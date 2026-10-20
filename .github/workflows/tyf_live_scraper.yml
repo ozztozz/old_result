@@ -1,5 +1,8 @@
 name: TYF Canli Yaris Takip Botu
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ master, main ]
