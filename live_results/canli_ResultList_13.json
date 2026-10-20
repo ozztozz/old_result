@@ -1,6 +1,6 @@
 {
   "tur": "sonuc_listesi",
-  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "musabaka_adi": "134 YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
   "sehir": "İSTANBUL",
   "tarih": "2026-04-25",
   "yaris_no": "13",
@@ -63,6 +63,28 @@
       "seri": "Seri 1 of 12",
       "kulvar": 5,
       "giris_derecesi": "35.17"
+    },
+    {
+      "sira": "6",
+      "sporcu": "Koza ALAGÜL",
+      "dogum_yili": "11",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "derece": "37.24",
+      "puan": null,
+      "seri": "Seri 2 of 12",
+      "kulvar": 3,
+      "giris_derecesi": "37.64"
+    },
+    {
+      "sira": "7",
+      "sporcu": "Defne Yaz MERİÇ",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "37.34",
+      "puan": null,
+      "seri": "Seri 1 of 12",
+      "kulvar": 1,
+      "giris_derecesi": "37.11"
     },
     {
       "sira": "8",
@@ -252,13 +274,6 @@
       "giris_derecesi": "41.76"
     },
     {
-      "sira": null,
-      "sporcu": "2B. Ayşe DURMAZ 12 o Fenerbahçe Spor Kulübü",
-      "kulup": "Bilinmiyor",
-      "derece": "41.08",
-      "puan": "362"
-    },
-    {
       "sira": "29",
       "sporcu": "Azra YEŞİL",
       "dogum_yili": "13",
@@ -391,33 +406,15 @@
       "giris_derecesi": "42.87"
     },
     {
-      "sira": null,
-      "sporcu": "Aslı ÖZDÜNDAR",
-      "dogum_yili": "11",
+      "sira": "45",
+      "sporcu": "Irem BOZYAYLA",
+      "dogum_yili": "13",
       "kulup": "Heybeliada Su Sporları Spor Kulübü",
-      "derece": "44.36",
-      "puan": "288",
-      "seri": "Seri 8 of 12",
-      "kulvar": 7,
-      "giris_derecesi": "44.67"
-    },
-    {
-      "sira": null,
-      "sporcu": "Esila TOSUN",
-      "dogum_yili": "11",
-      "kulup": "Istanbul Yıldızlar Yüzme Spor Kulübü",
       "derece": "44.52",
-      "puan": "285",
-      "seri": "Seri 8 of 12",
-      "kulvar": 3,
-      "giris_derecesi": "43.90"
-    },
-    {
-      "sira": null,
-      "sporcu": "4B. Zeynep KOÇ 13 Atakent Yüzme Spor Kulübü",
-      "kulup": "Bilinmiyor",
-      "derece": "44.59",
-      "puan": "283"
+      "puan": null,
+      "seri": "Seri 7 of 12",
+      "kulvar": 1,
+      "giris_derecesi": "43.54"
     },
     {
       "sira": "49",
@@ -442,6 +439,17 @@
       "giris_derecesi": "44.96"
     },
     {
+      "sira": "52",
+      "sporcu": "Selin ÇAKRAKLI",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "derece": "44.75",
+      "puan": null,
+      "seri": "Seri 9 of 12",
+      "kulvar": 4,
+      "giris_derecesi": "44.88"
+    },
+    {
       "sira": "54",
       "sporcu": "Alisa Meyra TEKE",
       "dogum_yili": "13",
@@ -453,15 +461,26 @@
       "giris_derecesi": "44.36"
     },
     {
-      "sira": null,
-      "sporcu": "Nil OLCAY",
+      "sira": "55",
+      "sporcu": "Dalya Su ASLANTÜRK",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "derece": "45.23",
+      "puan": null,
+      "seri": "Seri 12 of 12",
+      "kulvar": 5,
+      "giris_derecesi": "53.38"
+    },
+    {
+      "sira": "56",
+      "sporcu": "Azra KAHRAMAN",
       "dogum_yili": "11",
-      "kulup": "Istanbul Yıldızlar Yüzme Spor Kulübü",
+      "kulup": "Istanbul Efor Spor Kulübü",
       "derece": "45.45",
-      "puan": "267",
-      "seri": "Seri 8 of 12",
-      "kulvar": 1,
-      "giris_derecesi": "44.75"
+      "puan": null,
+      "seri": "Seri 9 of 12",
+      "kulvar": 2,
+      "giris_derecesi": "45.97"
     },
     {
       "sira": "58",
@@ -484,6 +503,17 @@
       "seri": "Seri 8 of 12",
       "kulvar": 8,
       "giris_derecesi": "44.78"
+    },
+    {
+      "sira": "60",
+      "sporcu": "Beyza METE",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "derece": "45.76",
+      "puan": null,
+      "seri": "Seri 9 of 12",
+      "kulvar": 1,
+      "giris_derecesi": "46.73"
     },
     {
       "sira": "61",
@@ -596,6 +626,28 @@
       "giris_derecesi": "46.63"
     },
     {
+      "sira": "72",
+      "sporcu": "Zeynep Defne UZUN",
+      "dogum_yili": "13",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "derece": "51.27",
+      "puan": null,
+      "seri": "Seri 11 of 12",
+      "kulvar": 7,
+      "giris_derecesi": "52.38"
+    },
+    {
+      "sira": "73",
+      "sporcu": "Elif Ela DİP",
+      "dogum_yili": "13",
+      "kulup": "Ck Spor Kulübü",
+      "derece": "51.78",
+      "puan": null,
+      "seri": "Seri 10 of 12",
+      "kulvar": 8,
+      "giris_derecesi": "49.95"
+    },
+    {
       "sira": "74",
       "sporcu": "Elis BABAYİĞİT",
       "dogum_yili": "13",
@@ -607,6 +659,17 @@
       "giris_derecesi": "50.37"
     },
     {
+      "sira": "75",
+      "sporcu": "Ada CİVELEK",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "53.07",
+      "puan": null,
+      "seri": "Seri 10 of 12",
+      "kulvar": 7,
+      "giris_derecesi": "49.45"
+    },
+    {
       "sira": "76",
       "sporcu": "Azra Yağmur SEYHAN",
       "dogum_yili": "13",
@@ -616,13 +679,6 @@
       "seri": "Seri 12 of 12",
       "kulvar": 4,
       "giris_derecesi": "53.33"
-    },
-    {
-      "sira": null,
-      "sporcu": "disk. Derin Naz BAYRAK 13 OEyüpsultan Belediyesi Spor Kulübü",
-      "kulup": "Bilinmiyor",
-      "derece": "52.38",
-      "puan": null
     }
   ],
   "dosya_adi": "canli/ResultList_13.pdf"

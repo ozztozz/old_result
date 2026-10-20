@@ -209,276 +209,684 @@
       "count": 166
     },
     "canli/StartList_1.pdf": {
-      "time": "2026-10-20 12:15:49",
-      "count": 195
+      "time": "2026-10-20 12:47:13",
+      "count": 195,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "022c9655cc287a8116399601df5c07b8a6432fc073c08cfec17dd573e7055693",
+      "etag": "69edc7aa-8c8b",
+      "last_modified": "Sun, 26 Apr 2026 08:07:06 GMT"
     },
     "canli/StartList_10.pdf": {
-      "time": "2026-10-20 12:15:50",
-      "count": 60
+      "time": "2026-10-20 12:47:14",
+      "count": 60,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "b68d62bbcfdf44cadfbafa86fbbce679810f810d7b092424501f66cbb6f0e3fa",
+      "etag": "69edc7b2-3867",
+      "last_modified": "Sun, 26 Apr 2026 08:07:14 GMT"
     },
     "canli/StartList_11.pdf": {
-      "time": "2026-10-20 12:15:51",
-      "count": 162
+      "time": "2026-10-20 12:47:15",
+      "count": 162,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "86764445cc8ba4941eed8ff4dc366d87c7fb9dd8a13d90e51e8f3b6ec33347a1",
+      "etag": "69edc7b3-79e3",
+      "last_modified": "Sun, 26 Apr 2026 08:07:15 GMT"
     },
     "canli/StartList_12.pdf": {
-      "time": "2026-10-20 12:15:52",
-      "count": 216
+      "time": "2026-10-20 12:47:15",
+      "count": 216,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "dcba9ea8ae2bab745701da08c5332ef077a2293a09543653d2367db2809da81d",
+      "etag": "69edc7b8-9d02",
+      "last_modified": "Sun, 26 Apr 2026 08:07:20 GMT"
     },
     "canli/StartList_13.pdf": {
-      "time": "2026-10-20 12:15:53",
-      "count": 95
+      "time": "2026-10-20 12:47:16",
+      "count": 95,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "15df87d7cbb9165794d6a6b05bccbc5ba24e3942491f133c165a55ee1a2183ee",
+      "etag": "69edc7b5-5084",
+      "last_modified": "Sun, 26 Apr 2026 08:07:17 GMT"
     },
     "canli/StartList_14.pdf": {
-      "time": "2026-10-20 12:15:54",
-      "count": 103
+      "time": "2026-10-20 12:47:17",
+      "count": 103,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "95fdf88854856de4384d9f3e063bde66c9b192c49d7600de51833a699e90b9d6",
+      "etag": "69edc7b6-5553",
+      "last_modified": "Sun, 26 Apr 2026 08:07:18 GMT"
     },
     "canli/StartList_15.pdf": {
-      "time": "2026-10-20 12:15:54",
-      "count": 14
+      "time": "2026-10-20 12:47:18",
+      "count": 14,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "242572d87cd91ded1e1bd98578418cb78e3204cf672d6edaa832e6e221d9b206",
+      "etag": "69edc7b7-1b69",
+      "last_modified": "Sun, 26 Apr 2026 08:07:19 GMT"
     },
     "canli/StartList_16.pdf": {
-      "time": "2026-10-20 12:15:55",
-      "count": 44
+      "time": "2026-10-20 12:47:19",
+      "count": 44,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "e69b463a876d97dab8a4382457f9092e7e7b93967086ca3b1494763bfcf47610",
+      "etag": "69edc7b8-3031",
+      "last_modified": "Sun, 26 Apr 2026 08:07:20 GMT"
     },
     "canli/StartList_17.pdf": {
-      "time": "2026-10-20 12:15:56",
-      "count": 126
+      "time": "2026-10-20 12:47:20",
+      "count": 126,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "c0de00dce62c615bc04cc58cafaab4bb1e135a76729e803a0531efbb7b9e5eab",
+      "etag": "69edc7ba-64e1",
+      "last_modified": "Sun, 26 Apr 2026 08:07:22 GMT"
     },
     "canli/StartList_18.pdf": {
-      "time": "2026-10-20 12:15:56",
-      "count": 130
+      "time": "2026-10-20 12:47:21",
+      "count": 130,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "78a79a682e22d22d29693b04f7e92c476bbf2887f52cf8ebac32ebb5aefc75ea",
+      "etag": "69edc7bc-6853",
+      "last_modified": "Sun, 26 Apr 2026 08:07:24 GMT"
     },
     "canli/StartList_19.pdf": {
-      "time": "2026-10-20 12:15:57",
-      "count": 90
+      "time": "2026-10-20 12:47:22",
+      "count": 90,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "ece0c07d1efc3d59de7810f9c2c41838640b3c8e645a4c24402c68b1f654e315",
+      "etag": "69edc7be-4c93",
+      "last_modified": "Sun, 26 Apr 2026 08:07:26 GMT"
     },
     "canli/StartList_2.pdf": {
-      "time": "2026-10-20 12:15:58",
-      "count": 246
+      "time": "2026-10-20 12:47:23",
+      "count": 246,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "cac73c238eaa7c7d2974261365c1bdb040bb894f84ee0fb7c457fd75ccd98bf2",
+      "etag": "69edc7ac-b0be",
+      "last_modified": "Sun, 26 Apr 2026 08:07:08 GMT"
     },
     "canli/StartList_20.pdf": {
-      "time": "2026-10-20 12:15:59",
-      "count": 96
+      "time": "2026-10-20 12:47:23",
+      "count": 96,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "9e0a045b7af36651926e64ea10a89a9f3cf219778036b4cb760213ddd75fcd0a",
+      "etag": "69edc7bf-5086",
+      "last_modified": "Sun, 26 Apr 2026 08:07:27 GMT"
     },
     "canli/StartList_21.pdf": {
-      "time": "2026-10-20 12:16:00",
-      "count": 26
+      "time": "2026-10-20 12:47:24",
+      "count": 26,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "26deb37e4317f2a75cf74cee2457a2b6bf933e48795c809a44ca67fc85ed606c",
+      "etag": "69edc7c1-2234",
+      "last_modified": "Sun, 26 Apr 2026 08:07:29 GMT"
     },
     "canli/StartList_22.pdf": {
-      "time": "2026-10-20 12:16:01",
-      "count": 17
+      "time": "2026-10-20 12:47:25",
+      "count": 17,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "0a30966c58bc5acb7e4d641643a5e7f96e774d106aafaa6124847e72d1242fed",
+      "etag": "69edc7c2-1d8d",
+      "last_modified": "Sun, 26 Apr 2026 08:07:30 GMT"
     },
     "canli/StartList_23.pdf": {
-      "time": "2026-10-20 12:16:02",
-      "count": 98
+      "time": "2026-10-20 12:47:26",
+      "count": 98,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "c35303cca2b3b2872ddb8014d29c52b5cc7b36f4fd38f42083401fd877b1c436",
+      "etag": "69edc7c3-503d",
+      "last_modified": "Sun, 26 Apr 2026 08:07:31 GMT"
     },
     "canli/StartList_24.pdf": {
-      "time": "2026-10-20 12:16:03",
-      "count": 136
+      "time": "2026-10-20 12:47:26",
+      "count": 136,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "3d0b909a2b3a811d5d5950fc71359bd5ffe82205f0205575eb4f27978429f26e",
+      "etag": "69edc97e-68b3",
+      "last_modified": "Sun, 26 Apr 2026 08:14:54 GMT"
     },
     "canli/StartList_25.pdf": {
-      "time": "2026-10-20 12:16:03",
-      "count": 60
+      "time": "2026-10-20 12:47:27",
+      "count": 60,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "7eda824dff69429fcd1cdd8fd3236cabf330296de31a127abd0b982e6df35c86",
+      "etag": "69edce04-390f",
+      "last_modified": "Sun, 26 Apr 2026 08:34:12 GMT"
     },
     "canli/StartList_26.pdf": {
-      "time": "2026-10-20 12:16:04",
-      "count": 68
+      "time": "2026-10-20 12:47:28",
+      "count": 68,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "958a95bd1705851f6a15e33e49034b8db98215f46bf0f9adee8d37d1722fef36",
+      "etag": "69edc7c6-3e1d",
+      "last_modified": "Sun, 26 Apr 2026 08:07:34 GMT"
     },
     "canli/StartList_27.pdf": {
-      "time": "2026-10-20 12:16:05",
-      "count": 86
+      "time": "2026-10-20 12:47:29",
+      "count": 86,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "488795568405d63c2774c158882b62bda4391bb8121709cebc380740e139d6bb",
+      "etag": "69edd865-4b49",
+      "last_modified": "Sun, 26 Apr 2026 09:18:29 GMT"
     },
     "canli/StartList_28.pdf": {
-      "time": "2026-10-20 12:16:05",
-      "count": 77
+      "time": "2026-10-20 12:47:29",
+      "count": 77,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "28c73ba140866a660fc509cffc03bc42ae1f5413b2d14ca268098bbb4110fd40",
+      "etag": "69eddcff-42c0",
+      "last_modified": "Sun, 26 Apr 2026 09:38:07 GMT"
     },
     "canli/StartList_29.pdf": {
-      "time": "2026-10-20 12:16:06",
-      "count": 135
+      "time": "2026-10-20 12:47:30",
+      "count": 135,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "980ea991aeaee2b9a2f6139389ca7b4a4ce9960d5a63c401974ef2a30ce5028e",
+      "etag": "69ee0076-6827",
+      "last_modified": "Sun, 26 Apr 2026 12:09:26 GMT"
     },
     "canli/StartList_3.pdf": {
-      "time": "2026-10-20 12:16:07",
-      "count": 33
+      "time": "2026-10-20 12:47:31",
+      "count": 33,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "d0740aa80f6c745c9dd23a0a0f60cf2b5bb7ec9f9deee8493cd39811a49a7fc6",
+      "etag": "69edc7ac-2630",
+      "last_modified": "Sun, 26 Apr 2026 08:07:08 GMT"
     },
     "canli/StartList_30.pdf": {
-      "time": "2026-10-20 12:16:08",
-      "count": 178
+      "time": "2026-10-20 12:47:32",
+      "count": 178,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "506ba2912b9824c28aa06486690816265bc60cd0eb29e200afa7c8373574c624",
+      "etag": "69ee026c-8527",
+      "last_modified": "Sun, 26 Apr 2026 12:17:48 GMT"
     },
     "canli/StartList_31.pdf": {
-      "time": "2026-10-20 12:16:08",
-      "count": 16
+      "time": "2026-10-20 12:47:33",
+      "count": 16,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "6cc1a0da176a83917e0e29b3b9542b71932c4142bac47fb5c51a9b1b5a9f8468",
+      "etag": "69ee0303-1ccd",
+      "last_modified": "Sun, 26 Apr 2026 12:20:19 GMT"
     },
     "canli/StartList_32.pdf": {
-      "time": "2026-10-20 12:16:09",
-      "count": 24
+      "time": "2026-10-20 12:47:34",
+      "count": 24,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "301f0aa3cd2f6951e0b28c7a7f3b13fe5aad3144d5c11d54ffae81b4fba578db",
+      "etag": "69ee075c-21a7",
+      "last_modified": "Sun, 26 Apr 2026 12:38:52 GMT"
     },
     "canli/StartList_33.pdf": {
-      "time": "2026-10-20 12:16:10",
-      "count": 8
+      "time": "2026-10-20 12:47:34",
+      "count": 8,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "9ebb0446df449510c6538e2b1a9dee1f6428801eafad8ee6e5c7e2ee0874b48e",
+      "etag": "69ee0cc7-173c",
+      "last_modified": "Sun, 26 Apr 2026 13:01:59 GMT"
     },
     "canli/StartList_34.pdf": {
-      "time": "2026-10-20 12:16:10",
-      "count": 8
+      "time": "2026-10-20 12:47:35",
+      "count": 8,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "8ffd9f0d91c7453efdb90b9d6b139aaa7717d7a5eeb500dd631b0604b3041070",
+      "etag": "69ee1160-1776",
+      "last_modified": "Sun, 26 Apr 2026 13:21:36 GMT"
     },
     "canli/StartList_4.pdf": {
-      "time": "2026-10-20 12:16:11",
-      "count": 31
+      "time": "2026-10-20 12:47:36",
+      "count": 31,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "9ec6f6be34c74f65e8ca34cd95b915add38c09647f923b7030f9815fef914a2e",
+      "etag": "69edc7ad-255c",
+      "last_modified": "Sun, 26 Apr 2026 08:07:09 GMT"
     },
     "canli/StartList_5.pdf": {
-      "time": "2026-10-20 12:16:12",
-      "count": 79
+      "time": "2026-10-20 12:47:37",
+      "count": 79,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "c485ea680fa10edd2aad7aea32eef253cb57d660ebe486260a0aa97841406662",
+      "etag": "69edc7b3-4200",
+      "last_modified": "Sun, 26 Apr 2026 08:07:15 GMT"
     },
     "canli/StartList_6.pdf": {
-      "time": "2026-10-20 12:16:12",
-      "count": 100
+      "time": "2026-10-20 12:47:38",
+      "count": 100,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "e0fe6dea809ef1f47f60d6948bd767711328a0642fa23b39927863df208f1570",
+      "etag": "69edc7b1-5214",
+      "last_modified": "Sun, 26 Apr 2026 08:07:13 GMT"
     },
     "canli/StartList_7.pdf": {
-      "time": "2026-10-20 12:16:13",
-      "count": 47
+      "time": "2026-10-20 12:47:38",
+      "count": 47,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "477bc0749c9777791601f110ee0de8a2afcbbe7deab54c7714afc8af09f7d223",
+      "etag": "69edc7ae-3148",
+      "last_modified": "Sun, 26 Apr 2026 08:07:10 GMT"
     },
     "canli/StartList_8.pdf": {
-      "time": "2026-10-20 12:16:14",
-      "count": 40
+      "time": "2026-10-20 12:47:39",
+      "count": 40,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "0731675c19e2aa44c64c660161e891a4665c3357117655c90ec4c155c6c3351b",
+      "etag": "69edc7b5-29e8",
+      "last_modified": "Sun, 26 Apr 2026 08:07:17 GMT"
     },
     "canli/StartList_9.pdf": {
-      "time": "2026-10-20 12:16:14",
-      "count": 49
+      "time": "2026-10-20 12:47:39",
+      "count": 49,
+      "start_count": 0,
+      "ratio": 1.0,
+      "status": "completed",
+      "sha256": "67809e95c8bd655176d737b8b637992616e63485ed2a06ddb8b2d4fbe3b9011a",
+      "etag": "69edc7b1-3208",
+      "last_modified": "Sun, 26 Apr 2026 08:07:13 GMT"
     },
     "canli/ResultList_1.pdf": {
-      "time": "2026-10-20 12:16:24",
-      "count": 128
+      "time": "2026-10-20 12:47:52",
+      "count": 138,
+      "start_count": 195,
+      "ratio": 0.708,
+      "status": "partial",
+      "sha256": "c4f1375cdd849a8b11ba79a7972ea241f66baa02226ac8ca042a3abc6d0ab45b",
+      "etag": "69edc7b0-f0d6a",
+      "last_modified": "Sun, 26 Apr 2026 08:07:12 GMT"
     },
     "canli/ResultList_10.pdf": {
-      "time": "2026-10-20 12:16:35",
-      "count": 114
+      "time": "2026-10-20 12:48:06",
+      "count": 47,
+      "start_count": 60,
+      "ratio": 0.783,
+      "status": "partial",
+      "sha256": "1c691c52524b05580853aca2613c9c467ed74f207806ce4d785b4376378de959",
+      "etag": "69edc7e2-ce24d",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_11.pdf": {
-      "time": "2026-10-20 12:16:43",
-      "count": 90
+      "time": "2026-10-20 12:48:16",
+      "count": 122,
+      "start_count": 162,
+      "ratio": 0.753,
+      "status": "partial",
+      "sha256": "644f0be1d6ce50740f6897db820c9183f568eb7b0fc30f4a57c50b0b320ea432",
+      "etag": "69edc7e2-c8b77",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_12.pdf": {
-      "time": "2026-10-20 12:16:53",
-      "count": 87
+      "time": "2026-10-20 12:48:30",
+      "count": 154,
+      "start_count": 216,
+      "ratio": 0.713,
+      "status": "partial",
+      "sha256": "50e30015b39f7caf140741d1267f910afa61a8467799dfc3f0b5bc04859edea2",
+      "etag": "69edc7e3-10aaf2",
+      "last_modified": "Sun, 26 Apr 2026 08:08:03 GMT"
     },
     "canli/ResultList_13.pdf": {
-      "time": "2026-10-20 12:16:58",
-      "count": 57
+      "time": "2026-10-20 12:48:37",
+      "count": 61,
+      "start_count": 95,
+      "ratio": 0.642,
+      "status": "partial",
+      "sha256": "40cbaea4ba7fb346c4b1ce942e66885999d63ba6e8344d94aaffcbe2f6373837",
+      "etag": "69edc7e2-719e8",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_14.pdf": {
-      "time": "2026-10-20 12:17:03",
-      "count": 67
+      "time": "2026-10-20 12:48:44",
+      "count": 74,
+      "start_count": 103,
+      "ratio": 0.718,
+      "status": "partial",
+      "sha256": "6971f53f517ee9b2cf49f84611e1e8996516534353d185abeb8ed9ca193a0288",
+      "etag": "69edc7e2-7ee32",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_15.pdf": {
-      "time": "2026-10-20 12:17:05",
-      "count": 10
+      "time": "2026-10-20 12:48:46",
+      "count": 10,
+      "start_count": 14,
+      "ratio": 0.714,
+      "status": "partial",
+      "sha256": "5dae378befb30553d2a227dc3c3ee5038a3651ae78de6c04181cd03fcdf5fc52",
+      "etag": "69edc7e2-16dda",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_16.pdf": {
-      "time": "2026-10-20 12:17:09",
-      "count": 31
+      "time": "2026-10-20 12:48:50",
+      "count": 32,
+      "start_count": 44,
+      "ratio": 0.727,
+      "status": "partial",
+      "sha256": "d474a6f717ed94302e0fdcb15842847aec42f06af9e7f6dc473145f2a94a2e9f",
+      "etag": "69edc7e2-3fd2f",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_17.pdf": {
-      "time": "2026-10-20 12:17:15",
-      "count": 83
+      "time": "2026-10-20 12:48:58",
+      "count": 91,
+      "start_count": 126,
+      "ratio": 0.722,
+      "status": "partial",
+      "sha256": "f5e00834bba520bb0b31266e9735437fd162d5ddfead293ba5a0aeb6205d506e",
+      "etag": "69edc7e2-9830c",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_18.pdf": {
-      "time": "2026-10-20 12:17:21",
-      "count": 83
+      "time": "2026-10-20 12:49:06",
+      "count": 94,
+      "start_count": 130,
+      "ratio": 0.723,
+      "status": "partial",
+      "sha256": "c230461e3416614c6a8c8b4d883716fcea8252442cd2881f400037d77cb472d2",
+      "etag": "69edc7e2-98117",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_19.pdf": {
-      "time": "2026-10-20 12:17:27",
-      "count": 57
+      "time": "2026-10-20 12:49:14",
+      "count": 68,
+      "start_count": 90,
+      "ratio": 0.756,
+      "status": "partial",
+      "sha256": "b6ed368a3665b3b06fe6963268a4102d5e74794787dcbedfe985f257d7e702e1",
+      "etag": "69edc7e2-7d31b",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_2.pdf": {
-      "time": "2026-10-20 12:17:39",
-      "count": 181
+      "time": "2026-10-20 12:49:31",
+      "count": 176,
+      "start_count": 246,
+      "ratio": 0.715,
+      "status": "partial",
+      "sha256": "ff406a178b858aa962220fecf22d5d5d38539d88b1e850eb3e55864df442df45",
+      "etag": "69edc7b0-150b2a",
+      "last_modified": "Sun, 26 Apr 2026 08:07:12 GMT"
     },
     "canli/ResultList_20.pdf": {
-      "time": "2026-10-20 12:17:45",
-      "count": 68
+      "time": "2026-10-20 12:49:39",
+      "count": 67,
+      "start_count": 96,
+      "ratio": 0.698,
+      "status": "partial",
+      "sha256": "58d2b513cf1b96bb284f3616c06047c67045bc13494969d5a92562d7ae00dd3e",
+      "etag": "69edc7e2-810e2",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_21.pdf": {
-      "time": "2026-10-20 12:17:50",
-      "count": 29
+      "time": "2026-10-20 12:49:45",
+      "count": 14,
+      "start_count": 26,
+      "ratio": 0.538,
+      "status": "partial",
+      "sha256": "5c62767dde4472571f22b67e3a2330d154c486014ea2e78193d7621e7e89749f",
+      "etag": "69edc7e2-5bff2",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_22.pdf": {
-      "time": "2026-10-20 12:17:54",
-      "count": 18
+      "time": "2026-10-20 12:49:50",
+      "count": 8,
+      "start_count": 17,
+      "ratio": 0.471,
+      "status": "partial",
+      "sha256": "7827e2ce4c3b0a928c2345f66b8537accdef383ef412f16352d957a4a4c47da9",
+      "etag": "69edc7e2-36f5e",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_23.pdf": {
-      "time": "2026-10-20 12:18:00",
-      "count": 73
+      "time": "2026-10-20 12:49:57",
+      "count": 73,
+      "start_count": 98,
+      "ratio": 0.745,
+      "status": "partial",
+      "sha256": "f8ef20bb9050aeef3fd1d3c0ec21cd25c0eb91265e347e111d316c388e1e2e3c",
+      "etag": "69edc7e2-7bfbf",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_24.pdf": {
-      "time": "2026-10-20 12:18:07",
-      "count": 105
+      "time": "2026-10-20 12:50:07",
+      "count": 106,
+      "start_count": 136,
+      "ratio": 0.779,
+      "status": "partial",
+      "sha256": "c317a17c5203248a73bff3d0cee4b307096a00b00733065d57c49d65a517b726",
+      "etag": "69edc986-ae571",
+      "last_modified": "Sun, 26 Apr 2026 08:15:02 GMT"
     },
     "canli/ResultList_25.pdf": {
-      "time": "2026-10-20 12:18:11",
-      "count": 23
+      "time": "2026-10-20 12:50:11",
+      "count": 36,
+      "start_count": 60,
+      "ratio": 0.6,
+      "status": "partial",
+      "sha256": "1c6568964b17f77503b92150e32fb11782cc076f93989c940c9a07a6d0a28e64",
+      "etag": "69edce03-42064",
+      "last_modified": "Sun, 26 Apr 2026 08:34:11 GMT"
     },
     "canli/ResultList_26.pdf": {
-      "time": "2026-10-20 12:18:15",
-      "count": 27
+      "time": "2026-10-20 12:50:17",
+      "count": 46,
+      "start_count": 68,
+      "ratio": 0.676,
+      "status": "partial",
+      "sha256": "6d043cf2afbd373ed4ca04cf4896f6b182a0f1e36362c24011596be3b5628a4d",
+      "etag": "69edd282-56fe2",
+      "last_modified": "Sun, 26 Apr 2026 08:53:22 GMT"
     },
     "canli/ResultList_27.pdf": {
-      "time": "2026-10-20 12:18:20",
-      "count": 35
+      "time": "2026-10-20 12:50:23",
+      "count": 54,
+      "start_count": 86,
+      "ratio": 0.628,
+      "status": "partial",
+      "sha256": "f7c142585efa96c617faa9e84deeb60c46fdb90a7bbe0f2ae63d4076ad0a1241",
+      "etag": "69edd868-6b590",
+      "last_modified": "Sun, 26 Apr 2026 09:18:32 GMT"
     },
     "canli/ResultList_28.pdf": {
-      "time": "2026-10-20 12:18:25",
-      "count": 31
+      "time": "2026-10-20 12:50:29",
+      "count": 50,
+      "start_count": 77,
+      "ratio": 0.649,
+      "status": "partial",
+      "sha256": "b52d8f6467942eaddd05daa03d7a224bc0145ad025be56a2cc0235be0399fec3",
+      "etag": "69eddd04-68345",
+      "last_modified": "Sun, 26 Apr 2026 09:38:12 GMT"
     },
     "canli/ResultList_29.pdf": {
-      "time": "2026-10-20 12:18:32",
-      "count": 59
+      "time": "2026-10-20 12:50:39",
+      "count": 92,
+      "start_count": 135,
+      "ratio": 0.681,
+      "status": "partial",
+      "sha256": "7e5cc438db53d7f7f52e09127fe38def85669cc949c724eae4ffed807014f747",
+      "etag": "69ee009a-a98e0",
+      "last_modified": "Sun, 26 Apr 2026 12:10:02 GMT"
     },
     "canli/ResultList_3.pdf": {
-      "time": "2026-10-20 12:18:35",
-      "count": 21
+      "time": "2026-10-20 12:50:42",
+      "count": 25,
+      "start_count": 33,
+      "ratio": 0.758,
+      "status": "partial",
+      "sha256": "b9a1bb0b6063f106555e7be20220de426b2690e4311b92544af3b3670e477260",
+      "etag": "69edc7e2-2eb75",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_30.pdf": {
-      "time": "2026-10-20 12:18:43",
-      "count": 105
+      "time": "2026-10-20 12:50:53",
+      "count": 117,
+      "start_count": 178,
+      "ratio": 0.657,
+      "status": "partial",
+      "sha256": "d49b8697577803f41df669227d2eef09b9fec6e738cf35ef68af21848ac348f9",
+      "etag": "69ee026d-cc1eb",
+      "last_modified": "Sun, 26 Apr 2026 12:17:49 GMT"
     },
     "canli/ResultList_31.pdf": {
-      "time": "2026-10-20 12:18:47",
-      "count": 26
+      "time": "2026-10-20 12:50:58",
+      "count": 11,
+      "start_count": 16,
+      "ratio": 0.688,
+      "status": "partial",
+      "sha256": "995a82fd36d4903cb5ea43bdcab797579674af004410ef69ca0f6ed7feb66850",
+      "etag": "69ee030c-319eb",
+      "last_modified": "Sun, 26 Apr 2026 12:20:28 GMT"
     },
     "canli/ResultList_32.pdf": {
-      "time": "2026-10-20 12:18:52",
-      "count": 44
+      "time": "2026-10-20 12:51:04",
+      "count": 19,
+      "start_count": 24,
+      "ratio": 0.792,
+      "status": "partial",
+      "sha256": "3f228bd38d0fc0194210091554fedb0b98a8501ea1185cbeaa46bad78bc46ca2",
+      "etag": "69ee0765-4d69b",
+      "last_modified": "Sun, 26 Apr 2026 12:39:01 GMT"
     },
     "canli/ResultList_33.pdf": {
-      "time": "2026-10-20 12:18:54",
-      "count": 10
+      "time": "2026-10-20 12:51:07",
+      "count": 1,
+      "start_count": 8,
+      "ratio": 0.125,
+      "status": "partial",
+      "sha256": "dd8b561cf35f1b60ace988e762ba7b795eca8aac510b87479aface8958b0c0b1",
+      "etag": "69ee0cca-211d5",
+      "last_modified": "Sun, 26 Apr 2026 13:02:02 GMT"
     },
     "canli/ResultList_34.pdf": {
-      "time": "2026-10-20 12:18:58",
-      "count": 28
+      "time": "2026-10-20 12:51:12",
+      "count": 7,
+      "start_count": 8,
+      "ratio": 0.875,
+      "status": "partial",
+      "sha256": "5ea6b1c0d984e215c9014f8aab14da7c8bcb6b01951a1b919eb3fd81ccc575a6",
+      "etag": "69ee1165-3b90d",
+      "last_modified": "Sun, 26 Apr 2026 13:21:41 GMT"
     },
     "canli/ResultList_4.pdf": {
-      "time": "2026-10-20 12:19:01",
-      "count": 22
+      "time": "2026-10-20 12:51:16",
+      "count": 25,
+      "start_count": 31,
+      "ratio": 0.806,
+      "status": "partial",
+      "sha256": "1c0b6b7a57a35c1a60138f6fd4116dc2ec3a3d6cb96af06541e9a18be8d39adf",
+      "etag": "69edc7b0-310c8",
+      "last_modified": "Sun, 26 Apr 2026 08:07:12 GMT"
     },
     "canli/ResultList_5.pdf": {
-      "time": "2026-10-20 12:19:06",
-      "count": 34
+      "time": "2026-10-20 12:51:21",
+      "count": 55,
+      "start_count": 79,
+      "ratio": 0.696,
+      "status": "partial",
+      "sha256": "c760b62934a8097361d121b0b1b2534c3689a8c0da3959cb250f182982224e30",
+      "etag": "69edc7b0-61d52",
+      "last_modified": "Sun, 26 Apr 2026 08:07:12 GMT"
     },
     "canli/ResultList_6.pdf": {
-      "time": "2026-10-20 12:19:12",
-      "count": 51
+      "time": "2026-10-20 12:51:29",
+      "count": 81,
+      "start_count": 100,
+      "ratio": 0.81,
+      "status": "partial",
+      "sha256": "a0aed182208911e63fa69eaadcc0d9c803fe7ea63e290bd747ba6a59c68e391e",
+      "etag": "69edc7e2-876a7",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_7.pdf": {
-      "time": "2026-10-20 12:19:15",
-      "count": 33
+      "time": "2026-10-20 12:51:34",
+      "count": 33,
+      "start_count": 47,
+      "ratio": 0.702,
+      "status": "partial",
+      "sha256": "d6827c2cf54187d01a99705dfd3cae41b551a1605d385ea2af421692971b0154",
+      "etag": "69edc7e2-3d780",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_8.pdf": {
-      "time": "2026-10-20 12:19:19",
-      "count": 30
+      "time": "2026-10-20 12:51:38",
+      "count": 30,
+      "start_count": 40,
+      "ratio": 0.75,
+      "status": "partial",
+      "sha256": "033097adbab6235dc786eb4778954c03a6359cfed0d51e0f712b96a7988e533d",
+      "etag": "69edc7e2-38cbf",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     },
     "canli/ResultList_9.pdf": {
-      "time": "2026-10-20 12:19:28",
-      "count": 90
+      "time": "2026-10-20 12:51:50",
+      "count": 41,
+      "start_count": 49,
+      "ratio": 0.837,
+      "status": "partial",
+      "sha256": "033e36487264ee4dae2b8e5e4f48c090207f13f26619053c66cfca7e62be9859",
+      "etag": "69edc7e2-b131c",
+      "last_modified": "Sun, 26 Apr 2026 08:08:02 GMT"
     }
   },
   "start_lists": {

@@ -1,6 +1,6 @@
 {
   "tur": "sonuc_listesi",
-  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "musabaka_adi": "134 YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
   "sehir": "İSTANBUL",
   "tarih": "2026-04-26",
   "yaris_no": "28",
@@ -54,6 +54,50 @@
       "giris_derecesi": "1:02.37"
     },
     {
+      "sira": "5",
+      "sporcu": "Enes UZUN",
+      "dogum_yili": "10",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "derece": "1:03.82",
+      "puan": null,
+      "seri": "Seri 1 of 10",
+      "kulvar": 7,
+      "giris_derecesi": "1:03.39"
+    },
+    {
+      "sira": "6",
+      "sporcu": "Akif Talha YILMAZ",
+      "dogum_yili": "09",
+      "kulup": "Bahçelievler Belediye Spor Kulübü",
+      "derece": "1:05.26",
+      "puan": "494",
+      "seri": "Seri 2 of 10",
+      "kulvar": 4,
+      "giris_derecesi": "1:05.02"
+    },
+    {
+      "sira": "7",
+      "sporcu": "Ali Eren BAŞER",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "derece": "1:06.18",
+      "puan": null,
+      "seri": "Seri 2 of 10",
+      "kulvar": 5,
+      "giris_derecesi": "1:05.43"
+    },
+    {
+      "sira": "8",
+      "sporcu": "Amir ALİMARDAN",
+      "dogum_yili": "10",
+      "kulup": "Ferdi",
+      "derece": "1:06.66",
+      "puan": null,
+      "seri": "Seri 2 of 10",
+      "kulvar": 1,
+      "giris_derecesi": "1:06.58"
+    },
+    {
       "sira": "11",
       "sporcu": "Yağız Deniz YEŞİL",
       "dogum_yili": "11",
@@ -76,6 +120,17 @@
       "giris_derecesi": "1:08.08"
     },
     {
+      "sira": "13",
+      "sporcu": "Kaan BEBEK",
+      "dogum_yili": "12",
+      "kulup": "Dinamik Nesiller Akademisi Spor Kulübü",
+      "derece": "1:10.25",
+      "puan": null,
+      "seri": "Seri 3 of 10",
+      "kulvar": 3,
+      "giris_derecesi": "1:10.02"
+    },
+    {
       "sira": "14",
       "sporcu": "Umut Mustafa BAK",
       "dogum_yili": "12",
@@ -87,44 +142,77 @@
       "giris_derecesi": "1:14.24"
     },
     {
+      "sira": "16",
+      "sporcu": "Kuzey TAŞTİMUR",
+      "dogum_yili": "10",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "derece": "1:11.49",
+      "puan": null,
+      "seri": "Seri 3 of 10",
+      "kulvar": 7,
+      "giris_derecesi": "1:10.64"
+    },
+    {
       "sira": "17",
       "sporcu": "Ediz ÖZGÜR",
       "dogum_yili": "12",
       "kulup": "Avrupa Yüzme Ihtisas Spor Kulübü",
-      "derece": "12.03",
+      "derece": "1:12.03",
       "puan": "367",
       "seri": "Seri 4 of 10",
       "kulvar": 1,
       "giris_derecesi": "1:13.84"
     },
     {
+      "sira": "18",
+      "sporcu": "Bora CEDİMAĞAR",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:12.06",
+      "puan": null,
+      "seri": "Seri 3 of 10",
+      "kulvar": 6,
+      "giris_derecesi": "1:10.53"
+    },
+    {
+      "sira": "20",
+      "sporcu": "Efe ÇAKAR",
+      "dogum_yili": "13",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "derece": "1:12.74",
+      "puan": null,
+      "seri": "Seri 4 of 10",
+      "kulvar": 4,
+      "giris_derecesi": "1:11.00"
+    },
+    {
+      "sira": "22",
+      "sporcu": "Berat Ege BALCI",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Büyükşehir Belediyesi Spor Kulübü",
+      "derece": "1:13.37",
+      "puan": "347",
+      "seri": "Seri 3 of 10",
+      "kulvar": 2,
+      "giris_derecesi": "1:10.57"
+    },
+    {
       "sira": "23",
       "sporcu": "Yaman YILMAZ",
       "dogum_yili": "12",
       "kulup": "Adalar Su Sporları Spor Kulübü",
-      "derece": "13.70",
+      "derece": "1:13.70",
       "puan": "343",
       "seri": "Seri 4 of 10",
       "kulvar": 3,
       "giris_derecesi": "1:12.00"
     },
     {
-      "sira": "24",
-      "sporcu": "Aras Rüzgar KAZANKAYA",
-      "dogum_yili": "13",
-      "kulup": "Anabilim Spor Kulübü",
-      "derece": "13.75",
-      "puan": "342",
-      "seri": "Seri 6 of 10",
-      "kulvar": 8,
-      "giris_derecesi": "1:19.30"
-    },
-    {
       "sira": "25",
       "sporcu": "Kemal Rüzgar TİRYAKİ",
       "dogum_yili": "13",
       "kulup": "Burak Sezgin Yüzme Spor Kulübü",
-      "derece": "13.85",
+      "derece": "1:13.85",
       "puan": "341",
       "seri": "Seri 5 of 10",
       "kulvar": 7,
@@ -135,7 +223,7 @@
       "sporcu": "Kaan TOROS",
       "dogum_yili": "12",
       "kulup": "Fenerbahçe Spor Kulübü",
-      "derece": "14.13",
+      "derece": "1:14.13",
       "puan": "337",
       "seri": "Seri 5 of 10",
       "kulvar": 3,
@@ -146,7 +234,7 @@
       "sporcu": "Ömer Burak YALÇIN",
       "dogum_yili": "12",
       "kulup": "Kınalıada Su Sporları Spor Kulübü",
-      "derece": "14.24",
+      "derece": "1:14.24",
       "puan": "335",
       "seri": "Seri 4 of 10",
       "kulvar": 7,
@@ -157,18 +245,40 @@
       "sporcu": "Cemil BİLGİN",
       "dogum_yili": "13",
       "kulup": "Üsküdar Belediyesi Spor Kulübü",
-      "derece": "14.54",
+      "derece": "1:14.54",
       "puan": "331",
       "seri": "Seri 4 of 10",
       "kulvar": 6,
       "giris_derecesi": "1:13.56"
     },
     {
+      "sira": "30",
+      "sporcu": "Emre SARIKAYA",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "derece": "1:14.67",
+      "puan": null,
+      "seri": "Seri 5 of 10",
+      "kulvar": 6,
+      "giris_derecesi": "1:15.12"
+    },
+    {
+      "sira": "31",
+      "sporcu": "Emir Kazım KARSU",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:14.81",
+      "puan": null,
+      "seri": "Seri 8 of 10",
+      "kulvar": 5,
+      "giris_derecesi": "1:21.42"
+    },
+    {
       "sira": "33",
       "sporcu": "Mustafa Yunus ATASOY",
       "dogum_yili": "12",
       "kulup": "Istanbul Su Sporları Spor Kulübü",
-      "derece": "15.63",
+      "derece": "1:15.63",
       "puan": "317",
       "seri": "Seri 5 of 10",
       "kulvar": 1,
@@ -190,18 +300,29 @@
       "sporcu": "Alp Deniz KARAHAN",
       "dogum_yili": "13",
       "kulup": "Fenerbahçe Spor Kulübü",
-      "derece": "16.85",
+      "derece": "1:16.85",
       "puan": "302",
       "seri": "Seri 6 of 10",
       "kulvar": 5,
       "giris_derecesi": "1:16.83"
     },
     {
+      "sira": "37",
+      "sporcu": "Mustafa Ege YAMALI",
+      "dogum_yili": "13",
+      "kulup": "Ck Spor Kulübü",
+      "derece": "1:17.39",
+      "puan": null,
+      "seri": "Seri 6 of 10",
+      "kulvar": 1,
+      "giris_derecesi": "1:19.14"
+    },
+    {
       "sira": "38",
       "sporcu": "Doğukan KARADENİZ",
       "dogum_yili": "13",
       "kulup": "Enka Spor Kulübü",
-      "derece": "17.50",
+      "derece": "1:17.50",
       "puan": "295",
       "seri": "Seri 7 of 10",
       "kulvar": 7,
@@ -212,11 +333,66 @@
       "sporcu": "Salih Yağız EYİ",
       "dogum_yili": "12",
       "kulup": "Enka Spor Kulübü",
-      "derece": "17.53",
+      "derece": "1:17.53",
       "puan": "294",
       "seri": "Seri 6 of 10",
       "kulvar": 4,
       "giris_derecesi": "1:16.43"
+    },
+    {
+      "sira": "40",
+      "sporcu": "Burak Demir SARIKAŞ",
+      "dogum_yili": "13",
+      "kulup": "Bahçeşehir Kültür Yüzme Kulübü",
+      "derece": "1:17.67",
+      "puan": null,
+      "seri": "Seri 6 of 10",
+      "kulvar": 6,
+      "giris_derecesi": "1:17.43"
+    },
+    {
+      "sira": "41",
+      "sporcu": "Aras ÖZTÜRK",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "derece": "1:17.97",
+      "puan": "289",
+      "seri": "Seri 6 of 10",
+      "kulvar": 7,
+      "giris_derecesi": "1:19.09"
+    },
+    {
+      "sira": "42",
+      "sporcu": "Yekta Talha HİNDİOĞLU",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "derece": "1:18.19",
+      "puan": null,
+      "seri": "Seri 5 of 10",
+      "kulvar": 2,
+      "giris_derecesi": "1:15.36"
+    },
+    {
+      "sira": "43",
+      "sporcu": "Poyraz DEMİR",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "derece": "1:18.86",
+      "puan": null,
+      "seri": "Seri 8 of 10",
+      "kulvar": 6,
+      "giris_derecesi": "1:21.60"
+    },
+    {
+      "sira": "47",
+      "sporcu": "Toprak UYSAL",
+      "dogum_yili": "12",
+      "kulup": "Dragos Spor Kulübü",
+      "derece": "1:20.20",
+      "puan": null,
+      "seri": "Seri 7 of 10",
+      "kulvar": 8,
+      "giris_derecesi": "1:20.93"
     },
     {
       "sira": "48",
@@ -239,6 +415,17 @@
       "seri": "Seri 8 of 10",
       "kulvar": 3,
       "giris_derecesi": "1:21.52"
+    },
+    {
+      "sira": "50",
+      "sporcu": "Robin KISA",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "derece": "1:20.59",
+      "puan": null,
+      "seri": "Seri 8 of 10",
+      "kulvar": 2,
+      "giris_derecesi": "1:21.71"
     },
     {
       "sira": "51",
@@ -307,6 +494,17 @@
       "giris_derecesi": "1:26.15"
     },
     {
+      "sira": "59",
+      "sporcu": "Mete ÖZGENÇ",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "derece": "1:26.17",
+      "puan": null,
+      "seri": "Seri 9 of 10",
+      "kulvar": 2,
+      "giris_derecesi": "1:26.63"
+    },
+    {
       "sira": "60",
       "sporcu": "Arın ALTILAR",
       "dogum_yili": "13",
@@ -329,6 +527,17 @@
       "giris_derecesi": "1:26.16"
     },
     {
+      "sira": "62",
+      "sporcu": "Kerem TÜZÜNTÜRK",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Performans Yüzme Spor Kulübü",
+      "derece": "1:27.78",
+      "puan": null,
+      "seri": "Seri 9 of 10",
+      "kulvar": 4,
+      "giris_derecesi": "1:25.01"
+    },
+    {
       "sira": "63",
       "sporcu": "Yiğit Ali EDE",
       "dogum_yili": "13",
@@ -340,11 +549,15 @@
       "giris_derecesi": "1:29.57"
     },
     {
-      "sira": null,
-      "sporcu": "disk. Eren KOL 12 Burak Sezgin Yüzme Spor Kulübü",
-      "kulup": "Bilinmiyor",
-      "derece": "1:16.44",
-      "puan": null
+      "sira": "64",
+      "sporcu": "Mert PEKÇAĞLAYAN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:39.03",
+      "puan": null,
+      "seri": "Seri 10 of 10",
+      "kulvar": 3,
+      "giris_derecesi": "1:33.99"
     }
   ],
   "dosya_adi": "canli/ResultList_28.pdf"

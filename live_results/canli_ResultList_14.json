@@ -1,6 +1,6 @@
 {
   "tur": "sonuc_listesi",
-  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "musabaka_adi": "134 YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
   "sehir": "İSTANBUL",
   "tarih": "2026-04-25",
   "yaris_no": "14",
@@ -120,6 +120,17 @@
       "giris_derecesi": "34.12"
     },
     {
+      "sira": "12",
+      "sporcu": "Bedirhan ACAR",
+      "dogum_yili": "10",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "32.94",
+      "puan": null,
+      "seri": "Seri 2 of 13",
+      "kulvar": 3,
+      "giris_derecesi": "32.85"
+    },
+    {
       "sira": "13",
       "sporcu": "Yiğit KIZILÖZ",
       "dogum_yili": "10",
@@ -129,6 +140,17 @@
       "seri": "Seri 3 of 13",
       "kulvar": 4,
       "giris_derecesi": "33.18"
+    },
+    {
+      "sira": "14",
+      "sporcu": "Muammer Utku GÖNCÜ",
+      "dogum_yili": "09",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "33.41",
+      "puan": null,
+      "seri": "Seri 2 of 13",
+      "kulvar": 5,
+      "giris_derecesi": "32.83"
     },
     {
       "sira": "15",
@@ -162,6 +184,17 @@
       "seri": "Seri 4 of 13",
       "kulvar": 5,
       "giris_derecesi": "33.70"
+    },
+    {
+      "sira": "18",
+      "sporcu": "Balamir EROL",
+      "dogum_yili": "10",
+      "kulup": "Dinamik Nesiller Akademisi Spor Kulübü",
+      "derece": "33.61",
+      "puan": null,
+      "seri": "Seri 3 of 13",
+      "kulvar": 6,
+      "giris_derecesi": "33.48"
     },
     {
       "sira": "20",
@@ -230,11 +263,15 @@
       "giris_derecesi": "33.55"
     },
     {
-      "sira": null,
-      "sporcu": "2B. Çağan Yiğit BOZACI 08 o Atlas Atletik Spor Kulübü",
-      "kulup": "Bilinmiyor",
-      "derece": "34.00",
-      "puan": "444"
+      "sira": "27",
+      "sporcu": "Onur ŞENTÜRK",
+      "dogum_yili": "07",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "derece": "33.96",
+      "puan": null,
+      "seri": "Seri 3 of 13",
+      "kulvar": 3,
+      "giris_derecesi": "33.47"
     },
     {
       "sira": "29",
@@ -257,17 +294,6 @@
       "seri": "Seri 5 of 13",
       "kulvar": 5,
       "giris_derecesi": "34.47"
-    },
-    {
-      "sira": null,
-      "sporcu": "Sercan PEHLİVAN",
-      "dogum_yili": "11",
-      "kulup": "Enka Spor Kulübü",
-      "derece": "34.26",
-      "puan": "434",
-      "seri": "Seri 4 of 13",
-      "kulvar": 2,
-      "giris_derecesi": "33.99"
     },
     {
       "sira": "33",
@@ -323,6 +349,28 @@
       "seri": "Seri 7 of 13",
       "kulvar": 3,
       "giris_derecesi": "38.15"
+    },
+    {
+      "sira": "39",
+      "sporcu": "Ahmet Kural TORLAK",
+      "dogum_yili": "12",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "derece": "35.61",
+      "puan": null,
+      "seri": "Seri 6 of 13",
+      "kulvar": 5,
+      "giris_derecesi": "35.16"
+    },
+    {
+      "sira": "40",
+      "sporcu": "Can MUTLULU",
+      "dogum_yili": "13",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "derece": "35.78",
+      "puan": null,
+      "seri": "Seri 6 of 13",
+      "kulvar": 7,
+      "giris_derecesi": "35.70"
     },
     {
       "sira": "41",
@@ -490,6 +538,17 @@
       "giris_derecesi": "39.25"
     },
     {
+      "sira": "56",
+      "sporcu": "Cemal Kaan ALMALAR",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "39.36",
+      "puan": null,
+      "seri": "Seri 9 of 13",
+      "kulvar": 5,
+      "giris_derecesi": "40.76"
+    },
+    {
       "sira": "57",
       "sporcu": "Ayaz DOĞAN",
       "dogum_yili": "13",
@@ -532,6 +591,17 @@
       "seri": "Seri 8 of 13",
       "kulvar": 4,
       "giris_derecesi": "39.14"
+    },
+    {
+      "sira": "61",
+      "sporcu": "Alp TEKİNALP",
+      "dogum_yili": "13",
+      "kulup": "Galatasaray Spor Kulübü",
+      "derece": "39.64",
+      "puan": null,
+      "seri": "Seri 7 of 13",
+      "kulvar": 7,
+      "giris_derecesi": "38.87"
     },
     {
       "sira": "62",
@@ -697,6 +767,17 @@
       "seri": "Seri 12 of 13",
       "kulvar": 5,
       "giris_derecesi": "45.79"
+    },
+    {
+      "sira": "83",
+      "sporcu": "Mert PEKÇAĞLAYAN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "45.24",
+      "puan": null,
+      "seri": "Seri 11 of 13",
+      "kulvar": 2,
+      "giris_derecesi": "44.60"
     },
     {
       "sira": "84",
