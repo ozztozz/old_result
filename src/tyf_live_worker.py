@@ -18,12 +18,13 @@ import re
 import json
 import ssl
 import time
+import hashlib
 import argparse
 import difflib
 import urllib.request
 import urllib.parse
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 # Proje kökünü sys.path'e ekle
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -138,13 +139,25 @@ def get_ssl_context():
     return ctx
 
 
-def fetch_url(url: str, timeout: int = 15) -> bytes:
+def fetch_url_with_meta(url: str, timeout: int = 15) -> Tuple[bytes, Dict[str, Any]]:
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     )
     with urllib.request.urlopen(req, context=get_ssl_context(), timeout=timeout) as resp:
-        return resp.read()
+        meta = {
+            "etag": resp.headers.get("ETag", "").strip('"'),
+            "last_modified": resp.headers.get("Last-Modified", ""),
+            "content_length": resp.headers.get("Content-Length", "")
+        }
+        data = resp.read()
+        meta["sha256"] = hashlib.sha256(data).hexdigest()
+        return data, meta
+
+
+def fetch_url(url: str, timeout: int = 15) -> bytes:
+    data, _ = fetch_url_with_meta(url, timeout)
+    return data
 
 
 def load_state() -> Dict[str, Any]:
@@ -557,8 +570,9 @@ def post_to_django(api_url: str, payload: Dict[str, Any], api_key: Optional[str]
         return False
 
 
-def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[str] = None, save_json: bool = False):
+def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[str] = None, save_json: bool = False, threshold: float = 0.95, force: bool = False):
     print(f"[*] TYF Canlı Sayfası taranıyor: {tyf_url}")
+    print(f"[*] Sonuç Tamamlanma Eşik Oranı: %{threshold*100:.0f}")
     if api_url:
         print(f"[*] Hedef Django API: {api_url}")
     else:
@@ -589,19 +603,37 @@ def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[st
 
     for pdf_rel in all_targets:
         full_pdf_url = urllib.parse.urljoin(tyf_url, pdf_rel) if "urllib" in globals() else tyf_url.rstrip("/") + "/" + pdf_rel.lstrip("/")
+        prev_info = processed_map.get(pdf_rel)
 
-        if pdf_rel in processed_map:
-            # Daha önce işlenmiş
-            continue
-
-        print(f"\n[>] Yeni dosya tespit edildi: {pdf_rel}")
         try:
-            pdf_bytes = fetch_url(full_pdf_url)
+            pdf_bytes, meta = fetch_url_with_meta(full_pdf_url)
         except Exception as e:
             print(f"  [-] İndirilemedi ({pdf_rel}): {e}")
             continue
 
+        sha256_val = meta.get("sha256", "")
+
+        # Önceki tarama durumu kontrolü (Parça parça yüklenen ve güncellenen dosyaları tespit etme)
+        if prev_info and not force:
+            prev_sha = prev_info.get("sha256")
+            prev_status = prev_info.get("status", "completed")
+            prev_count = prev_info.get("count", 0)
+
+            if prev_sha and prev_sha == sha256_val:
+                if prev_status == "completed":
+                    # Zaten tamamlanmış (%95+) ve dosya sunucuda değişmemiş
+                    continue
+                elif prev_status == "partial":
+                    # Kısmi dosya ancak dosya sunucuda henüz güncellenmemiş
+                    print(f"  [~] {pdf_rel}: Kısmi sonuç (%{prev_info.get('ratio', 0)*100:.1f} kayıtlı). Sunucudaki dosya henüz güncellenmedi (bekleniyor).")
+                    continue
+            else:
+                print(f"\n[!] GÜNCELLEME TESPİT EDİLDİ: {pdf_rel} (Eski kayıt: {prev_count}, sunucuda dosya güncellendi!)")
+        else:
+            print(f"\n[>] Yeni dosya tespit edildi: {pdf_rel}")
+
         payload = None
+        start_candidates = []
         if "startlist" in pdf_rel.lower():
             payload = parse_start_list_pdf(pdf_bytes)
             if payload and payload.get("yaris_no"):
@@ -625,7 +657,27 @@ def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[st
 
         if payload and payload.get("kayitlar"):
             payload["dosya_adi"] = pdf_rel
-            print(f"  [*] {pdf_rel}: {len(payload['kayitlar'])} kayıt ayrıştırıldı.")
+            result_count = len(payload["kayitlar"])
+            start_count = 0
+            ratio = 1.0
+            status = "completed"
+
+            if "resultlist" in pdf_rel.lower():
+                start_count = len(start_candidates)
+                if start_count > 0:
+                    ratio = result_count / start_count
+                    if ratio < threshold:
+                        status = "partial"
+                        print(f"  [!] {pdf_rel}: Start listesindeki {start_count} sporcunun {result_count}'si sonuçta yer alıyor (%{ratio*100:.1f} < %{threshold*100:.0f}).")
+                        print(f"      -> Yarış henüz devam ediyor veya parça parça yükleniyor. Durum: 'PARTIAL' olarak işaretlendi.")
+                    else:
+                        status = "completed"
+                        print(f"  [+] {pdf_rel}: %{ratio*100:.1f} oranla sonuç tamamlandı ({result_count}/{start_count} sporcu) -> Durum: COMPLETED")
+                else:
+                    status = "completed"
+                    print(f"  [*] {pdf_rel}: {result_count} kayıt ayrıştırıldı.")
+            else:
+                print(f"  [*] {pdf_rel}: {result_count} kayıt ayrıştırıldı.")
             
             success = False
             # 1. Django'ya POST at (eğer API URL verilmişse)
@@ -646,7 +698,13 @@ def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[st
             if success:
                 processed_map[pdf_rel] = {
                     "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "count": len(payload["kayitlar"])
+                    "count": result_count,
+                    "start_count": start_count,
+                    "ratio": round(ratio, 3),
+                    "status": status,
+                    "sha256": sha256_val,
+                    "etag": meta.get("etag", ""),
+                    "last_modified": meta.get("last_modified", "")
                 }
                 state["processed"] = processed_map
                 save_state(state)
@@ -662,6 +720,8 @@ if __name__ == "__main__":
     parser.add_argument("--api", default=None, help="Django POST Endpoint URL'si (Opsiyonel)")
     parser.add_argument("--api-key", default=None, help="Opsiyonel X-Api-Key")
     parser.add_argument("--save-json", action="store_true", help="Ayrıştırılan sonuçları live_results/ klasörüne JSON olarak kaydet")
+    parser.add_argument("--threshold", type=float, default=0.95, help="Tamamlanma eşik oranı (varsayılan: 0.95 yani %%95)")
+    parser.add_argument("--force", action="store_true", help="Kayıtlı duruma bakılmaksızın tüm dosyaları yeniden tara")
     args = parser.parse_args()
 
-    run_worker(args.url, args.api, args.api_key, args.save_json)
+    run_worker(args.url, args.api, args.api_key, args.save_json, args.threshold, args.force)
