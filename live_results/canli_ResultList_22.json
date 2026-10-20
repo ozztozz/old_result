@@ -1,0 +1,160 @@
+{
+  "tur": "sonuc_listesi",
+  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "sehir": "İSTANBUL",
+  "tarih": "2026-04-25",
+  "yaris_no": "22",
+  "cinsiyet": "Erkek",
+  "mesafe": 800,
+  "stil": "Serbest",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "sira": null,
+      "sporcu": "100m: 58.41 58.41 g0bm: m04.Zz1 103.11 S00m: 11.23 103.84 Jülm:",
+      "kulup": "Bilinmiyor",
+      "derece": "20.21",
+      "puan": "10463"
+    },
+    {
+      "sira": "2",
+      "sporcu": "Ege Ulaş ASLANKARA",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "9:19.23",
+      "puan": "528",
+      "seri": "Seri 1 of 3",
+      "kulvar": 1,
+      "giris_derecesi": "9:38.59"
+    },
+    {
+      "sira": null,
+      "sporcu": "e00m: 2:14.69 110.92 düm: 4:3/.58 1:11.42 güm: 7/:00.88 1:11.65 &0üm: 919.23 1",
+      "kulup": "Bilinmiyor",
+      "derece": "08.08",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1:05.39 1:05.39 dg0üm: 4:26.19 110.35 S00m: 543.04 1:11.66 70mm: 811.74",
+      "kulup": "Bilinmiyor",
+      "derece": "1:11.30",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 215.84 11:1045 düm: 4:3/.38 111.19 6üdm: 70044 11:1140 80üm: 21.53",
+      "kulup": "Bilinmiyor",
+      "derece": "1:05.75",
+      "puan": null
+    },
+    {
+      "sira": "4",
+      "sporcu": "Çağatay DİNÇER",
+      "dogum_yili": "12",
+      "kulup": "Antalyaspor Kulübü",
+      "derece": "9:22.22",
+      "puan": "500",
+      "seri": "Seri 1 of 3",
+      "kulvar": 7,
+      "giris_derecesi": "9:26.55"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1107.62 107.62 g0bm: 233.29 TİZ S00m: 60143 1:14.19 7Ülm: 830.63",
+      "kulup": "Bilinmiyor",
+      "derece": "1:14.66",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 220.32 112T0 düm: 4:4/.30 Tid0i gOdm:  7:15.97 114.48 80üm: 94245 1",
+      "kulup": "Bilinmiyor",
+      "derece": "11.82",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: MOZ11 MDZ.Tİ dg0bm: 234.82 1:ld.35 S00m: #0380 1:14.18 70dm: 83204",
+      "kulup": "Bilinmiyor",
+      "derece": "1:14.30",
+      "puan": null
+    },
+    {
+      "sira": "8",
+      "sporcu": "Halil ŞEN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "54.40",
+      "puan": "440",
+      "seri": "Seri 2 of 3",
+      "kulvar": 5,
+      "giris_derecesi": "9:47.12"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1:08.39 1:03.39 dg0bm: 2:39.4/ 115.25 S00m: &:11.31 1:15.90 70Olm: 84196 1",
+      "kulup": "Bilinmiyor",
+      "derece": "15.27",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2126.28 1:14.64 düm: 456.88 11B.26 bOdm: AZLOY MİB &0üm: 56.54",
+      "kulup": "Bilinmiyor",
+      "derece": "1:13.98",
+      "puan": null
+    },
+    {
+      "sira": "10",
+      "sporcu": "Çınar UZUN",
+      "dogum_yili": "13",
+      "kulup": "Galatasaray Spor Kulübü",
+      "derece": "59.33",
+      "puan": "429",
+      "seri": "Seri 2 of 3",
+      "kulvar": 2,
+      "giris_derecesi": "10:01.38"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 10.32 11032 dg0bm: 24144 115.56 S00m: &:13.54 1:16.15 Tüm: 845.64 1",
+      "kulup": "Bilinmiyor",
+      "derece": "15.87",
+      "puan": null
+    },
+    {
+      "sira": "11",
+      "sporcu": "Can KIRHAN",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "derece": "10:06.24",
+      "puan": "414",
+      "seri": "Seri 2 of 3",
+      "kulvar": 1,
+      "giris_derecesi": "10:32.58"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1:11.63 1:11.63 g00m: 3:45.33 1:16.35 S00m: &18.10 1:17.13 Jülm: &B524B8",
+      "kulup": "Bilinmiyor",
+      "derece": "1:15.86",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 228.98 1:17.35 düm: W01.8/ 116.64 gOdm: 7:46.62 117.52 800m: 1006.24",
+      "kulup": "Bilinmiyor",
+      "derece": "1:13.76",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 22432 1115.35 düm: 45/87 TİZ g0üm:  7:44.839 1:18.13 800m: 111.06",
+      "kulup": "Bilinmiyor",
+      "derece": "1:17.60",
+      "puan": null
+    }
+  ],
+  "dosya_adi": "canli/ResultList_22.pdf"
+}

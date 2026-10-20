@@ -1,0 +1,150 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "sehir": "İSTANBUL",
+  "tarih": "2026-04-25",
+  "yaris_no": "22",
+  "cinsiyet": "Erkek",
+  "mesafe": 800,
+  "stil": "Serbest",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 1,
+      "sporcu": "Ege Ulaş ASLANKARA",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "9:38.59"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 2,
+      "sporcu": "Osman Ayaz TÜRKER",
+      "dogum_yili": "11",
+      "kulup": "Antalyaspor Kulübü",
+      "giris_derecesi": "9:11.68"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 3,
+      "sporcu": "Ahmet Efe SÖKER",
+      "dogum_yili": "07",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "8:22.28"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 4,
+      "sporcu": "Efe IŞLER",
+      "dogum_yili": "07",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "8:00.57"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 5,
+      "sporcu": "Mehmet Efe YILMAZ",
+      "dogum_yili": "07",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "8:10.73"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 6,
+      "sporcu": "Onur ŞENTÜRK",
+      "dogum_yili": "07",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "8:59.48"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 7,
+      "sporcu": "Çağatay DİNÇER",
+      "dogum_yili": "12",
+      "kulup": "Antalyaspor Kulübü",
+      "giris_derecesi": "9:26.55"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 8,
+      "sporcu": "Can TANDOĞAN",
+      "dogum_yili": "12",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "9:43.35"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 1,
+      "sporcu": "Can KIRHAN",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "10:32.58"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 2,
+      "sporcu": "Çınar UZUN",
+      "dogum_yili": "13",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "10:01.38"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 3,
+      "sporcu": "Kayra Aslan YILMAZ",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Itü Geliştirme Vakfı Okulları Spor Kulübü",
+      "giris_derecesi": "9:54.61"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 4,
+      "sporcu": "Berk Deniz INAN",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "9:43.93"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 5,
+      "sporcu": "Halil ŞEN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "9:47.12"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 6,
+      "sporcu": "Berke ÇELEBİ",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "9:55.53"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 7,
+      "sporcu": "Mehmet Rüzgar ÇİVİCİ",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Itü Geliştirme Vakfı Okulları Spor Kulübü",
+      "giris_derecesi": "10:04.76"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 8,
+      "sporcu": "Can TAHAN",
+      "dogum_yili": "10",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "10:35.50"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 3,
+      "sporcu": "Hasan Arda BAYHAN",
+      "dogum_yili": "13",
+      "kulup": "Anabilim Spor Kulübü",
+      "giris_derecesi": "11:21.25"
+    }
+  ],
+  "dosya_adi": "canli/StartList_22.pdf"
+}

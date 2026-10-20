@@ -1,0 +1,394 @@
+{
+  "tur": "sonuc_listesi",
+  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "sehir": "İSTANBUL",
+  "tarih": "2026-04-26",
+  "yaris_no": "32",
+  "cinsiyet": "Erkek",
+  "mesafe": 400,
+  "stil": "Karışık",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "sira": "1",
+      "sporcu": "Sarp Barkın HASAY",
+      "dogum_yili": "10",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:05.88",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 7,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 28.33 28.33 1S0m: OoO1:3837 15.88 250m: Oo 258.60 45.34 3ölm: O #1878",
+      "kulup": "Bilinmiyor",
+      "derece": "33.10",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "ilüm: o 10239 3408 2ülm: o 214.26 35.89 a00m: o 45.66 46.06 Alim: #B1.GA",
+      "kulup": "Bilinmiyor",
+      "derece": "32.78",
+      "puan": null
+    },
+    {
+      "sira": "2",
+      "sporcu": "Onur ŞENTÜRK",
+      "dogum_yili": "07",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "derece": "1:06.24",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 3,
+      "giris_derecesi": "5:03.74"
+    },
+    {
+      "sira": "3",
+      "sporcu": "Deniz Mert KOÇAK",
+      "dogum_yili": "09",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "derece": "1:07.85",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 4,
+      "giris_derecesi": "4:56.56"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 31.53 31.53 1S0m: Oo 148.76 40.80 2ö0m: o 308.23 4D.TZ 3ölm: O #254",
+      "kulup": "Bilinmiyor",
+      "derece": "35.27",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: o 108.15 36.63 dülm: OZER 38.81 alü0m: Oo AS0.15 41.86 Alim: #BBDÜ",
+      "kulup": "Bilinmiyor",
+      "derece": "32.58",
+      "puan": null
+    },
+    {
+      "sira": "4",
+      "sporcu": "Kerem AYAR",
+      "dogum_yili": "10",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "07.82",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 5,
+      "giris_derecesi": "5:00.13"
+    },
+    {
+      "sira": "5",
+      "sporcu": "Alp SAYGIN",
+      "dogum_yili": "10",
+      "kulup": "Feyziye Mektepleri Vakfı ışık Okulları Spor Kulübü",
+      "derece": "08.27",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 6,
+      "giris_derecesi": "5:06.09"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 30.87 30.87 1S0m: o 147.28 39.28 250m: O B08.B4 42.49 3ölm: O #27.",
+      "kulup": "Bilinmiyor",
+      "derece": "34.20",
+      "puan": null
+    },
+    {
+      "sira": "7",
+      "sporcu": "Abdullah SÜZEN",
+      "dogum_yili": "09",
+      "kulup": "Ferdi",
+      "derece": "1:12.88",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 2,
+      "giris_derecesi": "5:10.08"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 31.87 3187 1S0m: Oo 151.88 4410 2ö)m: O BATİ 43.72 3ölm: Oo #BRGB",
+      "kulup": "Bilinmiyor",
+      "derece": "37.78",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "ilüm: oo TD7.BE 36.21 Zülm: Oo 233.39 dt a00m: o 401.18 44.08 Alim: o GİT",
+      "kulup": "Bilinmiyor",
+      "derece": "35.08",
+      "puan": null
+    },
+    {
+      "sira": "8",
+      "sporcu": "Mehmet Sarp ARAZ",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "derece": "1:12.82",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 1,
+      "giris_derecesi": "5:14.81"
+    },
+    {
+      "sira": null,
+      "sporcu": "üm: 31.81 31.81 1S0m: oo 147.75 39.98 2ö)m: o 313.34 48.16 3ölm: O 4BB.7",
+      "kulup": "Bilinmiyor",
+      "derece": "37.88",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "iMüm O 10777 35.08 Zülm: Oo 225.18 37.43 a0)m: 9 401.23 47.05 Alim: o BİŞİ",
+      "kulup": "Bilinmiyor",
+      "derece": "35.14",
+      "puan": null
+    },
+    {
+      "sira": "9",
+      "sporcu": "Can BİRİNCİ",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:13.23",
+      "puan": null,
+      "seri": "Seri 1 of 3",
+      "kulvar": 7,
+      "giris_derecesi": "5:10.74"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 3147 3147 1S0m: o 154.33 42.72 2ö)m: o 311981 44.46 3öbm: o 441.87",
+      "kulup": "Bilinmiyor",
+      "derece": "36.05",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: O 11181 40.14 Zülm: Oo 23545 4112 al0m: — #D5.OZ 45.11 Alm: Oo G1B.25",
+      "kulup": "Bilinmiyor",
+      "derece": "36.28",
+      "puan": null
+    },
+    {
+      "sira": "10",
+      "sporcu": "Ali Cihan AYDIN",
+      "dogum_yili": "10",
+      "kulup": "Feyziye Mektepleri Vakfı ışık Okulları Spor Kulübü",
+      "derece": "13.57",
+      "puan": null,
+      "seri": "Seri 2 of 3",
+      "kulvar": 4,
+      "giris_derecesi": "5:17.55"
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: Oo 108.59 36.52 Zülm: Oo 22708 49.83 al0m: #06 49.50 Alim: Oo 61008",
+      "kulup": "Bilinmiyor",
+      "derece": "35.68",
+      "puan": null
+    },
+    {
+      "sira": "11",
+      "sporcu": "Ömer Kıvanç ÖZER",
+      "dogum_yili": "09",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:11.75",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 2,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: Oo 10852 36.85 Zülm: Oo 233.50 41.83 al0m: o 41275 47.85 Alm: o 624.50",
+      "kulup": "Bilinmiyor",
+      "derece": "33.10",
+      "puan": null
+    },
+    {
+      "sira": "12",
+      "sporcu": "Halil ŞEN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:11.28",
+      "puan": null,
+      "seri": "Seri 2 of 3",
+      "kulvar": 6,
+      "giris_derecesi": "5:29.50"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 34.85 3495 1S0m: OoOZ00.28 42.90 250m: Oo BEBİZ2 44.37 3öbm: o 44MES",
+      "kulup": "Bilinmiyor",
+      "derece": "35.68",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: o 117.23 42.34 Zülm: Oo 243.75 4347 a00m: #47 46.05 Alm: o B254S",
+      "kulup": "Bilinmiyor",
+      "derece": "35.60",
+      "puan": null
+    },
+    {
+      "sira": "13",
+      "sporcu": "Arda KAZANCI",
+      "dogum_yili": "11",
+      "kulup": "Feyziye Mektepleri Vakfı ışık Okulları Spor Kulübü",
+      "derece": "1:11.38",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 8,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "üm: 31.75 3178 1S0m: oo 15641 43.38 250m: Oo 3252 47.M 3öbm: o #5135",
+      "kulup": "Bilinmiyor",
+      "derece": "35.54",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "ilüm: O İZÜ3 40.27 Zülm: Ooo 238 42.60 aü)m: — #HBBİ 49.E3 Alim: o GZ7.19",
+      "kulup": "Bilinmiyor",
+      "derece": "35.84",
+      "puan": null
+    },
+    {
+      "sira": "14",
+      "sporcu": "Faruk BADAY",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "derece": "1:15.86",
+      "puan": null,
+      "seri": "Seri 2 of 3",
+      "kulvar": 2,
+      "giris_derecesi": "5:30.84"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 32.84 32.64 1S0m: Ooo 154.80 43.39 2ö)m: Oo BPB1Z BÜ.E7 aölm: o ABRİB",
+      "kulup": "Bilinmiyor",
+      "derece": "38.52",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: O İM1.2İ 38.57 Zülm: Oo 23645 40.85 a00m: o 414.66 4B.BA Alım: Oo GRDGE",
+      "kulup": "Bilinmiyor",
+      "derece": "37.34",
+      "puan": null
+    },
+    {
+      "sira": "15",
+      "sporcu": "Batu KURŞUN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:08.91",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 3,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 32.88 3268 1S0m: o 15543 43.78 250m: oOBEB.ET 52.43 3ölm: O ABBAS",
+      "kulup": "Bilinmiyor",
+      "derece": "35.78",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: o 111.85 38.97 Zülm: oo 236.14 40.71 a00m: o #Pİ.16 52.53 Alm: o GRİL",
+      "kulup": "Bilinmiyor",
+      "derece": "34.12",
+      "puan": null
+    },
+    {
+      "sira": "16",
+      "sporcu": "Poyraz BAŞ",
+      "dogum_yili": "13",
+      "kulup": "Ferdi",
+      "derece": "15.72",
+      "puan": null,
+      "seri": "Seri 2 of 3",
+      "kulvar": 7,
+      "giris_derecesi": "5:39.54"
+    },
+    {
+      "sira": null,
+      "sporcu": "Güm: 34.26 34.28 1S0m: Oo 200.80 44.75 2ö)m: O B:33Gİ 49.00 aöbm: o GÜZİZ",
+      "kulup": "Bilinmiyor",
+      "derece": "37.82",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: o 1105 4178 Zülm: O ZA4.Rİ 4371 alm: #:ZARİ 51.00 Alim: o 5423",
+      "kulup": "Bilinmiyor",
+      "derece": "38.10",
+      "puan": null
+    },
+    {
+      "sira": "17",
+      "sporcu": "Cemal Sami ŞENYUVA",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "1:21.28",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 1,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: o 121.82 45.13 Zülm: Oo 251.88 43.50 aü)m: 94:3644 51.46 Alım: o GETZ",
+      "kulup": "Bilinmiyor",
+      "derece": "40.11",
+      "puan": null
+    },
+    {
+      "sira": "18",
+      "sporcu": "Mehmetemin ŞAHİNKAYA",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "derece": "1:21.76",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 5,
+      "giris_derecesi": "6:02.82"
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: Oo 1123.95 47.13 Zülm: Oo 256.85 44.55 aö0)m: Sti 54.33 Allm: o &Ü277",
+      "kulup": "Bilinmiyor",
+      "derece": "41.28",
+      "puan": null
+    },
+    {
+      "sira": "19",
+      "sporcu": "Emir Taha KOCABAL",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Büyükşehir Belediyesi Spor Kulübü",
+      "derece": "1:21.35",
+      "puan": null,
+      "seri": "Seri 3 of 3",
+      "kulvar": 4,
+      "giris_derecesi": "5:59.31"
+    },
+    {
+      "sira": null,
+      "sporcu": "idüm: o 12210 45.8 Zülm: Oo 251.06 43.98 a0)m: o A45.EB 57.82 Alim: o GÜL",
+      "kulup": "Bilinmiyor",
+      "derece": "40.38",
+      "puan": null
+    }
+  ],
+  "dosya_adi": "canli/ResultList_32.pdf"
+}

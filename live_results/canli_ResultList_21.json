@@ -1,0 +1,237 @@
+{
+  "tur": "sonuc_listesi",
+  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "sehir": "İSTANBUL",
+  "tarih": "2026-04-25",
+  "yaris_no": "21",
+  "cinsiyet": "Kadın",
+  "mesafe": 800,
+  "stil": "Serbest",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "sira": null,
+      "sporcu": "100m: 107.39 1:07.39 d0bm: 23142 111.64 S00m: B5bd4z2 1:11.986 70dm: 8",
+      "kulup": "Bilinmiyor",
+      "derece": "19.57",
+      "puan": "11232"
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:19.7/8 1712.39 düm: 443465 Tizd4 ödüm: /:07/.25 1:11.83 8&00m: 30.34",
+      "kulup": "Bilinmiyor",
+      "derece": "10.77",
+      "puan": null
+    },
+    {
+      "sira": "2",
+      "sporcu": "Defne Sinem EKEN",
+      "dogum_yili": "12",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "35.14",
+      "puan": "598",
+      "seri": "Seri 3 of 4",
+      "kulvar": 1,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2220.80 TEZİ düm: 446.268 11286 gO0m:  7:11.86 112.56 80mm: 35.14 1",
+      "kulup": "Bilinmiyor",
+      "derece": "10.30",
+      "puan": null
+    },
+    {
+      "sira": "3",
+      "sporcu": "Ayşe Nur KUZGUN",
+      "dogum_yili": "13",
+      "kulup": "Galatasaray Spor Kulübü",
+      "derece": "57.20",
+      "puan": "534",
+      "seri": "Seri 2 of 4",
+      "kulvar": 3,
+      "giris_derecesi": "10:10.33"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1:11.68 1:11.68 g00m: 2:45.71 1:16.87 S00m: &18.57 1:15.24 70Odm: 46.62",
+      "kulup": "Bilinmiyor",
+      "derece": "1:15.51",
+      "puan": null
+    },
+    {
+      "sira": "4",
+      "sporcu": "Neris Ayşe ÖZÇETİN",
+      "dogum_yili": "12",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "9:58.20",
+      "puan": "532",
+      "seri": "Seri 1 of 4",
+      "kulvar": 6,
+      "giris_derecesi": "9:56.69"
+    },
+    {
+      "sira": null,
+      "sporcu": "İ00m: 1D8.B3 1:08.B9 dg00m: 239.75 11DEZ? S00m: &1322 1:16.88 Jülm: &4BOB 1",
+      "kulup": "Bilinmiyor",
+      "derece": "16.24",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "İ00m: 1208.53 1:08.53 g0bm: 2:43.86 Tir.04 S00m: E1B2E2 İZ Jüdm: B&53d4 1",
+      "kulup": "Bilinmiyor",
+      "derece": "17.53",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:26.92 1:17.39 dübm: 00.85 1:16.89 gOlm:  7:45.91 1:17.69 &0üm: 1007.99 1",
+      "kulup": "Bilinmiyor",
+      "derece": "14.55",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:30.32 118.20 dübm: 06.935 1:18.23 bOdm: Zdm22 117.69 800m:",
+      "kulup": "Bilinmiyor",
+      "derece": "10:13.36",
+      "puan": "11265"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1:11.81 1:11.91 g0bm: 3:45.84 Ti7.12 S00m: EZEZB 1:18.28 700m: #0410 1",
+      "kulup": "Bilinmiyor",
+      "derece": "21.33",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 228.72 1116.81 düm: ©0400 118.186 bOdm: Zidajf 2049 &0üm: 1020.69",
+      "kulup": "Bilinmiyor",
+      "derece": "1:16.59",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "l00m: 1m12.a5 112.35 g00m: 251.12 12067 S00m:  &Z340 1:1840 70lm: 0/95",
+      "kulup": "Bilinmiyor",
+      "derece": "1:18.80",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2130.48 1:17.76 düm: 10.30 12004 BO0m: /:50.47 11892 800m: İWZSOY 1",
+      "kulup": "Bilinmiyor",
+      "derece": "14.74",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1712.59 11258 d0bm: 251.38 11844 S00m: &Z20.77 120.19 7ülm: #0308",
+      "kulup": "Bilinmiyor",
+      "derece": "1:18.98",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:31.94 1:19.35 dübm: 10.58 118.20 gOlm: /:50.10 1:18.33 &00m: 1023.53",
+      "kulup": "Bilinmiyor",
+      "derece": "1:14.45",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "20mm: Z2:33.20 11947 düöbm: 13.79 12065 BO0m:  /:50.54 1:18.58 8&0üm: 1026.93",
+      "kulup": "Bilinmiyor",
+      "derece": "1:18.50",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "İ00m: 1116.55 116.55 d0bm: 01.84 2264 S00m: 64/45 12295 JÜlm: WZ2B6Y 1",
+      "kulup": "Bilinmiyor",
+      "derece": "20.61",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:39.00 12245 düm: W245I 2287 blm: EDB0S 120.60 80mm: 1045.16",
+      "kulup": "Bilinmiyor",
+      "derece": "1:16.49",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "1d. Sevim Asya BAYRAM 11 Enka Spor Kulübü",
+      "kulup": "Bilinmiyor",
+      "derece": "10:48.38",
+      "puan": "417"
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:34.30 120.78 düm: 20.50 123.25 blm: &'0B.57 12285 80üm:",
+      "kulup": "Bilinmiyor",
+      "derece": "10:48.38",
+      "puan": "11802"
+    },
+    {
+      "sira": "15",
+      "sporcu": "Defne SATIR",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "10:49.19",
+      "puan": "416",
+      "seri": "Seri 3 of 4",
+      "kulvar": 7,
+      "giris_derecesi": "10:57.99"
+    },
+    {
+      "sira": null,
+      "sporcu": "100m: 1117.48 117.48 dg0bm: #0295 122.55 S00m: &B0.7/6 123.69 7Ülm: ©2930 1:1",
+      "kulup": "Bilinmiyor",
+      "derece": "98.06",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "e0bm: 240.42 12293 düm: 27.07 124.12 bO0m:  E10.24 1:1848 &0üm: 10:49.19",
+      "kulup": "Bilinmiyor",
+      "derece": "1:19.89",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "l00m: 1114.87 14.8 g0bm: 5802 121.87 S00m: &dd05 126.13 7Ülm: 930.69",
+      "kulup": "Bilinmiyor",
+      "derece": "1:22.78",
+      "puan": null
+    },
+    {
+      "sira": null,
+      "sporcu": "200m: 2:34.15 1:19.28 dübm: 518.92 12290 bOüm: &:07.91 123.86 8&00m: 10",
+      "kulup": "Bilinmiyor",
+      "derece": "51.13",
+      "puan": "2044"
+    },
+    {
+      "sira": "17",
+      "sporcu": "Eylül KOÇAK",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "derece": "11:39.94",
+      "puan": "332",
+      "seri": "Seri 2 of 4",
+      "kulvar": 4,
+      "giris_derecesi": "NT"
+    },
+    {
+      "sira": null,
+      "sporcu": "İ00m: 1118.38 1:18.38 d0bm: #1242 127.6 S00m: Zl0d0 128.96 TÜm: 101208",
+      "kulup": "Bilinmiyor",
+      "derece": "1:33.79",
+      "puan": null
+    }
+  ],
+  "dosya_adi": "canli/ResultList_21.pdf"
+}
