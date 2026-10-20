@@ -1,0 +1,1054 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "13+ YAS UZUN KULVAR BARAJ GECME MUSABAKALARI",
+  "sehir": "İSTANBUL",
+  "tarih": "2026-04-25",
+  "yaris_no": "18",
+  "cinsiyet": "Erkek",
+  "mesafe": 50,
+  "stil": "Sırtüstü",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 1,
+      "sporcu": "Serhat GÖLGE",
+      "dogum_yili": "11",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "29.07"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 2,
+      "sporcu": "Bora Mehmet ÇELİKDEMİR",
+      "dogum_yili": "11",
+      "kulup": "Dragos Spor Kulübü",
+      "giris_derecesi": "28.90"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 3,
+      "sporcu": "Uygar KAHRAMAN",
+      "dogum_yili": "09",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "28.32"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 4,
+      "sporcu": "Berke BURAN",
+      "dogum_yili": "03",
+      "kulup": "Ferdi",
+      "giris_derecesi": "26.34"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 5,
+      "sporcu": "Toprak DURSUN",
+      "dogum_yili": "08",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "27.62"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 6,
+      "sporcu": "Onur ŞENTÜRK",
+      "dogum_yili": "07",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "28.45"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 7,
+      "sporcu": "Enes UZUN",
+      "dogum_yili": "10",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "29.06"
+    },
+    {
+      "seri": "Seri 1 of 17",
+      "kulvar": 8,
+      "sporcu": "Uras Ozan TÜRKYILMAZ",
+      "dogum_yili": "11",
+      "kulup": "Ferdi",
+      "giris_derecesi": "29.55"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 1,
+      "sporcu": "Ali Eren BAŞER",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "30.71"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 2,
+      "sporcu": "Berke ŞADOĞLU",
+      "dogum_yili": "08",
+      "kulup": "Istanbul Yüzme Teknolojileri Spor Kulübü",
+      "giris_derecesi": "30.30"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 3,
+      "sporcu": "Can ÖZKAN",
+      "dogum_yili": "12",
+      "kulup": "Feyziye Mektepleri Vakfı ışık Okulları Spor Kulübü",
+      "giris_derecesi": "30.10"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 4,
+      "sporcu": "Aziz IŞIK",
+      "dogum_yili": "09",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "29.61"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 5,
+      "sporcu": "Ali Demir ERUSTA",
+      "dogum_yili": "10",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "29.65"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 6,
+      "sporcu": "Izzet Eren ADA",
+      "dogum_yili": "10",
+      "kulup": "Dragos Spor Kulübü",
+      "giris_derecesi": "30.24"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 7,
+      "sporcu": "Mete ŞAMLI",
+      "dogum_yili": "09",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "30.45"
+    },
+    {
+      "seri": "Seri 2 of 17",
+      "kulvar": 8,
+      "sporcu": "Demir AYRIKAYA",
+      "dogum_yili": "08",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "30.98"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 1,
+      "sporcu": "Amir ALİMARDAN",
+      "dogum_yili": "10",
+      "kulup": "Ferdi",
+      "giris_derecesi": "31.53"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 2,
+      "sporcu": "Ali Ulaş AKKOYUN",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "31.47"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 3,
+      "sporcu": "Eymen ATAŞ",
+      "dogum_yili": "11",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "31.23"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 4,
+      "sporcu": "Onur SONKAYA",
+      "dogum_yili": "10",
+      "kulup": "Atlas Atletik Spor Kulübü",
+      "giris_derecesi": "30.99"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 5,
+      "sporcu": "Cemal Efe TEKİN",
+      "dogum_yili": "11",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "31.01"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 6,
+      "sporcu": "Yağız Deniz YEŞİL",
+      "dogum_yili": "11",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "31.47"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 7,
+      "sporcu": "Baran BÜYÜKÖZKAN",
+      "dogum_yili": "09",
+      "kulup": "Dinamik Nesiller Akademisi Spor Kulübü",
+      "giris_derecesi": "31.51"
+    },
+    {
+      "seri": "Seri 3 of 17",
+      "kulvar": 8,
+      "sporcu": "Poyraz TİRYAKİ",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "31.63"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 1,
+      "sporcu": "Kıvanç TAŞÇI",
+      "dogum_yili": "10",
+      "kulup": "Istanbul Büyükşehir Belediyesi Spor Kulübü",
+      "giris_derecesi": "32.43"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 2,
+      "sporcu": "Kuzey TAŞTİMUR",
+      "dogum_yili": "10",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "32.27"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 3,
+      "sporcu": "Bertuğ BOZKURT",
+      "dogum_yili": "11",
+      "kulup": "Kasırga Tornado Yüzme Spor Kulübü",
+      "giris_derecesi": "32.06"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 4,
+      "sporcu": "Yaşar Utku EDİZASLAN",
+      "dogum_yili": "09",
+      "kulup": "Dragos Spor Kulübü",
+      "giris_derecesi": "31.69"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 5,
+      "sporcu": "Ali Bera YENTÜRK",
+      "dogum_yili": "10",
+      "kulup": "Bahçelievler Belediye Spor Kulübü",
+      "giris_derecesi": "32.02"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 6,
+      "sporcu": "Demir GENÇATA",
+      "dogum_yili": "09",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "32.19"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 7,
+      "sporcu": "Orhan Ege GÖGEN",
+      "dogum_yili": "09",
+      "kulup": "Dragos Spor Kulübü",
+      "giris_derecesi": "32.36"
+    },
+    {
+      "seri": "Seri 4 of 17",
+      "kulvar": 8,
+      "sporcu": "Çınar UÇAR",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "giris_derecesi": "32.43"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 1,
+      "sporcu": "Efe ÇAKAR",
+      "dogum_yili": "13",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "33.34"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 2,
+      "sporcu": "Kaan BEBEK",
+      "dogum_yili": "12",
+      "kulup": "Dinamik Nesiller Akademisi Spor Kulübü",
+      "giris_derecesi": "33.22"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 3,
+      "sporcu": "Bora CEDİMAĞAR",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "32.66"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 4,
+      "sporcu": "Ediz ÖZGÜR",
+      "dogum_yili": "12",
+      "kulup": "Avrupa Yüzme Ihtisas Spor Kulübü",
+      "giris_derecesi": "32.45"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 5,
+      "sporcu": "Berat Ege BALCI",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Büyükşehir Belediyesi Spor Kulübü",
+      "giris_derecesi": "32.65"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 6,
+      "sporcu": "Andrıı KOSORUKOV",
+      "dogum_yili": "09",
+      "kulup": "Istanbul Gençlik Spor Kulübü",
+      "giris_derecesi": "32.97"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 7,
+      "sporcu": "Berk YARGIÇ",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "33.27"
+    },
+    {
+      "seri": "Seri 5 of 17",
+      "kulvar": 8,
+      "sporcu": "Cemil BİLGİN",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "33.46"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 1,
+      "sporcu": "Kayra KAYRAL",
+      "dogum_yili": "13",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "34.43"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 2,
+      "sporcu": "Batu ÖZTEKİN",
+      "dogum_yili": "12",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "34.24"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 3,
+      "sporcu": "Eymen Batu ÖZCAN",
+      "dogum_yili": "11",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "33.71"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 4,
+      "sporcu": "Yaman YILMAZ",
+      "dogum_yili": "12",
+      "kulup": "Adalar Su Sporları Spor Kulübü",
+      "giris_derecesi": "33.50"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 5,
+      "sporcu": "Emir Tahir SALAR",
+      "dogum_yili": "11",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "33.64"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 6,
+      "sporcu": "Ömer Inanç EKŞİ",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "34.04"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 7,
+      "sporcu": "Yusuf Can HAYDAROĞLU",
+      "dogum_yili": "12",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "giris_derecesi": "34.29"
+    },
+    {
+      "seri": "Seri 6 of 17",
+      "kulvar": 8,
+      "sporcu": "Deniz DURNA",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "34.65"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 1,
+      "sporcu": "Fikret UZUNER",
+      "dogum_yili": "13",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "34.91"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 2,
+      "sporcu": "Ömer Burak YALÇIN",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "giris_derecesi": "34.81"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 3,
+      "sporcu": "Yiğit Hüseyin OTAY",
+      "dogum_yili": "13",
+      "kulup": "Bağcılar Belediyesi Spor Kulübü",
+      "giris_derecesi": "34.75"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 4,
+      "sporcu": "Emre Şan AYDOĞAN",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Itü Geliştirme Vakfı Okulları Spor Kulübü",
+      "giris_derecesi": "34.66"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 5,
+      "sporcu": "Yekta Talha HİNDİOĞLU",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "34.68"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 6,
+      "sporcu": "Mustafa Yunus ATASOY",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "giris_derecesi": "34.80"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 7,
+      "sporcu": "Kaan TOROS",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "34.88"
+    },
+    {
+      "seri": "Seri 7 of 17",
+      "kulvar": 8,
+      "sporcu": "Emre SARIKAYA",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "giris_derecesi": "34.92"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 1,
+      "sporcu": "Mehmet Rüzgar ÇİVİCİ",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Itü Geliştirme Vakfı Okulları Spor Kulübü",
+      "giris_derecesi": "35.78"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 2,
+      "sporcu": "Aras ÖZTÜRK",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "35.47"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 3,
+      "sporcu": "Poyraz DEMİR",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "35.11"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 4,
+      "sporcu": "Yunus Emre HAYDAROĞLU",
+      "dogum_yili": "12",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "giris_derecesi": "34.95"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 5,
+      "sporcu": "Melih KURTULUŞ",
+      "dogum_yili": "09",
+      "kulup": "Bahçelievler Belediye Spor Kulübü",
+      "giris_derecesi": "35.05"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 6,
+      "sporcu": "Burak Demir SARIKAŞ",
+      "dogum_yili": "13",
+      "kulup": "Bahçeşehir Kültür Yüzme Kulübü",
+      "giris_derecesi": "35.35"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 7,
+      "sporcu": "Sarp AYSU",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "35.63"
+    },
+    {
+      "seri": "Seri 8 of 17",
+      "kulvar": 8,
+      "sporcu": "Can MUTLULU",
+      "dogum_yili": "13",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "giris_derecesi": "35.84"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 1,
+      "sporcu": "Toprak UYSAL",
+      "dogum_yili": "12",
+      "kulup": "Dragos Spor Kulübü",
+      "giris_derecesi": "36.05"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 2,
+      "sporcu": "Mustafa Ege YAMALI",
+      "dogum_yili": "13",
+      "kulup": "Ck Spor Kulübü",
+      "giris_derecesi": "35.95"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 3,
+      "sporcu": "Atlas Cem BAYRAM",
+      "dogum_yili": "13",
+      "kulup": "Feyziye Mektepleri Vakfı ışık Okulları Spor Kulübü",
+      "giris_derecesi": "35.88"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 4,
+      "sporcu": "Eren KOL",
+      "dogum_yili": "12",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "35.86"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 5,
+      "sporcu": "Doğukan KARADENİZ",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "35.87"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 6,
+      "sporcu": "Önder Iz EROL",
+      "dogum_yili": "13",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "35.93"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 7,
+      "sporcu": "Can KIRHAN",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "36.02"
+    },
+    {
+      "seri": "Seri 9 of 17",
+      "kulvar": 8,
+      "sporcu": "Salih Yağız EYİ",
+      "dogum_yili": "12",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "36.09"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 1,
+      "sporcu": "Ömer Efe ÇAVDAR",
+      "dogum_yili": "11",
+      "kulup": "Istanbul Yıldızlar Yüzme Spor Kulübü",
+      "giris_derecesi": "36.37"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 2,
+      "sporcu": "Kerem AYNİGÜL",
+      "dogum_yili": "11",
+      "kulup": "Istanbul Ata Sporları Ve Yüzme Spor Kulübü",
+      "giris_derecesi": "36.29"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 3,
+      "sporcu": "Berke ÇELEBİ",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "36.22"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 4,
+      "sporcu": "Emir Kazım KARSU",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "36.20"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 5,
+      "sporcu": "Demir DUR",
+      "dogum_yili": "13",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "36.22"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 6,
+      "sporcu": "Umut Cihan GÜNYOL",
+      "dogum_yili": "13",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "36.27"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 7,
+      "sporcu": "Özgür Deniz ÖZBAYHAN",
+      "dogum_yili": "13",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "36.29"
+    },
+    {
+      "seri": "Seri 10 of 17",
+      "kulvar": 8,
+      "sporcu": "Erdem YÜCEL",
+      "dogum_yili": "13",
+      "kulup": "Pruva Yüzme Spor Kulübü",
+      "giris_derecesi": "36.54"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 1,
+      "sporcu": "Aras AYDINLIK",
+      "dogum_yili": "13",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "37.14"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 2,
+      "sporcu": "Robin KISA",
+      "dogum_yili": "12",
+      "kulup": "Kınalıada Su Sporları Spor Kulübü",
+      "giris_derecesi": "36.94"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 3,
+      "sporcu": "Emir Taha KOCABAL",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Büyükşehir Belediyesi Spor Kulübü",
+      "giris_derecesi": "36.77"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 4,
+      "sporcu": "Kemal Rüzgar TİRYAKİ",
+      "dogum_yili": "13",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "36.63"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 5,
+      "sporcu": "Berk Deniz INAN",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "36.70"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 6,
+      "sporcu": "Tuna TUNÇ",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "36.87"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 7,
+      "sporcu": "Demir BAYDAR",
+      "dogum_yili": "12",
+      "kulup": "Galatasaray Spor Kulübü",
+      "giris_derecesi": "36.95"
+    },
+    {
+      "seri": "Seri 11 of 17",
+      "kulvar": 8,
+      "sporcu": "Umut Ali KARTAL",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "37.15"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 1,
+      "sporcu": "Hulusi Doruk BAŞOĞLU",
+      "dogum_yili": "13",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "38.25"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 2,
+      "sporcu": "Eymen Efe YILDIRIM",
+      "dogum_yili": "10",
+      "kulup": "Ck Spor Kulübü",
+      "giris_derecesi": "37.83"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 3,
+      "sporcu": "Ahmet Kural TORLAK",
+      "dogum_yili": "12",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "giris_derecesi": "37.60"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 4,
+      "sporcu": "Sercan PEHLİVAN",
+      "dogum_yili": "11",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "37.45"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 5,
+      "sporcu": "Cemal Sami ŞENYUVA",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "37.54"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 6,
+      "sporcu": "Arhan BEG",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "37.63"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 7,
+      "sporcu": "Kaan AKTAN",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "giris_derecesi": "38.05"
+    },
+    {
+      "seri": "Seri 12 of 17",
+      "kulvar": 8,
+      "sporcu": "Sarp Doğan YILDIZ",
+      "dogum_yili": "13",
+      "kulup": "Ck Spor Kulübü",
+      "giris_derecesi": "38.35"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 1,
+      "sporcu": "Maksut Enes ÇAKIR",
+      "dogum_yili": "11",
+      "kulup": "Bahçelievler Belediye Spor Kulübü",
+      "giris_derecesi": "39.13"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 2,
+      "sporcu": "Attila CIBIROĞLU",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "giris_derecesi": "38.75"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 3,
+      "sporcu": "Sadık Hasan ALBAYRAK",
+      "dogum_yili": "11",
+      "kulup": "Istanbul Yıldızlar Yüzme Spor Kulübü",
+      "giris_derecesi": "38.58"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 4,
+      "sporcu": "Can ÇETİNER",
+      "dogum_yili": "12",
+      "kulup": "Fenerbahçe Spor Kulübü",
+      "giris_derecesi": "38.43"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 5,
+      "sporcu": "Pars GÜNSEVER",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Gençlik Spor Kulübü",
+      "giris_derecesi": "38.55"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 6,
+      "sporcu": "Ege SAK",
+      "dogum_yili": "13",
+      "kulup": "Üsküdar Belediyesi Spor Kulübü",
+      "giris_derecesi": "38.72"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 7,
+      "sporcu": "Talha Yağız ÇIRAK",
+      "dogum_yili": "13",
+      "kulup": "Bağcılar Belediyesi Spor Kulübü",
+      "giris_derecesi": "38.94"
+    },
+    {
+      "seri": "Seri 13 of 17",
+      "kulvar": 8,
+      "sporcu": "Kerem TÜZÜNTÜRK",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Performans Yüzme Spor Kulübü",
+      "giris_derecesi": "39.13"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 1,
+      "sporcu": "Mert KULECİ",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Teknik Üniversitesi Spor Kulübü",
+      "giris_derecesi": "39.88"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 2,
+      "sporcu": "Ayaz FİDECİ",
+      "dogum_yili": "11",
+      "kulup": "Bağcılar Belediyesi Spor Kulübü",
+      "giris_derecesi": "39.58"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 3,
+      "sporcu": "Mete ÖZGENÇ",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Su Sporları Spor Kulübü",
+      "giris_derecesi": "39.31"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 4,
+      "sporcu": "Sarp Ege YÜKSEL",
+      "dogum_yili": "13",
+      "kulup": "Atakent Yüzme Spor Kulübü",
+      "giris_derecesi": "39.21"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 5,
+      "sporcu": "Muhammet Eren ASLAN",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Efor Spor Kulübü",
+      "giris_derecesi": "39.24"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 6,
+      "sporcu": "Uras ZAİM",
+      "dogum_yili": "13",
+      "kulup": "Atakent Yüzme Spor Kulübü",
+      "giris_derecesi": "39.53"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 7,
+      "sporcu": "Mustafa Ege KARAKAN",
+      "dogum_yili": "13",
+      "kulup": "Heybeliada Su Sporları Spor Kulübü",
+      "giris_derecesi": "39.71"
+    },
+    {
+      "seri": "Seri 14 of 17",
+      "kulvar": 8,
+      "sporcu": "Yiğit Ali EDE",
+      "dogum_yili": "13",
+      "kulup": "Burak Sezgin Yüzme Spor Kulübü",
+      "giris_derecesi": "40.21"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 1,
+      "sporcu": "Ali ÜNAL",
+      "dogum_yili": "11",
+      "kulup": "Avrupa Yüzme Ihtisas Spor Kulübü",
+      "giris_derecesi": "43.31"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 2,
+      "sporcu": "Ata Yalçın ŞATIROĞLU",
+      "dogum_yili": "13",
+      "kulup": "Feyziye Mektepleri Vakfı ışık Okulları Spor Kulübü",
+      "giris_derecesi": "41.98"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 3,
+      "sporcu": "Necmettin Ozan GÜZEL",
+      "dogum_yili": "13",
+      "kulup": "Anabilim Spor Kulübü",
+      "giris_derecesi": "41.70"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 4,
+      "sporcu": "Cihangir Ali GÜLAP",
+      "dogum_yili": "13",
+      "kulup": "Dragos Spor Kulübü",
+      "giris_derecesi": "40.23"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 5,
+      "sporcu": "Ediz TÜMER",
+      "dogum_yili": "13",
+      "kulup": "Sevinç Koleji Spor Kulübü",
+      "giris_derecesi": "41.62"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 6,
+      "sporcu": "Mert PEKÇAĞLAYAN",
+      "dogum_yili": "13",
+      "kulup": "Enka Spor Kulübü",
+      "giris_derecesi": "41.75"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 7,
+      "sporcu": "Ahmet Safa KARACAN",
+      "dogum_yili": "13",
+      "kulup": "Istanbul Efor Spor Kulübü",
+      "giris_derecesi": "42.63"
+    },
+    {
+      "seri": "Seri 15 of 17",
+      "kulvar": 8,
+      "sporcu": "Arın ALTILAR",
+      "dogum_yili": "13",
+      "kulup": "Ferdi",
+      "giris_derecesi": "43.99"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 1,
+      "sporcu": "Uras Aziz AKDENİZ",
+      "dogum_yili": "13",
+      "kulup": "Sevinç Koleji Spor Kulübü",
+      "giris_derecesi": "47.77"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 2,
+      "sporcu": "Mustafa Aydın MUTLUER",
+      "dogum_yili": "13",
+      "kulup": "Ck Spor Kulübü",
+      "giris_derecesi": "46.37"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 3,
+      "sporcu": "Yağız Hüseyin KURT",
+      "dogum_yili": "13",
+      "kulup": "Ck Spor Kulübü",
+      "giris_derecesi": "45.62"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 4,
+      "sporcu": "Dara Sadık ÖZKAHRAMAN",
+      "dogum_yili": "11",
+      "kulup": "Bağcılar Belediyesi Spor Kulübü",
+      "giris_derecesi": "44.89"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 5,
+      "sporcu": "Akay SAKARYA",
+      "dogum_yili": "12",
+      "kulup": "Ck Spor Kulübü",
+      "giris_derecesi": "45.45"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 6,
+      "sporcu": "Güney YEŞİL",
+      "dogum_yili": "12",
+      "kulup": "Istanbul Yıldızlar Yüzme Spor Kulübü",
+      "giris_derecesi": "46.18"
+    },
+    {
+      "seri": "Seri 16 of 17",
+      "kulvar": 7,
+      "sporcu": "Ensar Yiğit YILMAZ",
+      "dogum_yili": "12",
+      "kulup": "Bağcılar Belediyesi Spor Kulübü",
+      "giris_derecesi": "46.93"
+    },
+    {
+      "seri": "Seri 17 of 17",
+      "kulvar": 3,
+      "sporcu": "Akif Talha YILMAZ",
+      "dogum_yili": "09",
+      "kulup": "Bahçelievler Belediye Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 17 of 17",
+      "kulvar": 4,
+      "sporcu": "Mehmet Kaan KARAKAYA",
+      "dogum_yili": "13",
+      "kulup": "Avrupa Yüzme Ihtisas Spor Kulübü",
+      "giris_derecesi": "51.62"
+    },
+    {
+      "seri": "Seri 17 of 17",
+      "kulvar": 5,
+      "sporcu": "Tunahan BOZKURT",
+      "dogum_yili": "13",
+      "kulup": "Ferdi",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_18.pdf"
+}
