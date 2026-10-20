@@ -31,6 +31,13 @@ def clean_ocr_swimming_line(line: str) -> str:
     line = re.sub(r"(\d{1,2}:\d{2}\.\d{2})\s*(?:[oOe<>/_~]+\s*)(\d{2,4}\b)", r"\1   \2", line)
     # 3. İsim ile 2 haneli doğum yılı arasındaki çizgi gürültüsü
     line = re.sub(r"([A-ZÇĞİÖŞÜa-zçğıöşü])\s+[|_—=~]+\s+(\d{2}\b)", r"\1   \2", line)
+    # 4. İki noktası olan ama noktası silinen dakikalı zaman: 1:4248 -> 1:42.48, 2:3144 -> 2:31.44
+    line = re.sub(r"\b(\d{1,2}):(\d{2})(\d{2})\b", r"\1:\2.\3", line)
+    # 5. İki noktası silinmiş 1 dakikalık zamanlar: 1553.11 -> 1:53.11, 1S57.70 -> 1:57.70
+    line = re.sub(r"\b1[5sS](\d{2}\.\d{2})\b", r"1:\1", line)
+    line = re.sub(r"\b1([1-5]\d\.\d{2})\b", r"1:\1", line)
+    # 6. Puan başındaki parantez lekeleri: (92 -> 92, (28 -> 28
+    line = re.sub(r"(?<=\d\s)[\(\[\{]+(\d{1,4})\b", r"\1", line)
     return line
 
 
