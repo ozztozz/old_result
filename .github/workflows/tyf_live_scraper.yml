@@ -31,6 +31,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
 
       - name: Tesseract OCR (Turkce Dil Paketi) Kurulumu
         run: |
@@ -40,7 +41,7 @@ jobs:
       - name: Python Bagimliliklarini Yukle
         run: |
           python -m pip install --upgrade pip
-          pip install PyMuPDF pytesseract Pillow
+          pip install -r requirements.txt
 
       - name: TYF Canli Takip Botunu Calistir
         env:
@@ -68,4 +69,4 @@ jobs:
           git config user.name "TYF Bot"
           git config user.email "bot@tyf.gov.tr"
           git add processed_files.json live_results/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto: Guncel yaris sonuclari ve hafiza [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto: Guncel yaris sonuclari ve hafiza [skip ci]" && git pull --rebase origin ${GITHUB_REF##*/} && git push origin ${GITHUB_REF##*/})
