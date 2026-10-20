@@ -508,20 +508,31 @@ def parse_scanned_pdf_ocr(doc, header: Dict[str, Any], start_entries: Optional[L
             content = m_rank.group(2).strip()
 
             # 4. Resmi Derece ve Puan tespiti:
-            # Önce OCR harf lekesi içeren veya standart derece + puan aranır
-            m_time = re.search(r'\b((?:[A-Za-z0-9]{1,2}:)?[A-Za-z0-9]{2,3}\.[A-Za-z0-9]{2})\s+(\d{2,4})\b', content)
-            if not m_time:
-                m_time = re.search(r'\b((?:\d{1,2}:)?\d{2,3}\.\d{2})\b', content)
-                time_val = m_time.group(1) if m_time else None
-                pts_val = None
-            else:
+            # Durum A: Standart dereceli (noktalı/iki noktalı) ve puanlı (aradaki leke/Oo temizlenmiş)
+            m_time = re.search(r'\b((?:[A-Za-z0-9]{1,2}:)?[A-Za-z0-9]{2,3}\.[A-Za-z0-9]{2,3})\s*(?:[oOe<>/_~]*\s*)(\d{1,4})\b', content)
+            time_val = None
+            pts_val = None
+
+            if m_time:
                 time_val = m_time.group(1)
                 pts_val = m_time.group(2)
-
-            if not time_val:
-                continue
-
-            prefix = content[:m_time.start()].strip()
+                prefix = content[:m_time.start()].strip()
+            else:
+                # Durum B: 50m sprint yarışlarında noktası OCR'da silinmiş 4 basamaklı zaman: '4242 119' -> '42.42 119'
+                m_4dig = re.search(r'\b(\d{2})(\d{2})\s*(?:[oOe<>/_~]*\s*)(\d{1,4})\b', content)
+                if m_4dig:
+                    time_val = f"{m_4dig.group(1)}.{m_4dig.group(2)}"
+                    pts_val = m_4dig.group(3)
+                    prefix = content[:m_4dig.start()].strip()
+                else:
+                    # Durum C: Puansız sadece zaman
+                    m_only_t = re.search(r'\b((?:\d{1,2}:)?\d{2,3}\.\d{2})\b', content)
+                    if m_only_t:
+                        time_val = m_only_t.group(1)
+                        pts_val = None
+                        prefix = content[:m_only_t.start()].strip()
+                    else:
+                        continue
 
             # 5. SADECE START LISTESİNDEKİ SPORCULARLA EŞLEŞENLERİ KABUL ET
             matched_name = match_ocr_line(prefix, candidates) if candidates else None
