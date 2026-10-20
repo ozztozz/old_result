@@ -356,10 +356,29 @@ def match_ocr_line(line_prefix: str, candidates: List[str]) -> Optional[str]:
     return None
 
 
+def fix_ocr_time(t_str: str, seed_time: Optional[str] = None) -> str:
+    """
+    OCR okumasında nokta öncesi eksik veya birleşik çıkan dakikayı düzeltir.
+    Örn: '402.52' -> '4:02.52'
+    """
+    if not t_str:
+        return t_str
+    # 1. '402.52' veya '538.41' gibi 3 basamak nokta öncesi varsa (dakika:saniye)
+    m = re.match(r'^(\d)(\d{2})\.(\d{2})$', t_str)
+    if m:
+        return f"{m.group(1)}:{m.group(2)}.{m.group(3)}"
+    # 2. Eğer dakika kısmı OCR'da kopmuşsa ve sadece '02.52' kalmışsa, giriş derecesinden dakikayı tamamla
+    if ':' not in t_str and seed_time and ':' in seed_time:
+        seed_min = seed_time.split(':')[0]
+        return f"{seed_min}:{t_str}"
+    return t_str
+
+
 def parse_scanned_pdf_ocr(doc, header: Dict[str, Any], start_entries: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     kayitlar = []
     candidates_map = {e['sporcu']: e for e in start_entries} if start_entries else {}
     candidates = list(candidates_map.keys())
+    seen_swimmers = set()
 
     for page_num, page in enumerate(doc):
         # 300 DPI yüksek çözünürlük ile render al
@@ -370,8 +389,13 @@ def parse_scanned_pdf_ocr(doc, header: Dict[str, Any], start_entries: Optional[L
 
         for line in ocr_text.splitlines():
             line = line.strip()
-            # Satır sonunda geçerli bir derece var mı? (örn: 28.32 veya 1:05.40 580)
-            m_time = re.search(r'((?:\d+:)?\d{2}\.\d{2})(?:\s+(\d+))?$', line)
+
+            # Ara derece (split time) satırlarını doğrudan atla (örn: 50m:, 100m:, tüm:, Güm: vb.)
+            if re.search(r'\b(?:\d{2,3}m|tüm|idüm|Güm|ilüm|isim)[:\s]', line, re.I):
+                continue
+
+            # Resmi Derece ve Puan aranır (örn: 4:02.52 747 veya 402.52 747 veya 27.61 630)
+            m_time = re.search(r'((?:\d+:)?\d{1,3}\.\d{2})(?:\s+(\d{2,4})\b)?', line)
             if not m_time:
                 continue
 
@@ -382,30 +406,24 @@ def parse_scanned_pdf_ocr(doc, header: Dict[str, Any], start_entries: Optional[L
             m_rank = re.match(r'^(\d+)[\.\s]+', prefix)
             rank_val = m_rank.group(1) if m_rank else None
 
+            # SADECE START LISTESİNDEKİ SPORCULARLA EŞLEŞENLERİ KABUL ET
             matched_name = match_ocr_line(prefix, candidates) if candidates else None
 
-            if matched_name:
+            if matched_name and matched_name not in seen_swimmers:
+                seen_swimmers.add(matched_name)
                 st = candidates_map[matched_name]
+                cleaned_time = fix_ocr_time(time_val, st.get("giris_derecesi"))
+
                 kayitlar.append({
                     "sira": rank_val,
                     "sporcu": matched_name,
                     "dogum_yili": st.get("dogum_yili"),
                     "kulup": st.get("kulup"),
-                    "derece": time_val,
+                    "derece": cleaned_time,
                     "puan": pts_val,
                     "seri": st.get("seri"),
                     "kulvar": st.get("kulvar"),
                     "giris_derecesi": st.get("giris_derecesi")
-                })
-            else:
-                # Eşleşmeyen durumlarda genel regex fallback
-                clean_pref = re.sub(r'^\d+[\.\s]+', '', prefix).strip()
-                kayitlar.append({
-                    "sira": rank_val,
-                    "sporcu": clean_pref,
-                    "kulup": "Bilinmiyor",
-                    "derece": time_val,
-                    "puan": pts_val
                 })
 
     return {
