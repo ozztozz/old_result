@@ -1,0 +1,135 @@
+{
+  "tur": "sonuc_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-11",
+  "yaris_no": "6",
+  "cinsiyet": "Erkek",
+  "mesafe": 50,
+  "stil": "Karışık",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "sira": "2",
+      "sporcu": "Başkent Çankaya Spor Kulübü",
+      "dogum_yili": "Başkent Çankaya Spor Kulübü",
+      "kulup": "NT",
+      "derece": "2:49.82",
+      "puan": null,
+      "seri": "Seri 2 of 2",
+      "kulvar": 7,
+      "giris_derecesi": "Kaan Batu CİHAN 16, Mehmet Hakan ÇETİN 16, Deniz DALKILIÇ 16, Cesur GENÇ 16"
+    },
+    {
+      "sira": "3",
+      "sporcu": "Yenimahalle Belediyesi Spor Kulübü",
+      "dogum_yili": "Yenimahalle Belediyesi Spor Kulübü",
+      "kulup": "2:54.32",
+      "derece": "2:51.04",
+      "puan": "164",
+      "seri": "Seri 1 of 2",
+      "kulvar": 3,
+      "giris_derecesi": "Ege ENGİN 16, Mustafa ERGÜN 16, Emre ŞAHİN 16, Yaman Taha YALÇIN 16"
+    },
+    {
+      "sira": "4",
+      "sporcu": "Orka Swim Team Spor Kulübü",
+      "dogum_yili": "Orka Swim Team Spor Kulübü",
+      "kulup": "2:53.59",
+      "derece": "2:51.65",
+      "puan": null,
+      "seri": "Seri 1 of 2",
+      "kulvar": 5,
+      "giris_derecesi": "Kaan Efe YILDIZ 16, Tuna SEVİCİ 16, Ibrahim OKUR 16, Cihangir BURAK 16"
+    },
+    {
+      "sira": "5",
+      "sporcu": "Aykon Spor Kulübü",
+      "dogum_yili": "Aykon Spor Kulübü",
+      "kulup": "2:57.60",
+      "derece": "2:52.53",
+      "puan": null,
+      "seri": "Seri 1 of 2",
+      "kulvar": 6,
+      "giris_derecesi": "Mustafa Ayaz POYRAZ 16, Denis KARAKAYALI 16, Mete TEKİN 16, Batuhan ŞAHİNÖZTÜRK 16"
+    },
+    {
+      "sira": "7",
+      "sporcu": "Kulvar Spor Kulübü",
+      "dogum_yili": "Kulvar Spor Kulübü",
+      "kulup": "3:00.38",
+      "derece": "2:55.97",
+      "puan": null,
+      "seri": "Seri 1 of 2",
+      "kulvar": 2,
+      "giris_derecesi": "Rüzgar Kartal ÖZDERE 16, Yusuf Çağlar ÜNAL 16, Ibrahim Efe ÇAKIRŞEN 16, Doruk KAYA 16"
+    },
+    {
+      "sira": "8",
+      "sporcu": "Beştepe Koleji Spor Kulübü",
+      "dogum_yili": "Beştepe Koleji Spor Kulübü",
+      "kulup": "3:09.05",
+      "derece": "3:01.74",
+      "puan": null,
+      "seri": "Seri 1 of 2",
+      "kulvar": 8,
+      "giris_derecesi": "Göktuğ TEKİN 16, Kantürk BAKTIR 16, Deniz ÇETİNTÜRK 16, Kadir Akın YAVUZARSLAN 16"
+    },
+    {
+      "sira": "9",
+      "sporcu": "Ted Ankara Kolejliler Spor Kulübü",
+      "dogum_yili": "Ted Ankara Kolejliler Spor Kulübü",
+      "kulup": "3:07.58",
+      "derece": "4:03.15",
+      "puan": null,
+      "seri": "Seri 1 of 2",
+      "kulvar": 1,
+      "giris_derecesi": "Doruk Alp AÇIK 16, Yusuf Eren MÜMÜŞOĞLU 16, Rüzgar KIDIŞ 16, Erdal Umut TEZCAN 16"
+    },
+    {
+      "sira": "10",
+      "sporcu": "Ankara Yüzme Kulübü Spor Kulübü",
+      "dogum_yili": "Ankara Yüzme Kulübü Spor Kulübü",
+      "kulup": "3:09.50",
+      "derece": "3:03.64",
+      "puan": "132",
+      "seri": "Seri 2 of 2",
+      "kulvar": 4,
+      "giris_derecesi": "Kılıçarslan TUNÇ 16, Ali Demir CENGİZ 16, Aras ERDOĞAN 16, Demir EROL 16"
+    },
+    {
+      "sira": "11",
+      "sporcu": "Hacettepeliler Spor Kulübü",
+      "dogum_yili": "Hacettepeliler Spor Kulübü",
+      "kulup": "NT",
+      "derece": "11.36",
+      "puan": null,
+      "seri": "Seri 2 of 2",
+      "kulvar": 3,
+      "giris_derecesi": "Çınar KURTYİĞİT 16, Kerem PEKTAŞ 16, Ali Kaan YEŞİLBAŞ 16, Deniz SOYLU 16"
+    },
+    {
+      "sira": "12",
+      "sporcu": "Altın Nefes Spor Kulübü",
+      "dogum_yili": "Altın Nefes Spor Kulübü",
+      "kulup": "NT",
+      "derece": "3:25.28",
+      "puan": null,
+      "seri": "Seri 2 of 2",
+      "kulvar": 2,
+      "giris_derecesi": "Aras PİRİNÇCİOĞLU 16, Baturalp ACAR 16, Rüzgar Efe HIZ 16, Mert DEMİRCİ 16"
+    },
+    {
+      "sira": "13",
+      "sporcu": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "dogum_yili": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "kulup": "3:34.35",
+      "derece": "3:27.22",
+      "puan": "92",
+      "seri": "Seri 2 of 2",
+      "kulvar": 5,
+      "giris_derecesi": "Kerem Aslan YILDIRIM 16, Efe Karahan ERDİNÇ 16, Eymen KAVUN 16, Kağan Alp KAYA 16"
+    }
+  ],
+  "dosya_adi": "canli/ResultList_6.pdf"
+}

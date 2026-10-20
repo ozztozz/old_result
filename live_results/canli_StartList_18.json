@@ -1,0 +1,550 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-12",
+  "yaris_no": "18",
+  "cinsiyet": "Erkek",
+  "mesafe": 50,
+  "stil": "Kurbağalama",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 1,
+      "sporcu": "Bartu YILMAZ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "51.99"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 2,
+      "sporcu": "Arin ÇETİNKAYA",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "51.32"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 3,
+      "sporcu": "Yusuf Çağlar ÜNAL",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "51.03"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 4,
+      "sporcu": "Aras DEMİRBAŞ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "47.03"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 5,
+      "sporcu": "Tuna SEVİCİ",
+      "dogum_yili": "16",
+      "kulup": "Orka Swim Team Spor Kulübü",
+      "giris_derecesi": "47.71"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 6,
+      "sporcu": "Deniz Türker BAŞ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "51.25"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 7,
+      "sporcu": "Ahmet Arel COŞKUN",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "51.89"
+    },
+    {
+      "seri": "Seri 1 of 9",
+      "kulvar": 8,
+      "sporcu": "Yusuf ATAK",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "52.20"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 1,
+      "sporcu": "Kerem PEKTAŞ",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "55.37"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 2,
+      "sporcu": "Doruk KAYA",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "54.38"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 3,
+      "sporcu": "Berk TOPTAŞ",
+      "dogum_yili": "16",
+      "kulup": "Abc Koleji Spor Kulübü",
+      "giris_derecesi": "54.22"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 4,
+      "sporcu": "Ahmet ÖZBAKIR",
+      "dogum_yili": "16",
+      "kulup": "Pars Su Sporları Spor Kulübü",
+      "giris_derecesi": "53.01"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 5,
+      "sporcu": "Erdal Umut TEZCAN",
+      "dogum_yili": "16",
+      "kulup": "Ted Ankara Kolejliler Spor Kulübü",
+      "giris_derecesi": "53.51"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 6,
+      "sporcu": "Baturalp ACAR",
+      "dogum_yili": "16",
+      "kulup": "Altın Nefes Spor Kulübü",
+      "giris_derecesi": "54.23"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 7,
+      "sporcu": "Denis KARAKAYALI",
+      "dogum_yili": "16",
+      "kulup": "Aykon Spor Kulübü",
+      "giris_derecesi": "55.05"
+    },
+    {
+      "seri": "Seri 2 of 9",
+      "kulvar": 8,
+      "sporcu": "Mustafa Alp REYHAN",
+      "dogum_yili": "16",
+      "kulup": "Master Academy Spor Kulübü",
+      "giris_derecesi": "55.42"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 1,
+      "sporcu": "Ege UKAV",
+      "dogum_yili": "16",
+      "kulup": "Aren Athletıcs Spor Kulübü",
+      "giris_derecesi": "57.96"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 2,
+      "sporcu": "Alım TALANTOV",
+      "dogum_yili": "16",
+      "kulup": "Mars Spor Kulübü",
+      "giris_derecesi": "56.70"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 3,
+      "sporcu": "Kerem Aslan YILDIRIM",
+      "dogum_yili": "16",
+      "kulup": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "giris_derecesi": "56.49"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 4,
+      "sporcu": "Mustafa ERGÜN",
+      "dogum_yili": "16",
+      "kulup": "Yenimahalle Belediyesi Spor Kulübü",
+      "giris_derecesi": "55.80"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 5,
+      "sporcu": "Mert DEMİRCİ",
+      "dogum_yili": "16",
+      "kulup": "Altın Nefes Spor Kulübü",
+      "giris_derecesi": "56.34"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 6,
+      "sporcu": "Kantürk BAKTIR",
+      "dogum_yili": "16",
+      "kulup": "Beştepe Koleji Spor Kulübü",
+      "giris_derecesi": "56.59"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 7,
+      "sporcu": "Batuhan KOÇ",
+      "dogum_yili": "16",
+      "kulup": "Mars Spor Kulübü",
+      "giris_derecesi": "56.80"
+    },
+    {
+      "seri": "Seri 3 of 9",
+      "kulvar": 8,
+      "sporcu": "Ali Emir TANRIKUT",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "58.10"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 1,
+      "sporcu": "Yusuf Eren MÜMÜŞOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Ted Ankara Kolejliler Spor Kulübü",
+      "giris_derecesi": "1:01.99"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 2,
+      "sporcu": "ılgaz YİĞİT",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüce Spor Kulübü",
+      "giris_derecesi": "1:01.25"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 3,
+      "sporcu": "Deniz SOYLU",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "1:00.94"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 4,
+      "sporcu": "Kemal Mert AYDIN",
+      "dogum_yili": "16",
+      "kulup": "Ankara Kurt Yüzme Spor Kulübü",
+      "giris_derecesi": "58.58"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 5,
+      "sporcu": "Toprak ŞENTÜRK",
+      "dogum_yili": "16",
+      "kulup": "Abc Koleji Spor Kulübü",
+      "giris_derecesi": "59.44"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 6,
+      "sporcu": "Sadi Aras BADAK",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "1:00.96"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 7,
+      "sporcu": "Atınç GENÇALP",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "1:01.36"
+    },
+    {
+      "seri": "Seri 4 of 9",
+      "kulvar": 8,
+      "sporcu": "Efe Karahan ERDİNÇ",
+      "dogum_yili": "16",
+      "kulup": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "giris_derecesi": "1:02.12"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 1,
+      "sporcu": "Erdem TANDAĞ",
+      "dogum_yili": "16",
+      "kulup": "Aykon Spor Kulübü",
+      "giris_derecesi": "1:10.93"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 2,
+      "sporcu": "Yankı KÖSEDAĞ",
+      "dogum_yili": "16",
+      "kulup": "Altın Oran Spor Kulübü",
+      "giris_derecesi": "1:08.53"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 3,
+      "sporcu": "Eymen Deniz ERÖZ",
+      "dogum_yili": "16",
+      "kulup": "Nova Akademi Spor Kulübü",
+      "giris_derecesi": "1:03.39"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 4,
+      "sporcu": "Umut GÜNDÜZ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:02.62"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 5,
+      "sporcu": "Çağan ÖZKAN",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "1:03.35"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 6,
+      "sporcu": "Çınar ÜLKER",
+      "dogum_yili": "16",
+      "kulup": "Nova Akademi Spor Kulübü",
+      "giris_derecesi": "1:05.87"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 7,
+      "sporcu": "Mehmet Cihan GÜLSEROĞLU",
+      "dogum_yili": "16",
+      "kulup": "Nova Akademi Spor Kulübü",
+      "giris_derecesi": "1:10.68"
+    },
+    {
+      "seri": "Seri 5 of 9",
+      "kulvar": 8,
+      "sporcu": "Alp INALKAÇ",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 1,
+      "sporcu": "Mehmet Erdem SEVİNDİ",
+      "dogum_yili": "16",
+      "kulup": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 2,
+      "sporcu": "Enes BİROL",
+      "dogum_yili": "16",
+      "kulup": "Siren Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 3,
+      "sporcu": "Kerem DEMİR",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 4,
+      "sporcu": "Uluhan KAYTAR",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 5,
+      "sporcu": "Göktuğ TOPAL",
+      "dogum_yili": "16",
+      "kulup": "My Sun Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 6,
+      "sporcu": "Buğra Mert SOYDAŞ",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 7,
+      "sporcu": "Ayaz YALÇIN",
+      "dogum_yili": "16",
+      "kulup": "Altın Oran Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 6 of 9",
+      "kulvar": 8,
+      "sporcu": "Eymen Ege YAĞIZ",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 1,
+      "sporcu": "Güney SARIALTUN",
+      "dogum_yili": "16",
+      "kulup": "Altın Nefes Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 2,
+      "sporcu": "Eymen KAVUN",
+      "dogum_yili": "16",
+      "kulup": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 3,
+      "sporcu": "Çınar KAYMAK",
+      "dogum_yili": "16",
+      "kulup": "Anka Yüzme Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 4,
+      "sporcu": "Arat Talha GÜL",
+      "dogum_yili": "16",
+      "kulup": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 5,
+      "sporcu": "Mirzali Baran BABAOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Nova Akademi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 6,
+      "sporcu": "Alp YALÇIN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 7,
+      "sporcu": "Toprak OYMAK",
+      "dogum_yili": "16",
+      "kulup": "Altın Nefes Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 7 of 9",
+      "kulvar": 8,
+      "sporcu": "Kuzey HAYTA",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 1,
+      "sporcu": "Kıvanç AYGAR",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 2,
+      "sporcu": "Hamza GÜN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Duru Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 3,
+      "sporcu": "Muhammed Selim BİTİM",
+      "dogum_yili": "16",
+      "kulup": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 4,
+      "sporcu": "Ömer KARACA",
+      "dogum_yili": "16",
+      "kulup": "Master Academy Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 5,
+      "sporcu": "Ayaz AYKAN",
+      "dogum_yili": "16",
+      "kulup": "Gordion Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 6,
+      "sporcu": "Deniz Uras AĞARDAN",
+      "dogum_yili": "16",
+      "kulup": "Fatih Karakurt Alpha Academy Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 7,
+      "sporcu": "Emin Ayaz GÜRBÜZ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 8 of 9",
+      "kulvar": 8,
+      "sporcu": "Ümit Çağan ÇETİN",
+      "dogum_yili": "16",
+      "kulup": "Emba Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 9 of 9",
+      "kulvar": 3,
+      "sporcu": "Muhammed Baha BİLGE",
+      "dogum_yili": "16",
+      "kulup": "My Sun Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 9 of 9",
+      "kulvar": 4,
+      "sporcu": "Yusuf Eşref ÜN",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 9 of 9",
+      "kulvar": 5,
+      "sporcu": "Anıl Emre BULUT",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_18.pdf"
+}

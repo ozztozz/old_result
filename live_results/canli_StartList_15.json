@@ -1,0 +1,310 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-12",
+  "yaris_no": "15",
+  "cinsiyet": "Kadın",
+  "mesafe": 200,
+  "stil": "Karışık",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 1,
+      "sporcu": "Asya Nehir SOLMAZ",
+      "dogum_yili": "16",
+      "kulup": "Yenimahalle Belediyesi Spor Kulübü",
+      "giris_derecesi": "3:34.93"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 2,
+      "sporcu": "Nisa CİHAN",
+      "dogum_yili": "16",
+      "kulup": "Megalodon Spor Kulübü",
+      "giris_derecesi": "3:26.89"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 3,
+      "sporcu": "Nilda KARATEKİN",
+      "dogum_yili": "16",
+      "kulup": "Orka Swim Team Spor Kulübü",
+      "giris_derecesi": "3:21.07"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 4,
+      "sporcu": "Zeynep AYMAYAN",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "3:03.27"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 5,
+      "sporcu": "Zeynep ALTAY",
+      "dogum_yili": "16",
+      "kulup": "Aren Athletıcs Spor Kulübü",
+      "giris_derecesi": "3:20.11"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 6,
+      "sporcu": "Serra GÜNGÖR",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "3:25.75"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 7,
+      "sporcu": "Arya DURCAN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "3:27.36"
+    },
+    {
+      "seri": "Seri 1 of 5",
+      "kulvar": 8,
+      "sporcu": "Defne Ecrin OKATAN",
+      "dogum_yili": "16",
+      "kulup": "Aykon Spor Kulübü",
+      "giris_derecesi": "3:36.46"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 1,
+      "sporcu": "Zeynep PAYLI",
+      "dogum_yili": "16",
+      "kulup": "Ankara Enerji Yüzme Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 2,
+      "sporcu": "Gülsen Naz KARAHANOĞULLARI",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "4:04.61"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 3,
+      "sporcu": "Buğlem Erva ÖZDEN",
+      "dogum_yili": "16",
+      "kulup": "Ankara Enerji Yüzme Spor Kulübü",
+      "giris_derecesi": "3:59.08"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 4,
+      "sporcu": "Ece MAHANOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "3:39.73"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 5,
+      "sporcu": "Tuğsem TUNCAY",
+      "dogum_yili": "16",
+      "kulup": "Performans Akademi Spor Kulübü",
+      "giris_derecesi": "3:48.49"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 6,
+      "sporcu": "Ela ÖZBAĞCI",
+      "dogum_yili": "16",
+      "kulup": "Ted Ankara Kolejliler Spor Kulübü",
+      "giris_derecesi": "4:02.78"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 7,
+      "sporcu": "Göksel ÖLÇER",
+      "dogum_yili": "16",
+      "kulup": "Megalodon Spor Kulübü",
+      "giris_derecesi": "4:12.60"
+    },
+    {
+      "seri": "Seri 2 of 5",
+      "kulvar": 8,
+      "sporcu": "Güneş KESİNBAŞOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüzme Kulübü Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 1,
+      "sporcu": "Ikra Elif YİĞİTER",
+      "dogum_yili": "16",
+      "kulup": "Pursaklar Belediye Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 2,
+      "sporcu": "Ipek Gülfem ARIK",
+      "dogum_yili": "16",
+      "kulup": "Altın Oran Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 3,
+      "sporcu": "ışıl SÖNMEZ",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 4,
+      "sporcu": "Eylül Azra KOÇAK",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 5,
+      "sporcu": "Dila YILMAZ",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 6,
+      "sporcu": "Elif Naz OKCU",
+      "dogum_yili": "16",
+      "kulup": "Anka Yüzme Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 7,
+      "sporcu": "Zeynep ÖRGE",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüzme Dersi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 5",
+      "kulvar": 8,
+      "sporcu": "Hilal KÜÇÜKYOLDAŞ",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 1,
+      "sporcu": "Alisa TEKİN",
+      "dogum_yili": "16",
+      "kulup": "Anka Yüzme Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 2,
+      "sporcu": "Arya TUNÇ",
+      "dogum_yili": "16",
+      "kulup": "Nova Akademi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 3,
+      "sporcu": "Yağmur YILMAZ",
+      "dogum_yili": "16",
+      "kulup": "Anka Yüzme Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 4,
+      "sporcu": "Yağmur ERCAN",
+      "dogum_yili": "16",
+      "kulup": "Orka Swim Team Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 5,
+      "sporcu": "Asya DAL",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüzme Dersi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 6,
+      "sporcu": "Beren Su MACUN",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 7,
+      "sporcu": "Damla AKARSU",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 4 of 5",
+      "kulvar": 8,
+      "sporcu": "Elif Ece ALTINSOY",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüzme Dersi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 5 of 5",
+      "kulvar": 2,
+      "sporcu": "Efruz Ece BOYACI",
+      "dogum_yili": "16",
+      "kulup": "Zafer Koleji Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 5 of 5",
+      "kulvar": 3,
+      "sporcu": "Zeynep Defne SEVİNÇ",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüzme Dersi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 5 of 5",
+      "kulvar": 4,
+      "sporcu": "Gökçe KARABACAK",
+      "dogum_yili": "16",
+      "kulup": "Orta Doğu Teknik Üniversitesi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 5 of 5",
+      "kulvar": 5,
+      "sporcu": "Beril CİNCİOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Orta Doğu Teknik Üniversitesi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 5 of 5",
+      "kulvar": 6,
+      "sporcu": "Ayyüce Alya ÖZHAN",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_15.pdf"
+}

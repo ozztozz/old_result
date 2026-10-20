@@ -1,0 +1,126 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-12",
+  "yaris_no": "14",
+  "cinsiyet": "Erkek",
+  "mesafe": 100,
+  "stil": "Sırtüstü",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 1,
+      "sporcu": "Mustafa Yaman SEĞMENOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "1:57.46"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 2,
+      "sporcu": "Rüzgar Kartal ÖZDERE",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "1:42.49"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 3,
+      "sporcu": "Mehmet Hakan ÇETİN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "1:32.43"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 4,
+      "sporcu": "Rüzgar AYDINCAK",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:27.44"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 5,
+      "sporcu": "Ege ENGİN",
+      "dogum_yili": "16",
+      "kulup": "Yenimahalle Belediyesi Spor Kulübü",
+      "giris_derecesi": "1:30.10"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 6,
+      "sporcu": "Mustafa Ayaz POYRAZ",
+      "dogum_yili": "16",
+      "kulup": "Aykon Spor Kulübü",
+      "giris_derecesi": "1:40.10"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 7,
+      "sporcu": "Umut KİNNA",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "1:42.70"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 8,
+      "sporcu": "Kaan DOĞAN",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 2,
+      "sporcu": "Aden Selim OKUR",
+      "dogum_yili": "16",
+      "kulup": "Zafer Koleji Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 3,
+      "sporcu": "Engin Mustafa DUMAN",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 4,
+      "sporcu": "Can EROĞLU",
+      "dogum_yili": "16",
+      "kulup": "Çubuk Belediyesi Engelsiz Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 5,
+      "sporcu": "Yunus Emre ÖLÇER",
+      "dogum_yili": "16",
+      "kulup": "Pars Su Sporları Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 6,
+      "sporcu": "Kaan Batu CİHAN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 7,
+      "sporcu": "Çınar KURTYİĞİT",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_14.pdf"
+}

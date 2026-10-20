@@ -1,0 +1,126 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-11",
+  "yaris_no": "5",
+  "cinsiyet": "Kadın",
+  "mesafe": 50,
+  "stil": "Karışık",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 1,
+      "sporcu": "Performans Akademi Spor Kulübü",
+      "dogum_yili": "Performans Akademi Spor Kulübü",
+      "kulup": "3:49.33",
+      "giris_derecesi": "Miray ÇOLAKOĞLU 16, Yağmur Elif GÜL 16, Tuğsem TUNCAY 16, Selin TEKİN 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 2,
+      "sporcu": "Yenimahalle Belediyesi Spor Kulübü",
+      "dogum_yili": "Yenimahalle Belediyesi Spor Kulübü",
+      "kulup": "3:36.01",
+      "giris_derecesi": "Ravza KAÇAR 16, Zeynep Erva KILINÇ 16, Asya Nehir SOLMAZ 16, Duru GÜVENÇ 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 3,
+      "sporcu": "Ted Ankara Kolejliler Spor Kulübü",
+      "dogum_yili": "Ted Ankara Kolejliler Spor Kulübü",
+      "kulup": "3:25.63",
+      "giris_derecesi": "Damla AÇMAZ 16, Nehir IŞIKER 16, Ela ÖZBAĞCI 16, Alya DEMİRKAYA 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 4,
+      "sporcu": "Vamos Spor Kulübü",
+      "dogum_yili": "Vamos Spor Kulübü",
+      "kulup": "2:41.78",
+      "giris_derecesi": "Ayyüce Alya ÖZHAN 16, Sara HOXHA 16, Zeynep AYMAYAN 16, Serra GÜNGÖR 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 5,
+      "sporcu": "Nesibe Aydın Spor Kulübü",
+      "dogum_yili": "Nesibe Aydın Spor Kulübü",
+      "kulup": "3:21.60",
+      "giris_derecesi": "Arya KESKİN 16, Doğa GINALI 16, Bilge CEYLAN 16, Ecrin Nilay UZUNBACAK 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 6,
+      "sporcu": "Kulvar Spor Kulübü",
+      "dogum_yili": "Kulvar Spor Kulübü",
+      "kulup": "3:31.76",
+      "giris_derecesi": "Elif Naz ÖZER 16, Hilal KÜÇÜKYOLDAŞ 16, Dila YILMAZ 16, Defne ARI 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 7,
+      "sporcu": "Hacettepeliler Spor Kulübü",
+      "dogum_yili": "Hacettepeliler Spor Kulübü",
+      "kulup": "3:36.45",
+      "giris_derecesi": "Eylül GÖÇMEN 16, ışıl SÖNMEZ 16, Beren Su MACUN 16, Irem KILIÇ 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 8,
+      "sporcu": "Ankara Yüzme Dersi Spor Kulübü",
+      "dogum_yili": "Ankara Yüzme Dersi Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Elif Ece ALTINSOY 16, Zeynep Defne SEVİNÇ 16, Asya DAL 16, Zeynep ÖRGE 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 2,
+      "sporcu": "Ankara Gsm Spor Kulübü",
+      "dogum_yili": "Ankara Gsm Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Tusem Erva GÜLER 16, Zeynep AKKAYA 16, Ece KILIÇASLAN 16, Zeynep EROĞLU 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 3,
+      "sporcu": "Altın Nefes Spor Kulübü",
+      "dogum_yili": "Altın Nefes Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Tuana KINACI 16, Aylin Belgin ÖZDEMİR 16, Gökçe BAYINDIR 16, Günay Güneş KAPLAN 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 4,
+      "sporcu": "Anka Yüzme Spor Kulübü",
+      "dogum_yili": "Anka Yüzme Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Defne AKKAYA 16, Alisa TEKİN 16, Elif Naz OKCU 16, Yağmur YILMAZ 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 5,
+      "sporcu": "Aykon Spor Kulübü",
+      "dogum_yili": "Aykon Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Alisa ÖZAYAZ 16, Ahsen Beyza TAŞPINAR 16, Defne Ecrin OKATAN 16, Defne DAĞLI 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 6,
+      "sporcu": "Başkent Çankaya Spor Kulübü",
+      "dogum_yili": "Başkent Çankaya Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Eylül Azra KOÇAK 16, Arya DURCAN 16, Ece MAHANOĞLU 16, Gülsen Naz KARAHANOĞULLARI 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 7,
+      "sporcu": "Pursaklar Belediye Spor Kulübü",
+      "dogum_yili": "Pursaklar Belediye Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Cemre KÜRTÜNCÜ 16, Ikra Elif YİĞİTER 16, Gökçe ÇAKIR 16, Selin Havva Naz TURHAN 16"
+    }
+  ],
+  "dosya_adi": "canli/StartList_5.pdf"
+}

@@ -1,0 +1,142 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-12",
+  "yaris_no": "20",
+  "cinsiyet": "Erkek",
+  "mesafe": 50,
+  "stil": "Serbest",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 1,
+      "sporcu": "Ted Ankara Kolejliler Spor Kulübü",
+      "dogum_yili": "Ted Ankara Kolejliler Spor Kulübü",
+      "kulup": "2:39.98",
+      "giris_derecesi": "Doruk Alp AÇIK 16, Yusuf Eren MÜMÜŞOĞLU 16, Erdal Umut TEZCAN 16, Rüzgar KIDIŞ 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 2,
+      "sporcu": "Başkent Çankaya Spor Kulübü",
+      "dogum_yili": "Başkent Çankaya Spor Kulübü",
+      "kulup": "2:36.50",
+      "giris_derecesi": "Cesur GENÇ 16, Kaan Batu CİHAN 16, Deniz DALKILIÇ 16, Mehmet Hakan ÇETİN 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 3,
+      "sporcu": "Kulvar Spor Kulübü",
+      "dogum_yili": "Kulvar Spor Kulübü",
+      "kulup": "2:34.44",
+      "giris_derecesi": "Doruk KAYA 16, Rüzgar Kartal ÖZDERE 16, Arin ÇETİNKAYA 16, Ibrahim Efe ÇAKIRŞEN 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 4,
+      "sporcu": "Yenimahalle Belediyesi Spor Kulübü",
+      "dogum_yili": "Yenimahalle Belediyesi Spor Kulübü",
+      "kulup": "2:26.38",
+      "giris_derecesi": "Emre ŞAHİN 16, Mustafa ERGÜN 16, Yaman Taha YALÇIN 16, Ege ENGİN 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 5,
+      "sporcu": "Aykon Spor Kulübü",
+      "dogum_yili": "Aykon Spor Kulübü",
+      "kulup": "2:33.76",
+      "giris_derecesi": "Ali ÖZER 16, Mustafa Ayaz POYRAZ 16, Mete TEKİN 16, Batuhan ŞAHİNÖZTÜRK 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 6,
+      "sporcu": "Vamos Spor Kulübü",
+      "dogum_yili": "Vamos Spor Kulübü",
+      "kulup": "2:36.11",
+      "giris_derecesi": "Atlas BİNZET 16, Deniz Türker BAŞ 16, Rüzgar AYDINCAK 16, Kaan DOĞAN 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 7,
+      "sporcu": "Orka Swim Team Spor Kulübü",
+      "dogum_yili": "Orka Swim Team Spor Kulübü",
+      "kulup": "2:38.74",
+      "giris_derecesi": "Ibrahim OKUR 16, Tuna SEVİCİ 16, Kaan Efe YILDIZ 16, Ali Kaan GENCAN 16"
+    },
+    {
+      "seri": "Seri 1 of 2",
+      "kulvar": 8,
+      "sporcu": "Beştepe Koleji Spor Kulübü",
+      "dogum_yili": "Beştepe Koleji Spor Kulübü",
+      "kulup": "2:42.35",
+      "giris_derecesi": "Göktuğ TEKİN 16, Deniz ÇETİNTÜRK 16, Kantürk BAKTIR 16, Kadir Akın YAVUZARSLAN 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 1,
+      "sporcu": "Zafer Koleji Spor Kulübü",
+      "dogum_yili": "Zafer Koleji Spor Kulübü",
+      "kulup": "3:08.57",
+      "giris_derecesi": "Poyraz ÖZÜNLÜ 16, Aden Selim OKUR 16, Doruk DEMİRCAN 16, Ali Latif YAZGAN 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 2,
+      "sporcu": "Altın Nefes Spor Kulübü",
+      "dogum_yili": "Altın Nefes Spor Kulübü",
+      "kulup": "2:58.53",
+      "giris_derecesi": "Baturalp ACAR 16, Mert DEMİRCİ 16, Rüzgar Efe HIZ 16, Aras PİRİNÇCİOĞLU 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 3,
+      "sporcu": "Nesibe Aydın Spor Kulübü",
+      "dogum_yili": "Nesibe Aydın Spor Kulübü",
+      "kulup": "2:57.96",
+      "giris_derecesi": "Arda DİNÇSÖNMEZ 16, Anıl Emre BULUT 16, Mustafa Yaman SEĞMENOĞLU 16, Umut KİNNA 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 4,
+      "sporcu": "Anka Yüzme Spor Kulübü",
+      "dogum_yili": "Anka Yüzme Spor Kulübü",
+      "kulup": "2:43.05",
+      "giris_derecesi": "Aras ERDOĞAN 16, Demir EROL 16, Ahmet SAYAN 16, Kılıçarslan TUNÇ 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 5,
+      "sporcu": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "dogum_yili": "Keçiören Belediyesi Bağlum Spor Kulübü",
+      "kulup": "2:52.65",
+      "giris_derecesi": "Eymen KAVUN 16, Kağan Alp KAYA 16, Efe Karahan ERDİNÇ 16, Mehmet Erdem SEVİNDİ 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 6,
+      "sporcu": "Hacettepeliler Spor Kulübü",
+      "dogum_yili": "Hacettepeliler Spor Kulübü",
+      "kulup": "2:58.26",
+      "giris_derecesi": "Kerem PEKTAŞ 16, Deniz SOYLU 16, Çınar KURTYİĞİT 16, Atınç GENÇALP 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 7,
+      "sporcu": "Aren Athletıcs Spor Kulübü",
+      "dogum_yili": "Aren Athletıcs Spor Kulübü",
+      "kulup": "3:06.19",
+      "giris_derecesi": "Kerem DOĞRU 16, Ege UKAV 16, Mert DEMİRKAN 16, Baybars OKUR 16"
+    },
+    {
+      "seri": "Seri 2 of 2",
+      "kulvar": 8,
+      "sporcu": "Altın Oran Spor Kulübü",
+      "dogum_yili": "Altın Oran Spor Kulübü",
+      "kulup": "NT",
+      "giris_derecesi": "Yusuf Tuğra CEYHAN 16, Ömer Hamza GÖKYAR 16, Yankı KÖSEDAĞ 16, Rüzgar BAYLANAY 16"
+    }
+  ],
+  "dosya_adi": "canli/StartList_20.pdf"
+}

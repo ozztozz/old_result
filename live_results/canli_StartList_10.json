@@ -1,0 +1,182 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-11",
+  "yaris_no": "10",
+  "cinsiyet": "Erkek",
+  "mesafe": 100,
+  "stil": "Kurbağalama",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 1,
+      "sporcu": "Kerem PEKTAŞ",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "1:59.51"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 2,
+      "sporcu": "Yusuf ATAK",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:56.11"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 3,
+      "sporcu": "Bartu YILMAZ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:55.33"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 4,
+      "sporcu": "Aras DEMİRBAŞ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:42.15"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 5,
+      "sporcu": "Yusuf Çağlar ÜNAL",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "1:52.13"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 6,
+      "sporcu": "Kerem BİLİM",
+      "dogum_yili": "16",
+      "kulup": "Ankara Üniversitesi Spor Kulübü",
+      "giris_derecesi": "1:55.62"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 7,
+      "sporcu": "Barış BÖLÜCEK",
+      "dogum_yili": "16",
+      "kulup": "Ankara Yüzme Akademisi Spor Kulübü",
+      "giris_derecesi": "1:58.15"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 8,
+      "sporcu": "Ahmet ÖZBAKIR",
+      "dogum_yili": "16",
+      "kulup": "Pars Su Sporları Spor Kulübü",
+      "giris_derecesi": "1:59.60"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 1,
+      "sporcu": "Ahmet GÜLENÇ",
+      "dogum_yili": "16",
+      "kulup": "Sınav Koleji Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 2,
+      "sporcu": "Deniz SOYLU",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "2:11.79"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 3,
+      "sporcu": "Atınç GENÇALP",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "2:07.04"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 4,
+      "sporcu": "Ali Emir TANRIKUT",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "2:01.88"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 5,
+      "sporcu": "Ege UKAV",
+      "dogum_yili": "16",
+      "kulup": "Aren Athletıcs Spor Kulübü",
+      "giris_derecesi": "2:05.21"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 6,
+      "sporcu": "Atlas AKAR",
+      "dogum_yili": "16",
+      "kulup": "Sınav Koleji Spor Kulübü",
+      "giris_derecesi": "2:07.63"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 7,
+      "sporcu": "Doruk DEMİRCAN",
+      "dogum_yili": "16",
+      "kulup": "Zafer Koleji Spor Kulübü",
+      "giris_derecesi": "2:20.37"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 8,
+      "sporcu": "Emin Ayaz GÜRBÜZ",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 2,
+      "sporcu": "Yankı KÖSEDAĞ",
+      "dogum_yili": "16",
+      "kulup": "Altın Oran Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 3,
+      "sporcu": "Kıvanç AYGAR",
+      "dogum_yili": "16",
+      "kulup": "Nesibe Aydın Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 4,
+      "sporcu": "Baturalp ACAR",
+      "dogum_yili": "16",
+      "kulup": "Altın Nefes Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 5,
+      "sporcu": "Sadi Aras BADAK",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 6,
+      "sporcu": "Hamza GÜN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Duru Spor Kulübü",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_10.pdf"
+}

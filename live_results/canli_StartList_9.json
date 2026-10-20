@@ -1,0 +1,150 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-11",
+  "yaris_no": "9",
+  "cinsiyet": "Kadın",
+  "mesafe": 100,
+  "stil": "Kurbağalama",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 1,
+      "sporcu": "Selin KÖNTE",
+      "dogum_yili": "16",
+      "kulup": "Beştepe Koleji Spor Kulübü",
+      "giris_derecesi": "2:04.36"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 2,
+      "sporcu": "Göksel ÖLÇER",
+      "dogum_yili": "16",
+      "kulup": "Megalodon Spor Kulübü",
+      "giris_derecesi": "1:57.21"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 3,
+      "sporcu": "Ece MAHANOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "1:55.79"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 4,
+      "sporcu": "Sara HOXHA",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:39.95"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 5,
+      "sporcu": "Arya DURCAN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "1:50.94"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 6,
+      "sporcu": "Asya Nehir SOLMAZ",
+      "dogum_yili": "16",
+      "kulup": "Yenimahalle Belediyesi Spor Kulübü",
+      "giris_derecesi": "1:56.77"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 7,
+      "sporcu": "Güneş TARAKÇI",
+      "dogum_yili": "16",
+      "kulup": "Ankara Üniversitesi Spor Kulübü",
+      "giris_derecesi": "1:57.77"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 8,
+      "sporcu": "Irem KILIÇ",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "2:08.84"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 2,
+      "sporcu": "Göksu Ada TOPRAK",
+      "dogum_yili": "16",
+      "kulup": "Başkent Duru Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 3,
+      "sporcu": "Arya Deren ASLAN",
+      "dogum_yili": "16",
+      "kulup": "Zafer Koleji Spor Kulübü",
+      "giris_derecesi": "2:25.70"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 4,
+      "sporcu": "ışıl SÖNMEZ",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "2:09.39"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 5,
+      "sporcu": "Deniz SERTKAYA",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "2:22.17"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 6,
+      "sporcu": "Masal Berfu GÖKYOKUŞ",
+      "dogum_yili": "16",
+      "kulup": "Pars Su Sporları Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 7,
+      "sporcu": "Yağmur Elif GÜL",
+      "dogum_yili": "16",
+      "kulup": "Performans Akademi Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 3,
+      "sporcu": "Asya BAYDAR",
+      "dogum_yili": "16",
+      "kulup": "Aren Athletıcs Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 4,
+      "sporcu": "Nefes ŞAHİN",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 5,
+      "sporcu": "Ayşegül SUCUOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Zafer Koleji Spor Kulübü",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_9.pdf"
+}

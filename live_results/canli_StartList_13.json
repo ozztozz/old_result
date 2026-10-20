@@ -1,0 +1,150 @@
+{
+  "tur": "start_listesi",
+  "musabaka_adi": "9 Yaş Yüzme Gelişim Müsabakası",
+  "sehir": "ANKARA",
+  "tarih": "2025-12-12",
+  "yaris_no": "13",
+  "cinsiyet": "Kadın",
+  "mesafe": 100,
+  "stil": "Sırtüstü",
+  "yas_grubu": "Açık",
+  "kayitlar": [
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 1,
+      "sporcu": "Damla AÇMAZ",
+      "dogum_yili": "16",
+      "kulup": "Ted Ankara Kolejliler Spor Kulübü",
+      "giris_derecesi": "1:51.86"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 2,
+      "sporcu": "Eylül GÖÇMEN",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "1:45.08"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 3,
+      "sporcu": "Ayyüce Alya ÖZHAN",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:37.96"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 4,
+      "sporcu": "Sara HOXHA",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "1:25.55"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 5,
+      "sporcu": "Arya DURCAN",
+      "dogum_yili": "16",
+      "kulup": "Başkent Çankaya Spor Kulübü",
+      "giris_derecesi": "1:36.36"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 6,
+      "sporcu": "Hande HANTALOĞLU",
+      "dogum_yili": "16",
+      "kulup": "Pars Su Sporları Spor Kulübü",
+      "giris_derecesi": "1:44.45"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 7,
+      "sporcu": "Tusem Erva GÜLER",
+      "dogum_yili": "16",
+      "kulup": "Ankara Gsm Spor Kulübü",
+      "giris_derecesi": "1:48.88"
+    },
+    {
+      "seri": "Seri 1 of 3",
+      "kulvar": 8,
+      "sporcu": "Beren Su MACUN",
+      "dogum_yili": "16",
+      "kulup": "Hacettepeliler Spor Kulübü",
+      "giris_derecesi": "1:56.74"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 2,
+      "sporcu": "Zeynep Neşe EROL",
+      "dogum_yili": "16",
+      "kulup": "Vamos Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 3,
+      "sporcu": "Öykü Melek ELÜSTÜN",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 4,
+      "sporcu": "Zeynep Bilge YÜCEKAYA",
+      "dogum_yili": "16",
+      "kulup": "Çubuk Belediyesi Engelsiz Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 5,
+      "sporcu": "Naz Irem TİTİZ",
+      "dogum_yili": "16",
+      "kulup": "Başkent Duru Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 6,
+      "sporcu": "Ekin YILDIRIM",
+      "dogum_yili": "16",
+      "kulup": "Çubuk Belediyesi Engelsiz Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 2 of 3",
+      "kulvar": 7,
+      "sporcu": "Göksu Ada TOPRAK",
+      "dogum_yili": "16",
+      "kulup": "Başkent Duru Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 3,
+      "sporcu": "Elif Naz ÖZER",
+      "dogum_yili": "16",
+      "kulup": "Kulvar Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 4,
+      "sporcu": "Zümra ÖZTOPRAK",
+      "dogum_yili": "16",
+      "kulup": "Ankara Enerji Yüzme Spor Kulübü",
+      "giris_derecesi": "NT"
+    },
+    {
+      "seri": "Seri 3 of 3",
+      "kulvar": 5,
+      "sporcu": "Lina AKTAŞCI",
+      "dogum_yili": "16",
+      "kulup": "Ferdi",
+      "giris_derecesi": "NT"
+    }
+  ],
+  "dosya_adi": "canli/StartList_13.pdf"
+}
