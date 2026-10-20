@@ -38,18 +38,20 @@ try:
     from src.extract_scanned_pdfs import clean_ocr_swimming_line
 except ImportError:
     def clean_ocr_swimming_line(line: str) -> str:
-        # 1. Kulüp adı ile yapışan derece: Kul1:20.59 -> Kul   1:20.59
-        line = re.sub(r"([A-Za-zçğıöşüÇĞİÖŞÜ])(\d{1,2}:\d{2}\.\d{2})", r"\1   \2", line)
-        # 2. Derece ile puan arasındaki OCR karakter lekeleri: 1:20.59 o 264 -> 1:20.59   264
-        line = re.sub(r"(\d{1,2}:\d{2}\.\d{2})\s*(?:[oOe<>/_~]+\s*)(\d{2,4}\b)", r"\1   \2", line)
-        # 3. İsim ile 2 haneli doğum yılı arasındaki çizgi gürültüsü
+        # 1. Slash içeren zamanlar: 32/4 -> 32.40, 32/5 -> 32.50
+        line = re.sub(r'\b(\d{2})\/(\d{1,2})\b', r'\1.\2', line)
+        # 2. Kulüp adı ile yapışan derece (dakikalı veya dakikasız): Kul1:20.59 -> Kul   1:20.59, Kulül28.53 -> Kulül   28.53
+        line = re.sub(r"([A-Za-zçğıöşüÇĞİÖŞÜ])((?:\d{1,2}:)?\d{2}\.\d{1,2})", r"\1   \2", line)
+        # 3. Derece ile puan arasındaki OCR karakter lekeleri (ibü, (o, Oo, ü vb.): 30.53ibü466 -> 30.53   466, 28.53 (o 571 -> 28.53   571
+        line = re.sub(r"((?:\d{1,2}:)?\d{2}\.\d{1,2})\s*(?:[\(\)\[\]A-Za-zçğıöşüÇĞİÖŞÜoOe<>/_~]+\s*)(\d{2,4}\b)", r"\1   \2", line)
+        # 4. İsim ile 2 haneli doğum yılı arasındaki çizgi gürültüsü
         line = re.sub(r"([A-ZÇĞİÖŞÜa-zçğıöşü])\s+[|_—=~]+\s+(\d{2}\b)", r"\1   \2", line)
-        # 4. İki noktası olan ama noktası silinen dakikalı zaman: 1:4248 -> 1:42.48, 2:3144 -> 2:31.44
+        # 5. İki noktası olan ama noktası silinen dakikalı zaman: 1:4248 -> 1:42.48, 2:3144 -> 2:31.44
         line = re.sub(r"\b(\d{1,2}):(\d{2})(\d{2})\b", r"\1:\2.\3", line)
-        # 5. İki noktası silinmiş 1 dakikalık zamanlar: 1553.11 -> 1:53.11, 1S57.70 -> 1:57.70
+        # 6. İki noktası silinmiş 1 dakikalık zamanlar: 1553.11 -> 1:53.11, 1S57.70 -> 1:57.70
         line = re.sub(r"\b1[5sS](\d{2}\.\d{2})\b", r"1:\1", line)
         line = re.sub(r"\b1([1-5]\d\.\d{2})\b", r"1:\1", line)
-        # 6. Puan başındaki parantez lekeleri: (92 -> 92, (28 -> 28
+        # 7. Puan başındaki parantez lekeleri: (92 -> 92, (28 -> 28
         line = re.sub(r"(?<=\d\s)[\(\[\{]+(\d{1,4})\b", r"\1", line)
         return line
 
