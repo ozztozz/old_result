@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ sporcu.sporcu_adi }} - Yüzücü Profili ve Yarış Geçmişi{% endblock %}
+
+{% block content %}
+<!-- Sporcu Profil Başlığı -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-1 rounded-pill">
+                    {% if sporcu.cinsiyet == 'ERKEK' %}<i class="bi bi-gender-male me-1"></i>Erkek
+                    {% elif sporcu.cinsiyet == 'KADIN' %}<i class="bi bi-gender-female me-1"></i>Kadın
+                    {% else %}Sporcu{% endif %}
+                </span>
+                {% if sporcu.dogum_yili %}
+                    <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-1 rounded-pill">
+                        <i class="bi bi-calendar-event me-1"></i>Doğum Yılı: {{ sporcu.dogum_yili }}
+                    </span>
+                {% elif sporcu.yas_dogum_yili %}
+                    <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-1 rounded-pill">
+                        D.Yılı / Yaş: {{ sporcu.yas_dogum_yili }}
+                    </span>
+                {% endif %}
+            </div>
+            <h1 class="display-6 fw-bold text-dark mb-1">{{ sporcu.sporcu_adi }}</h1>
+            <p class="text-muted mb-0">
+                <i class="bi bi-shield me-1 text-primary"></i>
+                Birincil Kulüp: 
+                {% if sporcu.birincil_kulup %}
+                    <a href="{% url 'sonuclar:kulup_detay' sporcu.birincil_kulup.id %}" class="fw-semibold text-decoration-none">
+                        {{ sporcu.birincil_kulup.kulup_adi }}
+                    </a>
+                {% else %}
+                    <span class="text-muted">Kulüpsüz / Belirtilmemiş</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 mt-3 mt-md-0 text-md-end">
+            <div class="d-inline-block bg-light p-3 rounded-4 border text-center">
+                <div class="fs-3 fw-bold text-primary">{{ sporcu.toplam_yaris_sayisi }}</div>
+                <div class="small text-muted text-uppercase fw-semibold">Toplam Yarış</div>
+                <div class="small text-muted mt-1">{{ sporcu.ilk_yaris_tarihi|slice:":4" }} - {{ sporcu.son_yaris_tarihi|slice:":4" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Kulüp Transfer ve Temsil Tarihçesi -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-4">
+                <i class="bi bi-clock-history text-primary me-2"></i> Kulüp Transfer ve Temsil Tarihçesi
+            </h5>
+            <div class="timeline ps-2">
+                {% for t in tarihce %}
+                <div class="timeline-item">
+                    <div class="timeline-dot {% if t.aktif_kulup_mu %}active{% endif %}"></div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-bold text-dark fs-6">
+                                <a href="{% url 'sonuclar:kulup_detay' t.kulup.id %}" class="text-decoration-none text-dark">
+                                    {{ t.kulup.kulup_adi }}
+                                </a>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                {{ t.ilk_yaris_tarihi|default:"Bilinmiyor" }} &rarr; {{ t.son_yaris_tarihi|default:"Bilinmiyor" }}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            {% if t.aktif_kulup_mu %}
+                                <span class="badge bg-success-subtle text-success badge-style mb-1">AKTİF KULÜP</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted border badge-style mb-1">{{ t.donem_sirasi }}. DÖNEM</span>
+                            {% endif %}
+                            <div class="small text-primary fw-semibold">{{ t.toplam_yaris_sayisi }} Yarış</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">Kayıtlı kulüp tarihçesi bulunamadı.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Kişisel En İyi Dereceler (PB) -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
+            <h5 class="fw-bold text-dark mb-4">
+                <i class="bi bi-trophy text-warning me-2"></i> Kişisel En İyi Dereceler (PB)
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mesafe & Stil</th>
+                            <th class="text-center">En İyi Derece</th>
+                            <th class="text-end">Müsabaka / Tarih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pb in pbs %}
+                        <tr>
+                            <td class="fw-bold">
+                                <span class="badge bg-light text-dark border me-1">{{ pb.mesafe }}m</span>
+                                {{ pb.stil }}
+                            </td>
+                            <td class="text-center fw-bold text-primary fs-6">{{ pb.derece }}</td>
+                            <td class="text-end small text-muted">
+                                <div>{{ pb.yaris_tarihi_baslangic }}</div>
+                                <div class="text-truncate" style="max-width: 180px;">{{ pb.musabaka_adi }}</div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">Kayıtlı derece bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tüm Yarış Sonuçları Tablosu -->
+<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-list-check text-info me-2"></i> Tüm Yarış Sonuçları ({{ total_races }})</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Tarih</th>
+                    <th>Müsabaka</th>
+                    <th>Kulüp</th>
+                    <th>Branş</th>
+                    <th class="text-center">Yarış Yaşı</th>
+                    <th class="text-center">Sıra</th>
+                    <th class="text-end">Derece</th>
+                    <th class="text-center">Puan</th>
+                    <th>Baraj / Not</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in page_obj %}
+                <tr>
+                    <td class="small text-muted text-nowrap">{{ r.yaris_tarihi_baslangic|default:r.yaris_tarihi_ham }}</td>
+                    <td class="small" style="max-width: 250px;">
+                        <span class="d-inline-block text-truncate w-100" title="{{ r.musabaka_adi }}">
+                            {{ r.musabaka_adi|default:"-" }}
+                        </span>
+                    </td>
+                    <td class="small text-muted">
+                        {% if r.kulup %}
+                            <a href="{% url 'sonuclar:kulup_detay' r.kulup.id %}" class="text-decoration-none text-muted">
+                                {{ r.kulup.kulup_adi }}
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="fw-semibold">
+                        <span class="badge bg-light text-dark border me-1">{{ r.mesafe }}m</span>
+                        {{ r.stil }}
+                        {% if r.seri or r.kulvar %}
+                            <div class="small text-muted fw-normal">
+                                {{ r.seri|default:"" }}{% if r.kulvar %} <span class="badge bg-info-subtle text-info border">K: {{ r.kulvar }}</span>{% endif %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center small">
+                        {% if r.hesaplanan_yas %}
+                            <span class="badge bg-primary-subtle text-primary">{{ r.hesaplanan_yas }} Yaş</span>
+                        {% elif r.sporcu_yas %}
+                            <span class="badge bg-light text-muted border">{{ r.sporcu_yas }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-center fw-semibold text-secondary">{{ r.sira|default:"-" }}</td>
+                    <td class="text-end fw-bold">
+                        {% if r.derece == 'Bekleniyor' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Bekleniyor</span>
+                        {% else %}
+                            <span class="text-primary">{{ r.derece }}</span>
+                        {% endif %}
+                        {% if r.giris_derecesi %}
+                            <div class="small text-muted fw-normal" title="Yarış Başlangıç / Giriş Derecesi">Giriş: {{ r.giris_derecesi }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center fw-semibold">{{ r.puan|default:"-" }}</td>
+                    <td>
+                        {% if r.baraj %}
+                            <span class="badge bg-success-subtle text-success">{{ r.baraj }}</span>
+                        {% endif %}
+                        {% if r.uyari_notu %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis small">{{ r.uyari_notu }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">Yarış kaydı bulunamadı.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama -->
+    {% if page_obj.has_other_pages %}
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination pagination-sm">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Önceki</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Sonraki</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+

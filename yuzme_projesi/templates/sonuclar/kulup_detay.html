@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ kulup.kulup_adi }} - Kulüp Profili ve Sporcuları{% endblock %}
+
+{% block content %}
+<!-- Kulüp Başlığı -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <span class="badge bg-success-subtle text-success fs-6 px-3 py-1 rounded-pill mb-2">
+                <i class="bi bi-shield-check me-1"></i> Resmî Kulüp Kaydı #{{ kulup.id }}
+            </span>
+            <h1 class="display-6 fw-bold text-dark mb-1">{{ kulup.kulup_adi }}</h1>
+            <p class="text-muted mb-0">
+                <i class="bi bi-calendar3 me-1"></i> Faaliyet Aralığı: 
+                <strong>{{ kulup.ilk_yaris_tarihi|default:"Bilinmiyor" }}</strong> &rarr; <strong>{{ kulup.son_yaris_tarihi|default:"Bilinmiyor" }}</strong>
+            </p>
+        </div>
+        <div class="col-md-4 mt-3 mt-md-0 text-md-end">
+            <div class="d-inline-flex gap-2">
+                <div class="bg-light p-3 rounded-4 border text-center">
+                    <div class="fs-4 fw-bold text-info">{{ kulup.toplam_sporcu_sayisi|intcomma }}</div>
+                    <div class="small text-muted text-uppercase fw-semibold">Sporcu</div>
+                </div>
+                <div class="bg-light p-3 rounded-4 border text-center">
+                    <div class="fs-4 fw-bold text-success">{{ kulup.toplam_yaris_sayisi|intcomma }}</div>
+                    <div class="small text-muted text-uppercase fw-semibold">Toplam Yarış</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Kulübün Sporcuları -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people text-primary me-2"></i> Bu Kulüpte Yarışan Sporcular ({{ total_swimmers }})</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sporcu</th>
+                            <th>D.Yılı</th>
+                            <th>Kulüpteki Tarih Aralığı</th>
+                            <th class="text-center">Durum</th>
+                            <th class="text-end">Kulüp Yarışları</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'sonuclar:sporcu_detay' t.sporcu.id %}" class="fw-bold text-decoration-none text-dark">
+                                    {{ t.sporcu.sporcu_adi }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-light text-muted border">{{ t.sporcu.dogum_yili|default:t.sporcu.yas_dogum_yili|default:"-" }}</span></td>
+                            <td class="small text-muted">
+                                {{ t.ilk_yaris_tarihi|slice:":4" }} - {{ t.son_yaris_tarihi|slice:":4" }}
+                            </td>
+                            <td class="text-center">
+                                {% if t.aktif_kulup_mu %}
+                                    <span class="badge bg-success-subtle text-success small">AKTİF</span>
+                                {% else %}
+                                    <span class="badge bg-light text-muted small">GEÇMİŞ</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold text-primary">{{ t.toplam_yaris_sayisi }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">Kayıtlı sporcu bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sayfalama -->
+            {% if page_obj.has_other_pages %}
+            <nav class="d-flex justify-content-center mt-3">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Önceki</a></li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Sonraki</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Son Yarış Sonuçları -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history text-info me-2"></i> Son Yarış Sonuçları</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sporcu</th>
+                            <th>Branş</th>
+                            <th class="text-end">Derece</th>
+                            <th class="text-end">Tarih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in son_sonuclar %}
+                        <tr>
+                            <td class="small">
+                                <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="fw-semibold text-decoration-none text-dark">
+                                    {{ r.sporcu.sporcu_adi }}
+                                </a>
+                            </td>
+                            <td class="small">
+                                <span class="badge bg-light text-dark border me-1">{{ r.mesafe }}m</span>
+                                {{ r.stil }}
+                            </td>
+                            <td class="text-end fw-bold text-primary small">{{ r.derece }}</td>
+                            <td class="text-end small text-muted text-nowrap">{{ r.yaris_tarihi_baslangic }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">Kayıtlı yarış bulunamadı.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

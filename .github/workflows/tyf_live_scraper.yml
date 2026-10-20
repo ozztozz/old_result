@@ -1,0 +1,68 @@
+name: TYF Canli Yaris Takip Botu
+
+on:
+  schedule:
+    # Her 10 dakikada bir otomatik kontrol (05:00 - 18:00 UTC)
+    - cron: '*/10 5-18 * * *'
+  workflow_dispatch:
+    inputs:
+      tyf_url:
+        description: 'TYF Canlı Yarış Sayfası Linki'
+        required: true
+        default: 'https://canli.tyf.gov.tr/istanbul/cs-1005380/'
+      django_api:
+        description: 'Django API URL (Boş bırakılırsa sonuçlar repoda JSON olarak saklanır)'
+        required: false
+        default: ''
+
+jobs:
+  scrape-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: Python Kurulumu
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Tesseract OCR (Türkçe Dil Paketi) Kurulumu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-tur libtesseract-dev
+
+      - name: Python Bağımlılıklarını Yükle
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyMuPDF pytesseract Pillow
+
+      - name: TYF Canlı Takip Botunu Çalıştır
+        env:
+          TYF_URL: ${{ github.event.inputs.tyf_url || 'https://canli.tyf.gov.tr/istanbul/cs-1005380/' }}
+          DJANGO_API: ${{ github.event.inputs.django_api || secrets.DJANGO_API_URL }}
+        run: |
+          if [ -n "$DJANGO_API" ]; then
+            echo "Django API bulundu: $DJANGO_API adresine veri aktarılacak."
+            python src/tyf_live_worker.py --url "$TYF_URL" --api "$DJANGO_API" --save-json
+          else
+            echo "Django API adresi boş. Sonuçlar 'live_results/' klasörüne JSON olarak kaydedilecek."
+            python src/tyf_live_worker.py --url "$TYF_URL" --save-json
+          fi
+
+      - name: Sonuçları GitHub Artifact Olarak Yükle
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: canli-yaris-sonuclari
+          path: live_results/
+          retention-days: 7
+
+      - name: Değişiklikleri Repoya Kaydet (Git Commit)
+        run: |
+          git config user.name "TYF Bot"
+          git config user.email "bot@tyf.gov.tr"
+          git add processed_files.json live_results/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto: Güncel yarış sonuçları ve hafıza [skip ci]" && git push)
