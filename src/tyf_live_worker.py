@@ -22,7 +22,38 @@ import argparse
 import difflib
 import urllib.request
 import urllib.parse
+from pathlib import Path
 from typing import Dict, List, Any, Optional
+
+# Proje kökünü sys.path'e ekle
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+try:
+    from rapidfuzz import fuzz
+except ImportError:
+    fuzz = None
+
+try:
+    from src.extract_scanned_pdfs import clean_ocr_swimming_line
+except ImportError:
+    def clean_ocr_swimming_line(line: str) -> str:
+        line = re.sub(r"([A-Za-zçğıöşüÇĞİÖŞÜ])(\d{1,2}:\d{2}\.\d{2})", r"\1   \2", line)
+        line = re.sub(r"(\d{1,2}:\d{2}\.\d{2})\s*(?:[oOe<>/_~]+\s*)(\d{2,4}\b)", r"\1   \2", line)
+        line = re.sub(r"([A-ZÇĞİÖŞÜa-zçğıöşü])\s+[|_—=~]+\s+(\d{2}\b)", r"\1   \2", line)
+        return line
+
+try:
+    from src.canonicalize_athletes import standardize_swimmer_name
+except ImportError:
+    def standardize_swimmer_name(name: str) -> str:
+        return name.strip()
+
+try:
+    from src.pdf_reader import find_tesseract_cmd
+except ImportError:
+    def find_tesseract_cmd() -> Optional[str]:
+        p = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        return p if os.path.exists(p) else None
 
 try:
     import fitz  # PyMuPDF
@@ -33,8 +64,9 @@ try:
     import pytesseract
     from PIL import Image
     import io
-    if os.name == 'nt' and os.path.exists(r"C:\Program Files\Tesseract-OCR\tesseract.exe"):
-        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    tess_path = find_tesseract_cmd()
+    if tess_path:
+        pytesseract.pytesseract.tesseract_cmd = tess_path
 except ImportError:
     pytesseract = None
 
@@ -330,16 +362,33 @@ def parse_result_list_pdf(pdf_bytes: bytes, start_entries: Optional[List[Dict[st
 
 def match_ocr_line(line_prefix: str, candidates: List[str]) -> Optional[str]:
     """OCR satır önekini start listesindeki sporcu adlarıyla eşleştirir."""
+    if not line_prefix or not candidates:
+        return None
+
     p_norm = normalize_tr(line_prefix)
     p_norm = re.sub(r'^\d+[\.\s]+', '', p_norm).strip()
+    text_lower = line_prefix.lower()
 
-    # 1. Birebir startswith kontrolü
+    # 1. RapidFuzz varsa yüksek doğruluklu token ve partial ratio kontrolü
+    if fuzz:
+        best_c, best_score = None, 0.0
+        for c in candidates:
+            c_lower = c.lower()
+            score1 = fuzz.partial_ratio(c_lower, text_lower)
+            score2 = fuzz.token_set_ratio(c_lower, text_lower)
+            score = max(score1, score2)
+            if score > best_score:
+                best_score = score
+                best_c = c
+        if best_score >= 70.0:
+            return best_c
+
+    # 2. Birebir startswith veya difflib toleransı (Fallback)
     for c in candidates:
         c_norm = normalize_tr(c)
         if p_norm.startswith(c_norm):
             return c
 
-    # 2. Kelime benzerliği toleransı (Fuzzy Match >= 0.70)
     words = p_norm.split()
     best_c, best_score = None, 0.0
     for c in candidates:
@@ -358,20 +407,36 @@ def match_ocr_line(line_prefix: str, candidates: List[str]) -> Optional[str]:
 
 def fix_ocr_time(t_str: str, seed_time: Optional[str] = None) -> str:
     """
-    OCR okumasında nokta öncesi eksik veya birleşik çıkan dakikayı düzeltir.
-    Örn: '402.52' -> '4:02.52'
+    OCR okumasında harf karışmalarını ve nokta öncesi eksik veya birleşik çıkan dakikayı düzeltir.
+    Örn: '402.52' -> '4:02.52', 'A27.B3' -> '4:27.83', 'M:51.58' -> '4:51.58'
     """
     if not t_str:
         return t_str
-    # 1. '402.52' veya '538.41' gibi 3 basamak nokta öncesi varsa (dakika:saniye)
-    m = re.match(r'^(\d)(\d{2})\.(\d{2})$', t_str)
-    if m:
-        return f"{m.group(1)}:{m.group(2)}.{m.group(3)}"
-    # 2. Eğer dakika kısmı OCR'da kopmuşsa ve sadece '02.52' kalmışsa, giriş derecesinden dakikayı tamamla
-    if ':' not in t_str and seed_time and ':' in seed_time:
-        seed_min = seed_time.split(':')[0]
-        return f"{seed_min}:{t_str}"
-    return t_str
+
+    t = t_str.strip()
+
+    # 1. OCR harf-sayı karışması düzeltmesi (A->4, B->8, S->5, O/o->0, I/l->1)
+    if any(c.isalpha() for c in t) and "." in t:
+        trans = str.maketrans("ABbSOoIl", "48850011")
+        t = t.translate(trans)
+
+    # 2. '402.52' veya '538.41' gibi 3 basamak nokta öncesi varsa (dakika:saniye)
+    m3 = re.match(r"^(\d)(\d{2})\.(\d{2})$", t)
+    if m3:
+        return f"{m3.group(1)}:{m3.group(2)}.{m3.group(3)}"
+
+    # 3. Eğer dakika kısmı harf lekesi veya bozulmuşsa (örn: 'M:51.58', 'hd:44.44' veya ':51.58')
+    m_corrupt_min = re.match(r"^[^\d:]*:(\d{2}\.\d{2})$", t)
+    if m_corrupt_min and seed_time and ":" in seed_time:
+        seed_min = seed_time.split(":")[0]
+        return f"{seed_min}:{m_corrupt_min.group(1)}"
+
+    # 4. Eğer dakika kısmı OCR'da tamamen kopmuşsa ('02.52') ve giriş derecesi dakikalı ise
+    if ":" not in t and seed_time and ":" in seed_time:
+        seed_min = seed_time.split(":")[0]
+        return f"{seed_min}:{t}"
+
+    return t
 
 
 def parse_scanned_pdf_ocr(doc, header: Dict[str, Any], start_entries: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -385,28 +450,67 @@ def parse_scanned_pdf_ocr(doc, header: Dict[str, Any], start_entries: Optional[L
         pix = page.get_pixmap(dpi=300)
         img = Image.open(io.BytesIO(pix.tobytes("png")))
         # --psm 6 satır hizalamasını koruyarak tablo satırlarını birleştirir
-        ocr_text = pytesseract.image_to_string(img, lang="tur", config="--psm 6")
+        ocr_text = pytesseract.image_to_string(img, lang="tur", config="--psm 6 preserve_interword_spaces=1")
 
-        for line in ocr_text.splitlines():
-            line = line.strip()
+        # Sayfa 0'da başlık eksikse OCR satırlarından tamamla
+        if page_num == 0 and not header.get("yaris_no"):
+            ocr_lines = [l.strip() for l in ocr_text.splitlines() if l.strip()]
+            for l in ocr_lines[:10]:
+                m_race = re.search(r"Yar[ıiIİ][şsSŞ]\s+(\d+)\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)[,\s]+(\d+)m\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\s*(.*)", l, re.I)
+                if m_race:
+                    header["yaris_no"] = m_race.group(1)
+                    header["cinsiyet"] = "Erkek" if "Erkek" in m_race.group(2) else "Kadın"
+                    header["mesafe"] = int(m_race.group(3))
+                    header["stil"] = m_race.group(4)
+                    if m_race.group(5):
+                        header["yas_grubu"] = m_race.group(5).strip()
+                    break
+            if not header.get("musabaka_adi") and len(ocr_lines) >= 2:
+                header["musabaka_adi"] = ocr_lines[0]
+                if "," in ocr_lines[1]:
+                    header["sehir"] = ocr_lines[1].split(",")[0].strip()
 
-            # Ara derece (split time) satırlarını doğrudan atla (örn: 50m:, 100m:, tüm:, Güm: vb.)
-            if re.search(r'\b(?:\d{2,3}m|tüm|idüm|Güm|ilüm|isim)[:\s]', line, re.I):
+        for raw_line in ocr_text.splitlines():
+            line = raw_line.strip()
+            if not line:
                 continue
 
-            # Resmi Derece ve Puan aranır (örn: 4:02.52 747 veya 402.52 747 veya 27.61 630)
-            m_time = re.search(r'((?:\d+:)?\d{1,3}\.\d{2})(?:\s+(\d{2,4})\b)?', line)
+            # 1. Eski yapımızdaki ara derece (split time) ve gürültü kontrolleri
+            if re.search(r'\b(?:\d{2,3}m|tüm|idüm|Güm|ilüm|isim|[5S]0m|[5S]om)[:\s]', line, re.I):
+                continue
+            if "Splash Meet Manager" in line or "Puanlar:" in line or "BAŞHAKEM" in line or "Sonuçlar" in line:
+                continue
+            if re.match(r"^S[ıi]ra\b", line, re.I) or re.search(r"T[ÜU]RK[İI]YE\s+REKORLAR", line, re.I):
+                continue
+
+            # 2. Temizleme katmanı
+            line = clean_ocr_swimming_line(line)
+
+            # 3. Yüzücü satırı tespiti: Baştaki sıra numarası (1., 2., 10. vb.)
+            m_rank = re.match(r"^(\d{1,3})\.[\s\t]+(.+)$", line)
+            if not m_rank:
+                continue
+
+            rank_val = m_rank.group(1)
+            content = m_rank.group(2).strip()
+
+            # 4. Resmi Derece ve Puan tespiti:
+            # Önce OCR harf lekesi içeren veya standart derece + puan aranır
+            m_time = re.search(r'\b((?:[A-Za-z0-9]{1,2}:)?[A-Za-z0-9]{2,3}\.[A-Za-z0-9]{2})\s+(\d{2,4})\b', content)
             if not m_time:
+                m_time = re.search(r'\b((?:\d{1,2}:)?\d{2,3}\.\d{2})\b', content)
+                time_val = m_time.group(1) if m_time else None
+                pts_val = None
+            else:
+                time_val = m_time.group(1)
+                pts_val = m_time.group(2)
+
+            if not time_val:
                 continue
 
-            time_val = m_time.group(1)
-            pts_val = m_time.group(2)
-            prefix = line[:m_time.start()].strip()
+            prefix = content[:m_time.start()].strip()
 
-            m_rank = re.match(r'^(\d+)[\.\s]+', prefix)
-            rank_val = m_rank.group(1) if m_rank else None
-
-            # SADECE START LISTESİNDEKİ SPORCULARLA EŞLEŞENLERİ KABUL ET
+            # 5. SADECE START LISTESİNDEKİ SPORCULARLA EŞLEŞENLERİ KABUL ET
             matched_name = match_ocr_line(prefix, candidates) if candidates else None
 
             if matched_name and matched_name not in seen_swimmers:
