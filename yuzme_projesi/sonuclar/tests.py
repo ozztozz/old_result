@@ -178,12 +178,8 @@ class SporcuApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data['durum'], 'basarili')
-        self.assertEqual(data['sporcu']['id'], self.sporcu.id)
-        self.assertEqual(data['sporcu']['sporcu_adi'], "Ahmet YILMAZ")
-        self.assertEqual(data['sporcu']['kulup'], "Test Spor Kulübü")
-        self.assertEqual(data['sporcu']['okul'], "Test Ortaokulu")
-        self.assertEqual(len(data['en_iyi_sonuclar']), 2)
+        self.assertEqual(set(data.keys()), {'en_iyi_derece', 'sonuclar'})
+        self.assertEqual(len(data['en_iyi_derece']), 2)
         self.assertEqual(len(data['sonuclar']), 2)
 
     def test_api_sporcu_sonuclari_query_param(self):
@@ -192,8 +188,7 @@ class SporcuApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data['durum'], 'basarili')
-        self.assertEqual(data['toplam_sonuc_sayisi'], 2)
+        self.assertEqual(set(data.keys()), {'en_iyi_derece', 'sonuclar'})
         self.assertEqual(len(data['sonuclar']), 2)
         self.assertEqual(data['en_iyi_derece']['derece'], "29.50")
         self.assertEqual(data['en_iyi_derece']['mesafe'], 50)
@@ -210,9 +205,7 @@ class SporcuApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data['durum'], 'basarili')
-        self.assertEqual(data['filtre']['kategori'], 'Serbest')
-        self.assertEqual(data['filtre']['mesafe'], 50)
+        self.assertEqual(set(data.keys()), {'en_iyi_derece', 'sonuclar'})
         self.assertEqual(len(data['sonuclar']), 2)
         self.assertEqual(data['en_iyi_derece']['derece'], "29.50")
 
@@ -229,15 +222,15 @@ class SporcuApiTests(TestCase):
         url = reverse('sonuclar:api_sporcu_sonuclari_query')
         response = self.client.post(
             url,
-            data=json.dumps({'id': self.sporcu.id, 'mesafe': 100}),
+            data=json.dumps({'id': self.sporcu.id, 'kategori': 'Serbest', 'mesafe': 100}),
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
-        self.assertEqual(data['durum'], 'basarili')
-        self.assertEqual(len(data['en_iyi_sonuclar']), 1)
-        self.assertEqual(data['en_iyi_sonuclar'][0]['mesafe'], 100)
+        self.assertEqual(set(data.keys()), {'en_iyi_derece', 'sonuclar'})
+        self.assertEqual(data['en_iyi_derece']['mesafe'], 100)
+        self.assertEqual(len(data['sonuclar']), 1)
 
     def test_api_sporcu_sonuclari_not_found(self):
         url = reverse('sonuclar:api_sporcu_sonuclari', kwargs={'sporcu_id': 999999})

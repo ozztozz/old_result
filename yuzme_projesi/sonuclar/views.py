@@ -875,54 +875,17 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
                 "kisisel_en_iyi_mi": bool(valid_pb_race and y.id == valid_pb_race.id)
             })
 
-        response_data = {
-            "durum": "basarili",
-            "sporcu": sporcu_data,
-            "filtre": {
-                "kategori": kategori_str or None,
-                "mesafe": mesafe_val,
-                "sirala": sirala
-            },
+        # Sadece en_iyi_derece ve sonuclar döner
+        return JsonResponse({
             "en_iyi_derece": best_race_dict,
-            "toplam_sonuc_sayisi": len(filtered_results_list),
-            "sonuclar": filtered_results_list,
-            "en_iyi_sonuclar": [best_race_dict] if best_race_dict else pb_list,
-            "kulup_tarihcesi": tarihce_list
-        }
-        return JsonResponse(response_data, status=200, json_dumps_params={'ensure_ascii': False})
+            "sonuclar": filtered_results_list
+        }, status=200, json_dumps_params={'ensure_ascii': False})
 
-    # Kategori veya mesafe belirtilmemişse genel PB özeti dön
-    response_data = {
-        "durum": "basarili",
-        "sporcu": sporcu_data,
-        "toplam_brans_sayisi": len(pb_list),
-        "en_iyi_sonuclar": pb_list,
-        "sonuclar": pb_list,
-        "kulup_tarihcesi": tarihce_list
-    }
-
-    if tum_yarislar:
-        tum_qs = sp.yaris_sonuclari.select_related('kulup').order_by('-yaris_tarihi_baslangic', '-id')
-        all_races_list = []
-        for y in tum_qs[:100]:
-            all_races_list.append({
-                "id": y.id,
-                "yaris_no": y.yaris_no,
-                "musabaka_adi": y.musabaka_adi,
-                "sehir": y.sehir,
-                "tarih": y.yaris_tarihi_baslangic or y.yaris_tarihi_ham,
-                "mesafe": y.mesafe,
-                "stil": y.stil,
-                "etkinlik": f"{y.mesafe}m {y.stil}" if y.mesafe and y.stil else (y.stil or ""),
-                "derece": y.derece,
-                "derece_saniye": y.derece_saniye,
-                "puan": y.puan,
-                "sira": y.sira,
-                "kulup": y.kulup.kulup_adi if y.kulup else ""
-            })
-        response_data["tum_yarislar"] = all_races_list
-
-    return JsonResponse(response_data, status=200, json_dumps_params={'ensure_ascii': False})
+    # Kategori veya mesafe belirtilmemişse
+    return JsonResponse({
+        "en_iyi_derece": pb_list,
+        "sonuclar": pb_list
+    }, status=200, json_dumps_params={'ensure_ascii': False})
 
 
 
