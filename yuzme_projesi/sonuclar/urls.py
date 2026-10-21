@@ -20,5 +20,7 @@ urlpatterns = [
     path('api/sporcular/<int:sporcu_id>/', views.api_sporcu_sonuclari, name='api_sporcu_detay_api'),
     path('api/sporcu-sonuclari/', views.api_sporcu_sonuclari, name='api_sporcu_sonuclari_query'),
     path('api/canli-aktar/', views.api_canli_aktar, name='api_canli_aktar'),
+    path('api/yaris-aktar/', views.api_canli_aktar, name='api_yaris_aktar'),
+    path('api/yaris-kaydet/', views.api_canli_aktar, name='api_yaris_kaydet'),
 ]
 

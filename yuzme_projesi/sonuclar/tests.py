@@ -279,3 +279,116 @@ class SporcuApiTests(TestCase):
 
         qs_upper = Sporcu.objects.filter(sporcu_adi__icontains="ÇINAR KÖYSÜREN")
         self.assertIn(self.cinar, qs_upper)
+
+    def test_api_canli_aktar_matching_and_deduplication(self):
+        """GitHub Action start ve sonuç aktarımı, sporcu eşleştirmesi ve mükerrerlik koruması testi."""
+        url = reverse('sonuclar:api_canli_aktar')
+
+        # 1. Aşama: Start Listesi Gönderimi
+        start_payload = {
+            "tur": "start_listesi",
+            "musabaka_adi": "TYF Bölge Müsabakası",
+            "sehir": "Ankara",
+            "yaris_tarihi_baslangic": "2026-05-01",
+            "yaris_no": "10",
+            "cinsiyet": "Erkek",
+            "mesafe": 50,
+            "stil": "Serbest",
+            "kayitlar": [
+                {
+                    "seri": "Seri 3",
+                    "kulvar": 4,
+                    "sporcu": "cinar koysuren",  # OCR veya küçük harf varyasyonu (Ahmet / Çınar eşleşmesi)
+                    "dogum_yili": "14",
+                    "kulup": "Gazi Üniversitesi Spor Kulübü",  # Yeni Kulüp
+                    "giris_derecesi": "32.50"
+                }
+            ]
+        }
+
+        resp1 = self.client.post(url, data=json.dumps(start_payload), content_type='application/json')
+        self.assertEqual(resp1.status_code, 200)
+        data1 = resp1.json()
+        self.assertEqual(data1['durum'], 'basarili')
+        self.assertEqual(data1['istatistikler']['eslesen_sporcu_sayisi'], 1)  # Çınar eşleşti
+        self.assertEqual(data1['istatistikler']['yeni_kulup_sayisi'], 1)      # Yeni kulüp eklendi
+        self.assertEqual(data1['istatistikler']['eklenen_sonuc_sayisi'], 1)    # 1 start kaydı eklendi
+
+        # Kaydın "Bekleniyor" olarak eklendiğini doğrula
+        yaris = YarisSonucu.objects.get(sporcu=self.cinar, musabaka_adi="TYF Bölge Müsabakası", mesafe=50, stil="Serbest")
+        self.assertEqual(yaris.derece, "Bekleniyor")
+        self.assertEqual(yaris.kulvar, 4)
+
+        # 2. Aşama: Yarış Sonucu Gönderimi (Start Listesindeki kaydı güncellemeli, mükerrer yaratmamalı)
+        result_payload = {
+            "tur": "sonuc_listesi",
+            "musabaka_adi": "TYF Bölge Müsabakası",
+            "sehir": "Ankara",
+            "yaris_tarihi_baslangic": "2026-05-01",
+            "yaris_no": "10",
+            "cinsiyet": "Erkek",
+            "mesafe": 50,
+            "stil": "Serbest",
+            "kayitlar": [
+                {
+                    "sira": "1",
+                    "sporcu": "Çınar KÖYSÜREN",
+                    "dogum_yili": 2014,
+                    "kulup": "Gazi Üniversitesi Spor Kulübü",
+                    "derece": "31.90",
+                    "puan": 290
+                }
+            ]
+        }
+
+        resp2 = self.client.post(url, data=json.dumps(result_payload), content_type='application/json')
+        self.assertEqual(resp2.status_code, 200)
+        data2 = resp2.json()
+        self.assertEqual(data2['istatistikler']['guncellenen_sonuc_sayisi'], 1)  # Start -> Sonuç güncellendi
+        self.assertEqual(data2['istatistikler']['eklenen_sonuc_sayisi'], 0)      # Yeni kayıt OLUŞMADI (Mükerrerlik engellendi)
+
+        yaris.refresh_from_db()
+        self.assertEqual(yaris.derece, "31.90")
+        self.assertEqual(yaris.puan, 290)
+        self.assertEqual(yaris.sira, "1")
+
+        # Toplam yarış sayısının sadece 1 kez arttığını doğrula
+        self.assertEqual(YarisSonucu.objects.filter(sporcu=self.cinar, musabaka_adi="TYF Bölge Müsabakası").count(), 1)
+
+        # 3. Aşama: Aynı Sonucun Tekrar Gönderilmesi (GitHub Actions tekrar çalıştığında)
+        resp3 = self.client.post(url, data=json.dumps(result_payload), content_type='application/json')
+        self.assertEqual(resp3.status_code, 200)
+        data3 = resp3.json()
+        self.assertEqual(data3['istatistikler']['mukerrer_atlanilan_sayisi'], 1) # Birebir aynı olduğu için atlandı
+        self.assertEqual(data3['istatistikler']['eklenen_sonuc_sayisi'], 0)
+        self.assertEqual(data3['istatistikler']['guncellenen_sonuc_sayisi'], 0)
+
+        # 4. Aşama: Tamamen Yeni Bir Sporcu Geldiğinde
+        new_swimmer_payload = {
+            "tur": "sonuc_listesi",
+            "musabaka_adi": "Okul Sporları İl Seçmesi",
+            "yaris_tarihi_baslangic": "2026-05-10",
+            "mesafe": 100,
+            "stil": "Kurbağalama",
+            "kayitlar": [
+                {
+                    "sira": "3",
+                    "sporcu": "Bora KORKMAZ",
+                    "dogum_yili": "2013",
+                    "kulup": "Özel Ankara İlkokulu",
+                    "derece": "1:25.40",
+                    "puan": 240
+                }
+            ]
+        }
+        resp4 = self.client.post(url, data=json.dumps(new_swimmer_payload), content_type='application/json')
+        self.assertEqual(resp4.status_code, 200)
+        data4 = resp4.json()
+        self.assertEqual(data4['istatistikler']['yeni_sporcu_sayisi'], 1)
+        self.assertEqual(data4['istatistikler']['yeni_kulup_sayisi'], 1)
+        self.assertEqual(data4['istatistikler']['eklenen_sonuc_sayisi'], 1)
+
+        # Yeni sporcu ve okul kaydının oluştuğunu doğrula
+        bora = Sporcu.objects.get(sporcu_adi="Bora KORKMAZ")
+        self.assertEqual(bora.dogum_yili, 2013)
+        self.assertEqual(bora.okul(), "Özel Ankara İlkokulu")
