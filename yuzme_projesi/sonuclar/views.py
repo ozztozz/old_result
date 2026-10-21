@@ -877,10 +877,15 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
         resp["Access-Control-Allow-Headers"] = "Content-Type, X-Requested-With, Accept"
         return resp
 
-    # Kategori veya mesafe belirtilmemişse
+    # Kategori veya mesafe belirtilmemişse (Genel sporcu profili ve PB özeti)
     resp = JsonResponse({
+        "durum": "basarili",
+        "sporcu": sporcu_data,
+        "toplam_brans_sayisi": len(pb_list),
+        "en_iyi_sonuclar": pb_list,
         "en_iyi_derece": pb_list,
-        "sonuclar": pb_list
+        "sonuclar": pb_list,
+        "kulup_tarihcesi": tarihce_list
     }, status=200, json_dumps_params={'ensure_ascii': False})
     resp["Access-Control-Allow-Origin"] = "*"
     resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
