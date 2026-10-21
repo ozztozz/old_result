@@ -395,6 +395,8 @@ def build_database():
     club_stats = defaultdict(lambda: {
         "swimmer_names": set(),
         "race_count": 0,
+        "okul_races": 0,
+        "fed_races": 0,
         "min_date": "9999-99-99",
         "max_date": "0000-00-00"
     })
@@ -414,6 +416,12 @@ def build_database():
 
         cs = club_stats[kl]
         cs["race_count"] += 1
+        m_adi = r.get("Müsabaka Adı", "").lower()
+        if "okul spor" in m_adi or "okulspor" in m_adi or "okullar" in m_adi:
+            cs["okul_races"] += 1
+        else:
+            cs["fed_races"] += 1
+
         if sp:
             cs["swimmer_names"].add(sp)
 
@@ -432,13 +440,25 @@ def build_database():
         cs = club_stats[kl]
         min_d = cs["min_date"] if cs["min_date"] != "9999-99-99" else None
         max_d = cs["max_date"] if cs["max_date"] != "0000-00-00" else None
+
+        in_school_meet = (cs["okul_races"] > 0)
+        has_school_kw = is_school_team(kl)
+        has_sk = bool(re.search(r'(?:spor\s*kul[uü]b[uü]|(?:\b|[_\s])sk\b|(?:\b|[_\s])gsk\b|(?:\b|[_\s])skd\b|y[uü]zme\s*kul[uü]b[uü]|ihtisas|derne[gğ]i|belediye\s*spor|belediyespor|kolejliler)', kl.lower()))
+        if in_school_meet:
+            okul_mu = 0 if (has_sk and cs["fed_races"] > cs["okul_races"] and cs["fed_races"] >= 50) else 1
+        elif has_school_kw and not has_sk:
+            okul_mu = 1
+        else:
+            okul_mu = 0
+
         club_insert_rows.append((
             c_id,
             kl,
             len(cs["swimmer_names"]),
             cs["race_count"],
             min_d,
-            max_d
+            max_d,
+            okul_mu
         ))
 
     print(f"[+] Toplam {len(club_insert_rows):,} benzersiz kulüp hazırlandı.")
@@ -855,7 +875,8 @@ def build_database():
         toplam_sporcu_sayisi INTEGER DEFAULT 0,
         toplam_yaris_sayisi INTEGER DEFAULT 0,
         ilk_yaris_tarihi TEXT,
-        son_yaris_tarihi TEXT
+        son_yaris_tarihi TEXT,
+        okul_mu INTEGER DEFAULT 0
     );
     """)
 
@@ -927,8 +948,8 @@ def build_database():
     print("[+] Tablolar oluşturuldu. Toplu veri aktarımı başlatılıyor...")
 
     cur.executemany("""
-    INSERT INTO kulupler (id, kulup_adi, toplam_sporcu_sayisi, toplam_yaris_sayisi, ilk_yaris_tarihi, son_yaris_tarihi)
-    VALUES (?, ?, ?, ?, ?, ?);
+    INSERT INTO kulupler (id, kulup_adi, toplam_sporcu_sayisi, toplam_yaris_sayisi, ilk_yaris_tarihi, son_yaris_tarihi, okul_mu)
+    VALUES (?, ?, ?, ?, ?, ?, ?);
     """, club_insert_rows)
     print(f"  -> {len(club_insert_rows):,} kulüp eklendi.")
 
@@ -965,6 +986,7 @@ def build_database():
     print("\n>>> ADIM 7: Sorgu hızlandırıcı indeksler inşa ediliyor...")
     indexes = [
         "CREATE INDEX idx_kulupler_ad ON kulupler(kulup_adi);",
+        "CREATE INDEX idx_kulupler_okul_mu ON kulupler(okul_mu);",
         "CREATE INDEX idx_sporcular_ad ON sporcular(sporcu_adi);",
         "CREATE INDEX idx_sporcular_dogum_yili ON sporcular(dogum_yili);",
         "CREATE INDEX idx_sporcular_birincil_kulup ON sporcular(birincil_kulup_id);",

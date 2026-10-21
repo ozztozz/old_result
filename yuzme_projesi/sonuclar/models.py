@@ -54,6 +54,7 @@ class Kulup(models.Model):
     toplam_yaris_sayisi = models.IntegerField(default=0, verbose_name="Toplam Yarış Sayısı")
     ilk_yaris_tarihi = models.CharField(max_length=20, blank=True, null=True, verbose_name="İlk Yarış Tarihi")
     son_yaris_tarihi = models.CharField(max_length=20, blank=True, null=True, verbose_name="Son Yarış Tarihi")
+    okul_mu = models.IntegerField(default=0, verbose_name="Okul mu?")
 
     class Meta:
         managed = False
@@ -100,27 +101,25 @@ class Sporcu(models.Model):
 
     def aktif_kulup(self):
         """
-        Sporcunun en güncel/aktif kulübünü döner.
-        Okul yarışlarındaki okul takımları yerine tescilli spor kulüplerine öncelik verir.
+        Sporcunun en güncel/aktif resmi spor kulübünü döner.
+        Okul Sporları takımları yerine tescilli spor kulüplerine öncelik verir.
         """
-        tarihce = self.kulup_tarihcesi.filter(aktif_kulup_mu=1).first()
-        if tarihce and not is_school_team(tarihce.kulup.kulup_adi):
+        # 1. Okul olmayan (okul_mu=0) tarihçeler arasından aktif olanı veya en son yarışılanı bul
+        tarihce = self.kulup_tarihcesi.select_related('kulup').filter(kulup__okul_mu=0, aktif_kulup_mu=1).first()
+        if not tarihce:
+            tarihce = self.kulup_tarihcesi.select_related('kulup').filter(kulup__okul_mu=0).order_by('-son_yaris_tarihi', '-id').first()
+
+        if tarihce:
             return tarihce.kulup
 
-        # Eğer aktif_kulup_mu okul takımıysa veya bulunamadıysa, okul olmayan son kulübü bul
-        for t in self.kulup_tarihcesi.select_related('kulup').order_by('-son_yaris_tarihi', '-id'):
-            if not is_school_team(t.kulup.kulup_adi):
-                return t.kulup
-
-        # Sporcunun sadece okul/ferdi kaydı varsa
-        return tarihce.kulup if tarihce else self.birincil_kulup
+        # 2. Sporcunun sadece okul/ferdi kaydı varsa
+        t_any = self.kulup_tarihcesi.select_related('kulup').order_by('-son_yaris_tarihi', '-id').first()
+        return t_any.kulup if t_any else self.birincil_kulup
 
     def okul(self):
-        """Sporcunun okul müsabakalarında (MEB) temsil ettiği en güncel okulu döner (varsa)."""
-        for t in self.kulup_tarihcesi.select_related('kulup').order_by('-son_yaris_tarihi', '-id'):
-            if is_school_team(t.kulup.kulup_adi):
-                return t.kulup.kulup_adi
-        return None
+        """Sporcunun Okul Sporları müsabakalarında temsil ettiği en güncel okulu döner (varsa)."""
+        tarihce = self.kulup_tarihcesi.select_related('kulup').filter(kulup__okul_mu=1).order_by('-son_yaris_tarihi', '-id').first()
+        return tarihce.kulup.kulup_adi if tarihce else None
 
     def en_iyi_dereceler(self):
         """Sporcunun branş ve mesafelere göre kişisel en iyi derecelerini (PB) döner."""
