@@ -476,3 +476,75 @@ def api_canli_aktar(request):
         'toplam_kayit': len(kayitlar)
     })
 
+
+from .athlete_matcher import match_athlete
+
+@csrf_exempt
+def api_sporcu_eslestir(request):
+    """
+    Sporcu Eşleştirme API'si (Açık / Yetkisiz Endpoint)
+    ----------------------------------------------------
+    GET veya POST parametreleriyle gelen sporcu adı ve doğum tarihi/yılına göre
+    veritabanındaki Sporcu kayıtlarını sorgular.
+
+    - Tam Eşleşme varsa: Doğrudan bulunan_id ve sporcu detayını döner.
+    - Tam Eşleşme yoksa: En yüksek benzerlik puanına sahip muhtemel sporcuları liste halinde döner.
+    """
+    name = ""
+    birth_info = None
+    club = None
+    limit = 10
+
+    if request.method == 'POST':
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                data = {}
+        else:
+            data = request.POST
+
+        name = data.get('sporcu_adi') or data.get('ad_soyad') or data.get('ad') or data.get('name') or data.get('sporcu') or ''
+        birth_info = data.get('dogum_yili') or data.get('dogum_tarihi') or data.get('birth_date') or data.get('yb')
+        club = data.get('kulup') or data.get('club')
+        if data.get('limit'):
+            try:
+                limit = int(data.get('limit'))
+            except Exception:
+                limit = 10
+    else:
+        name = request.GET.get('sporcu_adi') or request.GET.get('ad_soyad') or request.GET.get('ad') or request.GET.get('name') or request.GET.get('q') or ''
+        birth_info = request.GET.get('dogum_yili') or request.GET.get('dogum_tarihi') or request.GET.get('birth_date') or request.GET.get('yb')
+        club = request.GET.get('kulup') or request.GET.get('club')
+        if request.GET.get('limit'):
+            try:
+                limit = int(request.GET.get('limit'))
+            except Exception:
+                limit = 10
+
+    res = match_athlete(name=name, birth_year_or_date=birth_info, club=club, limit=limit)
+    status_code = 200 if res.get("durum") in ["basarili", "bulunamadi"] else 400
+    return JsonResponse(res, status=status_code, json_dumps_params={'ensure_ascii': False})
+
+
+def sporcu_eslestir_sayfasi(request):
+    """
+    Sporcu Eşleştirme Test ve Arama Arayüzü (Web Arayüzü)
+    """
+    name = request.GET.get('ad', '').strip()
+    birth_info = request.GET.get('dogum_yili', '').strip()
+    club = request.GET.get('kulup', '').strip()
+
+    sonuc = None
+    if name:
+        sonuc = match_athlete(name=name, birth_year_or_date=birth_info, club=club)
+
+    context = {
+        'ad': name,
+        'dogum_yili': birth_info,
+        'kulup': club,
+        'sonuc': sonuc,
+    }
+    return render(request, 'sonuclar/sporcu_eslestir.html', context)
+
+
