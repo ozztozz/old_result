@@ -383,9 +383,22 @@ def build_database():
         for r in reader:
             raw_rows.append(r)
 
-    rows = [r for r in raw_rows if is_valid_result_row(r)]
+    def is_2020_or_newer(r: dict) -> bool:
+        t_raw = r.get("Tarih", "").strip()
+        fname = r.get("Dosya Adı", "").strip()
+        mname = r.get("Müsabaka Adı", "").strip()
+        d1, _ = parse_date_range(t_raw, fname)
+        if d1 and len(d1) >= 4 and d1[:4].isdigit():
+            return int(d1[:4]) >= 2020
+        text = f"{fname} {mname}"
+        m = re.findall(r'(?:^|[^\d])(20[12]\d)(?:[^\d]|$)', text)
+        if m:
+            return int(m[0]) >= 2020
+        return False
+
+    rows = [r for r in raw_rows if is_valid_result_row(r) and is_2020_or_newer(r)]
     filtered_cnt = len(raw_rows) - len(rows)
-    print(f"[+] Toplam {len(raw_rows):,} satırdan {len(rows):,} geçerli yarış sonucu seçildi ({filtered_cnt:,} başlık/baraj satırı elendi) ({time.time() - start_time:.2f}s).")
+    print(f"[+] Toplam {len(raw_rows):,} satırdan {len(rows):,} geçerli (2020 ve sonrası) yarış sonucu seçildi ({filtered_cnt:,} satır elendi) ({time.time() - start_time:.2f}s).")
 
     # -------------------------------------------------------------------------
     # ADIM 2: Kulüpler Tablosu Hazırlığı
