@@ -659,25 +659,17 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
     Sporcu ID ile Kategori ve Mesafe Bazında Sonuçlar API'si
     -------------------------------------------------------
     GET veya POST ile gelen sporcu ID'sine göre sporcunun:
-    1. Profil bilgilerini (ad, doğum yılı, cinsiyet, aktif kulüp, okul, yarış sayısı)
-    2. Belirli bir kategori (stil) ve mesafe seçilmişse o branştaki tüm sonuç listesini ve en iyi derecesini (PB)
-    3. Herhangi bir kategori seçilmemişse stil ve mesafe bazındaki kişisel en iyi derecelerini (PB özeti)
-    4. Kulüp temsil tarihçesini
+    1. Belirli bir kategori (stil) ve mesafe seçilmişse o branştaki tüm sonuç listesini ve en iyi derecesini (PB)
+    2. Herhangi bir kategori seçilmemişse stil ve mesafe bazındaki kişisel en iyi derecelerini (PB özeti)
     JSON formatında döner.
-
-    Kullanım URL'leri:
-      - GET /api/sporcular/<sporcu_id>/sonuclar/
-      - GET /api/sporcular/<sporcu_id>/sonuclar/<kategori>/<mesafe>/
-      - GET /api/sporcular/<sporcu_id>/<kategori>/<mesafe>/
-      - GET /api/sporcu-sonuclari/?sporcu_id=<id>&kategori=<stil>&mesafe=<mesafe>
-      - POST /api/sporcu-sonuclari/ {"sporcu_id": <id>, "kategori": "Serbest", "mesafe": 50}
-
-    Parametreler:
-      - kategori / stil: 'Serbest', 'Kurbağalama', 'Sırtüstü', 'Kelebek', 'Karışık'
-      - mesafe: 50, 100, 200, 400, 800, 1500
-      - sirala: 'tarih' (en yeni önce - varsayılan), 'tarih_asc' (kronolojik), 'derece' (en hızlı önce)
-      - tum_yarislar: 1 / true (Tüm geçmiş yarışları da döner)
     """
+    if request.method == 'OPTIONS':
+        resp = JsonResponse({}, status=200)
+        resp["Access-Control-Allow-Origin"] = "*"
+        resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        resp["Access-Control-Allow-Headers"] = "Content-Type, X-Requested-With, Accept"
+        return resp
+
     target_id = sporcu_id
     kategori_filter = kategori
     mesafe_filter = mesafe
@@ -876,16 +868,24 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
             })
 
         # Sadece en_iyi_derece ve sonuclar döner
-        return JsonResponse({
+        resp = JsonResponse({
             "en_iyi_derece": best_race_dict,
             "sonuclar": filtered_results_list
         }, status=200, json_dumps_params={'ensure_ascii': False})
+        resp["Access-Control-Allow-Origin"] = "*"
+        resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        resp["Access-Control-Allow-Headers"] = "Content-Type, X-Requested-With, Accept"
+        return resp
 
     # Kategori veya mesafe belirtilmemişse
-    return JsonResponse({
+    resp = JsonResponse({
         "en_iyi_derece": pb_list,
         "sonuclar": pb_list
     }, status=200, json_dumps_params={'ensure_ascii': False})
+    resp["Access-Control-Allow-Origin"] = "*"
+    resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp["Access-Control-Allow-Headers"] = "Content-Type, X-Requested-With, Accept"
+    return resp
 
 
 
