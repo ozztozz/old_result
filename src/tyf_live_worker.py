@@ -604,9 +604,18 @@ def post_to_django(api_url: str, payload: Dict[str, Any], api_key: Optional[str]
 
     req = urllib.request.Request(api_url, data=data_json, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=30) as resp:
             resp_body = json.loads(resp.read().decode("utf-8"))
-            print(f"  [+] Django API Yanıtı: {resp_body}")
+            msg = resp_body.get('mesaj', resp_body)
+            print(f"  [+] Django API Yanıtı: {msg}")
+            stats = resp_body.get('istatistikler', {})
+            if stats:
+                print(f"      -> Yeni Eklenen: {stats.get('eklenen_sonuc_sayisi', 0)} | "
+                      f"Güncellenen: {stats.get('guncellenen_sonuc_sayisi', 0)} | "
+                      f"Mükerrer Atlanan: {stats.get('mukerrer_atlanilan_sayisi', 0)} | "
+                      f"Eşleşen Sporcu: {stats.get('eslesen_sporcu_sayisi', 0)} | "
+                      f"Yeni Sporcu: {stats.get('yeni_sporcu_sayisi', 0)} | "
+                      f"Yeni Takım: {stats.get('yeni_kulup_sayisi', 0)}")
             return True
     except Exception as e:
         print(f"  [-] Django API Gönderim Hatası: {e}")

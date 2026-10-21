@@ -6,6 +6,10 @@ permissions:
 on:
   push:
     branches: [ master, main ]
+    paths-ignore:
+      - 'live_results/**'
+      - 'processed_files.json'
+      - '**.md'
   schedule:
     - cron: '*/10 5-18 * * *'
   workflow_dispatch:
@@ -15,9 +19,18 @@ on:
         required: true
         default: 'https://canli.tyf.gov.tr/istanbul/cs-1005380/'
       django_api:
-        description: 'Django API URL (Opsiyonel)'
+        description: 'Django API URL (Örn: https://your-server.com/api/canli-aktar/)'
         required: false
         default: ''
+      api_key:
+        description: 'Opsiyonel X-Api-Key'
+        required: false
+        default: ''
+      force:
+        description: 'Zorla yeniden tara (Cache/SHA256 yoksay)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   scrape-and-push:
@@ -43,17 +56,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: TYF Canli Takip Botunu Calistir
+      - name: Sistem ve API Testlerini Dogrula
+        run: |
+          python yuzme_projesi/manage.py test sonuclar
+
+      - name: TYF Canli Takip ve API Aktarimini Calistir
         env:
           TYF_URL: ${{ github.event.inputs.tyf_url || 'https://canli.tyf.gov.tr/istanbul/cs-1005380/' }}
           DJANGO_API: ${{ github.event.inputs.django_api || secrets.DJANGO_API_URL }}
+          API_KEY: ${{ github.event.inputs.api_key || secrets.API_KEY }}
+          FORCE_OPT: ${{ github.event.inputs.force == true && '--force' || '' }}
         run: |
+          EXTRA_ARGS=""
+          if [ -n "$API_KEY" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --api-key $API_KEY"
+          fi
+          if [ -n "$FORCE_OPT" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS $FORCE_OPT"
+          fi
+
           if [ -n "$DJANGO_API" ]; then
-            echo "Django API bulundu: $DJANGO_API adresine veri aktarilacak."
-            python src/tyf_live_worker.py --url "$TYF_URL" --api "$DJANGO_API" --save-json
+            echo "[*] Hedef Uzak Django API: $DJANGO_API"
+            python src/tyf_live_worker.py --url "$TYF_URL" --api "$DJANGO_API" --save-json $EXTRA_ARGS
           else
-            echo "Django API adresi bos. Sonuclar live_results/ klasorune JSON olarak kaydedilecek."
-            python src/tyf_live_worker.py --url "$TYF_URL" --save-json
+            echo "[*] Uzak API tanimlanmamis. Yerel Django API baslatilarak islenecek..."
+            python yuzme_projesi/manage.py runserver 127.0.0.1:8000 &
+            sleep 4
+            python src/tyf_live_worker.py --url "$TYF_URL" --api "http://127.0.0.1:8000/api/canli-aktar/" --save-json $EXTRA_ARGS
           fi
 
       - name: Sonuclari GitHub Artifact Olarak Yukle
