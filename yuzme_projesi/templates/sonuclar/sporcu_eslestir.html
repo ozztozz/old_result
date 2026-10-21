@@ -125,6 +125,9 @@
                                 <a href="{{ sonuc.sporcu.profil_url }}" class="btn btn-outline-primary w-100 mb-2">
                                     <i class="bi bi-person-lines-fill me-1"></i> Sporcu Profilini Aç
                                 </a>
+                                <a href="/api/sporcular/{{ sonuc.sporcu.id }}/sonuclar/" target="_blank" class="btn btn-outline-info w-100 mb-2">
+                                    <i class="bi bi-filetype-json me-1"></i> Sonuçları Getir (API / JSON)
+                                </a>
                                 <button class="btn btn-success w-100 copy-id-btn" data-id="{{ sonuc.sporcu.id }}">
                                     <i class="bi bi-clipboard-check me-1"></i> ID'yi Kopyala ({{ sonuc.sporcu.id }})
                                 </button>
@@ -184,6 +187,9 @@
                                                 {% endif %}
                                             </td>
                                             <td class="text-end pe-3">
+                                                <a href="/api/sporcular/{{ sp.id }}/sonuclar/" target="_blank" class="btn btn-sm btn-outline-info me-1" title="API Sonuçlarını JSON Gör">
+                                                    <i class="bi bi-filetype-json"></i> Sonuçlar
+                                                </a>
                                                 <button class="btn btn-sm btn-outline-success copy-id-btn" data-id="{{ sp.id }}" title="Bu ID'yi kopyala">
                                                     <i class="bi bi-check2"></i> ID Seç: {{ sp.id }}
                                                 </button>
@@ -237,10 +243,10 @@
 
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-link-45deg text-primary"></i> 1. GET İsteği ile Sorgulama</h6>
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-link-45deg text-primary"></i> 1. Sporcu Eşleştirme (İsim + D.Yılı)</h6>
                         <pre class="bg-light p-3 rounded-3 border text-dark font-monospace small"><code>GET /api/sporcu-eslestir/?sporcu_adi=Efe+İŞLER&dogum_yili=2007</code></pre>
 
-                        <h6 class="fw-bold text-dark mt-3 mb-2"><i class="bi bi-arrow-down-left-square text-primary"></i> 2. POST (JSON) İsteği ile Sorgulama</h6>
+                        <h6 class="fw-bold text-dark mt-3 mb-2"><i class="bi bi-arrow-down-left-square text-primary"></i> 2. POST (JSON) ile Eşleştirme</h6>
                         <pre class="bg-light p-3 rounded-3 border text-dark font-monospace small"><code>POST /api/sporcu-eslestir/
 Content-Type: application/json
 
@@ -249,24 +255,46 @@ Content-Type: application/json
   "dogum_yili": 2007,
   "kulup": "Enka"  // Opsiyonel
 }</code></pre>
+
+                        <h6 class="fw-bold text-dark mt-3 mb-2"><i class="bi bi-stopwatch text-success"></i> 3. Sporcu ID ile Sonuçları ve Dereceleri Getirme</h6>
+                        <pre class="bg-light p-3 rounded-3 border text-dark font-monospace small"><code>GET /api/sporcular/242/sonuclar/
+GET /api/sporcu-sonuclari/?sporcu_id=242&stil=Serbest&limit=20
+POST /api/sporcu-sonuclari/  {"sporcu_id": 242, "sadece_en_iyi": 1}</code></pre>
                     </div>
 
                     <div class="col-md-6">
-                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-filetype-json text-success"></i> 3. Örnek JSON Yanıtı (Tam Eşleşme)</h6>
-                        <pre class="bg-dark text-light p-3 rounded-3 font-monospace small" style="max-height: 280px; overflow-y: auto;"><code>{
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-filetype-json text-success"></i> 4. Örnek JSON Yanıtı (Sonuçlar ve PB)</h6>
+                        <pre class="bg-dark text-light p-3 rounded-3 font-monospace small" style="max-height: 380px; overflow-y: auto;"><code>{
   "durum": "basarili",
-  "sonuc": "tam_eslesme",
-  "bulunan_id": 7904,
   "sporcu": {
-    "id": 7904,
-    "sporcu_adi": "Efe İŞLER",
-    "dogum_yili": 2007,
+    "id": 242,
+    "sporcu_adi": "Mansur Mert YARDIMCI",
+    "dogum_yili": 2015,
     "cinsiyet": "ERKEK",
-    "kulup": "Enka Spor Kulübü",
-    "toplam_yaris_sayisi": 34,
-    "profil_url": "/sporcular/7904/"
+    "kulup": "Vamos Spor Kulübü",
+    "okul": "Beytepe Ortaokulu",
+    "toplam_yaris_sayisi": 18
   },
-  "muhtemel_eslesmeler": []
+  "en_iyi_dereceler": [
+    {
+      "etkinlik": "50m Serbest",
+      "derece": "38.77",
+      "derece_saniye": 38.77,
+      "puan": 145,
+      "tarih": "2025-12-13"
+    }
+  ],
+  "sonuclar": [
+    {
+      "etkinlik": "100m Serbest",
+      "derece": "1:27.73",
+      "sira": "1",
+      "puan": 152,
+      "tarih": "2026-02-25",
+      "musabaka_adi": "Okul Sporları...",
+      "kulup": "Beytepe Ortaokulu"
+    }
+  ]
 }</code></pre>
                     </div>
                 </div>

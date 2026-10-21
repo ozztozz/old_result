@@ -614,3 +614,208 @@ def sporcu_eslestir_sayfasi(request):
     return render(request, 'sonuclar/sporcu_eslestir.html', context)
 
 
+@csrf_exempt
+def api_sporcu_sonuclari(request, sporcu_id=None):
+    """
+    Sporcu ID ile Yarış Sonuçları ve Dereceler API'si (Açık / Yetkisiz Endpoint)
+    ----------------------------------------------------------------------------
+    GET veya POST ile gelen sporcu ID'sine göre sporcunun:
+    1. Profil bilgilerini (ad, doğum yılı, cinsiyet, aktif kulüp, okul, yarış sayısı, tarih aralığı)
+    2. Kişisel En İyi Derecelerini (PB - Branş ve mesafelere göre)
+    3. Kulüp Tarihçesini (Dönem sıralı transfer geçmişi)
+    4. Yarış Sonuçları Listesini (Tarih, müsabaka, stil, mesafe, derece, puan, baraj, sıra vb.)
+    JSON formatında döner.
+
+    Kullanım:
+      - GET /api/sporcular/242/sonuclar/
+      - GET /api/sporcular/242/
+      - GET /api/sporcu-sonuclari/?sporcu_id=242
+      - POST /api/sporcu-sonuclari/ {"sporcu_id": 242}
+
+    Filtre Parametreleri (Opsiyonel):
+      - stil: 'Serbest', 'Kurbağalama', 'Sırtüstü', 'Kelebek', 'Karışık'
+      - mesafe: 50, 100, 200, 400 vb.
+      - yil: 2024, 2025 vb.
+      - sadece_en_iyi: 1 / true (Sadece PB derecelerini döner)
+      - limit: Döndürülecek maksimum sonuç sayısı (varsayılan: 100, tümü için: 0 veya 'all')
+    """
+    target_id = sporcu_id
+    stil_filter = None
+    mesafe_filter = None
+    yil_filter = None
+    sadece_en_iyi = False
+    limit = 100
+
+    if request.method == 'POST':
+        if request.content_type and 'application/json' in request.content_type:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                data = {}
+        else:
+            data = request.POST
+
+        if not target_id:
+            target_id = data.get('sporcu_id') or data.get('id') or data.get('bulunan_id')
+        stil_filter = data.get('stil')
+        mesafe_filter = data.get('mesafe')
+        yil_filter = data.get('yil')
+        sadece_en_iyi = str(data.get('sadece_en_iyi', '')).lower() in ('1', 'true', 'yes') or str(data.get('pb_only', '')).lower() in ('1', 'true', 'yes')
+        limit_val = data.get('limit')
+        if limit_val:
+            try:
+                limit = int(limit_val)
+            except Exception:
+                limit = 0 if str(limit_val).lower() == 'all' else 100
+    else:
+        if not target_id:
+            target_id = request.GET.get('sporcu_id') or request.GET.get('id') or request.GET.get('bulunan_id')
+        stil_filter = request.GET.get('stil')
+        mesafe_filter = request.GET.get('mesafe')
+        yil_filter = request.GET.get('yil')
+        sadece_en_iyi = str(request.GET.get('sadece_en_iyi', '')).lower() in ('1', 'true', 'yes') or str(request.GET.get('pb_only', '')).lower() in ('1', 'true', 'yes')
+        limit_val = request.GET.get('limit')
+        if limit_val:
+            try:
+                limit = int(limit_val)
+            except Exception:
+                limit = 0 if str(limit_val).lower() == 'all' else 100
+
+    if not target_id:
+        return JsonResponse({
+            "durum": "gecersiz_istek",
+            "mesaj": "Geçerli bir sporcu ID'si belirtilmelidir (örn: ?sporcu_id=242 veya /api/sporcular/242/sonuclar/).",
+            "sporcu": None,
+            "sonuclar": []
+        }, status=400, json_dumps_params={'ensure_ascii': False})
+
+    try:
+        target_id = int(str(target_id).strip())
+    except (ValueError, TypeError):
+        return JsonResponse({
+            "durum": "gecersiz_istek",
+            "mesaj": f"Geçersiz sporcu ID formatı: '{target_id}'. ID bir tamsayı olmalıdır.",
+            "sporcu": None,
+            "sonuclar": []
+        }, status=400, json_dumps_params={'ensure_ascii': False})
+
+    try:
+        sp = Sporcu.objects.select_related('birincil_kulup').get(id=target_id)
+    except Sporcu.DoesNotExist:
+        return JsonResponse({
+            "durum": "bulunamadi",
+            "mesaj": f"ID: {target_id} olan sporcu veritabanında bulunamadı.",
+            "sporcu": None,
+            "sonuclar": []
+        }, status=404, json_dumps_params={'ensure_ascii': False})
+
+    aktif_k = sp.aktif_kulup()
+    okul_adi = sp.okul()
+
+    sporcu_data = {
+        "id": sp.id,
+        "sporcu_adi": sp.sporcu_adi,
+        "dogum_yili": sp.dogum_yili,
+        "yas_dogum_yili": sp.yas_dogum_yili,
+        "cinsiyet": sp.cinsiyet,
+        "kulup": aktif_k.kulup_adi if aktif_k else (sp.birincil_kulup.kulup_adi if sp.birincil_kulup else "Kulüpsüz / Ferdi"),
+        "okul": okul_adi,
+        "toplam_yaris_sayisi": sp.toplam_yaris_sayisi,
+        "ilk_yaris_tarihi": sp.ilk_yaris_tarihi,
+        "son_yaris_tarihi": sp.son_yaris_tarihi,
+        "profil_url": f"/sporcular/{sp.id}/"
+    }
+
+    # 1. Kişisel En İyi Dereceler (PB)
+    pbs = sp.en_iyi_dereceler()
+    pb_list = []
+    for pb in pbs:
+        pb_list.append({
+            "mesafe": pb.mesafe,
+            "stil": pb.stil,
+            "etkinlik": f"{pb.mesafe}m {pb.stil}" if pb.mesafe and pb.stil else (pb.stil or ""),
+            "derece": pb.derece,
+            "derece_saniye": pb.derece_saniye,
+            "puan": pb.puan,
+            "tarih": pb.yaris_tarihi_baslangic or pb.yaris_tarihi_ham,
+            "musabaka_adi": pb.musabaka_adi,
+            "sehir": pb.sehir,
+            "kulup": pb.kulup.kulup_adi if pb.kulup else ""
+        })
+
+    # 2. Kulüp Tarihçesi
+    tarihce_list = []
+    for t in sp.kulup_tarihcesi.select_related('kulup').order_by('donem_sirasi'):
+        tarihce_list.append({
+            "kulup_id": t.kulup.id,
+            "kulup_adi": t.kulup.kulup_adi,
+            "okul_mu": t.kulup.okul_mu,
+            "aktif_kulup_mu": t.aktif_kulup_mu,
+            "toplam_yaris_sayisi": t.toplam_yaris_sayisi,
+            "ilk_yaris_tarihi": t.ilk_yaris_tarihi,
+            "son_yaris_tarihi": t.son_yaris_tarihi,
+            "donem_sirasi": t.donem_sirasi
+        })
+
+    # 3. Yarış Sonuçları Filtreleme ve Listeleme
+    results_list = []
+    if not sadece_en_iyi:
+        yarislar_qs = sp.yaris_sonuclari.select_related('kulup')
+
+        if stil_filter:
+            yarislar_qs = yarislar_qs.filter(stil__icontains=stil_filter.strip())
+        if mesafe_filter:
+            try:
+                yarislar_qs = yarislar_qs.filter(mesafe=int(mesafe_filter))
+            except Exception:
+                pass
+        if yil_filter:
+            yarislar_qs = yarislar_qs.filter(
+                Q(yaris_tarihi_baslangic__startswith=str(yil_filter).strip()) |
+                Q(yaris_tarihi_ham__icontains=str(yil_filter).strip())
+            )
+
+        yarislar_qs = yarislar_qs.order_by('-yaris_tarihi_baslangic', '-id')
+
+        filtrelenen_toplam = yarislar_qs.count()
+
+        if limit > 0:
+            yarislar_qs = yarislar_qs[:limit]
+
+        for y in yarislar_qs:
+            results_list.append({
+                "id": y.id,
+                "yaris_no": y.yaris_no,
+                "musabaka_adi": y.musabaka_adi,
+                "sehir": y.sehir,
+                "tarih": y.yaris_tarihi_baslangic or y.yaris_tarihi_ham,
+                "mesafe": y.mesafe,
+                "stil": y.stil,
+                "etkinlik": f"{y.mesafe}m {y.stil}" if y.mesafe and y.stil else (y.stil or ""),
+                "yas_grubu": y.yas_grubu,
+                "kulvar": y.kulvar,
+                "seri": y.seri,
+                "giris_derecesi": y.giris_derecesi,
+                "derece": y.derece,
+                "derece_saniye": y.derece_saniye,
+                "puan": y.puan,
+                "sira": y.sira,
+                "baraj": y.baraj,
+                "kulup": y.kulup.kulup_adi if y.kulup else "",
+                "kulup_okul_mu": y.kulup.okul_mu if y.kulup else 0
+            })
+    else:
+        filtrelenen_toplam = len(pb_list)
+
+    return JsonResponse({
+        "durum": "basarili",
+        "sporcu": sporcu_data,
+        "en_iyi_dereceler": pb_list,
+        "kulup_tarihcesi": tarihce_list,
+        "toplam_sonuc_sayisi": sp.toplam_yaris_sayisi,
+        "filtrelenen_sonuc_sayisi": filtrelenen_toplam,
+        "sonuclar": results_list
+    }, status=200, json_dumps_params={'ensure_ascii': False})
+
+
+
