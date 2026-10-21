@@ -227,7 +227,7 @@
             <small class="text-muted">(Yukarı çıktıkça saniye düşer ve yüzücü hızlanır)</small>
         </div>
         <div class="position-relative w-100 bg-white rounded-3 p-3 border overflow-visible" style="min-height: 250px;">
-            <div id="swimDetailSvgContainer" class="w-100 h-100 d-flex align-items-center justify-content-center"></div>
+            <div id="swimDetailSvgContainer" class="w-100 h-100 d-flex align-items-center justify-content-center" style="overflow-x: auto; -webkit-overflow-scrolling: touch;"></div>
             <div id="swimDetailTooltip" class="position-absolute pointer-events-none shadow-lg rounded-3 p-2.5 text-white bg-dark border border-secondary" style="display: none; transform: translate(-50%, -100%); margin-top: -12px; z-index: 1050; font-size: 11px;"></div>
         </div>
     </div>
@@ -635,7 +635,7 @@
             }
         });
 
-        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-100 h-100" style="overflow: visible; font-family: monospace;">' +
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-100" style="height: auto; max-width: 100%; display: block; overflow: visible; font-family: monospace;">' +
             '<defs>' +
                 '<linearGradient id="swimAreaGrad" x1="0" y1="0" x2="0" y2="1">' +
                     '<stop offset="0%" stop-color="#0284c7" stop-opacity="0.30"/>' +
@@ -663,6 +663,9 @@
         '</svg>';
 
         container.innerHTML = svg;
+        if (container.scrollWidth > container.clientWidth) {
+            container.scrollLeft = container.scrollWidth - container.clientWidth;
+        }
 
         // Tooltip bağla
         container.querySelectorAll('.swim-detail-dot-group').forEach(function(dot) {
@@ -771,14 +774,20 @@
     function init() {
         var secilenKat = "{{ secilen_kategori|default:'' }}";
         var secilenMes = "{{ secilen_mesafe|default:'' }}";
+        var sonYarisKat = "{{ son_yaris.stil|default:'' }}";
+        var sonYarisMes = "{{ son_yaris.mesafe|default:'' }}";
+
+        // URL filtresi verilmemişse sporcunun en son katıldığı yarışın branşını seç
+        var hedefKat = secilenKat || sonYarisKat;
+        var hedefMes = secilenMes || sonYarisMes;
 
         var targetRow = null;
-        if (secilenKat || secilenMes) {
+        if (hedefKat || hedefMes) {
             document.querySelectorAll('.pb-branch-row').forEach(function(r) {
                 var rStil = r.getAttribute('data-stil') || '';
                 var rMesafe = r.getAttribute('data-mesafe') || '';
-                if ((!secilenKat || rStil.toLowerCase() === secilenKat.toLowerCase()) &&
-                    (!secilenMes || rMesafe === secilenMes)) {
+                if ((!hedefKat || rStil.toLowerCase() === hedefKat.toLowerCase()) &&
+                    (!hedefMes || rMesafe === hedefMes)) {
                     if (!targetRow) targetRow = r;
                 }
             });

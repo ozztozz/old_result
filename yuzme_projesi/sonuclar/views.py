@@ -131,8 +131,11 @@ def sporcu_detay(request, pk):
     mevcut_stiller = ['Serbest', 'Sırtüstü', 'Kurbağalama', 'Kelebek', 'Karışık']
     mevcut_mesafeler = [50, 100, 200, 400, 800, 1500]
 
+    son_yaris = sporcu.yaris_sonuclari.order_by('-yaris_tarihi_baslangic', '-id').first()
+
     context = {
         'sporcu': sporcu,
+        'son_yaris': son_yaris,
         'tarihce': tarihce,
         'pbs': pbs,
         'page_obj': page_obj,
