@@ -187,6 +187,14 @@ def save_state(state: Dict[str, Any]):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
+def is_school_meet(meet_name: str) -> bool:
+    """Yarış/müsabaka adının Okul Sporları (MEB) müsabakası olup olmadığını belirler."""
+    if not meet_name:
+        return False
+    ml = meet_name.lower()
+    return bool(re.search(r'(?:okul\s*spor|okulspor|okullar|meb)', ml))
+
+
 def extract_header_info(lines: List[str]) -> Dict[str, Any]:
     info = {
         "musabaka_adi": "",
@@ -196,7 +204,8 @@ def extract_header_info(lines: List[str]) -> Dict[str, Any]:
         "cinsiyet": "",
         "mesafe": None,
         "stil": "",
-        "yas_grubu": ""
+        "yas_grubu": "",
+        "okul_musabakasi": False
     }
     for i, l in enumerate(lines[:20]):
         if "Yarış " in l:
@@ -207,6 +216,17 @@ def extract_header_info(lines: List[str]) -> Dict[str, Any]:
                 info["sehir"] = lines[i-1].split(",")[0].strip()
             if i > 1:
                 info["musabaka_adi"] = lines[i-2].strip()
+
+            # Başlık satırlarında 'Okul Sporları' kontrolü
+            if is_school_meet(info["musabaka_adi"]):
+                info["okul_musabakasi"] = True
+            else:
+                for pre_l in lines[:i]:
+                    if is_school_meet(pre_l):
+                        info["okul_musabakasi"] = True
+                        if not info["musabaka_adi"]:
+                            info["musabaka_adi"] = pre_l.strip()
+                        break
             if i + 1 < len(lines):
                 event_line = lines[i+1]
                 if "Erkek" in event_line:
@@ -613,6 +633,10 @@ def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[st
         print(f"[-] TYF sayfasına ulaşılamadı: {e}")
         return
 
+    title_m = re.search(r'<title>([^<]+)</title>', html, re.I)
+    page_meet_name = title_m.group(1).strip() if title_m else ""
+    is_page_school = is_school_meet(page_meet_name)
+
     # PDF linklerini bul
     pdf_links = set(re.findall(r'href=[\"\']([^\"\']+\.pdf)[\"\']', html, re.I))
     print(f"[*] Sayfada {len(pdf_links)} PDF linki bulundu.")
@@ -673,6 +697,10 @@ def run_worker(tyf_url: str, api_url: Optional[str] = None, api_key: Optional[st
 
         if payload and payload.get("kayitlar"):
             payload["dosya_adi"] = pdf_rel
+            if not payload.get("musabaka_adi") and page_meet_name:
+                payload["musabaka_adi"] = page_meet_name
+            if is_page_school:
+                payload["okul_musabakasi"] = True
             result_count = len(payload["kayitlar"])
             print(f"  [*] {pdf_rel}: {result_count} kayıt ayrıştırıldı.")
             

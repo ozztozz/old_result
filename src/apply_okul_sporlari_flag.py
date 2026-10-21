@@ -75,6 +75,9 @@ def main():
     club_ids = []
 
     for cid, cname, okul_races, fed_races in club_stats:
+        if cname.lower() == 'ferdi':
+            club_ids.append(cid)
+            continue
         in_school_meet = (okul_races > 0)
         has_school_kw = is_school_name(cname)
         has_sk = has_real_club_suffix(cname)
@@ -183,3 +186,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

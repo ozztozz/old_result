@@ -444,7 +444,9 @@ def build_database():
         in_school_meet = (cs["okul_races"] > 0)
         has_school_kw = is_school_team(kl)
         has_sk = bool(re.search(r'(?:spor\s*kul[uü]b[uü]|(?:\b|[_\s])sk\b|(?:\b|[_\s])gsk\b|(?:\b|[_\s])skd\b|y[uü]zme\s*kul[uü]b[uü]|ihtisas|derne[gğ]i|belediye\s*spor|belediyespor|kolejliler)', kl.lower()))
-        if in_school_meet:
+        if kl.lower() == 'ferdi':
+            okul_mu = 0
+        elif in_school_meet:
             okul_mu = 0 if (has_sk and cs["fed_races"] > cs["okul_races"] and cs["fed_races"] >= 50) else 1
         elif has_school_kw and not has_sk:
             okul_mu = 1
