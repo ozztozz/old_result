@@ -124,7 +124,11 @@ class Sporcu(models.Model):
     def en_iyi_dereceler(self):
         """Sporcunun branş ve mesafelere göre kişisel en iyi derecelerini (PB) döner."""
         # Geçerli derece saniyesi olan yarışları al
-        sonuclar = self.yaris_sonuclari.filter(derece_saniye__isnull=False, derece_saniye__gt=0).order_by('derece_saniye')
+        sonuclar = self.yaris_sonuclari.select_related('kulup').filter(
+            derece_saniye__isnull=False,
+            derece_saniye__gt=0
+        ).order_by('derece_saniye')
+
         seen_events = set()
         best_list = []
         for s in sonuclar:
@@ -132,8 +136,25 @@ class Sporcu(models.Model):
             if key not in seen_events and s.mesafe and s.stil:
                 seen_events.add(key)
                 best_list.append(s)
-        # Mesafeye ve stile göre sırala
-        best_list.sort(key=lambda x: (x.mesafe or 0, x.stil or ""))
+
+        # Standart stil sıralaması: Serbest, Sırtüstü, Kurbağalama, Kelebek, Karışık
+        stil_oncelik = {
+            'SERBEST': 1,
+            'SIRTUSTU': 2,
+            'SIRTÜSTÜ': 2,
+            'KURBAGALAMA': 3,
+            'KURBAĞALAMA': 3,
+            'KELEBEK': 4,
+            'KARISIK': 5,
+            'KARIŞIK': 5
+        }
+
+        def event_sort_key(item):
+            s_norm = (item.stil or '').strip().upper()
+            st_rank = stil_oncelik.get(s_norm, 99)
+            return (st_rank, item.mesafe or 0)
+
+        best_list.sort(key=event_sort_key)
         return best_list
 
 
