@@ -112,7 +112,7 @@
                             data-stil="{{ pb.stil }}" 
                             data-mesafe="{{ pb.mesafe }}"
                             data-etkinlik="{{ pb.mesafe }}m {{ pb.stil }}"
-                            onclick="selectBranch('{{ pb.stil }}', '{{ pb.mesafe }}', '{{ pb.mesafe }}m {{ pb.stil }}', this)"
+                            onclick="selectBranch('{{ pb.stil }}', '{{ pb.mesafe }}', '{{ pb.mesafe }}m {{ pb.stil }}', this, true)"
                             title="Tıkla: Bu branşın derece gelişim grafiğini ve tüm yarışlarını göster">
                             <td class="fw-bold">
                                 <div class="d-flex align-items-center">
@@ -268,11 +268,11 @@
     var apiBaseUrl = "{% url 'sonuclar:api_sporcu_sonuclari_query' %}";
 
     // Branş seçildiğinde tetiklenir
-    window.selectBranch = function(stil, mesafe, etkinlik, rowEl) {
+    window.selectBranch = function(stil, mesafe, etkinlik, rowEl, isUserClick) {
         // Tablodaki seçili satır vurgusu
         document.querySelectorAll('.pb-branch-row').forEach(function(r) {
             r.classList.remove('table-primary', 'border-primary');
-            var icon = r.querySelector('.badge.bg-light');
+            var icon = r.querySelector('.badge.bg-light, .badge.bg-primary');
             if (icon) {
                 icon.className = "badge bg-light text-muted border ms-auto small";
                 icon.textContent = "📈 Grafik";
@@ -285,6 +285,12 @@
             if (activeBadge) {
                 activeBadge.className = "badge bg-primary text-white border-0 ms-auto small";
                 activeBadge.textContent = "✓ Seçili";
+            }
+            if (isUserClick) {
+                var detailCard = document.getElementById('branchDetailCard');
+                if (detailCard) {
+                    detailCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
         }
 
