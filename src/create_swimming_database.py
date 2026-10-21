@@ -114,6 +114,39 @@ def norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", clean)
 
 
+def is_school_team(club_name: str) -> bool:
+    """
+    Bir kulüp adının resmi yüzme spor kulübü mü yoksa okul müsabakası (MEB)
+    temsili mi olduğunu belirler.
+    """
+    if not club_name:
+        return False
+    name = club_name.strip()
+    name_lower = name.lower()
+
+    if name_lower == 'ferdi':
+        return False
+
+    has_club_suffix = bool(re.search(
+        r'(?:spor\s*kul[uü]b[uü]|(?:\b|[_\s])sk\b|(?:\b|[_\s])gsk\b|(?:\b|[_\s])skd\b|y[uü]zme\s*kul[uü]b[uü]|ihtisas|derne[gğ]i|belediye\s*spor|belediyespor|kolejliler)',
+        name_lower
+    ))
+    if has_club_suffix:
+        return False
+
+    has_school_word = bool(re.search(
+        r'(?:ilkokul|ortaokul|lise|imam\s*hatip|i\.?[oö]\.?okulu|kolej|okullar[ıi]|anaokul|bilsen|bilsem|kamp[uü]s)',
+        name_lower
+    ))
+    if has_school_word:
+        return True
+
+    if re.search(r'(?:okulu|lisesi|koleji)$', name_lower):
+        return True
+
+    return False
+
+
 def clean_swimmer_name_raw(s: str) -> str:
     """Okul etiketleri, virgüller ve yaygın OCR kalıplarını temizler."""
     if not s:
@@ -597,7 +630,14 @@ def build_database():
         else:
             gender = "BELİRTİLMEMİŞ"
 
-        top_club = club_counts.most_common(1)[0][0] if club_counts else ""
+        # Okul takımlarını resmi spor kulüplerinden ayır:
+        # Eğer sporcunun resmi kulüp yarışları varsa birincil kulüp resmi kulüpler arasından seçilir.
+        real_clubs = [c for c in p_clubs if not is_school_team(c)]
+        if real_clubs:
+            real_club_counts = Counter(real_clubs)
+            top_club = real_club_counts.most_common(1)[0][0]
+        else:
+            top_club = club_counts.most_common(1)[0][0] if club_counts else ""
         top_club_id = club_id_map.get(top_club)
 
         min_d_str = min_date if min_date != "9999-99-99" else None
@@ -656,9 +696,16 @@ def build_database():
     history_id_map: Dict[Tuple[int, int], int] = {}
     h_counter = 1
 
+    id_to_club_map = {cid: cname for cname, cid in club_id_map.items()}
+
     for a_id, clist in athlete_histories.items():
         clist_sorted = sorted(clist, key=lambda item: (item[1]["min_date"], item[1]["max_date"]))
-        latest_c_id = max(clist, key=lambda item: item[1]["max_date"])[0]
+        # Okul olmayanlar arasından en son yarışılan kulübü aktif seç
+        non_school_clist = [item for item in clist if not is_school_team(id_to_club_map.get(item[0], ""))]
+        if non_school_clist:
+            latest_c_id = max(non_school_clist, key=lambda item: item[1]["max_date"])[0]
+        else:
+            latest_c_id = max(clist, key=lambda item: item[1]["max_date"])[0]
 
         for order_idx, (c_id, hdata) in enumerate(clist_sorted, start=1):
             history_id_map[(a_id, c_id)] = h_counter

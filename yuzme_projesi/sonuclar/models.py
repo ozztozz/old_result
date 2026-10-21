@@ -1,6 +1,51 @@
 # -*- coding: utf-8 -*-
+import re
 from django.db import models
 from django.db.models import Min
+
+
+def is_school_team(club_name: str) -> bool:
+    """
+    Bir kulüp adının resmi yüzme spor kulübü mü yoksa okul müsabakası (MEB)
+    temsili mi olduğunu belirler.
+    Örn:
+      - 'Mehmet Aker İlkokulu' -> True (Okul)
+      - 'Ted Ankara Koleji Vakfı Özel Ortaokulu' -> True (Okul)
+      - 'Beytepe Ortaokulu' -> True (Okul)
+      - 'Özel Bademli Sınav Koleji' -> True (Okul)
+      - 'İTÜ Geliştirme Vakfı Okulları Spor Kulübü' -> False (Resmi Spor Kulübü)
+      - 'Ted Ankara Kolejliler Spor Kulübü' -> False (Resmi Spor Kulübü)
+      - 'Bursa Kolejliler' -> False (Resmi Spor Kulübü)
+      - 'Enka Spor Kulübü' -> False (Resmi Spor Kulübü)
+    """
+    if not club_name:
+        return False
+    name = club_name.strip()
+    name_lower = name.lower()
+
+    if name_lower == 'ferdi':
+        return False
+
+    # Resmi tescilli kulüp belirteçleri (bu ekler varsa okulla ilişkili olsa dahi resmi kulüptür)
+    has_club_suffix = bool(re.search(
+        r'(?:spor\s*kul[uü]b[uü]|(?:\b|[_\s])sk\b|(?:\b|[_\s])gsk\b|(?:\b|[_\s])skd\b|y[uü]zme\s*kul[uü]b[uü]|ihtisas|derne[gğ]i|belediye\s*spor|belediyespor|kolejliler)',
+        name_lower
+    ))
+    if has_club_suffix:
+        return False
+
+    # Okul / MEB anahtar kelimeleri
+    has_school_word = bool(re.search(
+        r'(?:ilkokul|ortaokul|lise|imam\s*hatip|i\.?[oö]\.?okulu|kolej|okullar[ıi]|anaokul|bilsen|bilsem|kamp[uü]s)',
+        name_lower
+    ))
+    if has_school_word:
+        return True
+
+    if re.search(r'(?:okulu|lisesi|koleji)$', name_lower):
+        return True
+
+    return False
 
 
 class Kulup(models.Model):
@@ -54,9 +99,28 @@ class Sporcu(models.Model):
         return self.sporcu_adi
 
     def aktif_kulup(self):
-        """Sporcunun en güncel/aktif kulübünü döner."""
+        """
+        Sporcunun en güncel/aktif kulübünü döner.
+        Okul yarışlarındaki okul takımları yerine tescilli spor kulüplerine öncelik verir.
+        """
         tarihce = self.kulup_tarihcesi.filter(aktif_kulup_mu=1).first()
+        if tarihce and not is_school_team(tarihce.kulup.kulup_adi):
+            return tarihce.kulup
+
+        # Eğer aktif_kulup_mu okul takımıysa veya bulunamadıysa, okul olmayan son kulübü bul
+        for t in self.kulup_tarihcesi.select_related('kulup').order_by('-son_yaris_tarihi', '-id'):
+            if not is_school_team(t.kulup.kulup_adi):
+                return t.kulup
+
+        # Sporcunun sadece okul/ferdi kaydı varsa
         return tarihce.kulup if tarihce else self.birincil_kulup
+
+    def okul(self):
+        """Sporcunun okul müsabakalarında (MEB) temsil ettiği en güncel okulu döner (varsa)."""
+        for t in self.kulup_tarihcesi.select_related('kulup').order_by('-son_yaris_tarihi', '-id'):
+            if is_school_team(t.kulup.kulup_adi):
+                return t.kulup.kulup_adi
+        return None
 
     def en_iyi_dereceler(self):
         """Sporcunun branş ve mesafelere göre kişisel en iyi derecelerini (PB) döner."""

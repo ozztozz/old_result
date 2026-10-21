@@ -129,10 +129,14 @@ def match_athlete(
             "sorgu": sorgu_info
         }
     elif len(exact_matches) > 1:
-        # Aynı isim ve doğum yılında birden fazla sporcu varsa kulüp ile filtrele
+        # Aynı isim ve doğum yılında birden fazla sporcu varsa kulüp veya okul ile filtrele
         if norm_club:
             for sp in exact_matches:
-                if sp.birincil_kulup and norm_club in normalize_tr(sp.birincil_kulup.kulup_adi):
+                aktif_k = sp.aktif_kulup()
+                k_norm = normalize_tr(aktif_k.kulup_adi) if aktif_k else ""
+                okul_norm = normalize_tr(sp.okul()) if sp.okul() else ""
+                if (k_norm and (norm_club in k_norm or k_norm in norm_club)) or \
+                   (okul_norm and (norm_club in okul_norm or okul_norm in norm_club)):
                     return {
                         "durum": "basarili",
                         "sonuc": "tam_eslesme",
@@ -199,9 +203,22 @@ def match_athlete(
         elif target_year and sp.dogum_yili in [target_year - 1, target_year + 1]:
             score += 3
 
-        # Kulüp adı uyuşuyorsa bonus puan
-        if norm_club and sp.birincil_kulup:
-            if norm_club in normalize_tr(sp.birincil_kulup.kulup_adi):
+        # Kulüp veya okul adı uyuşuyorsa bonus puan
+        if norm_club:
+            aktif_k = sp.aktif_kulup()
+            k_norm = normalize_tr(aktif_k.kulup_adi) if aktif_k else ""
+            okul_norm = normalize_tr(sp.okul()) if sp.okul() else ""
+            matched = False
+            for cand_text in (k_norm, okul_norm):
+                if not cand_text:
+                    continue
+                if norm_club in cand_text or cand_text in norm_club:
+                    matched = True
+                    break
+                if fuzz and fuzz.partial_ratio(norm_club, cand_text) >= 80:
+                    matched = True
+                    break
+            if matched:
                 score += 8
 
         score = min(round(float(score), 1), 99.5)
@@ -249,16 +266,21 @@ def match_athlete(
 
 def _serialize_sporcu(sp: Sporcu, benzerlik: Optional[float] = None) -> Dict[str, Any]:
     """Sporcu nesnesini JSON uyumlu sözlüğe dönüştürür."""
+    aktif_k = sp.aktif_kulup()
+    okul_adi = sp.okul()
     data = {
         "id": sp.id,
         "sporcu_adi": sp.sporcu_adi,
         "dogum_yili": sp.dogum_yili,
         "yas_dogum_yili": sp.yas_dogum_yili,
         "cinsiyet": sp.cinsiyet,
-        "kulup": sp.birincil_kulup.kulup_adi if sp.birincil_kulup else "Kulüpsüz / Ferdi",
+        "kulup": aktif_k.kulup_adi if aktif_k else (sp.birincil_kulup.kulup_adi if sp.birincil_kulup else "Kulüpsüz / Ferdi"),
+        "okul": okul_adi,
         "toplam_yaris_sayisi": sp.toplam_yaris_sayisi,
+        "son_yaris_tarihi": sp.son_yaris_tarihi,
         "profil_url": f"/sporcular/{sp.id}/"
     }
     if benzerlik is not None:
         data["benzerlik_orani"] = benzerlik
     return data
+
