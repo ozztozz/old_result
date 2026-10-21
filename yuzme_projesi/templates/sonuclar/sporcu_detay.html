@@ -106,13 +106,19 @@
                         {% for pb in pbs %}
                         <tr>
                             <td class="fw-bold">
-                                <span class="badge bg-light text-dark border me-1">{{ pb.mesafe }}m</span>
-                                {{ pb.stil }}
+                                <a href="?kategori={{ pb.stil }}&mesafe={{ pb.mesafe }}" class="text-decoration-none text-dark d-inline-flex align-items-center" title="Bu branştaki tüm yarış sonuçlarını filtrele">
+                                    <span class="badge bg-light text-dark border me-2">{{ pb.mesafe }}m</span>
+                                    <span>{{ pb.stil }}</span>
+                                    <i class="bi bi-filter ms-1 text-primary small"></i>
+                                </a>
                             </td>
                             <td class="text-center fw-bold text-primary fs-6">{{ pb.derece }}</td>
                             <td class="text-end small text-muted">
                                 <div>{{ pb.yaris_tarihi_baslangic }}</div>
                                 <div class="text-truncate" style="max-width: 180px;">{{ pb.musabaka_adi }}</div>
+                                <a href="{% url 'sonuclar:api_sporcu_sonuclari' sporcu.id %}{{ pb.stil }}/{{ pb.mesafe }}/" target="_blank" class="badge bg-primary-subtle text-primary border text-decoration-none mt-1" title="Bu branşın JSON API sonucunu yeni sekmede aç">
+                                    <i class="bi bi-braces me-1"></i>API
+                                </a>
                             </td>
                         </tr>
                         {% empty %}
@@ -127,11 +133,69 @@
     </div>
 </div>
 
-<!-- Tüm Yarış Sonuçları Tablosu -->
+<!-- Yarış Sonuçları Filtreleme ve Tablosu -->
 <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-list-check text-info me-2"></i> Tüm Yarış Sonuçları ({{ total_races }})</h5>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+        <div>
+            <h5 class="fw-bold text-dark mb-0">
+                <i class="bi bi-list-check text-info me-2"></i>
+                {% if secilen_kategori or secilen_mesafe %}
+                    {{ secilen_mesafe|default:"" }}{% if secilen_mesafe %}m {% endif %}{{ secilen_kategori|default:"" }} Yarış Sonuçları ({{ total_races }})
+                {% else %}
+                    Tüm Yarış Sonuçları ({{ total_races }})
+                {% endif %}
+            </h5>
+            {% if secilen_kategori or secilen_mesafe %}
+                <small class="text-muted">Toplam {{ total_all_races }} yarış arasından filtrelendi.</small>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'sonuclar:api_sporcu_sonuclari' sporcu.id %}?{% if secilen_kategori %}kategori={{ secilen_kategori }}&{% endif %}{% if secilen_mesafe %}mesafe={{ secilen_mesafe }}&{% endif %}sirala={{ secilen_sirala }}" 
+               target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                <i class="bi bi-braces me-1"></i> Bu Filtrenin JSON API Yanıtı
+            </a>
+        </div>
     </div>
+
+    <!-- Kategori ve Mesafe Filtre Formu -->
+    <form method="get" class="row g-2 align-items-center mb-4 bg-light p-3 rounded-3 border">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Kategori / Stil</label>
+            <select name="kategori" class="form-select form-select-sm">
+                <option value="">Tüm Kategoriler</option>
+                {% for st in mevcut_stiller %}
+                    <option value="{{ st }}" {% if secilen_kategori == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Mesafe</label>
+            <select name="mesafe" class="form-select form-select-sm">
+                <option value="">Tüm Mesafeler</option>
+                {% for m in mevcut_mesafeler %}
+                    <option value="{{ m }}" {% if secilen_mesafe == m %}selected{% endif %}>{{ m }}m</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Sıralama</label>
+            <select name="sirala" class="form-select form-select-sm">
+                <option value="tarih_desc" {% if secilen_sirala == 'tarih_desc' or not secilen_sirala %}selected{% endif %}>Tarih (Yeniden Eskiye)</option>
+                <option value="tarih_asc" {% if secilen_sirala == 'tarih_asc' %}selected{% endif %}>Tarih (Kronolojik Gelişim)</option>
+                <option value="derece" {% if secilen_sirala == 'derece' %}selected{% endif %}>Derece (En Hızlı Önce)</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end gap-2 pt-md-4">
+            <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                <i class="bi bi-filter me-1"></i> Filtrele
+            </button>
+            {% if secilen_kategori or secilen_mesafe or secilen_sirala != 'tarih_desc' %}
+                <a href="{% url 'sonuclar:sporcu_detay' sporcu.id %}" class="btn btn-outline-secondary btn-sm" title="Filtreleri Temizle">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            {% endif %}
+        </div>
+    </form>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
@@ -218,13 +282,13 @@
     <nav class="d-flex justify-content-center mt-4">
         <ul class="pagination pagination-sm">
             {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Önceki</a></li>
+                <li class="page-item"><a class="page-link" href="?page=1{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">Önceki</a></li>
             {% endif %}
             <li class="page-item active"><span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
             {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Sonraki</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">Sonraki</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">&raquo;</a></li>
             {% endif %}
         </ul>
     </nav>

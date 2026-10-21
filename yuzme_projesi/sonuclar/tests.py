@@ -155,6 +155,23 @@ class SporcuApiTests(TestCase):
             sira="2"
         )
 
+        # 50m Serbest ikinci yarış (daha yavaş derece)
+        self.yaris3 = YarisSonucu.objects.create(
+            sporcu=self.sporcu,
+            kulup=self.kulup,
+            sporcu_kulup_tarihce=self.tarihce_kulup,
+            musabaka_adi="TYF Vize Müsabakası",
+            sehir="Ankara",
+            yaris_tarihi_baslangic="2024-01-20",
+            yaris_no="3",
+            mesafe=50,
+            stil="Serbest",
+            derece="31.20",
+            derece_saniye=31.20,
+            puan=310,
+            sira="5"
+        )
+
     def test_api_sporcu_sonuclari_url_path(self):
         url = reverse('sonuclar:api_sporcu_sonuclari', kwargs={'sporcu_id': self.sporcu.id})
         response = self.client.get(url)
@@ -171,14 +188,42 @@ class SporcuApiTests(TestCase):
 
     def test_api_sporcu_sonuclari_query_param(self):
         url = reverse('sonuclar:api_sporcu_sonuclari_query')
-        response = self.client.get(f"{url}?sporcu_id={self.sporcu.id}&stil=Serbest&mesafe=50")
+        response = self.client.get(f"{url}?sporcu_id={self.sporcu.id}&kategori=Serbest&mesafe=50")
         self.assertEqual(response.status_code, 200)
 
         data = response.json()
         self.assertEqual(data['durum'], 'basarili')
-        self.assertEqual(len(data['sonuclar']), 1)
-        self.assertEqual(data['sonuclar'][0]['mesafe'], 50)
-        self.assertEqual(data['sonuclar'][0]['derece'], "29.50")
+        self.assertEqual(data['toplam_sonuc_sayisi'], 2)
+        self.assertEqual(len(data['sonuclar']), 2)
+        self.assertEqual(data['en_iyi_derece']['derece'], "29.50")
+        self.assertEqual(data['en_iyi_derece']['mesafe'], 50)
+        self.assertTrue(any(s['kisisel_en_iyi_mi'] for s in data['sonuclar']))
+
+    def test_api_kategori_ve_mesafe_url_path(self):
+        """URL yolunda /api/sporcular/<id>/sonuclar/<kategori>/<mesafe>/ testi."""
+        url = reverse('sonuclar:api_sporcu_kategori_mesafe_sonuclari', kwargs={
+            'sporcu_id': self.sporcu.id,
+            'kategori': 'Serbest',
+            'mesafe': 50
+        })
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data['durum'], 'basarili')
+        self.assertEqual(data['filtre']['kategori'], 'Serbest')
+        self.assertEqual(data['filtre']['mesafe'], 50)
+        self.assertEqual(len(data['sonuclar']), 2)
+        self.assertEqual(data['en_iyi_derece']['derece'], "29.50")
+
+    def test_sporcu_detay_html_filtreleme(self):
+        """Sporcu detay HTML sayfasında kategori ve mesafe filtreleme testi."""
+        url = reverse('sonuclar:sporcu_detay', kwargs={'pk': self.sporcu.id})
+        response = self.client.get(f"{url}?kategori=Serbest&mesafe=50")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_races'], 2)
+        self.assertEqual(response.context['secilen_kategori'], 'Serbest')
+        self.assertEqual(response.context['secilen_mesafe'], 50)
 
     def test_api_sporcu_sonuclari_post_json(self):
         url = reverse('sonuclar:api_sporcu_sonuclari_query')

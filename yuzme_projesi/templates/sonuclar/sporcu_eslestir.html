@@ -151,7 +151,8 @@
                                             <th>Puan</th>
                                             <th>Tarih</th>
                                             <th>Temsil Ettiği Kurum</th>
-                                            <th class="pe-3">Müsabaka</th>
+                                            <th>Müsabaka</th>
+                                            <th class="pe-3 text-end">Sonuçlar & API</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -177,7 +178,15 @@
                                                         <span class="badge bg-light text-secondary border ms-1">Okul</span>
                                                     {% endif %}
                                                 </td>
-                                                <td class="pe-3"><small class="text-muted">{{ pb.musabaka_adi|truncatechars:35 }}</small></td>
+                                                <td><small class="text-muted">{{ pb.musabaka_adi|truncatechars:30 }}</small></td>
+                                                <td class="pe-3 text-end">
+                                                    <a href="{% url 'sonuclar:sporcu_detay' sonuc.sporcu.id %}?kategori={{ pb.stil }}&mesafe={{ pb.mesafe }}" class="btn btn-outline-primary btn-sm py-0 px-2 small" title="Bu branştaki tüm yarış sonuçlarını incele">
+                                                        <i class="bi bi-list-ul"></i> Tüm Yarışlar
+                                                    </a>
+                                                    <a href="{% url 'sonuclar:api_sporcu_sonuclari' sonuc.sporcu.id %}{{ pb.stil }}/{{ pb.mesafe }}/" target="_blank" class="btn btn-outline-secondary btn-sm py-0 px-1 small" title="API JSON Yanıtı">
+                                                        <i class="bi bi-braces"></i>
+                                                    </a>
+                                                </td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>

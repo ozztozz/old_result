@@ -89,7 +89,7 @@ def sporcu_listesi(request):
 
 
 def sporcu_detay(request, pk):
-    """Sporcu detay sayfası: Profil, Kulüp Tarihçesi, En İyi Dereceler (PB) ve Tüm Yarışları."""
+    """Sporcu detay sayfası: Profil, Kulüp Tarihçesi, En İyi Dereceler (PB) ve Kategori/Mesafe filtreli Yarış Sonuçları."""
     sporcu = get_object_or_404(Sporcu.objects.select_related('birincil_kulup'), pk=pk)
 
     # Kulüp Transfer Tarihçesi
@@ -98,18 +98,51 @@ def sporcu_detay(request, pk):
     # Kişisel En İyi Dereceler (PB)
     pbs = sporcu.en_iyi_dereceler()
 
-    # Tüm Yarış Sonuçları (Sayfalanmış)
-    sonuclar_qs = sporcu.yaris_sonuclari.select_related('kulup').order_by('-yaris_tarihi_baslangic', 'id')
+    # Kategori (Stil) ve Mesafe Filtreleri
+    kategori = (request.GET.get('kategori') or request.GET.get('stil') or '').strip()
+    mesafe_raw = request.GET.get('mesafe', '').strip()
+    sirala = request.GET.get('sirala', 'tarih_desc')
+
+    sonuclar_qs = sporcu.yaris_sonuclari.select_related('kulup')
+
+    if kategori:
+        sonuclar_qs = sonuclar_qs.filter(stil__icontains=kategori)
+
+    mesafe_val = None
+    if mesafe_raw:
+        try:
+            mesafe_val = int(mesafe_raw)
+            sonuclar_qs = sonuclar_qs.filter(mesafe=mesafe_val)
+        except ValueError:
+            pass
+
+    if sirala == 'derece':
+        sonuclar_qs = sonuclar_qs.order_by('derece_saniye', '-yaris_tarihi_baslangic')
+    elif sirala == 'tarih_asc':
+        sonuclar_qs = sonuclar_qs.order_by('yaris_tarihi_baslangic', 'id')
+    else:
+        sonuclar_qs = sonuclar_qs.order_by('-yaris_tarihi_baslangic', '-id')
+
+    total_filtered_races = sonuclar_qs.count()
     paginator = Paginator(sonuclar_qs, 30)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    mevcut_stiller = ['Serbest', 'Sırtüstü', 'Kurbağalama', 'Kelebek', 'Karışık']
+    mevcut_mesafeler = [50, 100, 200, 400, 800, 1500]
 
     context = {
         'sporcu': sporcu,
         'tarihce': tarihce,
         'pbs': pbs,
         'page_obj': page_obj,
-        'total_races': sonuclar_qs.count(),
+        'total_races': total_filtered_races,
+        'total_all_races': sporcu.toplam_yaris_sayisi,
+        'secilen_kategori': kategori,
+        'secilen_mesafe': mesafe_val,
+        'secilen_sirala': sirala,
+        'mevcut_stiller': mevcut_stiller,
+        'mevcut_mesafeler': mevcut_mesafeler,
     }
     return render(request, 'sonuclar/sporcu_detay.html', context)
 
@@ -621,30 +654,34 @@ def sporcu_eslestir_sayfasi(request):
 
 
 @csrf_exempt
-def api_sporcu_sonuclari(request, sporcu_id=None):
+def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
     """
-    Sporcu ID ile Stil ve Mesafe Bazında En İyi Sonuçlar API'si
-    -----------------------------------------------------------
+    Sporcu ID ile Kategori ve Mesafe Bazında Sonuçlar API'si
+    -------------------------------------------------------
     GET veya POST ile gelen sporcu ID'sine göre sporcunun:
     1. Profil bilgilerini (ad, doğum yılı, cinsiyet, aktif kulüp, okul, yarış sayısı)
-    2. Stil ve mesafe bazında kişisel en iyi sonuçlarını (PB - Personal Bests)
-    3. Kulüp tarihçesini
+    2. Belirli bir kategori (stil) ve mesafe seçilmişse o branştaki tüm sonuç listesini ve en iyi derecesini (PB)
+    3. Herhangi bir kategori seçilmemişse stil ve mesafe bazındaki kişisel en iyi derecelerini (PB özeti)
+    4. Kulüp temsil tarihçesini
     JSON formatında döner.
 
-    Kullanım:
-      - GET /api/sporcular/242/sonuclar/
-      - GET /api/sporcular/242/
-      - GET /api/sporcu-sonuclari/?sporcu_id=242
-      - POST /api/sporcu-sonuclari/ {"sporcu_id": 242}
+    Kullanım URL'leri:
+      - GET /api/sporcular/<sporcu_id>/sonuclar/
+      - GET /api/sporcular/<sporcu_id>/sonuclar/<kategori>/<mesafe>/
+      - GET /api/sporcular/<sporcu_id>/<kategori>/<mesafe>/
+      - GET /api/sporcu-sonuclari/?sporcu_id=<id>&kategori=<stil>&mesafe=<mesafe>
+      - POST /api/sporcu-sonuclari/ {"sporcu_id": <id>, "kategori": "Serbest", "mesafe": 50}
 
-    Filtre Parametreleri (Opsiyonel):
-      - stil: 'Serbest', 'Kurbağalama', 'Sırtüstü', 'Kelebek', 'Karışık'
-      - mesafe: 50, 100, 200, 400 vb.
-      - tum_yarislar: 1 / true (Tüm geçmiş yarışları da 'tum_yarislar' anahtarıyla ekler)
+    Parametreler:
+      - kategori / stil: 'Serbest', 'Kurbağalama', 'Sırtüstü', 'Kelebek', 'Karışık'
+      - mesafe: 50, 100, 200, 400, 800, 1500
+      - sirala: 'tarih' (en yeni önce - varsayılan), 'tarih_asc' (kronolojik), 'derece' (en hızlı önce)
+      - tum_yarislar: 1 / true (Tüm geçmiş yarışları da döner)
     """
     target_id = sporcu_id
-    stil_filter = None
-    mesafe_filter = None
+    kategori_filter = kategori
+    mesafe_filter = mesafe
+    sirala = 'tarih'
     tum_yarislar = False
 
     if request.method == 'POST':
@@ -658,20 +695,26 @@ def api_sporcu_sonuclari(request, sporcu_id=None):
 
         if not target_id:
             target_id = data.get('sporcu_id') or data.get('id') or data.get('bulunan_id')
-        stil_filter = data.get('stil')
-        mesafe_filter = data.get('mesafe')
+        if not kategori_filter:
+            kategori_filter = data.get('kategori') or data.get('stil') or data.get('brans')
+        if mesafe_filter is None:
+            mesafe_filter = data.get('mesafe')
+        sirala = data.get('sirala') or sirala
         tum_yarislar = str(data.get('tum_yarislar', '')).lower() in ('1', 'true', 'yes') or str(data.get('tum_sonuclar', '')).lower() in ('1', 'true', 'yes')
     else:
         if not target_id:
             target_id = request.GET.get('sporcu_id') or request.GET.get('id') or request.GET.get('bulunan_id')
-        stil_filter = request.GET.get('stil')
-        mesafe_filter = request.GET.get('mesafe')
+        if not kategori_filter:
+            kategori_filter = request.GET.get('kategori') or request.GET.get('stil') or request.GET.get('brans')
+        if mesafe_filter is None:
+            mesafe_filter = request.GET.get('mesafe')
+        sirala = request.GET.get('sirala') or sirala
         tum_yarislar = str(request.GET.get('tum_yarislar', '')).lower() in ('1', 'true', 'yes') or str(request.GET.get('tum_sonuclar', '')).lower() in ('1', 'true', 'yes')
 
     if not target_id:
         return JsonResponse({
             "durum": "gecersiz_istek",
-            "mesaj": "Geçerli bir sporcu ID'si belirtilmelidir (örn: ?sporcu_id=242 veya /api/sporcular/242/sonuclar/).",
+            "mesaj": "Geçerli bir sporcu ID'si belirtilmelidir (örn: ?sporcu_id=441 veya /api/sporcular/441/sonuclar/).",
             "sporcu": None,
             "en_iyi_sonuclar": [],
             "sonuclar": []
@@ -716,18 +759,38 @@ def api_sporcu_sonuclari(request, sporcu_id=None):
         "profil_url": f"/sporcular/{sp.id}/"
     }
 
-    # Stil ve mesafe bazında kişisel en iyi sonuçlar (PB)
+    # Kulüp Tarihçesi
+    tarihce_list = []
+    for t in sp.kulup_tarihcesi.select_related('kulup').order_by('donem_sirasi'):
+        tarihce_list.append({
+            "kulup_id": t.kulup.id,
+            "kulup_adi": t.kulup.kulup_adi,
+            "okul_mu": t.kulup.okul_mu,
+            "aktif_kulup_mu": t.aktif_kulup_mu,
+            "toplam_yaris_sayisi": t.toplam_yaris_sayisi,
+            "ilk_yaris_tarihi": t.ilk_yaris_tarihi,
+            "son_yaris_tarihi": t.son_yaris_tarihi,
+            "donem_sirasi": t.donem_sirasi
+        })
+
+    # Mesafe int dönüşümü
+    mesafe_val = None
+    if mesafe_filter is not None and str(mesafe_filter).strip():
+        try:
+            mesafe_val = int(str(mesafe_filter).strip())
+        except (ValueError, TypeError):
+            pass
+
+    kategori_str = str(kategori_filter).strip() if kategori_filter else ""
+
+    # Kişisel En İyi Dereceler (PB listesi)
     pbs = sp.en_iyi_dereceler()
     pb_list = []
     for pb in pbs:
-        if stil_filter and stil_filter.lower() not in (pb.stil or '').lower():
+        if kategori_str and kategori_str.lower() not in (pb.stil or '').lower():
             continue
-        if mesafe_filter:
-            try:
-                if int(mesafe_filter) != pb.mesafe:
-                    continue
-            except Exception:
-                pass
+        if mesafe_val is not None and pb.mesafe != mesafe_val:
+            continue
 
         pb_list.append({
             "etkinlik": f"{pb.mesafe}m {pb.stil}" if pb.mesafe and pb.stil else (pb.stil or ""),
@@ -745,20 +808,90 @@ def api_sporcu_sonuclari(request, sporcu_id=None):
             "kulup_okul_mu": pb.kulup.okul_mu if pb.kulup else 0
         })
 
-    # Kulüp Tarihçesi
-    tarihce_list = []
-    for t in sp.kulup_tarihcesi.select_related('kulup').order_by('donem_sirasi'):
-        tarihce_list.append({
-            "kulup_id": t.kulup.id,
-            "kulup_adi": t.kulup.kulup_adi,
-            "okul_mu": t.kulup.okul_mu,
-            "aktif_kulup_mu": t.aktif_kulup_mu,
-            "toplam_yaris_sayisi": t.toplam_yaris_sayisi,
-            "ilk_yaris_tarihi": t.ilk_yaris_tarihi,
-            "son_yaris_tarihi": t.son_yaris_tarihi,
-            "donem_sirasi": t.donem_sirasi
-        })
+    # Kategori veya Mesafe filtresi verilmişse (veya tum_yarislar istenmişse)
+    # sporcunun o branştaki tüm sonuçlarını liste halinde dön
+    if kategori_str or mesafe_val is not None:
+        races_qs = sp.yaris_sonuclari.select_related('kulup')
+        if kategori_str:
+            races_qs = races_qs.filter(stil__icontains=kategori_str)
+        if mesafe_val is not None:
+            races_qs = races_qs.filter(mesafe=mesafe_val)
 
+        # Sıralama
+        if sirala == 'derece':
+            races_qs = races_qs.order_by('derece_saniye', '-yaris_tarihi_baslangic')
+        elif sirala in ('tarih_asc', 'eskiden_yeniye', 'kronolojik'):
+            races_qs = races_qs.order_by('yaris_tarihi_baslangic', 'id')
+        else:
+            races_qs = races_qs.order_by('-yaris_tarihi_baslangic', '-id')
+
+        # O branştaki en iyi derece (PB) tespiti
+        valid_pb_race = races_qs.filter(
+            derece_saniye__isnull=False,
+            derece_saniye__gt=0
+        ).order_by('derece_saniye').first()
+
+        best_race_dict = None
+        if valid_pb_race:
+            best_race_dict = {
+                "id": valid_pb_race.id,
+                "etkinlik": f"{valid_pb_race.mesafe}m {valid_pb_race.stil}" if valid_pb_race.mesafe and valid_pb_race.stil else (valid_pb_race.stil or ""),
+                "mesafe": valid_pb_race.mesafe,
+                "stil": valid_pb_race.stil,
+                "derece": valid_pb_race.derece,
+                "derece_saniye": valid_pb_race.derece_saniye,
+                "puan": valid_pb_race.puan,
+                "sira": valid_pb_race.sira,
+                "baraj": valid_pb_race.baraj,
+                "tarih": valid_pb_race.yaris_tarihi_baslangic or valid_pb_race.yaris_tarihi_ham,
+                "musabaka_adi": valid_pb_race.musabaka_adi,
+                "sehir": valid_pb_race.sehir,
+                "kulup": valid_pb_race.kulup.kulup_adi if valid_pb_race.kulup else "",
+                "kulup_okul_mu": valid_pb_race.kulup.okul_mu if valid_pb_race.kulup else 0
+            }
+
+        filtered_results_list = []
+        for y in races_qs:
+            filtered_results_list.append({
+                "id": y.id,
+                "tarih": y.yaris_tarihi_baslangic or y.yaris_tarihi_ham,
+                "musabaka_adi": y.musabaka_adi,
+                "sehir": y.sehir,
+                "mesafe": y.mesafe,
+                "stil": y.stil,
+                "etkinlik": f"{y.mesafe}m {y.stil}" if y.mesafe and y.stil else (y.stil or ""),
+                "derece": y.derece,
+                "derece_saniye": y.derece_saniye,
+                "puan": y.puan,
+                "sira": y.sira,
+                "seri": y.seri,
+                "kulvar": y.kulvar,
+                "giris_derecesi": y.giris_derecesi,
+                "baraj": y.baraj,
+                "kulup": y.kulup.kulup_adi if y.kulup else "",
+                "kulup_okul_mu": y.kulup.okul_mu if y.kulup else 0,
+                "yas_grubu": y.yas_grubu,
+                "sporcu_yasi": y.hesaplanan_yas or y.sporcu_yas,
+                "kisisel_en_iyi_mi": bool(valid_pb_race and y.id == valid_pb_race.id)
+            })
+
+        response_data = {
+            "durum": "basarili",
+            "sporcu": sporcu_data,
+            "filtre": {
+                "kategori": kategori_str or None,
+                "mesafe": mesafe_val,
+                "sirala": sirala
+            },
+            "en_iyi_derece": best_race_dict,
+            "toplam_sonuc_sayisi": len(filtered_results_list),
+            "sonuclar": filtered_results_list,
+            "en_iyi_sonuclar": [best_race_dict] if best_race_dict else pb_list,
+            "kulup_tarihcesi": tarihce_list
+        }
+        return JsonResponse(response_data, status=200, json_dumps_params={'ensure_ascii': False})
+
+    # Kategori veya mesafe belirtilmemişse genel PB özeti dön
     response_data = {
         "durum": "basarili",
         "sporcu": sporcu_data,
@@ -768,16 +901,8 @@ def api_sporcu_sonuclari(request, sporcu_id=None):
         "kulup_tarihcesi": tarihce_list
     }
 
-    # İsteğe bağlı tüm yarış geçmişi
     if tum_yarislar:
         tum_qs = sp.yaris_sonuclari.select_related('kulup').order_by('-yaris_tarihi_baslangic', '-id')
-        if stil_filter:
-            tum_qs = tum_qs.filter(stil__icontains=stil_filter.strip())
-        if mesafe_filter:
-            try:
-                tum_qs = tum_qs.filter(mesafe=int(mesafe_filter))
-            except Exception:
-                pass
         all_races_list = []
         for y in tum_qs[:100]:
             all_races_list.append({

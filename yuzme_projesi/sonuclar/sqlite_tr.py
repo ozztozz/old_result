@@ -127,3 +127,4 @@ def register_sqlite_tr_functions(sender=None, connection=None, **kwargs):
             conn.create_function('lower', 1, tr_lower)
         except Exception:
             pass
+

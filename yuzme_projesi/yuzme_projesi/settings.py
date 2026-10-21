@@ -70,6 +70,16 @@ DATABASES = {
     }
 }
 
+"""
+DATABASE_DIR = BASE_DIR.parent.parent / "database"
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": DATABASE_DIR / "yuzme_veritabani.db",
+    }
+}
+"""
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
