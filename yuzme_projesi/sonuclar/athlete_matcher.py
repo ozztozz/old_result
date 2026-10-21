@@ -109,14 +109,20 @@ def match_athlete(
             Q(dogum_yili=target_year) | Q(yas_dogum_yili=str(target_year)[-2:])
         )
 
-    # İsim birebir aynı mı?
+    # İsim birebir aynı mı? (Büyük/küçük harf ve Türkçe harf duyarsız)
     exact_matches = list(exact_qs.filter(sporcu_adi__iexact=name.strip()))
     if not exact_matches:
-        # Türkçe normalize isim birebir aynı mı?
-        for sp in exact_qs.filter(sporcu_adi__icontains=norm_input.split()[0])[:15]:
-            if normalize_tr(sp.sporcu_adi) == norm_input:
-                exact_matches.append(sp)
-                break
+        # Türkçe normalize isim veya kelime sırası bağımsız tam eşleşme kontrolü
+        tokens = [t for t in norm_input.split() if len(t) >= 2]
+        if tokens:
+            cand_token_filter = Q()
+            for tok in tokens:
+                cand_token_filter |= Q(sporcu_adi__icontains=tok)
+            for sp in exact_qs.filter(cand_token_filter)[:100]:
+                sp_norm = normalize_tr(sp.sporcu_adi)
+                if sp_norm == norm_input or sorted(sp_norm.split()) == sorted(tokens):
+                    if sp not in exact_matches:
+                        exact_matches.append(sp)
 
     if len(exact_matches) == 1:
         sp = exact_matches[0]

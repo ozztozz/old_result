@@ -130,6 +130,15 @@ class SporcuApiTests(TestCase):
             sira="1"
         )
 
+        self.cinar = Sporcu.objects.create(
+            sporcu_adi="Çınar KÖYSÜREN",
+            dogum_yili=2014,
+            yas_dogum_yili="2014",
+            cinsiyet="ERKEK",
+            birincil_kulup=self.kulup,
+            toplam_yaris_sayisi=1
+        )
+
         self.yaris2 = YarisSonucu.objects.create(
             sporcu=self.sporcu,
             kulup=self.okul,
@@ -198,3 +207,37 @@ class SporcuApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertEqual(data['durum'], 'gecersiz_istek')
+
+    def test_turkish_character_and_casing_search(self):
+        """Türkçe karakter ve büyük/küçük harf duyarsız arama ve eşleştirme testi."""
+        from sonuclar.athlete_matcher import match_athlete
+
+        # 1. Küçük harf Türkçe ile arama: "çınar köysüren"
+        m1 = match_athlete("çınar köysüren")
+        self.assertEqual(m1["durum"], "basarili")
+        self.assertEqual(m1["bulunan_id"], self.cinar.id)
+
+        # 2. ASCII küçük harf ile arama: "cinar koysuren"
+        m2 = match_athlete("cinar koysuren")
+        self.assertEqual(m2["durum"], "basarili")
+        self.assertEqual(m2["bulunan_id"], self.cinar.id)
+
+        # 3. Büyük harf Türkçe ile arama: "ÇINAR KÖYSÜREN"
+        m3 = match_athlete("ÇINAR KÖYSÜREN")
+        self.assertEqual(m3["durum"], "basarili")
+        self.assertEqual(m3["bulunan_id"], self.cinar.id)
+
+        # 4. İsim ve soyisim sırası ters girildiğinde: "köysüren çınar"
+        m4 = match_athlete("köysüren çınar")
+        self.assertEqual(m4["durum"], "basarili")
+        self.assertEqual(m4["bulunan_id"], self.cinar.id)
+
+        # 5. ORM icontains sorgusu üzerinden test
+        qs_tr = Sporcu.objects.filter(sporcu_adi__icontains="çınar köysüren")
+        self.assertIn(self.cinar, qs_tr)
+
+        qs_ascii = Sporcu.objects.filter(sporcu_adi__icontains="cinar koysuren")
+        self.assertIn(self.cinar, qs_ascii)
+
+        qs_upper = Sporcu.objects.filter(sporcu_adi__icontains="ÇINAR KÖYSÜREN")
+        self.assertIn(self.cinar, qs_upper)
