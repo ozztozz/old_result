@@ -90,9 +90,12 @@
     <!-- Kişisel En İyi Dereceler (PB) -->
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
-            <h5 class="fw-bold text-dark mb-4">
-                <i class="bi bi-trophy text-warning me-2"></i> Kişisel En İyi Dereceler (PB)
-            </h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-trophy text-warning me-2"></i> Kişisel En İyi Dereceler (PB)
+                </h5>
+                <small class="text-muted"><i class="bi bi-hand-index-thumb me-1"></i>Branşa tıklayarak grafiğini görün</small>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -102,23 +105,26 @@
                             <th class="text-end">Müsabaka / Tarih</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="pb-table-body">
                         {% for pb in pbs %}
-                        <tr>
+                        <tr class="pb-branch-row" 
+                            style="cursor: pointer; transition: all 0.2s;"
+                            data-stil="{{ pb.stil }}" 
+                            data-mesafe="{{ pb.mesafe }}"
+                            data-etkinlik="{{ pb.mesafe }}m {{ pb.stil }}"
+                            onclick="selectBranch('{{ pb.stil }}', '{{ pb.mesafe }}', '{{ pb.mesafe }}m {{ pb.stil }}', this)"
+                            title="Tıkla: Bu branşın derece gelişim grafiğini ve tüm yarışlarını göster">
                             <td class="fw-bold">
-                                <a href="?kategori={{ pb.stil }}&mesafe={{ pb.mesafe }}" class="text-decoration-none text-dark d-inline-flex align-items-center" title="Bu branştaki tüm yarış sonuçlarını filtrele">
-                                    <span class="badge bg-light text-dark border me-2">{{ pb.mesafe }}m</span>
-                                    <span>{{ pb.stil }}</span>
-                                    <i class="bi bi-filter ms-1 text-primary small"></i>
-                                </a>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-2">{{ pb.mesafe }}m</span>
+                                    <span class="branch-text">{{ pb.stil }}</span>
+                                    <span class="badge bg-light text-muted border ms-auto small" style="font-size: 10px;">📈 Grafik</span>
+                                </div>
                             </td>
-                            <td class="text-center fw-bold text-primary fs-6">{{ pb.derece }}</td>
+                            <td class="text-center fw-bold text-primary fs-6 font-monospace">{{ pb.derece }}</td>
                             <td class="text-end small text-muted">
                                 <div>{{ pb.yaris_tarihi_baslangic }}</div>
-                                <div class="text-truncate" style="max-width: 180px;">{{ pb.musabaka_adi }}</div>
-                                <a href="{% url 'sonuclar:api_sporcu_sonuclari' sporcu.id %}{{ pb.stil }}/{{ pb.mesafe }}/" target="_blank" class="badge bg-primary-subtle text-primary border text-decoration-none mt-1" title="Bu branşın JSON API sonucunu yeni sekmede aç">
-                                    <i class="bi bi-braces me-1"></i>API
-                                </a>
+                                <div class="text-truncate" style="max-width: 170px;" title="{{ pb.musabaka_adi }}">{{ pb.musabaka_adi }}</div>
                             </td>
                         </tr>
                         {% empty %}
@@ -133,35 +139,44 @@
     </div>
 </div>
 
-<!-- Yarış Sonuçları Filtreleme ve Tablosu -->
-<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+<!-- =====================================================================
+     SEÇİLİ BRANŞ: ZAMAN GRAFİĞİ VE TÜM YARIŞ SONUÇLARI LİSTESİ
+====================================================================== -->
+<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4" id="branchDetailCard">
+    <!-- Başlık ve Branş İstatistikleri -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
         <div>
-            <h5 class="fw-bold text-dark mb-0">
-                <i class="bi bi-list-check text-info me-2"></i>
-                {% if secilen_kategori or secilen_mesafe %}
-                    {{ secilen_mesafe|default:"" }}{% if secilen_mesafe %}m {% endif %}{{ secilen_kategori|default:"" }} Yarış Sonuçları ({{ total_races }})
-                {% else %}
-                    Tüm Yarış Sonuçları ({{ total_races }})
-                {% endif %}
-            </h5>
-            {% if secilen_kategori or secilen_mesafe %}
-                <small class="text-muted">Toplam {{ total_all_races }} yarış arasından filtrelendi.</small>
-            {% endif %}
+            <div class="d-flex align-items-center gap-2">
+                <span class="spinner-grow spinner-grow-sm text-primary" id="branchLiveIndicator" role="status"></span>
+                <h5 class="fw-bold text-dark mb-0" id="branchSectionTitle">
+                    Branş Derece Gelişimi & Yarış Sonuçları
+                </h5>
+            </div>
+            <small class="text-muted" id="branchSectionSubtitle">
+                Kronolojik derece gelişimi ve bu branştaki tüm müsabaka geçmişi
+            </small>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'sonuclar:api_sporcu_sonuclari' sporcu.id %}?{% if secilen_kategori %}kategori={{ secilen_kategori }}&{% endif %}{% if secilen_mesafe %}mesafe={{ secilen_mesafe }}&{% endif %}sirala={{ secilen_sirala }}" 
-               target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                <i class="bi bi-braces me-1"></i> Bu Filtrenin JSON API Yanıtı
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="badge bg-warning-subtle text-dark border border-warning px-3 py-2 fs-6 rounded-pill" id="branchPbBadge">
+                🏆 PB: <strong id="branchPbValue">-</strong>
+            </span>
+            <span class="badge bg-light text-secondary border px-3 py-2 fs-6 rounded-pill" id="branchCountBadge">
+                🏊 <span id="branchCountValue">0</span> Yarış
+            </span>
+            <span class="badge bg-success-subtle text-success border border-success px-3 py-2 fs-6 rounded-pill" id="branchDiffBadge" style="display: none;">
+                <span id="branchDiffValue">-</span>
+            </span>
+            <a href="{% url 'sonuclar:api_sporcu_sonuclari_query' %}?sporcu_id={{ sporcu.id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="branchJsonApiLink" title="Bu sorgunun canlı JSON API yanıtını yeni sekmede inceleyin">
+                <i class="bi bi-braces me-1"></i> JSON API
             </a>
         </div>
     </div>
 
-    <!-- Kategori ve Mesafe Filtre Formu -->
-    <form method="get" class="row g-2 align-items-center mb-4 bg-light p-3 rounded-3 border">
-        <div class="col-md-3">
+    <!-- Hızlı Branş & Sıralama Filtre Kontrolleri -->
+    <div class="row g-2 align-items-center mb-4 bg-light p-3 rounded-3 border">
+        <div class="col-md-4">
             <label class="form-label small fw-semibold text-muted mb-1">Kategori / Stil</label>
-            <select name="kategori" class="form-select form-select-sm">
+            <select id="filterKategoriSelect" class="form-select form-select-sm" onchange="onFilterChange()">
                 <option value="">Tüm Kategoriler</option>
                 {% for st in mevcut_stiller %}
                     <option value="{{ st }}" {% if secilen_kategori == st %}selected{% endif %}>{{ st }}</option>
@@ -170,7 +185,7 @@
         </div>
         <div class="col-md-3">
             <label class="form-label small fw-semibold text-muted mb-1">Mesafe</label>
-            <select name="mesafe" class="form-select form-select-sm">
+            <select id="filterMesafeSelect" class="form-select form-select-sm" onchange="onFilterChange()">
                 <option value="">Tüm Mesafeler</option>
                 {% for m in mevcut_mesafeler %}
                     <option value="{{ m }}" {% if secilen_mesafe == m %}selected{% endif %}>{{ m }}m</option>
@@ -179,259 +194,506 @@
         </div>
         <div class="col-md-3">
             <label class="form-label small fw-semibold text-muted mb-1">Sıralama</label>
-            <select name="sirala" class="form-select form-select-sm">
-                <option value="tarih_desc" {% if secilen_sirala == 'tarih_desc' or not secilen_sirala %}selected{% endif %}>Tarih (Yeniden Eskiye)</option>
-                <option value="tarih_asc" {% if secilen_sirala == 'tarih_asc' %}selected{% endif %}>Tarih (Kronolojik Gelişim)</option>
-                <option value="derece" {% if secilen_sirala == 'derece' %}selected{% endif %}>Derece (En Hızlı Önce)</option>
+            <select id="filterSiralaSelect" class="form-select form-select-sm" onchange="onFilterChange()">
+                <option value="tarih_asc" selected>Tarih (Kronolojik Gelişim)</option>
+                <option value="tarih_desc">Tarih (Yeniden Eskiye)</option>
+                <option value="derece">Derece (En Hızlı Önce)</option>
             </select>
         </div>
-        <div class="col-md-3 d-flex align-items-end gap-2 pt-md-4">
-            <button type="submit" class="btn btn-primary btn-sm flex-fill">
-                <i class="bi bi-filter me-1"></i> Filtrele
+        <div class="col-md-2 d-flex align-items-end pt-md-4">
+            <button type="button" class="btn btn-primary btn-sm w-100" onclick="onFilterChange()">
+                <i class="bi bi-arrow-repeat me-1"></i> Yenile
             </button>
-            {% if secilen_kategori or secilen_mesafe or secilen_sirala != 'tarih_desc' %}
-                <a href="{% url 'sonuclar:sporcu_detay' sporcu.id %}" class="btn btn-outline-secondary btn-sm" title="Filtreleri Temizle">
-                    <i class="bi bi-x-circle"></i>
-                </a>
-            {% endif %}
         </div>
-    </form>
+    </div>
 
-    {% if secilen_kategori or secilen_mesafe %}
-    <!-- Zaman / Derece Gelişim Grafiği (Filtrelenmiş Branş İçin) -->
-    <div class="card border border-primary-subtle rounded-3 p-3 mb-4 bg-light-subtle shadow-sm">
+    <!-- Yükleniyor Göstergesi -->
+    <div id="branchLoadingSpinner" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+        <div class="small text-muted mt-2 fw-medium">Sonuçlar ve zaman grafiği yükleniyor...</div>
+    </div>
+
+    <!-- 1. ZAMAN / DERECE GELİŞİM GRAFİĞİ -->
+    <div id="branchChartContainerWrapper" class="mb-5">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="fw-bold text-dark mb-0">
-                <i class="bi bi-graph-up text-primary me-1"></i>
-                {{ secilen_mesafe|default:"" }}{% if secilen_mesafe %}m {% endif %}{{ secilen_kategori|default:"" }} — Zaman / Derece Gelişim Grafiği
-            </h6>
-            <small class="text-muted">(Kronolojik derece gelişimi — yukarı doğru hızlanma)</small>
+            <span class="small fw-bold text-muted text-uppercase d-flex align-items-center gap-1.5">
+                <i class="bi bi-graph-up text-primary"></i> Zaman / Derece Gelişim Grafiği
+            </span>
+            <small class="text-muted">(Yukarı çıktıkça saniye düşer ve yüzücü hızlanır)</small>
         </div>
-        <div class="position-relative w-100 bg-white rounded-3 p-2 border overflow-visible" style="min-height: 240px;">
-            <div id="swimDetailSvgContainer" class="w-100 h-100 flex align-items-center justify-content-center"></div>
-            <div id="swimDetailTooltip" class="position-absolute pointer-events-none shadow-lg rounded-3 p-2 text-white bg-dark border border-secondary" style="display: none; transform: translate(-50%, -100%); margin-top: -10px; z-index: 1050; font-size: 11px;"></div>
+        <div class="position-relative w-100 bg-white rounded-3 p-3 border overflow-visible" style="min-height: 250px;">
+            <div id="swimDetailSvgContainer" class="w-100 h-100 d-flex align-items-center justify-content-center"></div>
+            <div id="swimDetailTooltip" class="position-absolute pointer-events-none shadow-lg rounded-3 p-2.5 text-white bg-dark border border-secondary" style="display: none; transform: translate(-50%, -100%); margin-top: -12px; z-index: 1050; font-size: 11px;"></div>
         </div>
     </div>
-    {% endif %}
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Tarih</th>
-                    <th>Müsabaka</th>
-                    <th>Kulüp</th>
-                    <th>Branş</th>
-                    <th class="text-center">Yarış Yaşı</th>
-                    <th class="text-center">Sıra</th>
-                    <th class="text-end">Derece</th>
-                    <th class="text-center">Puan</th>
-                    <th>Baraj / Not</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in page_obj %}
-                <tr>
-                    <td class="small text-muted text-nowrap">{{ r.yaris_tarihi_baslangic|default:r.yaris_tarihi_ham }}</td>
-                    <td class="small" style="max-width: 250px;">
-                        <span class="d-inline-block text-truncate w-100" title="{{ r.musabaka_adi }}">
-                            {{ r.musabaka_adi|default:"-" }}
-                        </span>
-                    </td>
-                    <td class="small text-muted">
-                        {% if r.kulup %}
-                            <a href="{% url 'sonuclar:kulup_detay' r.kulup.id %}" class="text-decoration-none text-muted">
-                                {{ r.kulup.kulup_adi }}
-                            </a>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td class="fw-semibold">
-                        <span class="badge bg-light text-dark border me-1">{{ r.mesafe }}m</span>
-                        {{ r.stil }}
-                        {% if r.seri or r.kulvar %}
-                            <div class="small text-muted fw-normal">
-                                {{ r.seri|default:"" }}{% if r.kulvar %} <span class="badge bg-info-subtle text-info border">K: {{ r.kulvar }}</span>{% endif %}
-                            </div>
-                        {% endif %}
-                    </td>
-                    <td class="text-center small">
-                        {% if r.hesaplanan_yas %}
-                            <span class="badge bg-primary-subtle text-primary">{{ r.hesaplanan_yas }} Yaş</span>
-                        {% elif r.sporcu_yas %}
-                            <span class="badge bg-light text-muted border">{{ r.sporcu_yas }}</span>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td class="text-center fw-semibold text-secondary">{{ r.sira|default:"-" }}</td>
-                    <td class="text-end fw-bold">
-                        {% if r.derece == 'Bekleniyor' %}
-                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Bekleniyor</span>
-                        {% else %}
-                            <span class="text-primary">{{ r.derece }}</span>
-                        {% endif %}
-                        {% if r.giris_derecesi %}
-                            <div class="small text-muted fw-normal" title="Yarış Başlangıç / Giriş Derecesi">Giriş: {{ r.giris_derecesi }}</div>
-                        {% endif %}
-                    </td>
-                    <td class="text-center fw-semibold">{{ r.puan|default:"-" }}</td>
-                    <td>
-                        {% if r.baraj %}
-                            <span class="badge bg-success-subtle text-success">{{ r.baraj }}</span>
-                        {% endif %}
-                        {% if r.uyari_notu %}
-                            <span class="badge bg-warning-subtle text-warning-emphasis small">{{ r.uyari_notu }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="text-center py-4 text-muted">Yarış kaydı bulunamadı.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- 2. FİLTRELİ YARIŞ SONUÇLARI TABLOSU -->
+    <div id="branchTableWrapper">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small fw-bold text-muted text-uppercase d-flex align-items-center gap-1.5">
+                <i class="bi bi-list-check text-info"></i> Filtreli Müsabaka Sonuçları
+            </span>
+            <small id="branchTableSummaryText" class="text-muted font-monospace fw-semibold"></small>
+        </div>
+        <div class="table-responsive border rounded-3 overflow-hidden shadow-xs">
+            <table class="table table-hover align-middle mb-0 text-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3 py-2.5">Tarih</th>
+                        <th class="py-2.5">Derece</th>
+                        <th class="py-2.5">Puan</th>
+                        <th class="py-2.5 text-center">Sıra</th>
+                        <th class="py-2.5 text-center">Seri / Kulvar</th>
+                        <th class="py-2.5 text-center">Baraj</th>
+                        <th class="py-2.5">Müsabaka & Şehir</th>
+                        <th class="py-2.5 pe-3">Temsil Ettiği Kulüp / Okul</th>
+                    </tr>
+                </thead>
+                <tbody id="branchResultsTableBody">
+                    <!-- JavaScript ile dinamik olarak doldurulur -->
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <!-- Sayfalama -->
-    {% if page_obj.has_other_pages %}
-    <nav class="d-flex justify-content-center mt-4">
-        <ul class="pagination pagination-sm">
-            {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page=1{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">&laquo;</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">Önceki</a></li>
-            {% endif %}
-            <li class="page-item active"><span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
-            {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">Sonraki</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if secilen_kategori %}&kategori={{ secilen_kategori }}{% endif %}{% if secilen_mesafe %}&mesafe={{ secilen_mesafe }}{% endif %}{% if secilen_sirala %}&sirala={{ secilen_sirala }}{% endif %}">&raquo;</a></li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
 </div>
 
-{% if secilen_kategori or secilen_mesafe %}
+<!-- =====================================================================
+     SCRIPTS: DİNAMİK BRANŞ KONTROLCÜSÜ VE SVG GRAFİK
+====================================================================== -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var container = document.getElementById('swimDetailSvgContainer');
-    var tooltip = document.getElementById('swimDetailTooltip');
-    if (!container) return;
+(function() {
+    var sporcuId = {{ sporcu.id }};
+    var apiBaseUrl = "{% url 'sonuclar:api_sporcu_sonuclari_query' %}";
 
-    var url = "{% url 'sonuclar:api_sporcu_sonuclari' sporcu.id %}?{% if secilen_kategori %}kategori={{ secilen_kategori }}&{% endif %}{% if secilen_mesafe %}mesafe={{ secilen_mesafe }}&{% endif %}sirala=tarih_asc";
-
-    fetch(url)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            var sonuclar = (data && data.sonuclar) ? data.sonuclar : [];
-            var validRaces = sonuclar.filter(function(r) { return r.derece_saniye && r.derece_saniye > 0; });
-            if (validRaces.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted py-5 small">Bu branşta geçerli zaman verisi bulunamadı.</div>';
-                return;
+    // Branş seçildiğinde tetiklenir
+    window.selectBranch = function(stil, mesafe, etkinlik, rowEl) {
+        // Tablodaki seçili satır vurgusu
+        document.querySelectorAll('.pb-branch-row').forEach(function(r) {
+            r.classList.remove('table-primary', 'border-primary');
+            var icon = r.querySelector('.badge.bg-light');
+            if (icon) {
+                icon.className = "badge bg-light text-muted border ms-auto small";
+                icon.textContent = "📈 Grafik";
             }
+        });
 
-            var W = 750, H = 240;
-            var padLeft = 65, padRight = 45, padTop = 35, padBottom = 40;
-            var plotW = W - padLeft - padRight;
-            var plotH = H - padTop - padBottom;
-
-            var times = validRaces.map(function(r) { return r.derece_saniye; });
-            var minSec = Math.min.apply(null, times);
-            var maxSec = Math.max.apply(null, times);
-            var range = maxSec - minSec;
-            var secPadding = (range > 0) ? range * 0.15 : 1.5;
-            var yMin = Math.max(0, minSec - secPadding);
-            var yMax = maxSec + secPadding;
-            var totalRange = yMax - yMin;
-
-            function getY(sec) {
-                return padTop + ((sec - yMin) / totalRange) * plotH;
+        if (rowEl) {
+            rowEl.classList.add('table-primary', 'border-primary');
+            var activeBadge = rowEl.querySelector('.badge.bg-light, .badge.bg-primary');
+            if (activeBadge) {
+                activeBadge.className = "badge bg-primary text-white border-0 ms-auto small";
+                activeBadge.textContent = "✓ Seçili";
             }
+        }
 
-            var N = validRaces.length;
-            function getX(idx) {
-                if (N === 1) return padLeft + plotW / 2;
-                return padLeft + (idx / (N - 1)) * plotW;
+        // Filtre dropdownlarını senkronize et
+        var katSel = document.getElementById('filterKategoriSelect');
+        var mesSel = document.getElementById('filterMesafeSelect');
+        if (katSel && stil) katSel.value = stil;
+        if (mesSel && mesafe) mesSel.value = mesafe;
+
+        fetchAndRenderBranch(stil, mesafe, etkinlik);
+    };
+
+    // Dropdown filtreleri değiştiğinde tetiklenir
+    window.onFilterChange = function() {
+        var katSel = document.getElementById('filterKategoriSelect');
+        var mesSel = document.getElementById('filterMesafeSelect');
+        var stil = katSel ? katSel.value : '';
+        var mesafe = mesSel ? mesSel.value : '';
+        var etkinlik = (mesafe ? mesafe + "m " : "") + (stil || "Tüm Branşlar");
+
+        // Uygun PB satırı varsa onu aktif yap
+        var matchedRow = null;
+        document.querySelectorAll('.pb-branch-row').forEach(function(r) {
+            var rStil = r.getAttribute('data-stil') || '';
+            var rMesafe = r.getAttribute('data-mesafe') || '';
+            if (rStil.toLowerCase() === stil.toLowerCase() && rMesafe === mesafe) {
+                matchedRow = r;
             }
+        });
 
-            var gridSteps = 4;
-            var gridHtml = '';
-            for (var g = 0; g <= gridSteps; g++) {
-                var frac = g / gridSteps;
-                var gY = padTop + frac * plotH;
-                var gSec = yMin + frac * totalRange;
-                gridHtml += '<line x1="' + padLeft + '" y1="' + gY.toFixed(1) + '" x2="' + (W - padRight) + '" y2="' + gY.toFixed(1) + '" stroke="#e2e8f0" stroke-dasharray="3,3" />' +
-                    '<text x="' + (padLeft - 10) + '" y="' + (gY + 4).toFixed(1) + '" font-size="10.5" font-family="monospace" text-anchor="end" fill="#64748b">' + gSec.toFixed(1) + 's</text>';
-            }
-
-            var pts = validRaces.map(function(r, idx) {
-                return { x: getX(idx), y: getY(r.derece_saniye), race: r };
+        if (matchedRow) {
+            selectBranch(stil, mesafe, etkinlik, matchedRow);
+        } else {
+            document.querySelectorAll('.pb-branch-row').forEach(function(r) {
+                r.classList.remove('table-primary', 'border-primary');
             });
+            fetchAndRenderBranch(stil, mesafe, etkinlik);
+        }
+    };
 
-            var pathD = "M " + pts[0].x.toFixed(1) + " " + pts[0].y.toFixed(1);
-            var areaD = "M " + pts[0].x.toFixed(1) + " " + (padTop + plotH) + " L " + pts[0].x.toFixed(1) + " " + pts[0].y.toFixed(1);
-            for (var i = 1; i < pts.length; i++) {
-                pathD += " L " + pts[i].x.toFixed(1) + " " + pts[i].y.toFixed(1);
-                areaD += " L " + pts[i].x.toFixed(1) + " " + pts[i].y.toFixed(1);
+    function fetchAndRenderBranch(stil, mesafe, etkinlik) {
+        var siralaSel = document.getElementById('filterSiralaSelect');
+        var sirala = siralaSel ? siralaSel.value : 'tarih_asc';
+
+        var titleEl = document.getElementById('branchSectionTitle');
+        var spinner = document.getElementById('branchLoadingSpinner');
+        var chartWrap = document.getElementById('branchChartContainerWrapper');
+        var tableWrap = document.getElementById('branchTableWrapper');
+        var apiLink = document.getElementById('branchJsonApiLink');
+
+        if (titleEl) {
+            titleEl.textContent = (etkinlik || "Branş") + " — Derece Gelişimi & Yarış Sonuçları";
+        }
+
+        // URL Hazırla
+        var params = new URLSearchParams();
+        params.set('sporcu_id', sporcuId);
+        if (stil) params.set('stil', stil);
+        if (mesafe) params.set('mesafe', mesafe);
+        if (sirala) params.set('sirala', sirala);
+
+        var requestUrl = apiBaseUrl + "?" + params.toString();
+        if (apiLink) {
+            apiLink.href = requestUrl;
+        }
+
+        if (spinner) spinner.style.display = 'block';
+        if (chartWrap) chartWrap.style.opacity = '0.35';
+        if (tableWrap) tableWrap.style.opacity = '0.35';
+
+        fetch(requestUrl)
+            .then(function(res) {
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                return res.json();
+            })
+            .then(function(data) {
+                if (spinner) spinner.style.display = 'none';
+                if (chartWrap) chartWrap.style.opacity = '1';
+                if (tableWrap) tableWrap.style.opacity = '1';
+                renderDataToUI(data, etkinlik);
+            })
+            .catch(function(err) {
+                if (spinner) spinner.style.display = 'none';
+                if (chartWrap) chartWrap.style.opacity = '1';
+                if (tableWrap) tableWrap.style.opacity = '1';
+                console.error("Branş sonuçları yüklenemedi:", err);
+                var tbody = document.getElementById('branchResultsTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Sonuçlar alınamadı: ' + err.message + '</td></tr>';
+                }
+            });
+    }
+
+    function renderDataToUI(data, etkinlik) {
+        // Sonuclar dizisi (farklı şemaları destekler)
+        var sonuclar = Array.isArray(data) ? data : ((data && data.sonuclar) ? data.sonuclar : ((data && data.en_iyi_sonuclar) ? data.en_iyi_sonuclar : []));
+        var pbObj = data ? data.en_iyi_derece : null;
+
+        // PB Rozeti
+        var pbVal = document.getElementById('branchPbValue');
+        if (pbVal) {
+            if (pbObj && pbObj.derece) {
+                pbVal.textContent = pbObj.derece;
+            } else if (sonuclar.length > 0) {
+                var validRacesWithSec = sonuclar.filter(function(s) { return parseFloat(s.derece_saniye) > 0; });
+                if (validRacesWithSec.length > 0) {
+                    var minSec = Math.min.apply(null, validRacesWithSec.map(function(s){ return parseFloat(s.derece_saniye); }));
+                    var minRace = validRacesWithSec.find(function(s){ return parseFloat(s.derece_saniye) === minSec; });
+                    pbVal.textContent = minRace ? minRace.derece : "-";
+                } else {
+                    pbVal.textContent = "-";
+                }
+            } else {
+                pbVal.textContent = "-";
             }
-            areaD += " L " + pts[pts.length - 1].x.toFixed(1) + " " + (padTop + plotH) + " Z";
+        }
 
-            var dotsHtml = '';
-            pts.forEach(function(p, i) {
+        // Yarış Sayısı Rozeti
+        var countVal = document.getElementById('branchCountValue');
+        if (countVal) {
+            countVal.textContent = sonuclar.length;
+        }
+
+        // Gelişim Farkı Rozeti
+        var diffSpan = document.getElementById('branchDiffValue');
+        var diffBadge = document.getElementById('branchDiffBadge');
+
+        // Kronolojik sıralı kopya
+        var chronoList = sonuclar.slice().sort(function(a, b) {
+            var tA = a.tarih || "";
+            var tB = b.tarih || "";
+            return tA.localeCompare(tB);
+        });
+
+        if (chronoList.length >= 2 && diffSpan && diffBadge) {
+            var firstSec = parseFloat(chronoList[0].derece_saniye);
+            var lastSec = parseFloat(chronoList[chronoList.length - 1].derece_saniye);
+            if (firstSec && lastSec) {
+                var diff = firstSec - lastSec; // Pozitif ise derece iyileşmiş
+                if (diff > 0) {
+                    diffSpan.textContent = "▼ " + diff.toFixed(2) + " sn Gelişim";
+                    diffBadge.className = "badge bg-success-subtle text-success border border-success px-3 py-2 fs-6 rounded-pill";
+                } else if (diff < 0) {
+                    diffSpan.textContent = "▲ " + Math.abs(diff).toFixed(2) + " sn";
+                    diffBadge.className = "badge bg-secondary-subtle text-secondary border px-3 py-2 fs-6 rounded-pill";
+                } else {
+                    diffSpan.textContent = "Derece Eşit";
+                    diffBadge.className = "badge bg-light text-muted border px-3 py-2 fs-6 rounded-pill";
+                }
+                diffBadge.style.display = 'inline-block';
+            } else {
+                diffBadge.style.display = 'none';
+            }
+        } else if (diffBadge) {
+            diffBadge.style.display = 'none';
+        }
+
+        // 1. ZAMAN GRAFİĞİNİ ÇİZ
+        renderSvgChart(chronoList, etkinlik);
+
+        // 2. SONUÇ TABLOSUNU DOLDUR
+        renderTable(sonuclar);
+    }
+
+    function renderSvgChart(chronoList, etkinlik) {
+        var container = document.getElementById('swimDetailSvgContainer');
+        var tooltip = document.getElementById('swimDetailTooltip');
+        if (!container) return;
+
+        var validRaces = chronoList.filter(function(r) { 
+            return parseFloat(r.derece_saniye) > 0; 
+        });
+
+        if (validRaces.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted py-5 small"><i class="bi bi-info-circle me-1"></i>Bu branşta geçerli derece / zaman verisi bulunamadı.</div>';
+            return;
+        }
+
+        var W = 760;
+        var H = 240;
+        var padLeft = 65;
+        var padRight = 45;
+        var padTop = 35;
+        var padBottom = 40;
+        var plotW = W - padLeft - padRight;
+        var plotH = H - padTop - padBottom;
+
+        var times = validRaces.map(function(r) { return parseFloat(r.derece_saniye); });
+        var minSec = Math.min.apply(null, times);
+        var maxSec = Math.max.apply(null, times);
+
+        var range = maxSec - minSec;
+        var secPadding = (range > 0) ? range * 0.15 : 1.5;
+        var yMin = Math.max(0, minSec - secPadding);
+        var yMax = maxSec + secPadding;
+        var totalRange = yMax - yMin;
+
+        // Y Koordinatı: Yüzmede saniye düştükçe yukarı çıksın
+        function getY(sec) {
+            return padTop + ((sec - yMin) / totalRange) * plotH;
+        }
+
+        var N = validRaces.length;
+        function getX(idx) {
+            if (N === 1) return padLeft + plotW / 2;
+            return padLeft + (idx / (N - 1)) * plotW;
+        }
+
+        // Grid çizgileri
+        var gridSteps = 4;
+        var gridHtml = '';
+        for (var g = 0; g <= gridSteps; g++) {
+            var frac = g / gridSteps;
+            var gY = padTop + frac * plotH;
+            var gSec = yMin + frac * totalRange;
+            gridHtml += '<line x1="' + padLeft + '" y1="' + gY.toFixed(1) + '" x2="' + (W - padRight) + '" y2="' + gY.toFixed(1) + '" stroke="#e2e8f0" stroke-dasharray="3,3" />' +
+                '<text x="' + (padLeft - 10) + '" y="' + (gY + 4).toFixed(1) + '" font-size="10.5" font-family="monospace" text-anchor="end" fill="#64748b">' + gSec.toFixed(1) + 's</text>';
+        }
+
+        // Noktalar
+        var pts = validRaces.map(function(r, idx) {
+            return {
+                x: getX(idx),
+                y: getY(parseFloat(r.derece_saniye)),
+                race: r
+            };
+        });
+
+        // Çizgi ve Degrade Poligon
+        var pathD = "M " + pts[0].x.toFixed(1) + " " + pts[0].y.toFixed(1);
+        var areaD = "M " + pts[0].x.toFixed(1) + " " + (padTop + plotH) + " L " + pts[0].x.toFixed(1) + " " + pts[0].y.toFixed(1);
+
+        for (var i = 1; i < pts.length; i++) {
+            pathD += " L " + pts[i].x.toFixed(1) + " " + pts[i].y.toFixed(1);
+            areaD += " L " + pts[i].x.toFixed(1) + " " + pts[i].y.toFixed(1);
+        }
+        areaD += " L " + pts[pts.length - 1].x.toFixed(1) + " " + (padTop + plotH) + " Z";
+
+        // Noktalar ve etiketler
+        var dotsHtml = '';
+        pts.forEach(function(p, i) {
+            var r = p.race;
+            var rSec = parseFloat(r.derece_saniye);
+            var isPb = (rSec === minSec || r.kisisel_en_iyi_mi);
+            var dotColor = isPb ? '#f59e0b' : '#0d6efd';
+            var pulse = isPb ? '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="12" fill="#f59e0b" fill-opacity="0.25"><animate attributeName="r" values="8;13;8" dur="2s" repeatCount="indefinite"/></circle>' : '';
+            var dateStr = (r.tarih || '').slice(2).replace(/-/g, '.');
+
+            dotsHtml += pulse +
+                '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (isPb ? 6.5 : 4.5) + '" fill="' + dotColor + '" stroke="#ffffff" stroke-width="2.5" class="swim-detail-dot" style="cursor: pointer; transition: transform 0.2s;" data-idx="' + i + '"/>' +
+                '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 12).toFixed(1) + '" font-size="10.5" font-weight="' + (isPb ? 'bold' : '600') + '" font-family="monospace" text-anchor="middle" fill="' + dotColor + '">' +
+                    r.derece + (isPb ? ' 🏆' : '') +
+                '</text>' +
+                '<text x="' + p.x.toFixed(1) + '" y="' + (H - 12) + '" font-size="9.5" text-anchor="middle" fill="#64748b">' + dateStr + '</text>';
+        });
+
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-100 h-100" style="overflow: visible;">' +
+            '<defs>' +
+                '<linearGradient id="swimDetailGrad" x1="0" y1="0" x2="0" y2="1">' +
+                    '<stop offset="0%" stop-color="#0d6efd" stop-opacity="0.28"/>' +
+                    '<stop offset="100%" stop-color="#0d6efd" stop-opacity="0.01"/>' +
+                '</linearGradient>' +
+            '</defs>' +
+            gridHtml +
+            (N > 1 ? '<path d="' + areaD + '" fill="url(#swimDetailGrad)"/>' : '') +
+            (N > 1 ? '<path d="' + pathD + '" fill="none" stroke="#0d6efd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
+            dotsHtml +
+        '</svg>';
+
+        container.innerHTML = svg;
+
+        // Tooltip bağla
+        container.querySelectorAll('.swim-detail-dot').forEach(function(dot) {
+            dot.addEventListener('mouseenter', function() {
+                var idx = parseInt(this.getAttribute('data-idx'));
+                var p = pts[idx];
                 var r = p.race;
-                var isPb = (r.derece_saniye === minSec || r.kisisel_en_iyi_mi);
-                var dotColor = isPb ? '#f59e0b' : '#0d6efd';
-                var pulse = isPb ? '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="12" fill="#f59e0b" fill-opacity="0.25"><animate attributeName="r" values="8;13;8" dur="2s" repeatCount="indefinite"/></circle>' : '';
-                var dateStr = (r.tarih || '').slice(2).replace(/-/g, '.');
+                var rSec = parseFloat(r.derece_saniye);
+                var isPb = (rSec === minSec || r.kisisel_en_iyi_mi);
 
-                dotsHtml += pulse +
-                    '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (isPb ? 6.5 : 4.5) + '" fill="' + dotColor + '" stroke="#ffffff" stroke-width="2.5" class="swim-detail-dot" style="cursor: pointer;" data-idx="' + i + '"/>' +
-                    '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 12).toFixed(1) + '" font-size="10.5" font-weight="' + (isPb ? 'bold' : '600') + '" font-family="monospace" text-anchor="middle" fill="' + dotColor + '">' +
-                        r.derece + (isPb ? ' 🏆' : '') +
-                    '</text>' +
-                    '<text x="' + p.x.toFixed(1) + '" y="' + (H - 12) + '" font-size="9.5" text-anchor="middle" fill="#64748b">' + dateStr + '</text>';
-            });
-
-            var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-100 h-100" style="overflow: visible;">' +
-                '<defs>' +
-                    '<linearGradient id="swimDetailGrad" x1="0" y1="0" x2="0" y2="1">' +
-                        '<stop offset="0%" stop-color="#0d6efd" stop-opacity="0.3"/>' +
-                        '<stop offset="100%" stop-color="#0d6efd" stop-opacity="0.01"/>' +
-                    '</linearGradient>' +
-                '</defs>' +
-                gridHtml +
-                (N > 1 ? '<path d="' + areaD + '" fill="url(#swimDetailGrad)"/>' : '') +
-                (N > 1 ? '<path d="' + pathD + '" fill="none" stroke="#0d6efd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
-                dotsHtml +
-            '</svg>';
-
-            container.innerHTML = svg;
-
-            container.querySelectorAll('.swim-detail-dot').forEach(function(dot) {
-                dot.addEventListener('mouseenter', function() {
-                    var idx = parseInt(this.getAttribute('data-idx'));
-                    var p = pts[idx];
-                    var r = p.race;
-                    var isPb = (r.derece_saniye === minSec || r.kisisel_en_iyi_mi);
-
+                if (tooltip) {
                     tooltip.style.left = ((p.x / W) * 100) + '%';
                     tooltip.style.top = ((p.y / H) * 100) + '%';
                     tooltip.innerHTML = 
-                        '<div class="fw-bold text-warning">' + r.derece + (isPb ? ' 🏆 Kişisel En İyi (PB)' : '') + '</div>' +
-                        '<div class="text-white-50">' + (r.tarih || '-') + '</div>' +
-                        (r.musabaka_adi ? '<div class="text-truncate" style="max-width: 180px;">' + r.musabaka_adi + '</div>' : '') +
-                        (r.puan ? '<div>Puan: ' + r.puan + ' | Sıra: #' + (r.sira || '-') + '</div>' : '');
+                        '<div class="fw-bold text-warning d-flex align-items-center gap-1.5">' +
+                            '<span>⏱ ' + r.derece + '</span>' +
+                            (isPb ? '<span class="badge bg-warning text-dark px-1.5 py-0.5 ms-1">🏆 PB</span>' : '') +
+                        '</div>' +
+                        '<div class="text-white-50 mt-1">📅 ' + (r.tarih || '-') + '</div>' +
+                        (r.musabaka_adi ? '<div class="text-truncate mt-0.5" style="max-width: 220px;">🏊 ' + r.musabaka_adi + (r.sehir ? ' (' + r.sehir + ')' : '') + '</div>' : '') +
+                        '<div class="d-flex align-items-center gap-2 text-white-50 mt-1 pt-1 border-top border-secondary small">' +
+                            (r.puan ? '<span>⭐ ' + r.puan + ' P</span>' : '') +
+                            (r.sira ? '<span>🏅 Sıra: #' + r.sira + '</span>' : '') +
+                            (r.kulup ? '<span class="text-truncate" style="max-width: 130px;">🏛 ' + r.kulup + '</span>' : '') +
+                        '</div>';
                     tooltip.style.display = 'block';
-                });
-                dot.addEventListener('mouseleave', function() {
-                    if (tooltip) tooltip.style.display = 'none';
-                });
+                }
+            });
+
+            dot.addEventListener('mouseleave', function() {
+                if (tooltip) tooltip.style.display = 'none';
             });
         });
-});
+    }
+
+    function renderTable(sonuclar) {
+        var tbody = document.getElementById('branchResultsTableBody');
+        var summary = document.getElementById('branchTableSummaryText');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+        if (summary) {
+            summary.textContent = sonuclar.length + " müsabaka kaydı";
+        }
+
+        if (sonuclar.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox me-1"></i>Bu branşta kayıtlı yarış sonucu bulunamadı.</td></tr>';
+            return;
+        }
+
+        // En iyi dereceyi tespit et
+        var validSecs = sonuclar.filter(function(r){ return parseFloat(r.derece_saniye) > 0; }).map(function(r){ return parseFloat(r.derece_saniye); });
+        var minSec = validSecs.length > 0 ? Math.min.apply(null, validSecs) : null;
+
+        sonuclar.forEach(function(r) {
+            var tr = document.createElement('tr');
+            var rSec = parseFloat(r.derece_saniye);
+            var isPb = (minSec !== null && rSec === minSec) || r.kisisel_en_iyi_mi;
+
+            if (isPb) {
+                tr.className = "table-warning-subtle";
+            }
+
+            var pbBadgeHtml = isPb 
+                ? '<span class="badge bg-warning text-dark border border-warning ms-1.5"><i class="bi bi-trophy-fill me-1"></i>PB</span>' 
+                : '';
+
+            var barajHtml = (r.baraj === 'EVET' || r.baraj === 'BARAJ')
+                ? '<span class="badge bg-success-subtle text-success border border-success-subtle">EVET</span>'
+                : '<span class="text-muted small">-</span>';
+
+            var puanHtml = r.puan 
+                ? '<span class="fw-semibold text-primary font-monospace">' + r.puan + ' P</span>'
+                : '<span class="text-muted">-</span>';
+
+            var seriKulvar = (r.seri || r.kulvar)
+                ? (r.seri ? 'S:' + r.seri : '') + (r.kulvar ? ' (K:' + r.kulvar + ')' : '')
+                : '<span class="text-muted">-</span>';
+
+            var kulupHtml = r.kulup || "-";
+            if (r.kulup_okul_mu) {
+                kulupHtml += ' <span class="badge bg-indigo-subtle text-indigo border ms-1" style="font-size: 10px;">Okul</span>';
+            }
+
+            tr.innerHTML = 
+                '<td class="ps-3 small font-monospace text-muted text-nowrap">' + (r.tarih || '-') + '</td>' +
+                '<td class="fw-bold font-monospace text-primary text-nowrap">' +
+                    r.derece + pbBadgeHtml +
+                '</td>' +
+                '<td class="text-nowrap">' + puanHtml + '</td>' +
+                '<td class="text-center fw-medium text-nowrap">#' + (r.sira || '-') + '</td>' +
+                '<td class="text-center small text-muted text-nowrap">' + seriKulvar + '</td>' +
+                '<td class="text-center text-nowrap">' + barajHtml + '</td>' +
+                '<td class="small text-truncate" style="max-width: 240px;" title="' + (r.musabaka_adi || '') + '">' +
+                    (r.musabaka_adi || '-') + (r.sehir ? ' (' + r.sehir + ')' : '') +
+                '</td>' +
+                '<td class="small pe-3 text-muted text-truncate" style="max-width: 190px;" title="' + (r.kulup || '') + '">' +
+                    kulupHtml +
+                '</td>';
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    // İlk yüklemede çalıştır
+    function init() {
+        var secilenKat = "{{ secilen_kategori|default:'' }}";
+        var secilenMes = "{{ secilen_mesafe|default:'' }}";
+
+        var targetRow = null;
+        if (secilenKat || secilenMes) {
+            document.querySelectorAll('.pb-branch-row').forEach(function(r) {
+                var rStil = r.getAttribute('data-stil') || '';
+                var rMesafe = r.getAttribute('data-mesafe') || '';
+                if ((!secilenKat || rStil.toLowerCase() === secilenKat.toLowerCase()) &&
+                    (!secilenMes || rMesafe === secilenMes)) {
+                    if (!targetRow) targetRow = r;
+                }
+            });
+        }
+
+        if (!targetRow) {
+            targetRow = document.querySelector('.pb-branch-row');
+        }
+
+        if (targetRow) {
+            targetRow.click();
+        } else {
+            // PB yoksa filtredeki değerlerle çek
+            onFilterChange();
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
 </script>
-{% endif %}
 {% endblock %}
 
