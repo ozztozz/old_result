@@ -17,6 +17,8 @@ src/iller_pdf/
 # Temporary / Scratch
 scratch/test_tyf/
 .gemini/
+.env
+*.env
 
 # OS Specific
 .DS_Store

@@ -2,12 +2,15 @@
 import json
 import difflib
 import re
-from django.shortcuts import render, get_object_or_404
+import threading
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, is_school_team
+from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, is_school_team
 from .athlete_matcher import match_athlete
 
 
@@ -963,6 +966,190 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
     resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     resp["Access-Control-Allow-Headers"] = "Content-Type, X-Requested-With, Accept"
     return resp
+
+
+def canli_yaris_listesi(request):
+    """Canlı yarışların listelendiği ve yeni linkin eklendiği panel."""
+    if request.method == "POST":
+        canli_url = request.POST.get("canli_url", "").strip()
+        musabaka_adi = request.POST.get("musabaka_adi", "").strip()
+        if canli_url:
+            yaris = CanliYaris.objects.create(
+                canli_url=canli_url,
+                musabaka_adi=musabaka_adi or None,
+                durum="BEKLIYOR"
+            )
+            messages.success(request, f"Canlı yarış linki eklendi: {yaris.canli_url}")
+            return redirect("sonuclar:canli_yaris_listesi")
+        else:
+            messages.error(request, "Lütfen geçerli bir canlı yarış linki girin.")
+
+    yarislar = CanliYaris.objects.all().order_by("-olusturulma_tarihi")
+    return render(request, "sonuclar/canli_yarislar.html", {"yarislar": yarislar})
+
+
+def canli_yaris_tara(request, pk):
+    """Tekil bir canlı yarışın start listelerini tarama tetikleyicisi."""
+    if request.method != "POST":
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    yaris = get_object_or_404(CanliYaris, pk=pk)
+
+    import os
+    import ssl
+    import urllib.request
+    cf_url = os.environ.get("GOOGLE_CLOUD_FUNCTION_URL")
+    host = request.get_host().lower()
+    is_localhost = host.startswith("127.0.0.1") or host.startswith("localhost")
+
+    # Eğer canlı sunucudaysak (PythonAnywhere) ve Cloud Run URL tanımlıysa asenkron Webhook mimarisini kullan
+    if cf_url and not is_localhost:
+        yaris.durum = "ISLENIYOR"
+        yaris.son_islem_tarihi = timezone.now()
+        yaris.save()
+
+        # Cloud Run'a 'async_mode' ile istek gönder - Cloud Run anında 200 döner, arka planda tarar
+        req_payload = json.dumps({
+            "event_id": yaris.id,
+            "event_url": yaris.canli_url,
+            "django_api_url": request.build_absolute_uri("/api/canli-aktar/"),
+            "callback_url": request.build_absolute_uri("/api/canli-durum-guncelle/"),
+            "async_mode": True
+        }).encode("utf-8")
+
+        try:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            req = urllib.request.Request(cf_url, data=req_payload, headers={"Content-Type": "application/json"})
+            # Kısa timeout ile sadece tetikleme cevabını bekle (PythonAnywhere zaman aşımına uğramaz)
+            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+                resp_data = json.loads(resp.read().decode("utf-8"))
+                toplam = resp_data.get("toplam_start_listesi", 0)
+                yaris.toplam_start_listesi = toplam
+                if resp_data.get("musabaka_adi"):
+                    yaris.musabaka_adi = resp_data["musabaka_adi"]
+                yaris.save()
+                messages.info(request, f"Google Cloud taraması başlatıldı ({toplam} start listesi tespit edildi). Sayfayı kapatabilirsiniz, sonuçlar arka planda yüklenecektir.")
+        except Exception as e:
+            yaris.durum = "HATA"
+            yaris.hata_mesaji = f"Cloud Run tetikleme hatası: {str(e)}"
+            yaris.save()
+            messages.error(request, f"Cloud Run tetiklenemedi: {str(e)}")
+
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    # Yerel geliştirme ortamında doğrudan yerel worker ile arka planda çalıştır
+    def worker_thread(event_id, url, api_target):
+        try:
+            from src.live_startlist_worker import run_live_event_startlists
+            obj = CanliYaris.objects.get(id=event_id)
+            obj.durum = "ISLENIYOR"
+            obj.son_islem_tarihi = timezone.now()
+            obj.save()
+
+            stats = run_live_event_startlists(event_url=url, django_api_url=api_target)
+
+            obj = CanliYaris.objects.get(id=event_id)
+            obj.durum = "TAMAMLANDI" if stats.get("basarili_sayisi", 0) > 0 else "HATA"
+            obj.musabaka_adi = stats.get("musabaka_adi") or obj.musabaka_adi
+            obj.toplam_start_listesi = stats.get("toplam_start_listesi", 0)
+            obj.islenen_start_listesi = stats.get("basarili_sayisi", 0)
+            obj.eklenen_kayit_sayisi = stats.get("toplam_kayit", 0)
+            obj.son_islem_tarihi = timezone.now()
+            obj.save()
+        except Exception as e:
+            try:
+                obj = CanliYaris.objects.get(id=event_id)
+                obj.durum = "HATA"
+                obj.hata_mesaji = str(e)
+                obj.son_islem_tarihi = timezone.now()
+                obj.save()
+            except Exception:
+                pass
+
+    api_url = request.build_absolute_uri("/api/canli-aktar/")
+    t = threading.Thread(target=worker_thread, args=(yaris.id, yaris.canli_url, api_url), daemon=True)
+    t.start()
+    yaris.durum = "ISLENIYOR"
+    yaris.save()
+
+    messages.success(request, "Start listesi taraması yerel ortamda başlatıldı. Gemini ile işleniyor...")
+    return redirect("sonuclar:canli_yaris_listesi")
+
+
+def canli_yaris_sil(request, pk):
+    """Canlı yarış kaydını siler."""
+    if request.method == "POST":
+        yaris = get_object_or_404(CanliYaris, pk=pk)
+        yaris.delete()
+        messages.success(request, "Canlı yarış kaydı silindi.")
+    return redirect("sonuclar:canli_yaris_listesi")
+
+
+@csrf_exempt
+def api_canli_durum_guncelle(request):
+    """
+    Cloud Run veya arka plan worker'ından gelen canlı yarış durum güncellemesini kaydeder.
+    """
+    if request.method != "POST":
+        return JsonResponse({"durum": "hata", "mesaj": "Sadece POST metodu desteklenir."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception as e:
+        return JsonResponse({"durum": "hata", "mesaj": f"Geçersiz JSON: {e}"}, status=400)
+
+    event_id = data.get("event_id")
+    event_url = data.get("event_url")
+
+    yaris = None
+    if event_id:
+        yaris = CanliYaris.objects.filter(id=event_id).first()
+    if not yaris and event_url:
+        yaris = CanliYaris.objects.filter(canli_url=event_url).first()
+
+    if not yaris:
+        return JsonResponse({"durum": "hata", "mesaj": "Canlı yarış kaydı bulunamadı."}, status=404)
+
+    durum = data.get("durum")
+    if durum in ["BEKLIYOR", "ISLENIYOR", "TAMAMLANDI", "HATA"]:
+        yaris.durum = durum
+
+    if data.get("musabaka_adi"):
+        yaris.musabaka_adi = data["musabaka_adi"]
+    if "toplam_start_listesi" in data:
+        yaris.toplam_start_listesi = int(data["toplam_start_listesi"])
+    if "islenen_start_listesi" in data:
+        yaris.islenen_start_listesi = int(data["islenen_start_listesi"])
+    elif "basarili" in data:
+        yaris.islenen_start_listesi = int(data["basarili"])
+    if "toplam_sporcu" in data:
+        yaris.eklenen_kayit_sayisi = int(data["toplam_sporcu"])
+    elif "eklenen_kayit_sayisi" in data:
+        yaris.eklenen_kayit_sayisi = int(data["eklenen_kayit_sayisi"])
+
+    if data.get("hatalar"):
+        hatalar = data["hatalar"]
+        yaris.hata_mesaji = "\n".join(hatalar) if isinstance(hatalar, list) else str(hatalar)
+
+    yaris.son_islem_tarihi = timezone.now()
+    yaris.save()
+
+    return JsonResponse({"durum": "basarili", "mesaj": f"Yarış #{yaris.id} durumu güncellendi: {yaris.durum}"})
+
+
+def api_canli_yarislar_durum(request):
+    """
+    Arayüzün durumları canlı yenilemesi için JSON liste döner.
+    """
+    yarislar = CanliYaris.objects.all().values(
+        "id", "musabaka_adi", "durum", "toplam_start_listesi",
+        "islenen_start_listesi", "eklenen_kayit_sayisi", "hata_mesaji"
+    )
+    return JsonResponse({"yarislar": list(yarislar)})
+
+
 
 
 

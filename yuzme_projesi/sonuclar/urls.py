@@ -22,5 +22,10 @@ urlpatterns = [
     path('api/canli-aktar/', views.api_canli_aktar, name='api_canli_aktar'),
     path('api/yaris-aktar/', views.api_canli_aktar, name='api_yaris_aktar'),
     path('api/yaris-kaydet/', views.api_canli_aktar, name='api_yaris_kaydet'),
+    path('canli/', views.canli_yaris_listesi, name='canli_yaris_listesi'),
+    path('canli/<int:pk>/tara/', views.canli_yaris_tara, name='canli_yaris_tara'),
+    path('canli/<int:pk>/sil/', views.canli_yaris_sil, name='canli_yaris_sil'),
+    path('api/canli-durum-guncelle/', views.api_canli_durum_guncelle, name='api_canli_durum_guncelle'),
+    path('api/canli-yarislar-durum/', views.api_canli_yarislar_durum, name='api_canli_yarislar_durum'),
 ]
 

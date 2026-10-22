@@ -138,6 +138,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if 'canli' in request.path %}active{% endif %}" href="{% url 'sonuclar:canli_yaris_listesi' %}">
+                            <i class="bi bi-broadcast text-danger me-1"></i> Canlı Yarışlar
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if 'eslestir' in request.path %}active{% endif %}" href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}">
                             <i class="bi bi-person-check me-1"></i> Sporcu Eşleştirme
                         </a>

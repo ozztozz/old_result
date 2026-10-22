@@ -254,3 +254,37 @@ class YarisSonucu(models.Model):
 
     def __str__(self):
         return f"{self.sporcu.sporcu_adi} - {self.mesafe}m {self.stil} ({self.derece})"
+
+
+class CanliYaris(models.Model):
+    DURUM_CHOICES = [
+        ('BEKLIYOR', 'Bekliyor'),
+        ('ISLENIYOR', 'İşleniyor'),
+        ('TAMAMLANDI', 'Tamamlandı'),
+        ('HATA', 'Hata'),
+    ]
+
+    musabaka_adi = models.CharField(max_length=255, blank=True, null=True, verbose_name="Müsabaka Adı")
+    sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir")
+    tarih = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tarih")
+    canli_url = models.URLField(max_length=500, verbose_name="TYF Canlı Yarış Linki")
+    durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='BEKLIYOR', verbose_name="Durum")
+    toplam_start_listesi = models.IntegerField(default=0, verbose_name="Toplam Start Listesi")
+    islenen_start_listesi = models.IntegerField(default=0, verbose_name="İşlenen Start Listesi")
+    toplam_sonuc_listesi = models.IntegerField(default=0, verbose_name="Toplam Sonuç Listesi")
+    islenen_sonuc_listesi = models.IntegerField(default=0, verbose_name="İşlenen Sonuç Listesi")
+    eklenen_kayit_sayisi = models.IntegerField(default=0, verbose_name="Eklenen Kayıt Sayısı")
+    hata_mesaji = models.TextField(blank=True, null=True, verbose_name="Hata / Uyarı Notu")
+    son_islem_tarihi = models.DateTimeField(blank=True, null=True, verbose_name="Son İşlem Tarihi")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    guncellenme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        managed = False
+        db_table = 'canli_yarislar'
+        verbose_name = "Canlı Yarış Takibi"
+        verbose_name_plural = "Canlı Yarış Takipleri"
+        ordering = ['-olusturulma_tarihi']
+
+    def __str__(self):
+        return self.musabaka_adi or self.canli_url

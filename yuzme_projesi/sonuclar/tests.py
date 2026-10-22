@@ -3,7 +3,7 @@ import json
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.db import connection
-from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu
+from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris
 
 
 class SporcuApiTests(TestCase):
@@ -81,6 +81,25 @@ class SporcuApiTests(TestCase):
                 kulvar INTEGER,
                 seri TEXT,
                 giris_derecesi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS canli_yarislar (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musabaka_adi TEXT,
+                sehir TEXT,
+                tarih TEXT,
+                canli_url TEXT NOT NULL,
+                durum TEXT DEFAULT 'BEKLIYOR',
+                toplam_start_listesi INTEGER DEFAULT 0,
+                islenen_start_listesi INTEGER DEFAULT 0,
+                toplam_sonuc_listesi INTEGER DEFAULT 0,
+                islenen_sonuc_listesi INTEGER DEFAULT 0,
+                eklenen_kayit_sayisi INTEGER DEFAULT 0,
+                hata_mesaji TEXT,
+                son_islem_tarihi TEXT,
+                olusturulma_tarihi TEXT,
+                guncellenme_tarihi TEXT
             );
             """)
 
@@ -392,3 +411,55 @@ class SporcuApiTests(TestCase):
         bora = Sporcu.objects.get(sporcu_adi="Bora KORKMAZ")
         self.assertEqual(bora.dogum_yili, 2013)
         self.assertEqual(bora.okul(), "Özel Ankara İlkokulu")
+
+
+class CanliYarisTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with connection.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS canli_yarislar (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musabaka_adi TEXT,
+                sehir TEXT,
+                tarih TEXT,
+                canli_url TEXT NOT NULL,
+                durum TEXT DEFAULT 'BEKLIYOR',
+                toplam_start_listesi INTEGER DEFAULT 0,
+                islenen_start_listesi INTEGER DEFAULT 0,
+                toplam_sonuc_listesi INTEGER DEFAULT 0,
+                islenen_sonuc_listesi INTEGER DEFAULT 0,
+                eklenen_kayit_sayisi INTEGER DEFAULT 0,
+                hata_mesaji TEXT,
+                son_islem_tarihi TEXT,
+                olusturulma_tarihi TEXT,
+                guncellenme_tarihi TEXT
+            );
+            """)
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_canli_yaris_ekleme_ve_listeleme(self):
+        """Kullanıcının canlı yarış eklemesi ve sayfada listelenmesi testi."""
+        res_get = self.client.get(reverse('sonuclar:canli_yaris_listesi'))
+        self.assertEqual(res_get.status_code, 200)
+
+        # Yeni yarış post et
+        test_url = "https://canli.tyf.gov.tr/istanbul/cs-1005380/"
+        res_post = self.client.post(reverse('sonuclar:canli_yaris_listesi'), {
+            'canli_url': test_url,
+            'musabaka_adi': 'Test Müsabakası'
+        }, follow=True)
+        self.assertEqual(res_post.status_code, 200)
+
+        # Veritabanında kontrol et
+        yaris = CanliYaris.objects.filter(canli_url=test_url).first()
+        self.assertIsNotNone(yaris)
+        self.assertEqual(yaris.durum, 'BEKLIYOR')
+
+        # Silme testi
+        res_del = self.client.post(reverse('sonuclar:canli_yaris_sil', args=[yaris.id]), follow=True)
+        self.assertEqual(res_del.status_code, 200)
+        self.assertFalse(CanliYaris.objects.filter(id=yaris.id).exists())

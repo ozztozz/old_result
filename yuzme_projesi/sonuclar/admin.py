@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
-from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu
+from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris
+
+
+@admin.register(CanliYaris)
+class CanliYarisAdmin(admin.ModelAdmin):
+    list_display = ('musabaka_adi', 'sehir', 'tarih', 'durum', 'islenen_start_listesi', 'toplam_start_listesi', 'eklenen_kayit_sayisi', 'son_islem_tarihi')
+    search_fields = ('musabaka_adi', 'sehir', 'canli_url')
+    list_filter = ('durum',)
+    readonly_fields = ('islenen_start_listesi', 'toplam_start_listesi', 'islenen_sonuc_listesi', 'toplam_sonuc_listesi', 'eklenen_kayit_sayisi', 'son_islem_tarihi', 'olusturulma_tarihi', 'guncellenme_tarihi')
 
 
 @admin.register(Kulup)
