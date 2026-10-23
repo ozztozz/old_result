@@ -95,8 +95,8 @@
                                 <small class="text-muted">Kayıt ID: #{{ yaris.id }}</small>
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ yaris.sehir|default:yaris.event.sehir|default:"-" }}</div>
-                                <small class="text-muted">{{ yaris.tarih|default:yaris.event.yaris_tarihi_baslangic|default:yaris.event.yaris_tarihi_ham|default:"" }}</small>
+                                <div class="fw-semibold">{{ yaris.gosterilen_sehir }}</div>
+                                <small class="text-muted">{{ yaris.gosterilen_tarih }}</small>
                             </td>
                             <td>
                                 <a href="{{ yaris.canli_url }}" target="_blank" class="text-decoration-none">

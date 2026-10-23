@@ -354,6 +354,22 @@ class CanliYaris(models.Model):
     def __str__(self):
         return self.musabaka_adi or self.canli_url
 
+    @property
+    def gosterilen_sehir(self):
+        if self.sehir:
+            return self.sehir
+        if self.event_id and self.event:
+            return self.event.sehir or "-"
+        return "-"
+
+    @property
+    def gosterilen_tarih(self):
+        if self.tarih:
+            return self.tarih
+        if self.event_id and self.event:
+            return self.event.yaris_tarihi_baslangic or self.event.yaris_tarihi_ham or ""
+        return ""
+
 
 class CanliYarisDosya(models.Model):
     DURUM_CHOICES = [
