@@ -1578,10 +1578,10 @@ def api_canli_startlist_sporculari(request):
 
 
 @csrf_exempt
-@csrf_exempt
 def api_canli_dosya_kontrol(request):
     """
     Belirli bir dosyanın (PDF) daha önce işlenip işlenmediğini ve mevcut hash/etag durumunu döner.
+    Eğer dosya_adi verilmezse, o event_id / canli_url'ye ait tüm işlenmiş dosyaların haritasını döner.
     Runner gereksiz indirme ve Gemini çağırmayı bu sayede önler.
     GET query param veya POST JSON body destekler.
     """
@@ -1597,21 +1597,47 @@ def api_canli_dosya_kontrol(request):
     dosya_adi = params.get('dosya_adi', '').strip()
     event_id = params.get('event_id') or params.get('canli_yaris_id')
     canli_url = params.get('canli_url', '').strip()
-    req_etag = params.get('etag', '').strip()
-    req_hash = params.get('content_hash', '').strip()
+    req_etag = (params.get('etag') or '').strip().strip('"')
+    req_last_modified = (params.get('last_modified') or '').strip()
 
-    if not dosya_adi:
-        return JsonResponse({"durum": "hata", "mesaj": "dosya_adi parametresi gereklidir."}, status=400)
-
-    qs = CanliYarisDosya.objects.filter(dosya_adi=dosya_adi)
+    canli_match = None
+    target_eid = None
     if event_id and str(event_id).isdigit():
         canli_match = CanliYaris.objects.filter(id=int(event_id)).first()
-        target_eid = canli_match.event_id if (canli_match and canli_match.event_id) else int(event_id)
-        qs = qs.filter(event_id=target_eid)
+        if canli_match and canli_match.event_id:
+            target_eid = canli_match.event_id
+        else:
+            target_eid = int(event_id)
     elif canli_url:
-        canli = CanliYaris.objects.filter(canli_url=canli_url).first()
-        if canli and canli.event_id:
-            qs = qs.filter(event_id=canli.event_id)
+        canli_match = CanliYaris.objects.filter(canli_url=canli_url).first()
+        if canli_match and canli_match.event_id:
+            target_eid = canli_match.event_id
+
+    # TOPLU KONTROL: dosya_adi belirtilmemişse o yarışa ait bilinen tüm dosyaların sözlüğünü döner
+    if not dosya_adi:
+        if target_eid or canli_match:
+            from django.db.models import Q
+            q_filter = Q()
+            if target_eid:
+                q_filter |= Q(event_id=target_eid)
+            if canli_match:
+                q_filter |= Q(canli_yaris=canli_match)
+
+            dosyalar = CanliYarisDosya.objects.filter(q_filter).values(
+                "dosya_adi", "etag", "dosya_boyutu", "durum", "last_modified", "kayit_sayisi"
+            )
+            dosyalar_map = {d["dosya_adi"]: d for d in dosyalar}
+            return JsonResponse({
+                "durum": "basarili",
+                "toplam": len(dosyalar_map),
+                "dosyalar": dosyalar_map
+            })
+        return JsonResponse({"durum": "hata", "mesaj": "dosya_adi veya event_id parametresi gereklidir."}, status=400)
+
+    # TEKİL DOSYA KONTROLÜ (ETag ve Last-Modified ile değişim kontrolü)
+    qs = CanliYarisDosya.objects.filter(dosya_adi=dosya_adi)
+    if target_eid:
+        qs = qs.filter(event_id=target_eid)
 
     dosya = qs.first()
     if not dosya:
@@ -1620,10 +1646,12 @@ def api_canli_dosya_kontrol(request):
     is_done = (dosya.durum == 'ISLENDI')
     degisti_mi = True
     if is_done:
-        if req_hash and dosya.content_hash:
-            degisti_mi = (req_hash != dosya.content_hash)
-        elif req_etag and dosya.etag:
-            degisti_mi = (req_etag != dosya.etag)
+        known_etag = (dosya.etag or '').strip().strip('"')
+        known_lm = (dosya.last_modified or '').strip()
+        if req_etag and known_etag:
+            degisti_mi = (req_etag != known_etag)
+        elif req_last_modified and known_lm:
+            degisti_mi = (req_last_modified != known_lm)
         else:
             degisti_mi = False
 
@@ -1633,7 +1661,6 @@ def api_canli_dosya_kontrol(request):
         "degisti_mi": degisti_mi,
         "etag": dosya.etag,
         "last_modified": dosya.last_modified,
-        "content_hash": dosya.content_hash,
         "kayit_sayisi": dosya.kayit_sayisi
     })
 

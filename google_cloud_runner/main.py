@@ -54,6 +54,7 @@ except ImportError:
 
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 DEFAULT_DJANGO_BASE_URL = os.environ.get("DJANGO_BASE_URL", "https://ozztozz.pythonanywhere.com").rstrip("/")
+DEFAULT_BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 5))
 
 
 def get_ssl_context():
@@ -73,7 +74,7 @@ def download_bytes(url: str) -> bytes:
 
 
 def download_file_with_meta(url: str) -> Tuple[bytes, Dict[str, Any]]:
-    """Dosyayı indirir ve ETag, Last-Modified ve SHA-256 hash meta verilerini çıkarır."""
+    """Dosyayı indirir ve ETag, Last-Modified meta verilerini çıkarır."""
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -82,14 +83,40 @@ def download_file_with_meta(url: str) -> Tuple[bytes, Dict[str, Any]]:
         content = resp.read()
         etag = (resp.headers.get("ETag") or "").strip('"')
         last_modified = resp.headers.get("Last-Modified") or ""
-        sha256 = hashlib.sha256(content).hexdigest()
         meta = {
             "etag": etag,
             "last_modified": last_modified,
-            "content_hash": sha256,
             "dosya_boyutu": len(content)
         }
         return content, meta
+
+
+def get_remote_file_header(url: str) -> Tuple[str, Dict[str, str]]:
+    """HTTP HEAD isteği ile dosyanın ETag ve Last-Modified başlıklarını çeker (0 bayt veri tüketir)."""
+    req = urllib.request.Request(
+        url,
+        method="HEAD",
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    )
+    try:
+        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=10) as resp:
+            etag = (resp.headers.get("ETag") or "").strip('"')
+            last_modified = resp.headers.get("Last-Modified") or ""
+            return url, {"etag": etag, "last_modified": last_modified}
+    except Exception:
+        return url, {}
+
+
+def fetch_remote_headers_map(urls: List[str]) -> Dict[str, Dict[str, str]]:
+    """Tüm PDF URL'lerinin ETag ve Last-Modified başlıklarını paralel HTTP HEAD ile çeker (~0.3 sn)."""
+    if not urls:
+        return {}
+    headers_map = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        for u, h in executor.map(get_remote_file_header, urls):
+            fname = os.path.basename(u)
+            headers_map[fname] = h
+    return headers_map
 
 
 def get_endpoint_url(django_url: str, endpoint: str) -> str:
@@ -116,7 +143,6 @@ def check_file_already_processed(django_url: str, event_id: Any, filename: str, 
         "dosya_adi": filename,
         "etag": meta.get("etag"),
         "last_modified": meta.get("last_modified"),
-        "content_hash": meta.get("content_hash"),
         "dosya_boyutu": meta.get("dosya_boyutu")
     }
     try:
@@ -131,6 +157,31 @@ def check_file_already_processed(django_url: str, event_id: Any, filename: str, 
     except Exception as e:
         print(f"  [!] Dosya kontrol hatası ({filename}): {e}")
         return False
+
+
+def fetch_known_files_map(django_url: str, event_id: Any, api_key: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    """
+    Django API'den o yarışa ait daha önce işlenmiş tüm dosyaları tek bir HTTP isteğinde çeker.
+    Bu sayede her dosya için ayrı ayrı HTTP isteği atılması ve 80 round-trip önlenir.
+    Dönen sözlük örneği:
+      {"StartList_1.pdf": {"durum": "ISLENDI", "etag": "...", "content_hash": "..."}, ...}
+    """
+    if not django_url or not event_id:
+        return {}
+    endpoint = get_endpoint_url(django_url, "canli-dosya-kontrol")
+    query = urlencode({"event_id": event_id})
+    full_url = f"{endpoint}?{query}"
+    try:
+        req = urllib.request.Request(full_url, headers={"User-Agent": "TYF-CloudRunner/1.0"})
+        if api_key:
+            req.add_header("X-Api-Key", api_key)
+        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("durum") == "basarili":
+                return data.get("dosyalar", {})
+    except Exception as e:
+        print(f"  [!] Toplu dosya kontrolü hatası ({full_url}): {e}")
+    return {}
 
 
 def fetch_startlist_swimmers(django_url: str, event_id: Any, yaris_no: str, api_key: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -452,13 +503,22 @@ def post_to_django(django_url: str, payload: Dict[str, Any], api_key: Optional[s
     return False
 
 
-def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Client, model: str = DEFAULT_MODEL, limit: Optional[int] = None, api_key: Optional[str] = None) -> Dict[str, Any]:
+def process_single_meet(
+    meet: Dict[str, Any],
+    base_url: str,
+    client: genai.Client,
+    model: str = DEFAULT_MODEL,
+    limit: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    api_key: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Tek bir canlı yarışı baştan sona işler:
-    1. Durumu 'ISLENIYOR' yapar.
-    2. Start listelerini tarar, değişmeyenleri atlar, yeni olanları Gemini ile ayrıştırıp Django'ya aktarır.
-    3. Sonuç listelerini tarar, start listesi ID'leriyle eşleştirip dereceleri günceller.
-    4. Durumu 'TAMAMLANDI' yapar ve istatistikleri döner.
+    Tek bir canlı yarışın web sayfasını inceler:
+    1. Django'dan bilinen tüm işlenmiş dosyaları tek sorguda çeker (/api/canli-dosya-kontrol/).
+    2. Daha önce işlenmiş (ISLENDI) dosyaları SIFIR indirme ile atlar (Ağ ve CPU tasarrufu).
+    3. Henüz işlenmemiş dosyaları BATCH_SIZE (varsayılan 5) gruplar halinde işler.
+    4. Sırada bekleyen dosya varsa durumu 'ISLENIYOR' olarak korur (sonraki Scheduler tetiklemesi devam ettirir).
+    5. Tüm dosyalar bittiğinde durumu 'TAMAMLANDI' yapar.
     """
     event_id = meet.get("id")
     event_url = meet.get("canli_url") or meet.get("event_url")
@@ -467,20 +527,13 @@ def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Clien
         return {"durum": "HATA", "mesaj": "Geçersiz yarış URL'si."}
 
     print(f"\n=======================================================")
-    print(f"[*] Canlı Yarış İşleniyor: ID #{event_id} - {event_url}")
+    print(f"[*] Canlı Yarış İnceleniyor: ID #{event_id} - {event_url}")
     print(f"=======================================================")
-
-    # 1. Django'da durumu ISLENIYOR yap
-    update_meet_status(base_url, {
-        "event_id": event_id,
-        "event_url": event_url,
-        "durum": "ISLENIYOR"
-    }, api_key=api_key)
 
     stats = {
         "event_id": event_id,
         "event_url": event_url,
-        "durum": "TAMAMLANDI",
+        "durum": "ISLENIYOR",
         "musabaka_adi": meet.get("musabaka_adi", ""),
         "sehir": meet.get("sehir", ""),
         "tarih": meet.get("tarih", ""),
@@ -491,12 +544,13 @@ def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Clien
         "basarili": 0,
         "atlanilan": 0,
         "hatali": 0,
+        "kalan_dosya": 0,
         "toplam_sporcu": 0,
         "hatalar": []
     }
 
     try:
-        # 2. Sayfayı tara, başlık ve PDF linklerini çek
+        # 1. Sayfayı tara, başlık ve PDF linklerini çek
         meet_title, city, date_str, start_date, end_date, all_pdf_urls = fetch_meet_pdf_urls(event_url, mode="all")
         if meet_title:
             stats["musabaka_adi"] = meet_title
@@ -508,147 +562,184 @@ def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Clien
         start_urls = [u for u in all_pdf_urls if detect_pdf_type(u, b"") == "start_listesi"]
         result_urls = [u for u in all_pdf_urls if detect_pdf_type(u, b"") == "sonuc_listesi"]
 
-        if limit and isinstance(limit, int) and limit > 0:
-            start_urls = start_urls[:limit]
-            result_urls = result_urls[:limit]
-
         stats["toplam_start_listesi"] = len(start_urls)
         stats["toplam_sonuc_listesi"] = len(result_urls)
 
-        # Django'ya ilk başlık ve toplam sayıları bildir
+        # 2. Django'dan daha önce işlenmiş dosyaları TEK HTTP çağrısında çek (Bulk check)
+        known_files = fetch_known_files_map(base_url, event_id, api_key=api_key)
+        print(f"[*] Django'dan {len(known_files)} adet kayıtlı dosya bilgisi alındı.")
+
+        # 3. TYF sunucusundan ETag ve Last-Modified başlıklarını paralel HTTP HEAD ile çek (0 bayt indirme, ~0.3 sn)
+        remote_headers = fetch_remote_headers_map(all_pdf_urls)
+
+        def is_file_unchanged(fname: str) -> bool:
+            kf = known_files.get(fname)
+            if not kf or kf.get("durum") != "ISLENDI":
+                return False
+            rh = remote_headers.get(fname) or {}
+            known_etag = (kf.get("etag") or "").strip('"')
+            remote_etag = (rh.get("etag") or "").strip('"')
+            known_lm = (kf.get("last_modified") or "").strip()
+            remote_lm = (rh.get("last_modified") or "").strip()
+
+            # ETag veya Last-Modified ile kontrol et
+            if remote_etag and known_etag:
+                return remote_etag == known_etag
+            if remote_lm and known_lm:
+                return remote_lm == known_lm
+            return True  # Her ikisi de yoksa önceden işlenmiş ISLENDI durumunu kabul et
+
+        # İndirmeden filtreleme (ETag / Last-Modified eşleşenler 0 bayt ile atlanır)
+        pending_start_urls = []
+        already_done_starts = 0
+        for u in start_urls:
+            fname = os.path.basename(u)
+            if is_file_unchanged(fname):
+                already_done_starts += 1
+            else:
+                pending_start_urls.append(u)
+
+        pending_result_urls = []
+        already_done_results = 0
+        for u in result_urls:
+            fname = os.path.basename(u)
+            if is_file_unchanged(fname):
+                already_done_results += 1
+            else:
+                pending_result_urls.append(u)
+
+        stats["islenen_start_listesi"] = already_done_starts
+        stats["islenen_sonuc_listesi"] = already_done_results
+        stats["atlanilan"] = already_done_starts + already_done_results
+
+        # Django'ya mevcut ilerleme durumunu anında bildir
         update_meet_status(base_url, {
             "event_id": event_id,
             "event_url": event_url,
+            "durum": "ISLENIYOR",
             "musabaka_adi": stats["musabaka_adi"],
             "sehir": stats["sehir"],
             "tarih": stats["tarih"],
             "toplam_start_listesi": stats["toplam_start_listesi"],
-            "toplam_sonuc_listesi": stats["toplam_sonuc_listesi"]
+            "islenen_start_listesi": stats["islenen_start_listesi"],
+            "toplam_sonuc_listesi": stats["toplam_sonuc_listesi"],
+            "islenen_sonuc_listesi": stats["islenen_sonuc_listesi"]
         }, api_key=api_key)
 
-        print(f"[*] Müsabaka: {stats['musabaka_adi']} | Şehir: {stats['sehir']} | Tarih: {stats['tarih']}")
-        print(f"[*] Tespit edilen: {len(start_urls)} Start Listesi, {len(result_urls)} Sonuç Listesi")
+        print(f"[*] Durum: {len(start_urls)} Start ({already_done_starts} işlenmiş, {len(pending_start_urls)} bekliyor), "
+              f"{len(result_urls)} Sonuç ({already_done_results} işlenmiş, {len(pending_result_urls)} bekliyor)")
 
-        # 3. Önce START LISTELERİNİ işle
-        for pdf_url in start_urls:
+        # 4. İşlenecek dosyaları sırala (Start listeleri sonuçlardan önce işlenmeli)
+        pending_queue = [("start_listesi", u) for u in pending_start_urls] + [("sonuc_listesi", u) for u in pending_result_urls]
+
+        # Eğer hiç bekleyen dosya kalmamışsa doğrudan tamamla!
+        if not pending_queue:
+            print(f"[*] Tüm dosyalar ({stats['atlanilan']}/{len(all_pdf_urls)}) zaten önceden işlenmiş. İndirme yapılmadan tamamlandı.")
+            stats["durum"] = "TAMAMLANDI"
+            stats["kalan_dosya"] = 0
+            update_meet_status(base_url, stats, api_key=api_key)
+            return stats
+
+        # 5. Batch dilimleme (Cloud Run ve PythonAnywhere aşırı yükünü önler)
+        effective_batch_size = int(batch_size or DEFAULT_BATCH_SIZE)
+        if limit and isinstance(limit, int) and limit > 0:
+            effective_batch_size = min(effective_batch_size, limit)
+
+        current_batch = pending_queue[:effective_batch_size]
+        remaining_after_batch = len(pending_queue) - len(current_batch)
+        print(f"[*] Batch planı: {len(pending_queue)} bekleyen dosya içinden ilk {len(current_batch)} dosya işlenecek (BATCH_SIZE={effective_batch_size}). Kalan dosya: {remaining_after_batch}")
+
+        # 6. Sadece bu batch içindeki dosyaları indir ve işle
+        for doc_type, pdf_url in current_batch:
             filename = os.path.basename(pdf_url)
             try:
                 pdf_bytes, meta = download_file_with_meta(pdf_url)
 
-                # Daha önce işlenmiş ve değişmemişse atla
-                if check_file_already_processed(base_url, event_id, filename, meta, api_key=api_key):
-                    print(f"  [-] {filename} zaten işlenmiş ve değişmemiş; atlanıyor.")
-                    stats["atlanilan"] += 1
+                if doc_type == "start_listesi":
+                    print(f"  [>] {filename} ayrıştırılıyor (Start Listesi - Gemini Flash Lite)...")
+                    parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model)
+                    parsed["tur"] = "start_listesi"
+                    if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
+                        parsed["musabaka_adi"] = stats["musabaka_adi"]
+                    if not parsed.get("sehir") and stats["sehir"]:
+                        parsed["sehir"] = stats["sehir"]
+                    if not parsed.get("tarih") and stats["tarih"]:
+                        parsed["tarih"] = stats["tarih"]
+                    if start_date and not parsed.get("yaris_tarihi_baslangic"):
+                        parsed["yaris_tarihi_baslangic"] = start_date
+                    if end_date and not parsed.get("yaris_tarihi_bitis"):
+                        parsed["yaris_tarihi_bitis"] = end_date
+
+                    parsed["canli_yaris_id"] = event_id
+                    parsed["dosya_adi"] = filename
+                    parsed["dosya_url"] = pdf_url
+                    parsed["etag"] = meta.get("etag")
+                    parsed["last_modified"] = meta.get("last_modified")
+                    parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
+
+                    aktar_url = get_endpoint_url(base_url, "canli-aktar")
+                    if not post_to_django(aktar_url, parsed, api_key=api_key):
+                        raise RuntimeError(f"Django aktarımı başarısız oldu ({aktar_url})")
+
+                    stats["basarili"] += 1
                     stats["islenen_start_listesi"] += 1
-                    continue
+                    record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
+                    stats["toplam_sporcu"] += record_count
+                    print(f"  [+] {filename} başarıyla aktarıldı ({record_count} sporcu/kulvar)")
 
-                print(f"  [>] {filename} ayrıştırılıyor (Start Listesi - Gemini Flash Lite)...")
-                parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model)
-                parsed["tur"] = "start_listesi"
-                if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
-                    parsed["musabaka_adi"] = stats["musabaka_adi"]
-                if not parsed.get("sehir") and stats["sehir"]:
-                    parsed["sehir"] = stats["sehir"]
-                if not parsed.get("tarih") and stats["tarih"]:
-                    parsed["tarih"] = stats["tarih"]
-                if start_date and not parsed.get("yaris_tarihi_baslangic"):
-                    parsed["yaris_tarihi_baslangic"] = start_date
-                if end_date and not parsed.get("yaris_tarihi_bitis"):
-                    parsed["yaris_tarihi_bitis"] = end_date
+                else:  # sonuc_listesi
+                    m_no = re.search(r"(?:ResultList|StartList)_(\d+)\.pdf", filename, re.I)
+                    if not m_no:
+                        m_no = re.search(r"_(\d+)\.pdf", filename, re.I)
+                    yaris_no = m_no.group(1) if m_no else None
 
-                parsed["canli_yaris_id"] = event_id
-                parsed["dosya_adi"] = filename
-                parsed["dosya_url"] = pdf_url
-                parsed["etag"] = meta.get("etag")
-                parsed["last_modified"] = meta.get("last_modified")
-                parsed["content_hash"] = meta.get("content_hash")
-                parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
+                    startlist_swimmers = None
+                    if yaris_no:
+                        startlist_swimmers = fetch_startlist_swimmers(base_url, event_id, yaris_no, api_key=api_key)
+                        if startlist_swimmers:
+                            print(f"  [*] Yarış #{yaris_no} için {len(startlist_swimmers)} startlist sporcusu eşleştirme için yüklendi.")
 
-                aktar_url = get_endpoint_url(base_url, "canli-aktar")
-                if not post_to_django(aktar_url, parsed, api_key=api_key):
-                    raise RuntimeError(f"Django aktarımı başarısız oldu ({aktar_url})")
+                    print(f"  [>] {filename} ayrıştırılıyor (Sonuç Listesi - Gemini Flash Lite)...")
+                    parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model, startlist_swimmers=startlist_swimmers)
+                    parsed["tur"] = "sonuc_listesi"
+                    if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
+                        parsed["musabaka_adi"] = stats["musabaka_adi"]
+                    if not parsed.get("sehir") and stats["sehir"]:
+                        parsed["sehir"] = stats["sehir"]
+                    if not parsed.get("tarih") and stats["tarih"]:
+                        parsed["tarih"] = stats["tarih"]
+                    if start_date and not parsed.get("yaris_tarihi_baslangic"):
+                        parsed["yaris_tarihi_baslangic"] = start_date
+                    if end_date and not parsed.get("yaris_tarihi_bitis"):
+                        parsed["yaris_tarihi_bitis"] = end_date
 
-                stats["basarili"] += 1
-                stats["islenen_start_listesi"] += 1
-                record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
-                stats["toplam_sporcu"] += record_count
-                print(f"  [+] {filename} başarıyla aktarıldı ({record_count} sporcu/kulvar)")
+                    parsed["canli_yaris_id"] = event_id
+                    parsed["dosya_adi"] = filename
+                    parsed["dosya_url"] = pdf_url
+                    parsed["etag"] = meta.get("etag")
+                    parsed["last_modified"] = meta.get("last_modified")
+                    parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
 
-                # PythonAnywhere tek worker'ına nefes aldır (web kullanıcılarının istekleri araya girebilsin)
-                time.sleep(1.5)
+                    aktar_url = get_endpoint_url(base_url, "canli-aktar")
+                    if not post_to_django(aktar_url, parsed, api_key=api_key):
+                        raise RuntimeError(f"Django aktarımı başarısız oldu ({aktar_url})")
 
-            except Exception as e:
-                err = f"{filename} (StartList): {str(e)}"
-                print(f"  [!] Hata: {err}")
-                stats["hatali"] += 1
-                stats["hatalar"].append(err)
-
-        # 4. Sonra SONUÇ LİSTELERİNİ işle
-        for pdf_url in result_urls:
-            filename = os.path.basename(pdf_url)
-            try:
-                pdf_bytes, meta = download_file_with_meta(pdf_url)
-
-                # Daha önce işlenmiş ve değişmemişse atla
-                if check_file_already_processed(base_url, event_id, filename, meta, api_key=api_key):
-                    print(f"  [-] {filename} zaten işlenmiş ve değişmemiş; atlanıyor.")
-                    stats["atlanilan"] += 1
+                    stats["basarili"] += 1
                     stats["islenen_sonuc_listesi"] += 1
-                    continue
+                    record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
+                    stats["toplam_sporcu"] += record_count
+                    print(f"  [+] {filename} sonuçları başarıyla aktarıldı ({record_count} derece)")
 
-                # Yarış no tespiti (Örn: ResultList_1.pdf -> 1)
-                m_no = re.search(r"(?:ResultList|StartList)_(\d+)\.pdf", filename, re.I)
-                if not m_no:
-                    m_no = re.search(r"_(\d+)\.pdf", filename, re.I)
-                yaris_no = m_no.group(1) if m_no else None
-
-                # Django'dan Start listesindeki aday sporcuları ve DB ID'lerini çek
-                startlist_swimmers = None
-                if yaris_no:
-                    startlist_swimmers = fetch_startlist_swimmers(base_url, event_id, yaris_no, api_key=api_key)
-                    if startlist_swimmers:
-                        print(f"  [*] Yarış #{yaris_no} için {len(startlist_swimmers)} startlist sporcusu eşleştirme için yüklendi.")
-
-                print(f"  [>] {filename} ayrıştırılıyor (Sonuç Listesi - Gemini Flash Lite)...")
-                parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model, startlist_swimmers=startlist_swimmers)
-                parsed["tur"] = "sonuc_listesi"
-                if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
-                    parsed["musabaka_adi"] = stats["musabaka_adi"]
-                if not parsed.get("sehir") and stats["sehir"]:
-                    parsed["sehir"] = stats["sehir"]
-                if not parsed.get("tarih") and stats["tarih"]:
-                    parsed["tarih"] = stats["tarih"]
-                if start_date and not parsed.get("yaris_tarihi_baslangic"):
-                    parsed["yaris_tarihi_baslangic"] = start_date
-                if end_date and not parsed.get("yaris_tarihi_bitis"):
-                    parsed["yaris_tarihi_bitis"] = end_date
-
-                parsed["canli_yaris_id"] = event_id
-                parsed["dosya_adi"] = filename
-                parsed["dosya_url"] = pdf_url
-                parsed["etag"] = meta.get("etag")
-                parsed["last_modified"] = meta.get("last_modified")
-                parsed["content_hash"] = meta.get("content_hash")
-                parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
-
-                aktar_url = get_endpoint_url(base_url, "canli-aktar")
-                if not post_to_django(aktar_url, parsed, api_key=api_key):
-                    raise RuntimeError(f"Django aktarımı başarısız oldu ({aktar_url})")
-
-                stats["basarili"] += 1
-                stats["islenen_sonuc_listesi"] += 1
-                record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
-                stats["toplam_sporcu"] += record_count
-                print(f"  [+] {filename} sonuçları başarıyla güncellendi ({record_count} derece)")
-
-                # PythonAnywhere tek worker'ına nefes aldır
+                # PythonAnywhere tek iş parçacığına nefes aldır (web ziyaretçileri için)
                 time.sleep(1.5)
 
             except Exception as e:
-                err = f"{filename} (ResultList): {str(e)}"
+                err = f"{filename} ({doc_type}): {str(e)}"
                 print(f"  [!] Hata: {err}")
                 stats["hatali"] += 1
                 stats["hatalar"].append(err)
+
+        stats["kalan_dosya"] = remaining_after_batch
 
     except Exception as e:
         err = f"Genel Tarama Hatası ({event_url}): {str(e)}"
@@ -656,15 +747,20 @@ def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Clien
         stats["hatali"] += 1
         stats["hatalar"].append(err)
 
-    # Nihai durum tespiti
-    if (stats["basarili"] + stats["atlanilan"]) == 0 and stats["hatali"] > 0:
-        stats["durum"] = "HATA"
+    # 7. Nihai durum tespiti: Sırada bekleyen dosya var mı?
+    if stats.get("kalan_dosya", 0) > 0:
+        stats["durum"] = "ISLENIYOR"
+        print(f"[*] Batch tamamlandı ({len(current_batch)} dosya). Sırada {stats['kalan_dosya']} dosya var. Durum ISLENIYOR olarak bırakıldı.")
     else:
-        stats["durum"] = "TAMAMLANDI"
+        if (stats["basarili"] + stats["atlanilan"]) == 0 and stats["hatali"] > 0:
+            stats["durum"] = "HATA"
+        else:
+            stats["durum"] = "TAMAMLANDI"
+        print(f"[*] Müsabaka #{event_id} tamamen bitti: Durum={stats['durum']}")
 
     # Django'da son durumu kaydet
     update_meet_status(base_url, stats, api_key=api_key)
-    print(f"[*] Müsabaka #{event_id} tamamlandı: Durum={stats['durum']}, Başarılı={stats['basarili']}, Atlanılan={stats['atlanilan']}, Hatalı={stats['hatali']}\n")
+    print(f"[*] Özet: Durum={stats['durum']}, Başarılı={stats['basarili']}, Atlanılan={stats['atlanilan']}, Hatalı={stats['hatali']}, Kalan={stats.get('kalan_dosya', 0)}\n")
     return stats
 
 
@@ -674,8 +770,8 @@ def tyf_startlist_handler(request):
     Cloud Scheduler tarafından periyodik (ör: her 5 veya 10 dk) tetiklendiğinde:
     1. Django API'den bekleyen canlı yarışları çeker (GET /api/canli-bekleyen-yarislar/).
     2. Bekleyen yarış yoksa 0.5 saniyede 200 OK dönerek Cloud Run örneğini sonlandırır (maliyet tasarrufu).
-    3. Bekleyen yarış varsa sırayla start ve sonuç listelerini indirip, hash kontrolü yaparak
-       yalnızca yeni/değişen dosyaları Gemini ile işler ve Django'ya aktarır.
+    3. Bekleyen yarış varsa sırayla start ve sonuç listelerini inceleyip,
+       BATCH_SIZE kadar yeni/değişen dosyayı Gemini ile işler ve Django'ya aktarır.
     4. İsteğe bağlı olarak tekil bir 'event_url' parametresiyle manuel olarak da çağrılabilir.
     """
     if request.method == "OPTIONS":
@@ -709,6 +805,15 @@ def tyf_startlist_handler(request):
         except ValueError:
             limit = None
 
+    batch_size = req_json.get("batch_size") or request.args.get("batch_size") or os.environ.get("BATCH_SIZE")
+    if batch_size:
+        try:
+            batch_size = int(batch_size)
+        except ValueError:
+            batch_size = DEFAULT_BATCH_SIZE
+    else:
+        batch_size = DEFAULT_BATCH_SIZE
+
     if not gemini_key:
         return (json.dumps({"durum": "hata", "mesaj": "GEMINI_API_KEY tanımlanmamış."}), 400, {"Content-Type": "application/json"})
 
@@ -725,11 +830,11 @@ def tyf_startlist_handler(request):
             "canli_url": event_url,
             "musabaka_adi": req_json.get("musabaka_adi", "")
         }
-        stats = process_single_meet(meet, base_url, client, model=model, limit=limit, api_key=api_key)
+        stats = process_single_meet(meet, base_url, client, model=model, limit=limit, batch_size=batch_size, api_key=api_key)
         return (json.dumps(stats, ensure_ascii=False), 200, {"Content-Type": "application/json; charset=utf-8"})
 
     # Rutin Tarama Modu (Cloud Scheduler cron)
-    print(f"[*] Rutin Tarama Başlatıldı. Hedef: {base_url}")
+    print(f"[*] Rutin Tarama Başlatıldı. Hedef: {base_url} (BATCH_SIZE={batch_size})")
     pending_meets = fetch_pending_meets(base_url, api_key=api_key)
 
     if not pending_meets:
@@ -741,10 +846,10 @@ def tyf_startlist_handler(request):
             "islenen_yaris_sayisi": 0
         }, ensure_ascii=False), 200, {"Content-Type": "application/json; charset=utf-8"})
 
-    print(f"[*] {len(pending_meets)} adet bekleyen canlı yarış bulundu.")
+    print(f"[*] {len(pending_meets)} adet bekleyen/işlemde canlı yarış bulundu.")
     reports = []
     for meet in pending_meets:
-        rep = process_single_meet(meet, base_url, client, model=model, limit=limit, api_key=api_key)
+        rep = process_single_meet(meet, base_url, client, model=model, limit=limit, batch_size=batch_size, api_key=api_key)
         reports.append(rep)
 
     return (json.dumps({
@@ -761,6 +866,7 @@ if __name__ == "__main__":
     parser.add_argument("--url", default=None, help="Doğrudan belirli bir canlı yarış URL'sini tara")
     parser.add_argument("--id", default=None, help="Yarış ID (isteğe bağlı)")
     parser.add_argument("--limit", type=int, default=None, help="Her yarış için taranacak azami PDF sayısı")
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Tek seferde işlenecek azami PDF sayısı (Varsayılan: 5)")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Gemini Model Adı")
     args = parser.parse_args()
 
@@ -774,48 +880,16 @@ if __name__ == "__main__":
 
     if args.url:
         meet = {"id": args.id, "canli_url": args.url}
-        rep = process_single_meet(meet, target_base, client, model=args.model, limit=args.limit)
+        rep = process_single_meet(meet, target_base, client, model=args.model, limit=args.limit, batch_size=args.batch_size)
         print(json.dumps(rep, indent=2, ensure_ascii=False))
     else:
-        print(f"[*] Rutin Tarama: {target_base} adresindeki bekleyen yarışlar sorgulanıyor...")
+        print(f"[*] Rutin Tarama: {target_base} adresindeki bekleyen yarışlar sorgulanıyor (BATCH_SIZE={args.batch_size})...")
         pending = fetch_pending_meets(target_base)
         if not pending:
             print("[*] Bekleyen veya işlemde olan canlı yarış bulunamadı.")
         else:
             print(f"[*] {len(pending)} adet bekleyen yarış bulundu.")
             for m in pending:
-                process_single_meet(m, target_base, client, model=args.model, limit=args.limit)
+                process_single_meet(m, target_base, client, model=args.model, limit=args.limit, batch_size=args.batch_size)
 
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="TYF Canlı Yarış Tarayıcısı (Cloud Run / CLI Runner)")
-    parser.add_argument("--base-url", default=DEFAULT_DJANGO_BASE_URL, help="Django ana web adresi (Varsayılan: https://ozztozz.pythonanywhere.com)")
-    parser.add_argument("--url", default=None, help="Doğrudan belirli bir canlı yarış URL'sini tara")
-    parser.add_argument("--id", default=None, help="Yarış ID (isteğe bağlı)")
-    parser.add_argument("--limit", type=int, default=None, help="Her yarış için taranacak azami PDF sayısı")
-    parser.add_argument("--model", default=DEFAULT_MODEL, help="Gemini Model Adı")
-    args = parser.parse_args()
-
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not gemini_key:
-        print("[!] Hata: GEMINI_API_KEY bulunamadı. Lütfen .env dosyasında veya ortam değişkenlerinde tanımlayın.")
-        exit(1)
-
-    client = genai.Client(api_key=gemini_key.strip().strip("'\""))
-    target_base = args.base_url.rstrip("/")
-
-    if args.url:
-        meet = {"id": args.id, "canli_url": args.url}
-        rep = process_single_meet(meet, target_base, client, model=args.model, limit=args.limit)
-        print(json.dumps(rep, indent=2, ensure_ascii=False))
-    else:
-        print(f"[*] Rutin Tarama: {target_base} adresindeki bekleyen yarışlar sorgulanıyor...")
-        pending = fetch_pending_meets(target_base)
-        if not pending:
-            print("[*] Bekleyen veya işlemde olan canlı yarış bulunamadı.")
-        else:
-            print(f"[*] {len(pending)} adet bekleyen yarış bulundu.")
-            for m in pending:
-                process_single_meet(m, target_base, client, model=args.model, limit=args.limit)
 
