@@ -116,7 +116,8 @@ def py_like(*args) -> bool:
 
 def register_sqlite_tr_functions(sender=None, connection=None, **kwargs):
     """
-    Django SQLite bağlantısına Türkçe uyumlu LIKE, UPPER ve LOWER fonksiyonlarını bağlar.
+    Django SQLite bağlantısına Türkçe uyumlu LIKE, UPPER ve LOWER fonksiyonlarını bağlar
+    ve WAL modu/performans PRAGMA ayarlarını etkinleştirir.
     """
     conn = connection.connection if connection else None
     if conn and hasattr(conn, 'create_function'):
@@ -125,6 +126,12 @@ def register_sqlite_tr_functions(sender=None, connection=None, **kwargs):
             conn.create_function('like', 3, py_like)
             conn.create_function('upper', 1, tr_upper)
             conn.create_function('lower', 1, tr_lower)
+            
+            # SQLite Concurrency & Hızlandırma PRAGMA'ları
+            cur = conn.cursor()
+            cur.execute("PRAGMA journal_mode=WAL;")
+            cur.execute("PRAGMA synchronous=NORMAL;")
+            cur.execute("PRAGMA cache_size=-64000;")
         except Exception:
             pass
 

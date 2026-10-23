@@ -79,6 +79,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": str(DB_PATH),
+        "OPTIONS": {
+            "timeout": 30,
+        },
     }
 }
 

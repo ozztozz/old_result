@@ -125,7 +125,7 @@ def check_file_already_processed(django_url: str, event_id: Any, filename: str, 
         if api_key:
             headers["X-Api-Key"] = api_key
         req = urllib.request.Request(check_api, data=data_json, headers=headers)
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=10) as resp:
+        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=25) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return bool(data.get("islenmis_mi") is True and data.get("degisti_mi") is False)
     except Exception as e:
@@ -442,13 +442,13 @@ def post_to_django(django_url: str, payload: Dict[str, Any], api_key: Optional[s
     for attempt in range(1, max_retries + 1):
         try:
             req = urllib.request.Request(django_url, data=data_json, headers=headers)
-            with urllib.request.urlopen(req, context=get_ssl_context(), timeout=45) as resp:
+            with urllib.request.urlopen(req, context=get_ssl_context(), timeout=60) as resp:
                 if resp.status in (200, 201):
                     return True
         except Exception as e:
             print(f"  [!] Django aktarım hatası ({django_url} - Deneme {attempt}/{max_retries}): {e}")
             if attempt < max_retries:
-                time.sleep(2)
+                time.sleep(4)
     return False
 
 
@@ -574,6 +574,9 @@ def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Clien
                 stats["toplam_sporcu"] += record_count
                 print(f"  [+] {filename} başarıyla aktarıldı ({record_count} sporcu/kulvar)")
 
+                # PythonAnywhere tek worker'ına nefes aldır (web kullanıcılarının istekleri araya girebilsin)
+                time.sleep(1.5)
+
             except Exception as e:
                 err = f"{filename} (StartList): {str(e)}"
                 print(f"  [!] Hata: {err}")
@@ -637,6 +640,9 @@ def process_single_meet(meet: Dict[str, Any], base_url: str, client: genai.Clien
                 record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
                 stats["toplam_sporcu"] += record_count
                 print(f"  [+] {filename} sonuçları başarıyla güncellendi ({record_count} derece)")
+
+                # PythonAnywhere tek worker'ına nefes aldır
+                time.sleep(1.5)
 
             except Exception as e:
                 err = f"{filename} (ResultList): {str(e)}"
