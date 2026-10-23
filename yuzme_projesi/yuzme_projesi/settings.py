@@ -12,10 +12,11 @@ ROOT_DIR = BASE_DIR.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-# .env dosyasını otomatik yükle
+# .env dosyasını otomatik yükle (hem ROOT hem BASE klasörünü kontrol eder)
 try:
     from dotenv import load_dotenv
     load_dotenv(ROOT_DIR / ".env")
+    load_dotenv(BASE_DIR / ".env")
 except ImportError:
     pass
 

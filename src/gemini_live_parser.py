@@ -300,7 +300,7 @@ GÖREVLER:
 SADECE JSON döndür. Başka hiçbir açıklama yazma.
 """
 
-    def _get_result_list_page_prompt(self, page_num: int, total_pages: int, is_first_page: bool) -> str:
+    def _get_result_list_page_prompt(self, page_num: int, total_pages: int, is_first_page: bool, startlist_swimmers: Optional[List[Dict[str, Any]]] = None) -> str:
         """Sonuç listesi için optimize edilmiş sayfa istemi."""
         header_instruction = ""
         if is_first_page:
@@ -318,14 +318,33 @@ SADECE JSON döndür. Başka hiçbir açıklama yazma.
         else:
             header_instruction = "1. Bu devam sayfasıdır, başlık bilgisi boş bırakılabilir."
 
+        swimmers_section = ""
+        if startlist_swimmers:
+            candidates = []
+            for s in startlist_swimmers:
+                candidates.append({
+                    "id": s.get("id"),
+                    "sporcu": s.get("sporcu_adi") or s.get("sporcu"),
+                    "kulup": s.get("kulup_adi") or s.get("kulup"),
+                    "dogum_yili": s.get("dogum_yili"),
+                    "seri": s.get("seri"),
+                    "kulvar": s.get("kulvar")
+                })
+            swimmers_section = f"""
+BU YARIŞTA YÜZEN START LİSTESİNDEKİ SPORCULAR:
+{json.dumps(candidates, ensure_ascii=False)}
+Lütfen PDF'teki sonuçları yukarıdaki sporcularla eşleştirip onların "id" değerini "id" alanına yazın.
+"""
+
         return f"""Bu bir Türkiye Yüzme Federasyonu (TYF) Splash Meet Manager SONUÇ LİSTESİ (Result List) PDF sayfasıdır.
 Bu sayfa taranmış/resim olabilir. OCR ile dikkatlice oku.
 Sayfa {page_num} / {total_pages}.
-
+{swimmers_section}
 GÖREVLER:
 {header_instruction}
 2. Sayfada yer alan tüm yarış sonuçlarını (sporcuları) eksiksiz çıkar.
    Her sporcu için:
+   - id: Start listesindeki eşleşen sporcunun id değeri (yoksa null)
    - sira: Sıralama derecesi tam sayı (1, 2, 3...) veya diskalifiye/katılmadıysa null
    - sporcu: Sporcunun tam adı ve soyadı ("(Fd)", "(Tk)", "(Td)" etiketlerini temizleyin)
    - dogum_yili: Doğum yılı (örn: "10" veya "2010")
@@ -348,6 +367,7 @@ GÖREVLER:
   "yas_grubu": string veya null,
   "kayitlar": [
     {{
+      "id": integer veya null,
       "sira": integer veya null,
       "sporcu": string,
       "dogum_yili": string,
@@ -363,7 +383,7 @@ GÖREVLER:
 SADECE JSON döndür. Başka hiçbir açıklama yazma.
 """
 
-    def parse_pdf_bytes(self, pdf_bytes: bytes, doc_type: Optional[str] = None, hint: str = "", max_workers: int = 5) -> Dict[str, Any]:
+    def parse_pdf_bytes(self, pdf_bytes: bytes, doc_type: Optional[str] = None, hint: str = "", max_workers: int = 5, startlist_swimmers: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """PDF baytlarını Gemini ile parse eder. Çok sayfalı belgeleri paralel thread havuzuyla çok hızlı tarar."""
         if not doc_type:
             doc_type = self.detect_document_type(pdf_bytes, hint)
@@ -373,7 +393,7 @@ SADECE JSON döndür. Başka hiçbir açıklama yazma.
             prompt = (
                 self._get_start_list_page_prompt(1, 1, True)
                 if doc_type == "start_listesi"
-                else self._get_result_list_page_prompt(1, 1, True)
+                else self._get_result_list_page_prompt(1, 1, True, startlist_swimmers=startlist_swimmers)
             )
             data = self._call_gemini_api(pdf_bytes, prompt)
             data["tur"] = doc_type
@@ -415,7 +435,7 @@ SADECE JSON döndür. Başka hiçbir açıklama yazma.
             prompt = (
                 self._get_start_list_page_prompt(page_num, total_pages, is_first)
                 if doc_type == "start_listesi"
-                else self._get_result_list_page_prompt(page_num, total_pages, is_first)
+                else self._get_result_list_page_prompt(page_num, total_pages, is_first, startlist_swimmers=startlist_swimmers)
             )
             t_start = time.time()
             try:

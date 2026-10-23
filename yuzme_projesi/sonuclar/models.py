@@ -124,7 +124,7 @@ class Sporcu(models.Model):
     def en_iyi_dereceler(self):
         """Sporcunun branş ve mesafelere göre kişisel en iyi derecelerini (PB) döner."""
         # Geçerli derece saniyesi olan yarışları al
-        sonuclar = self.yaris_sonuclari.select_related('kulup').filter(
+        sonuclar = self.yaris_sonuclari.select_related('kulup', 'event').filter(
             derece_saniye__isnull=False,
             derece_saniye__gt=0
         ).order_by('derece_saniye')
@@ -190,7 +190,39 @@ class SporcuKulupTarihce(models.Model):
         return f"{self.sporcu.sporcu_adi} -> {self.kulup.kulup_adi} ({self.donem_sirasi}. Dönem)"
 
 
+class Event(models.Model):
+    musabaka_adi = models.CharField(max_length=500, verbose_name="Müsabaka Adı")
+    sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir")
+    yaris_tarihi_ham = models.CharField(max_length=100, blank=True, null=True, verbose_name="Yarış Tarihi (Ham)")
+    yaris_tarihi_baslangic = models.CharField(max_length=20, blank=True, null=True, db_index=True, verbose_name="Yarış Tarihi (Başlangıç)")
+    yaris_tarihi_bitis = models.CharField(max_length=20, blank=True, null=True, verbose_name="Yarış Tarihi (Bitiş)")
+    kaynak_turu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Varsayılan Kaynak Türü")
+    toplam_yaris_sayisi = models.IntegerField(default=0, verbose_name="Toplam Yarış Sayısı")
+    toplam_sporcu_sayisi = models.IntegerField(default=0, verbose_name="Toplam Sporcu Sayısı")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    guncellenme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        managed = False
+        db_table = 'events'
+        verbose_name = "Müsabaka (Event)"
+        verbose_name_plural = "Müsabakalar (Events)"
+        ordering = ['-yaris_tarihi_baslangic', 'musabaka_adi']
+
+    def __str__(self):
+        return f"{self.musabaka_adi} ({self.sehir or '-'} / {self.yaris_tarihi_baslangic or '-'})"
+
+
 class YarisSonucu(models.Model):
+    event = models.ForeignKey(
+        Event,
+        models.CASCADE,
+        blank=True,
+        null=True,
+        db_column='event_id',
+        related_name='yaris_sonuclari',
+        verbose_name="Müsabaka (Event)"
+    )
     sporcu = models.ForeignKey(
         Sporcu,
         models.CASCADE,
@@ -216,15 +248,19 @@ class YarisSonucu(models.Model):
         related_name='yaris_sonuclari',
         verbose_name="Kulüp Tarihçesi"
     )
+    canli_dosya = models.ForeignKey(
+        'CanliYarisDosya',
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        db_column='canli_dosya_id',
+        related_name='yaris_sonuclari',
+        verbose_name="Canlı Dosya"
+    )
     kaynak_turu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Kaynak Türü")
     dosya_adi = models.CharField(max_length=255, blank=True, null=True, verbose_name="Dosya Adı")
     sayfa_no = models.IntegerField(blank=True, null=True, verbose_name="Sayfa No")
     satir_no = models.IntegerField(blank=True, null=True, verbose_name="Satır No")
-    musabaka_adi = models.CharField(max_length=500, blank=True, null=True, verbose_name="Müsabaka Adı")
-    sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir")
-    yaris_tarihi_ham = models.CharField(max_length=100, blank=True, null=True, verbose_name="Yarış Tarihi (Ham)")
-    yaris_tarihi_baslangic = models.CharField(max_length=20, blank=True, null=True, verbose_name="Yarış Tarihi (Başlangıç)")
-    yaris_tarihi_bitis = models.CharField(max_length=20, blank=True, null=True, verbose_name="Yarış Tarihi (Bitiş)")
     yaris_no = models.CharField(max_length=50, blank=True, null=True, verbose_name="Yarış No")
     cinsiyet = models.CharField(max_length=20, blank=True, null=True, verbose_name="Cinsiyet")
     mesafe = models.IntegerField(blank=True, null=True, verbose_name="Mesafe (m)")
@@ -250,10 +286,30 @@ class YarisSonucu(models.Model):
         db_table = 'yaris_sonuclari'
         verbose_name = "Yarış Sonucu"
         verbose_name_plural = "Yarış Sonuçları"
-        ordering = ['-yaris_tarihi_baslangic', 'id']
+        ordering = ['-event__yaris_tarihi_baslangic', 'id']
 
     def __str__(self):
         return f"{self.sporcu.sporcu_adi} - {self.mesafe}m {self.stil} ({self.derece})"
+
+    @property
+    def musabaka_adi(self):
+        return self.event.musabaka_adi if self.event else None
+
+    @property
+    def sehir(self):
+        return self.event.sehir if self.event else None
+
+    @property
+    def yaris_tarihi_ham(self):
+        return self.event.yaris_tarihi_ham if self.event else None
+
+    @property
+    def yaris_tarihi_baslangic(self):
+        return self.event.yaris_tarihi_baslangic if self.event else None
+
+    @property
+    def yaris_tarihi_bitis(self):
+        return self.event.yaris_tarihi_bitis if self.event else None
 
 
 class CanliYaris(models.Model):
@@ -264,6 +320,15 @@ class CanliYaris(models.Model):
         ('HATA', 'Hata'),
     ]
 
+    event = models.ForeignKey(
+        Event,
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        db_column='event_id',
+        related_name='canli_yarislar',
+        verbose_name="Müsabaka (Event)"
+    )
     musabaka_adi = models.CharField(max_length=255, blank=True, null=True, verbose_name="Müsabaka Adı")
     sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir")
     tarih = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tarih")
@@ -288,3 +353,65 @@ class CanliYaris(models.Model):
 
     def __str__(self):
         return self.musabaka_adi or self.canli_url
+
+
+class CanliYarisDosya(models.Model):
+    DURUM_CHOICES = [
+        ('BEKLIYOR', 'Bekliyor'),
+        ('ISLENDI', 'İşlendi'),
+        ('DEGISTI', 'Değişti'),
+        ('HATA', 'Hata'),
+    ]
+    TUR_CHOICES = [
+        ('START_LISTESI', 'Start Listesi'),
+        ('SONUC_LISTESI', 'Sonuç Listesi'),
+    ]
+
+    event = models.ForeignKey(
+        Event,
+        models.CASCADE,
+        db_column='event_id',
+        related_name='canli_dosyalar',
+        verbose_name="Müsabaka (Event)"
+    )
+    canli_yaris = models.ForeignKey(
+        CanliYaris,
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        db_column='canli_yaris_id',
+        related_name='dosyalar',
+        verbose_name="Canlı Yarış Oturumu"
+    )
+    dosya_adi = models.CharField(max_length=255, verbose_name="Dosya Adı")
+    dosya_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Dosya Linki")
+    dosya_turu = models.CharField(max_length=20, choices=TUR_CHOICES, default='START_LISTESI', verbose_name="Dosya Türü")
+    yaris_no = models.CharField(max_length=50, blank=True, null=True, verbose_name="Yarış No")
+    mesafe = models.IntegerField(blank=True, null=True, verbose_name="Mesafe")
+    stil = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stil")
+    cinsiyet = models.CharField(max_length=20, blank=True, null=True, verbose_name="Cinsiyet")
+    yas_grubu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Yaş Grubu")
+
+    # HTTP & Hash Takip Alanları
+    etag = models.CharField(max_length=150, blank=True, null=True, verbose_name="ETag")
+    last_modified = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last-Modified")
+    content_hash = models.CharField(max_length=64, blank=True, null=True, verbose_name="SHA-256 Hash")
+    dosya_boyutu = models.IntegerField(blank=True, null=True, verbose_name="Dosya Boyutu (Byte)")
+
+    durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='BEKLIYOR', verbose_name="Durum")
+    kayit_sayisi = models.IntegerField(default=0, verbose_name="Aktarılan Kayıt Sayısı")
+    hata_mesaji = models.TextField(blank=True, null=True, verbose_name="Hata Mesajı")
+    son_kontrol_tarihi = models.DateTimeField(blank=True, null=True, verbose_name="Son Kontrol Tarihi")
+    son_islem_tarihi = models.DateTimeField(blank=True, null=True, verbose_name="Son İşlem Tarihi")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    guncellenme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        managed = False
+        db_table = 'canli_yaris_dosyalari'
+        verbose_name = "Canlı Yarış Dosyası"
+        verbose_name_plural = "Canlı Yarış Dosyaları"
+        ordering = ['yaris_no', 'dosya_turu']
+
+    def __str__(self):
+        return f"{self.dosya_adi} ({self.get_dosya_turu_display()} - {self.durum})"

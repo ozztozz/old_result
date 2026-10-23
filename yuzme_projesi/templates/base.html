@@ -133,6 +133,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if 'musabaka' in request.path %}active{% endif %}" href="{% url 'sonuclar:musabaka_listesi' %}">
+                            <i class="bi bi-calendar-event me-1"></i> Müsabakalar
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'yaris_sonuclari_ara' %}active{% endif %}" href="{% url 'sonuclar:yaris_sonuclari_ara' %}">
                             <i class="bi bi-trophy me-1"></i> Yarış Sonuçları
                         </a>

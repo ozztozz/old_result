@@ -1,12 +1,18 @@
-# Google Cloud Functions - TYF Canlı Start Listesi İşleyicisi
+# Google Cloud Functions / Cloud Run - TYF Canlı Start & Sonuç Listesi İşleyicisi
 
 Bu servis, Google Cloud altyapısında (Cloud Functions gen2 veya Cloud Run) çalışarak PythonAnywhere'in harici indirme (proxy) kısıtlamasını tamamen çözer.
 
-## Nasıl Çalışır?
-1. Django arayüzünden (veya kullanıcının girdiği) TYF canlı yarış URL'si bu Cloud Function'a iletilir.
-2. Cloud Function, Google sunucuları üzerinden `canli.tyf.gov.tr` sayfasına bağlanır ve tüm `StartList_*.pdf` dosyalarını bulup indirir.
-3. Gemini Flash Lite (`gemini-flash-lite-latest`) ile PDF'leri paralel olarak ayrıştırır.
-4. Elde edilen yapılandırılmış start listesi verisini doğrudan PythonAnywhere üzerindeki Django API'sine (`https://<user>.pythonanywhere.com/api/canli-aktar/`) POST eder.
+## Temel Özellikler
+1. **Çift Modlu Çalışma (`mod` parametresi):**
+   - `start_listesi`: `StartList_*.pdf` dosyalarını indirir ve yarışmacıları serileriyle kaydeder.
+   - `sonuc_listesi`: `ResultList_*.pdf` dosyalarını indirir. Django'dan mevcut start listesi sporcularını ve PK ID'lerini çekerek Gemini promptuna enjekte eder; sonuçları doğrudan $O(1)$ birincil anahtarla eşleştirip günceller.
+2. **Akıllı ETag / SHA-256 Hash Kontrolü:**
+   - Her PDF indirilip hash/etag bilgisi Django API'ye (`/api/canli-dosya-kontrol/`) sorulur.
+   - Eğer dosya daha önce işlenmişse ve TYF tarafında değişmemişse Gemini çağrısı yapılmadan atlanır (Kota ve süre tasarrufu).
+3. **Şehir & Tarih Ayrıştırma:**
+   - HTML başlığından yarış adı, şehir, tarih aralığı (`24. - 26.4.2026` -> ISO başlangıç/bitiş) otomatik ayrıştırılır.
+4. **Asenkron Webhook Desteği:**
+   - PythonAnywhere timeout yemeden 200 ms içinde HTTP 202 döner, işlem bitince `callback_url` (`/api/canli-durum-guncelle/`) ile durumu Django'ya bildirir.
 
 ---
 
@@ -37,7 +43,7 @@ gcloud functions deploy tyf-startlist-parser \
 1. [Google Cloud Console](https://console.cloud.google.com/functions) sayfasına gidin.
 2. **Create Function** butonuna tıklayın.
 3. Ayarlar:
-   - **Environment**: 2nd gen
+   - **Environment**: 2nd gen (veya Cloud Run)
    - **Function name**: `tyf-startlist-parser`
    - **Region**: `europe-west1` (veya `europe-west3`)
    - **Trigger**: HTTPS (Allow unauthenticated)
@@ -48,7 +54,7 @@ gcloud functions deploy tyf-startlist-parser \
 5. **Environment Variables**:
    - `GEMINI_API_KEY`: Sizin Gemini API anahtarınız.
 6. **Deploy** butonuna tıklayın.
-7. Oluşan HTTPS URL'sini `.env` dosyanıza `GOOGLE_CLOUD_FUNCTION_URL=...` olarak ekleyin.
+7. Oluşan HTTPS URL'sini `.env` dosyanıza `GOOGLE_CLOUD_FUNCTION_URL=https://...` olarak ekleyin.
 
 ---
 
@@ -59,11 +65,16 @@ import requests
 
 cf_url = "https://europe-west1-YOUR_PROJECT.cloudfunctions.net/tyf-startlist-parser"
 payload = {
+    "event_id": 5,
     "event_url": "https://canli.tyf.gov.tr/istanbul/cs-1005380/",
-    "django_api_url": "https://your-domain.pythonanywhere.com/api/canli-aktar/"
+    "django_api_url": "https://your-domain.pythonanywhere.com/api/canli-aktar/",
+    "callback_url": "https://your-domain.pythonanywhere.com/api/canli-durum-guncelle/",
+    "async_mode": True,
+    "mod": "sonuc_listesi",  # veya 'start_listesi'
+    "limit": 3                # İsteğe bağlı test limiti
 }
 
-response = requests.post(cf_url, json=payload, timeout=300)
+response = requests.post(cf_url, json=payload, timeout=10)
 print(response.json())
 ```
 

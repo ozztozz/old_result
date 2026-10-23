@@ -73,7 +73,7 @@
                             <th>Şehir / Tarih</th>
                             <th>Canlı Link</th>
                             <th>Durum</th>
-                            <th>Start Listesi</th>
+                            <th>Start / Sonuç Listesi</th>
                             <th>Aktarılan Sporcu</th>
                             <th>Son İşlem</th>
                             <th class="text-end pe-4">İşlemler</th>
@@ -83,12 +83,20 @@
                         {% for yaris in yarislar %}
                         <tr id="yaris-row-{{ yaris.id }}" data-yaris-id="{{ yaris.id }}" data-durum="{{ yaris.durum }}">
                             <td class="ps-4">
-                                <div class="fw-bold text-dark" id="yaris-ad-{{ yaris.id }}">{{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }}</div>
+                                <div class="fw-bold text-dark" id="yaris-ad-{{ yaris.id }}">
+                                    {% if yaris.event %}
+                                        <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="text-decoration-none text-primary" title="Müsabaka Sonuçlarını Görüntüle">
+                                            {{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }} <i class="bi bi-arrow-right-circle small"></i>
+                                        </a>
+                                    {% else %}
+                                        {{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }}
+                                    {% endif %}
+                                </div>
                                 <small class="text-muted">Kayıt ID: #{{ yaris.id }}</small>
                             </td>
                             <td>
-                                <div>{{ yaris.sehir|default:"-" }}</div>
-                                <small class="text-muted">{{ yaris.tarih|default:"" }}</small>
+                                <div class="fw-semibold">{{ yaris.sehir|default:yaris.event.sehir|default:"-" }}</div>
+                                <small class="text-muted">{{ yaris.tarih|default:yaris.event.yaris_tarihi_baslangic|default:yaris.event.yaris_tarihi_ham|default:"" }}</small>
                             </td>
                             <td>
                                 <a href="{{ yaris.canli_url }}" target="_blank" class="text-decoration-none">
@@ -107,7 +115,10 @@
                                 {% endif %}
                             </td>
                             <td id="yaris-liste-{{ yaris.id }}">
-                                <span class="fw-bold text-primary">{{ yaris.islenen_start_listesi }}</span> / {{ yaris.toplam_start_listesi }} liste
+                                <div><span class="badge bg-primary-subtle text-primary border"><i class="bi bi-card-list me-1"></i>Start: {{ yaris.islenen_start_listesi }}/{{ yaris.toplam_start_listesi }}</span></div>
+                                {% if yaris.toplam_sonuc_listesi %}
+                                    <div class="mt-1"><span class="badge bg-success-subtle text-success border"><i class="bi bi-check2-circle me-1"></i>Sonuç: {{ yaris.islenen_sonuc_listesi }}/{{ yaris.toplam_sonuc_listesi }}</span></div>
+                                {% endif %}
                             </td>
                             <td id="yaris-sporcu-{{ yaris.id }}">
                                 <span class="badge bg-info text-dark fw-bold px-2 py-1">{{ yaris.eklenen_kayit_sayisi }} sporcu</span>
@@ -117,12 +128,59 @@
                             </td>
                             <td class="text-end pe-4">
                                 <div class="btn-group btn-group-sm">
-                                    <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" id="yaris-tara-btn-{{ yaris.id }}" class="btn btn-outline-primary" title="Start Listelerini Gemini ile Tara" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %}>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %}>
                                             <i class="bi bi-play-fill"></i> Tara
                                         </button>
-                                    </form>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li><h6 class="dropdown-header text-uppercase small">Test Modu (Sadece 3 Liste)</h6></li>
+                                            <li>
+                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="mod" value="start_listesi">
+                                                    <input type="hidden" name="limit" value="3">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-123 text-primary me-2"></i><strong>İlk 3 Start Listesi</strong> (Test)
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="mod" value="sonuc_listesi">
+                                                    <input type="hidden" name="limit" value="3">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-award text-success me-2"></i><strong>İlk 3 Sonuç Listesi</strong> (Test & Güncelle)
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><h6 class="dropdown-header text-uppercase small">Tam Tarama</h6></li>
+                                            <li>
+                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="mod" value="start_listesi">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-card-checklist text-primary me-2"></i>Tüm Start Listeleri
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="mod" value="sonuc_listesi">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-trophy text-success me-2"></i>Tüm Sonuç Listeleri (Güncelle)
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    {% if yaris.event %}
+                                    <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="btn btn-outline-info ms-1" title="Müsabaka Sonuçları Sayfasına Git">
+                                        <i class="bi bi-table"></i>
+                                    </a>
+                                    {% endif %}
                                     <form method="post" action="{% url 'sonuclar:canli_yaris_sil' yaris.id %}" class="d-inline ms-1" onsubmit="return confirm('Bu canlı yarış kaydını silmek istediğinizden emin misiniz?');">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-outline-danger" title="Sil">
@@ -221,7 +279,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     // Liste sayıları
                     const listeCell = document.getElementById("yaris-liste-" + item.id);
                     if (listeCell) {
-                        listeCell.innerHTML = '<span class="fw-bold text-primary">' + item.islenen_start_listesi + '</span> / ' + item.toplam_start_listesi + ' liste';
+                        let h = '<div><span class="badge bg-primary-subtle text-primary border"><i class="bi bi-card-list me-1"></i>Start: ' + item.islenen_start_listesi + '/' + item.toplam_start_listesi + '</span></div>';
+                        if (item.toplam_sonuc_listesi) {
+                            h += '<div class="mt-1"><span class="badge bg-success-subtle text-success border"><i class="bi bi-check2-circle me-1"></i>Sonuç: ' + item.islenen_sonuc_listesi + '/' + item.toplam_sonuc_listesi + '</span></div>';
+                        }
+                        listeCell.innerHTML = h;
                     }
 
                     // Sporcu sayısı

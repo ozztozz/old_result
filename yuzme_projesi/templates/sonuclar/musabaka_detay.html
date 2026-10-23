@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ event.musabaka_adi }} - Yarış Sonuçları{% endblock %}
+
+{% block content %}
+<!-- Başlık Kartı -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <span class="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill fw-semibold">
+                <i class="bi bi-calendar-event me-1"></i> Müsabaka Detayı
+            </span>
+            <h2 class="fw-bold text-dark mb-2">{{ event.musabaka_adi }}</h2>
+            <div class="d-flex flex-wrap gap-3 text-muted small mt-2">
+                {% if event.sehir %}
+                    <span><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ event.sehir }}</span>
+                {% endif %}
+                {% if event.yaris_tarihi_baslangic %}
+                    <span><i class="bi bi-calendar3 text-primary me-1"></i> {{ event.yaris_tarihi_baslangic }}{% if event.yaris_tarihi_bitis %} - {{ event.yaris_tarihi_bitis }}{% endif %}</span>
+                {% elif event.yaris_tarihi_ham %}
+                    <span><i class="bi bi-calendar3 text-primary me-1"></i> {{ event.yaris_tarihi_ham }}</span>
+                {% endif %}
+                {% if event.kaynak_turu %}
+                    <span><i class="bi bi-file-earmark-text text-secondary me-1"></i> {{ event.kaynak_turu }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <a href="{% url 'sonuclar:musabaka_listesi' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Tüm Müsabakalar
+        </a>
+    </div>
+
+    <div class="row g-3 mt-3 pt-3 border-top">
+        <div class="col-md-4">
+            <div class="p-3 bg-light rounded-3 text-center">
+                <span class="d-block text-muted small text-uppercase fw-semibold">Toplam Yarış Sonucu</span>
+                <span class="fs-4 fw-bold text-primary">{{ event.toplam_yaris_sayisi|intcomma }}</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 bg-light rounded-3 text-center">
+                <span class="d-block text-muted small text-uppercase fw-semibold">Katılan Sporcu Sayısı</span>
+                <span class="fs-4 fw-bold text-success">{{ event.toplam_sporcu_sayisi|intcomma }}</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 bg-light rounded-3 text-center">
+                <span class="d-block text-muted small text-uppercase fw-semibold">Event ID</span>
+                <span class="fs-4 fw-bold text-secondary">#{{ event.id }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yarış Sonuçları Tablosu -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-0">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h5 class="fw-bold mb-1 text-dark">
+                    <i class="bi bi-trophy text-warning me-2"></i> Müsabaka Yarış Sonuçları ({{ total_races|intcomma }})
+                </h5>
+                <span class="small text-muted">Resmi sonuçlar derece ve sıralamaya göre listelenir; start listesinde olup henüz yüzülmeyenler en altta yer alır.</span>
+            </div>
+            
+            <!-- Durum Filtresi (Hap Butonlar) -->
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="?yaris_no={{ secili_yaris_no }}" class="btn {% if not secili_durum %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Tümü ({{ total_races }})
+                </a>
+                <a href="?durum=sonuc&yaris_no={{ secili_yaris_no }}" class="btn {% if secili_durum == 'sonuc' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    <i class="bi bi-check2-circle me-1"></i>Sonuçlananlar ({{ completed_count }})
+                </a>
+                <a href="?durum=bekliyor&yaris_no={{ secili_yaris_no }}" class="btn {% if secili_durum == 'bekliyor' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                    <i class="bi bi-clock me-1"></i>Bekleyenler ({{ pending_count }})
+                </a>
+            </div>
+        </div>
+
+        <!-- Yarış No Filtresi -->
+        {% if yaris_nolari %}
+        <div class="d-flex flex-wrap align-items-center gap-1 mt-3 pt-3 border-top">
+            <span class="small fw-semibold text-muted me-2"><i class="bi bi-filter me-1"></i>Yarış No:</span>
+            <a href="?durum={{ secili_durum }}" class="badge rounded-pill text-decoration-none {% if not secili_yaris_no %}bg-dark text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
+                Tümü
+            </a>
+            {% for yno in yaris_nolari %}
+            <a href="?yaris_no={{ yno }}&durum={{ secili_durum }}" class="badge rounded-pill text-decoration-none {% if secili_yaris_no == yno %}bg-primary text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
+                Yarış {{ yno }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">No</th>
+                    <th>Branş</th>
+                    <th>Sporcu Adı</th>
+                    <th>Kulüp</th>
+                    <th class="text-center">Sıra</th>
+                    <th class="text-end">Derece</th>
+                    <th class="text-center">Puan</th>
+                    <th class="text-end pe-4">Baraj</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in page_obj %}
+                <tr>
+                    <td class="ps-4 small text-muted">
+                        {% if r.yaris_no %}<span class="badge bg-secondary-subtle text-secondary">#{{ r.yaris_no }}</span>{% else %}-{% endif %}
+                    </td>
+                    <td class="fw-semibold text-nowrap">
+                        <span class="badge bg-light text-dark border me-1">{{ r.mesafe }}m</span>
+                        {{ r.stil }}
+                        {% if r.seri or r.kulvar %}
+                            <div class="small text-muted fw-normal">
+                                {{ r.seri|default:"" }}{% if r.kulvar %} <span class="badge bg-info-subtle text-info border">K: {{ r.kulvar }}</span>{% endif %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="fw-bold text-decoration-none text-dark">
+                            {{ r.sporcu.sporcu_adi }}
+                        </a>
+                        <span class="small text-muted d-block">
+                            {% if r.hesaplanan_yas %}{{ r.hesaplanan_yas }} Yaşında{% elif r.sporcu.dogum_yili %}D.Yılı: {{ r.sporcu.dogum_yili }}{% endif %}
+                        </span>
+                    </td>
+                    <td class="small text-muted" style="max-width: 200px;">
+                        {% if r.kulup %}
+                            <a href="{% url 'sonuclar:kulup_detay' r.kulup.id %}" class="text-decoration-none text-muted d-inline-block text-truncate w-100">
+                                {{ r.kulup.kulup_adi }}
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-center fw-semibold text-secondary">{{ r.sira|default:"-" }}</td>
+                    <td class="text-end fw-bold">
+                        {% if r.derece == 'Bekleniyor' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Bekleniyor</span>
+                        {% else %}
+                            <span class="text-primary">{{ r.derece }}</span>
+                        {% endif %}
+                        {% if r.giris_derecesi %}
+                            <div class="small text-muted fw-normal">Giriş: {{ r.giris_derecesi }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-center fw-semibold">{{ r.puan|default:"-" }}</td>
+                    <td class="text-end pe-4">
+                        {% if r.baraj %}
+                            <span class="badge bg-success-subtle text-success small">{{ r.baraj }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        Bu müsabakaya ait kayıtlı yarış sonucu bulunamadı.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama -->
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white py-3 border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">&laquo; İlk</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">Önceki</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">Sonraki</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">Son &raquo;</a></li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

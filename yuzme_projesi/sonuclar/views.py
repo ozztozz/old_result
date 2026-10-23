@@ -7,10 +7,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Case, When, Value, IntegerField
+from django.db.models.functions import Cast
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, is_school_team
+from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, Event, CanliYarisDosya, is_school_team
 from .athlete_matcher import match_athlete
 
 
@@ -35,15 +36,8 @@ def index(request):
     # En çok sporcusu olan kulüpler
     en_buyuk_kulupler = Kulup.objects.order_by('-toplam_sporcu_sayisi')[:8]
 
-    # Son müsabaka adları
-    son_yarismalar = (
-        YarisSonucu.objects
-        .filter(musabaka_adi__isnull=False)
-        .exclude(musabaka_adi="")
-        .values('musabaka_adi', 'sehir', 'yaris_tarihi_baslangic')
-        .distinct()
-        .order_by('-yaris_tarihi_baslangic')[:6]
-    )
+    # Son müsabakalar (Event tablosundan hızlı sorgu)
+    son_yarismalar = Event.objects.order_by('-yaris_tarihi_baslangic')[:6]
 
     context = {
         'toplam_sporcu': toplam_sporcu,
@@ -111,7 +105,7 @@ def sporcu_detay(request, pk):
     mesafe_raw = request.GET.get('mesafe', '').strip()
     sirala = request.GET.get('sirala', 'tarih_desc')
 
-    sonuclar_qs = sporcu.yaris_sonuclari.select_related('kulup')
+    sonuclar_qs = sporcu.yaris_sonuclari.select_related('kulup', 'event')
 
     if kategori:
         sonuclar_qs = sonuclar_qs.filter(stil__icontains=kategori)
@@ -125,11 +119,11 @@ def sporcu_detay(request, pk):
             pass
 
     if sirala == 'derece':
-        sonuclar_qs = sonuclar_qs.order_by('derece_saniye', '-yaris_tarihi_baslangic')
+        sonuclar_qs = sonuclar_qs.order_by('derece_saniye', '-event__yaris_tarihi_baslangic')
     elif sirala == 'tarih_asc':
-        sonuclar_qs = sonuclar_qs.order_by('yaris_tarihi_baslangic', 'id')
+        sonuclar_qs = sonuclar_qs.order_by('event__yaris_tarihi_baslangic', 'id')
     else:
-        sonuclar_qs = sonuclar_qs.order_by('-yaris_tarihi_baslangic', '-id')
+        sonuclar_qs = sonuclar_qs.order_by('-event__yaris_tarihi_baslangic', '-id')
 
     total_filtered_races = sonuclar_qs.count()
     paginator = Paginator(sonuclar_qs, 30)
@@ -139,7 +133,7 @@ def sporcu_detay(request, pk):
     mevcut_stiller = ['Serbest', 'Sırtüstü', 'Kurbağalama', 'Kelebek', 'Karışık']
     mevcut_mesafeler = [50, 100, 200, 400, 800, 1500]
 
-    son_yaris = sporcu.yaris_sonuclari.order_by('-yaris_tarihi_baslangic', '-id').first()
+    son_yaris = sporcu.yaris_sonuclari.select_related('event', 'kulup').order_by('-event__yaris_tarihi_baslangic', '-id').first()
 
     context = {
         'sporcu': sporcu,
@@ -200,7 +194,7 @@ def kulup_detay(request, pk):
     page_obj = paginator.get_page(page_number)
 
     # Kulübün son yarış sonuçları
-    son_sonuclar = kulup.yaris_sonuclari.select_related('sporcu').order_by('-yaris_tarihi_baslangic')[:25]
+    son_sonuclar = kulup.yaris_sonuclari.select_related('sporcu', 'event').order_by('-event__yaris_tarihi_baslangic')[:25]
 
     context = {
         'kulup': kulup,
@@ -221,14 +215,14 @@ def yaris_sonuclari_ara(request):
     cinsiyet = request.GET.get('cinsiyet', '').strip()
     yil = request.GET.get('yil', '').strip()
 
-    qs = YarisSonucu.objects.select_related('sporcu', 'kulup')
+    qs = YarisSonucu.objects.select_related('sporcu', 'kulup', 'event')
 
     if q_sporcu:
         qs = qs.filter(sporcu__sporcu_adi__icontains=q_sporcu)
     if q_kulup:
         qs = qs.filter(kulup__kulup_adi__icontains=q_kulup)
     if q_musabaka:
-        qs = qs.filter(musabaka_adi__icontains=q_musabaka)
+        qs = qs.filter(event__musabaka_adi__icontains=q_musabaka)
     if stil:
         qs = qs.filter(stil=stil)
     if mesafe and mesafe.isdigit():
@@ -236,7 +230,7 @@ def yaris_sonuclari_ara(request):
     if cinsiyet:
         qs = qs.filter(cinsiyet=cinsiyet)
     if yil and yil.isdigit():
-        qs = qs.filter(yaris_tarihi_baslangic__startswith=yil)
+        qs = qs.filter(event__yaris_tarihi_baslangic__startswith=yil)
 
     paginator = Paginator(qs, 50)
     page_number = request.GET.get('page')
@@ -307,7 +301,7 @@ def _process_single_race_payload(payload: dict) -> dict:
     tur = payload.get('tur', 'sonuc_listesi')  # 'start_listesi' veya 'sonuc_listesi'
     musabaka_adi = (payload.get('musabaka_adi') or '').strip()
     sehir = (payload.get('sehir') or '').strip()
-    yaris_tarihi = (payload.get('yaris_tarihi') or '').strip()
+    yaris_tarihi = (payload.get('yaris_tarihi') or payload.get('tarih') or '').strip()
     yaris_tarihi_baslangic = (payload.get('yaris_tarihi_baslangic') or yaris_tarihi).strip()
     yaris_no = str(payload.get('yaris_no') or '').strip()
     cinsiyet = (payload.get('cinsiyet') or '').strip()
@@ -332,16 +326,144 @@ def _process_single_race_payload(payload: dict) -> dict:
         'yeni_kulup': 0
     }
 
+    # Müsabakayı Event tablosunda bul veya oluştur
+    canli_yaris_id = payload.get('canli_yaris_id')
+    canli_yaris_obj = None
+    if canli_yaris_id and str(canli_yaris_id).isdigit():
+        canli_yaris_obj = CanliYaris.objects.filter(id=int(canli_yaris_id)).first()
+
+    event = None
+    if canli_yaris_obj and canli_yaris_obj.event:
+        event = canli_yaris_obj.event
+    elif musabaka_adi:
+        event, _ = Event.objects.get_or_create(
+            musabaka_adi=musabaka_adi,
+            yaris_tarihi_baslangic=yaris_tarihi_baslangic or '',
+            defaults={
+                'sehir': sehir,
+                'yaris_tarihi_ham': yaris_tarihi,
+                'yaris_tarihi_bitis': payload.get('yaris_tarihi_bitis') or '',
+                'kaynak_turu': "CANLI_SONUC" if tur == 'sonuc_listesi' else "CANLI_START_LISTESI"
+            }
+        )
+        if canli_yaris_obj and not canli_yaris_obj.event:
+            canli_yaris_obj.event = event
+            canli_yaris_obj.save(update_fields=['event'])
+
+    # Canlı yarış ve Event üzerinde eksik şehir/tarih bilgilerini senkronize et
+    if canli_yaris_obj:
+        dirty_canli = []
+        if sehir and not canli_yaris_obj.sehir:
+            canli_yaris_obj.sehir = sehir
+            dirty_canli.append('sehir')
+        if (yaris_tarihi or yaris_tarihi_baslangic) and not canli_yaris_obj.tarih:
+            canli_yaris_obj.tarih = yaris_tarihi_baslangic or yaris_tarihi
+            dirty_canli.append('tarih')
+        if musabaka_adi and not canli_yaris_obj.musabaka_adi:
+            canli_yaris_obj.musabaka_adi = musabaka_adi
+            dirty_canli.append('musabaka_adi')
+        if dirty_canli:
+            canli_yaris_obj.save(update_fields=dirty_canli)
+
+    if event:
+        dirty_event = []
+        if sehir and not event.sehir:
+            event.sehir = sehir
+            dirty_event.append('sehir')
+        if yaris_tarihi_baslangic and not event.yaris_tarihi_baslangic:
+            event.yaris_tarihi_baslangic = yaris_tarihi_baslangic
+            event.yaris_tarihi_ham = yaris_tarihi
+            dirty_event.extend(['yaris_tarihi_baslangic', 'yaris_tarihi_ham'])
+        if dirty_event:
+            event.save(update_fields=dirty_event)
+
+    # Canlı Yarış Dosya Takip kaydı (ETag, Last-Modified, SHA-256 Hash)
+    dosya_obj = None
+    if dosya_adi and event:
+        dosya_turu = "SONUC_LISTESI" if tur == 'sonuc_listesi' else "START_LISTESI"
+        dosya_obj, _ = CanliYarisDosya.objects.get_or_create(
+            event=event,
+            dosya_adi=dosya_adi,
+            defaults={
+                'canli_yaris': canli_yaris_obj,
+                'dosya_url': payload.get('dosya_url') or payload.get('pdf_url'),
+                'dosya_turu': dosya_turu,
+                'yaris_no': yaris_no,
+                'mesafe': mesafe,
+                'stil': stil,
+                'cinsiyet': cinsiyet,
+                'yas_grubu': yas_grubu,
+                'etag': payload.get('etag'),
+                'last_modified': payload.get('last_modified'),
+                'content_hash': payload.get('content_hash'),
+                'dosya_boyutu': payload.get('dosya_boyutu'),
+                'durum': 'ISLENDI',
+                'son_kontrol_tarihi': timezone.now(),
+                'son_islem_tarihi': timezone.now()
+            }
+        )
+        if not _:
+            if payload.get('etag'): dosya_obj.etag = payload.get('etag')
+            if payload.get('last_modified'): dosya_obj.last_modified = payload.get('last_modified')
+            if payload.get('content_hash'): dosya_obj.content_hash = payload.get('content_hash')
+            if payload.get('dosya_boyutu'): dosya_obj.dosya_boyutu = payload.get('dosya_boyutu')
+            dosya_obj.durum = 'ISLENDI'
+            dosya_obj.son_islem_tarihi = timezone.now()
+            dosya_obj.son_kontrol_tarihi = timezone.now()
+            dosya_obj.save()
+
     # Bu müsabaka ve branş için var olan yarışları önbelleğe al
     existing_races_map = {}
     if musabaka_adi and mesafe and stil:
-        q_init = YarisSonucu.objects.filter(musabaka_adi=musabaka_adi, mesafe=mesafe, stil=stil)
+        q_init = YarisSonucu.objects.filter(mesafe=mesafe, stil=stil)
+        if event:
+            q_init = q_init.filter(event=event)
+        else:
+            q_init = q_init.filter(event__musabaka_adi=musabaka_adi)
         if yaris_no:
             q_init = q_init.filter(yaris_no=yaris_no)
         for r in q_init.select_related('sporcu', 'kulup'):
             existing_races_map[r.sporcu_id] = r
 
-    for item in kayitlar:
+    tum_kayitlar = list(kayitlar)
+    for y_item in payload.get('yeni_sporcular', []):
+        tum_kayitlar.append(y_item)
+
+    for item in tum_kayitlar:
+        derece_val = item.get('derece') or item.get('time')
+        sira_val = str(item.get('sira') or item.get('rank') or '').strip()
+        puan_val = item.get('puan') or item.get('points')
+        if puan_val:
+            try:
+                puan_val = int(puan_val)
+            except Exception:
+                puan_val = None
+        baraj_val = item.get('baraj')
+
+        # 1. DOĞRUDAN GEMINI'DEN GELEN ID İLE HIZLI GÜNCELLEME (O(1))
+        race_id = item.get('id')
+        if race_id:
+            try:
+                target_race = YarisSonucu.objects.select_related('sporcu').get(id=race_id)
+                derece_sn = _time_to_seconds(derece_val)
+                target_race.derece = derece_val or target_race.derece
+                target_race.derece_saniye = derece_sn
+                target_race.sira = sira_val
+                target_race.puan = puan_val
+                if baraj_val:
+                    target_race.baraj = baraj_val
+                target_race.kaynak_turu = "CANLI_SONUC"
+                if dosya_adi:
+                    target_race.dosya_adi = dosya_adi
+                if dosya_obj:
+                    target_race.canli_dosya = dosya_obj
+                target_race.save(update_fields=[
+                    'derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'kaynak_turu', 'dosya_adi', 'canli_dosya'
+                ])
+                stats['guncellenen_sonuc'] += 1
+                continue
+            except YarisSonucu.DoesNotExist:
+                pass
         sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
         kulup_adi = (item.get('kulup') or item.get('club') or item.get('kulup_adi') or 'Ferdi').strip()
         yb = item.get('dogum_yili') or item.get('yb') or item.get('yas') or item.get('birth_year')
@@ -469,8 +591,14 @@ def _process_single_race_payload(payload: dict) -> dict:
 
         if not existing_race:
             cand_qs = YarisSonucu.objects.filter(sporcu=sporcu, mesafe=mesafe, stil=stil)
-            if musabaka_adi:
-                cand_meet = cand_qs.filter(musabaka_adi=musabaka_adi)
+            if event:
+                cand_meet = cand_qs.filter(event=event)
+            elif musabaka_adi:
+                cand_meet = cand_qs.filter(event__musabaka_adi=musabaka_adi)
+            else:
+                cand_meet = None
+
+            if cand_meet:
                 if yaris_no:
                     cand_y_no = cand_meet.filter(yaris_no=yaris_no)
                     if cand_y_no.exists():
@@ -479,7 +607,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                     existing_race = cand_meet.first()
 
             if not existing_race and yaris_tarihi_baslangic:
-                cand_date = cand_qs.filter(yaris_tarihi_baslangic=yaris_tarihi_baslangic)
+                cand_date = cand_qs.filter(event__yaris_tarihi_baslangic=yaris_tarihi_baslangic)
                 if yaris_no:
                     cand_d_no = cand_date.filter(yaris_no=yaris_no)
                     if cand_d_no.exists():
@@ -509,6 +637,10 @@ def _process_single_race_payload(payload: dict) -> dict:
                         existing_race.giris_derecesi = str(giris_derecesi_val)
                     if kulup:
                         existing_race.kulup = kulup
+                    if dosya_obj:
+                        existing_race.canli_dosya = dosya_obj
+                    if dosya_adi:
+                        existing_race.dosya_adi = dosya_adi
                     existing_race.save()
                     stats['guncellenen_sonuc'] += 1
                 else:
@@ -528,6 +660,10 @@ def _process_single_race_payload(payload: dict) -> dict:
                         existing_race.puan = puan_val
                         if baraj_val:
                             existing_race.baraj = baraj_val
+                        if dosya_obj:
+                            existing_race.canli_dosya = dosya_obj
+                        if dosya_adi:
+                            existing_race.dosya_adi = dosya_adi
                         existing_race.save()
                         stats['guncellenen_sonuc'] += 1
             else: # start_listesi
@@ -545,21 +681,21 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.kulvar = kulvar_val
                         if giris_derecesi_val:
                             existing_race.giris_derecesi = str(giris_derecesi_val)
+                        if dosya_obj:
+                            existing_race.canli_dosya = dosya_obj
                         existing_race.save()
                         stats['guncellenen_sonuc'] += 1
         else:
             # YENİ YARIŞ SONUCU / START KAYDI
             yeni_derece = derece_val if tur == 'sonuc_listesi' else "Bekleniyor"
             yeni_yaris = YarisSonucu.objects.create(
+                event=event,
                 sporcu=sporcu,
                 kulup=kulup,
                 sporcu_kulup_tarihce=tarihce,
+                canli_dosya=dosya_obj,
                 kaynak_turu="CANLI_SONUC" if tur == 'sonuc_listesi' else "CANLI_START_LISTESI",
                 dosya_adi=dosya_adi,
-                musabaka_adi=musabaka_adi,
-                sehir=sehir,
-                yaris_tarihi_ham=yaris_tarihi,
-                yaris_tarihi_baslangic=yaris_tarihi_baslangic,
                 yaris_no=yaris_no,
                 cinsiyet=cinsiyet or sporcu.cinsiyet,
                 mesafe=mesafe,
@@ -591,6 +727,10 @@ def _process_single_race_payload(payload: dict) -> dict:
 
             kulup.toplam_yaris_sayisi = (kulup.toplam_yaris_sayisi or 0) + 1
             kulup.save(update_fields=['toplam_yaris_sayisi'])
+
+    if dosya_obj:
+        dosya_obj.kayit_sayisi = len(tum_kayitlar)
+        dosya_obj.save(update_fields=['kayit_sayisi'])
 
     return stats
 
@@ -883,7 +1023,7 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
     # Kategori veya Mesafe filtresi verilmişse (veya tum_yarislar istenmişse)
     # sporcunun o branştaki tüm sonuçlarını liste halinde dön
     if kategori_str or mesafe_val is not None:
-        races_qs = sp.yaris_sonuclari.select_related('kulup')
+        races_qs = sp.yaris_sonuclari.select_related('kulup', 'event')
         if kategori_str:
             races_qs = races_qs.filter(stil__icontains=kategori_str)
         if mesafe_val is not None:
@@ -891,11 +1031,11 @@ def api_sporcu_sonuclari(request, sporcu_id=None, kategori=None, mesafe=None):
 
         # Sıralama
         if sirala == 'derece':
-            races_qs = races_qs.order_by('derece_saniye', '-yaris_tarihi_baslangic')
+            races_qs = races_qs.order_by('derece_saniye', '-event__yaris_tarihi_baslangic')
         elif sirala in ('tarih_asc', 'eskiden_yeniye', 'kronolojik'):
-            races_qs = races_qs.order_by('yaris_tarihi_baslangic', 'id')
+            races_qs = races_qs.order_by('event__yaris_tarihi_baslangic', 'id')
         else:
-            races_qs = races_qs.order_by('-yaris_tarihi_baslangic', '-id')
+            races_qs = races_qs.order_by('-event__yaris_tarihi_baslangic', '-id')
 
         # O branştaki en iyi derece (PB) tespiti
         valid_pb_race = races_qs.filter(
@@ -974,9 +1114,44 @@ def canli_yaris_listesi(request):
         canli_url = request.POST.get("canli_url", "").strip()
         musabaka_adi = request.POST.get("musabaka_adi", "").strip()
         if canli_url:
+            sehir_val = None
+            tarih_val = None
+            start_d, end_d = '', ''
+            try:
+                from src.live_startlist_worker import fetch_event_page
+                title_scraped, city_scraped, date_scraped, start_d, end_d, _, _ = fetch_event_page(canli_url)
+                if not musabaka_adi and title_scraped:
+                    musabaka_adi = title_scraped
+                sehir_val = city_scraped
+                tarih_val = date_scraped or start_d
+            except Exception:
+                pass
+
+            if not sehir_val:
+                m_url_city = re.search(r'canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/', canli_url)
+                if m_url_city:
+                    c_raw = m_url_city.group(1).lower()
+                    sehir_val = c_raw.replace('i', 'İ').replace('ı', 'I').upper()
+
+            event_obj = None
+            if musabaka_adi:
+                event_obj, _ = Event.objects.get_or_create(
+                    musabaka_adi=musabaka_adi,
+                    defaults={
+                        'sehir': sehir_val,
+                        'yaris_tarihi_baslangic': start_d,
+                        'yaris_tarihi_bitis': end_d,
+                        'yaris_tarihi_ham': tarih_val or '',
+                        'kaynak_turu': "CANLI_TAKIP"
+                    }
+                )
+
             yaris = CanliYaris.objects.create(
+                event=event_obj,
                 canli_url=canli_url,
                 musabaka_adi=musabaka_adi or None,
+                sehir=sehir_val,
+                tarih=tarih_val,
                 durum="BEKLIYOR"
             )
             messages.success(request, f"Canlı yarış linki eklendi: {yaris.canli_url}")
@@ -984,16 +1159,20 @@ def canli_yaris_listesi(request):
         else:
             messages.error(request, "Lütfen geçerli bir canlı yarış linki girin.")
 
-    yarislar = CanliYaris.objects.all().order_by("-olusturulma_tarihi")
+    yarislar = CanliYaris.objects.all().select_related('event').order_by("-olusturulma_tarihi")
     return render(request, "sonuclar/canli_yarislar.html", {"yarislar": yarislar})
 
 
 def canli_yaris_tara(request, pk):
-    """Tekil bir canlı yarışın start listelerini tarama tetikleyicisi."""
+    """Tekil bir canlı yarışın start listelerini veya sonuç listelerini tarama tetikleyicisi."""
     if request.method != "POST":
         return redirect("sonuclar:canli_yaris_listesi")
 
     yaris = get_object_or_404(CanliYaris, pk=pk)
+
+    mod = request.POST.get('mod', 'start_listesi')
+    limit_raw = request.POST.get('limit', '').strip()
+    limit = int(limit_raw) if (limit_raw and limit_raw.isdigit()) else None
 
     import os
     import ssl
@@ -1014,7 +1193,9 @@ def canli_yaris_tara(request, pk):
             "event_url": yaris.canli_url,
             "django_api_url": request.build_absolute_uri("/api/canli-aktar/"),
             "callback_url": request.build_absolute_uri("/api/canli-durum-guncelle/"),
-            "async_mode": True
+            "async_mode": True,
+            "mod": mod,
+            "limit": limit
         }).encode("utf-8")
 
         try:
@@ -1030,7 +1211,7 @@ def canli_yaris_tara(request, pk):
                 if resp_data.get("musabaka_adi"):
                     yaris.musabaka_adi = resp_data["musabaka_adi"]
                 yaris.save()
-                messages.info(request, f"Google Cloud taraması başlatıldı ({toplam} start listesi tespit edildi). Sayfayı kapatabilirsiniz, sonuçlar arka planda yüklenecektir.")
+                messages.info(request, f"Google Cloud taraması başlatıldı ({toplam} liste tespit edildi). Sayfayı kapatabilirsiniz, sonuçlar arka planda yüklenecektir.")
         except Exception as e:
             yaris.durum = "HATA"
             yaris.hata_mesaji = f"Cloud Run tetikleme hatası: {str(e)}"
@@ -1040,7 +1221,7 @@ def canli_yaris_tara(request, pk):
         return redirect("sonuclar:canli_yaris_listesi")
 
     # Yerel geliştirme ortamında doğrudan yerel worker ile arka planda çalıştır
-    def worker_thread(event_id, url, api_target):
+    def worker_thread(event_id, url, api_target, mod_val, limit_val):
         try:
             from src.live_startlist_worker import run_live_event_startlists
             obj = CanliYaris.objects.get(id=event_id)
@@ -1048,14 +1229,28 @@ def canli_yaris_tara(request, pk):
             obj.son_islem_tarihi = timezone.now()
             obj.save()
 
-            stats = run_live_event_startlists(event_url=url, django_api_url=api_target)
+            stats = run_live_event_startlists(
+                event_url=url,
+                django_api_url=api_target,
+                limit=limit_val,
+                mod=mod_val,
+                canli_yaris_id=event_id
+            )
 
             obj = CanliYaris.objects.get(id=event_id)
             obj.durum = "TAMAMLANDI" if stats.get("basarili_sayisi", 0) > 0 else "HATA"
             obj.musabaka_adi = stats.get("musabaka_adi") or obj.musabaka_adi
-            obj.toplam_start_listesi = stats.get("toplam_start_listesi", 0)
-            obj.islenen_start_listesi = stats.get("basarili_sayisi", 0)
-            obj.eklenen_kayit_sayisi = stats.get("toplam_kayit", 0)
+            if stats.get("sehir"):
+                obj.sehir = stats["sehir"]
+            if stats.get("tarih"):
+                obj.tarih = stats["tarih"]
+            if mod_val == 'sonuc_listesi':
+                obj.toplam_sonuc_listesi = stats.get("toplam_liste", 0)
+                obj.islenen_sonuc_listesi = stats.get("basarili_sayisi", 0)
+            else:
+                obj.toplam_start_listesi = stats.get("toplam_liste", 0)
+                obj.islenen_start_listesi = stats.get("basarili_sayisi", 0)
+            obj.eklenen_kayit_sayisi = (obj.eklenen_kayit_sayisi or 0) + stats.get("toplam_kayit", 0)
             obj.son_islem_tarihi = timezone.now()
             obj.save()
         except Exception as e:
@@ -1069,12 +1264,14 @@ def canli_yaris_tara(request, pk):
                 pass
 
     api_url = request.build_absolute_uri("/api/canli-aktar/")
-    t = threading.Thread(target=worker_thread, args=(yaris.id, yaris.canli_url, api_url), daemon=True)
+    t = threading.Thread(target=worker_thread, args=(yaris.id, yaris.canli_url, api_url, mod, limit), daemon=True)
     t.start()
     yaris.durum = "ISLENIYOR"
     yaris.save()
 
-    messages.success(request, "Start listesi taraması yerel ortamda başlatıldı. Gemini ile işleniyor...")
+    mod_adi = "Sonuç Listesi" if mod == 'sonuc_listesi' else "Start Listesi"
+    limit_str = f" (İlk {limit} adet)" if limit else ""
+    messages.success(request, f"{mod_adi} taraması{limit_str} yerel ortamda başlatıldı. Gemini ile işleniyor...")
     return redirect("sonuclar:canli_yaris_listesi")
 
 
@@ -1118,11 +1315,19 @@ def api_canli_durum_guncelle(request):
 
     if data.get("musabaka_adi"):
         yaris.musabaka_adi = data["musabaka_adi"]
+    if data.get("sehir"):
+        yaris.sehir = data["sehir"]
+    if data.get("tarih"):
+        yaris.tarih = data["tarih"]
     if "toplam_start_listesi" in data:
         yaris.toplam_start_listesi = int(data["toplam_start_listesi"])
     if "islenen_start_listesi" in data:
         yaris.islenen_start_listesi = int(data["islenen_start_listesi"])
-    elif "basarili" in data:
+    if "toplam_sonuc_listesi" in data:
+        yaris.toplam_sonuc_listesi = int(data["toplam_sonuc_listesi"])
+    if "islenen_sonuc_listesi" in data:
+        yaris.islenen_sonuc_listesi = int(data["islenen_sonuc_listesi"])
+    elif "basarili" in data and not data.get("toplam_sonuc_listesi"):
         yaris.islenen_start_listesi = int(data["basarili"])
     if "toplam_sporcu" in data:
         yaris.eklenen_kayit_sayisi = int(data["toplam_sporcu"])
@@ -1145,9 +1350,228 @@ def api_canli_yarislar_durum(request):
     """
     yarislar = CanliYaris.objects.all().values(
         "id", "musabaka_adi", "durum", "toplam_start_listesi",
-        "islenen_start_listesi", "eklenen_kayit_sayisi", "hata_mesaji"
+        "islenen_start_listesi", "toplam_sonuc_listesi", "islenen_sonuc_listesi",
+        "eklenen_kayit_sayisi", "hata_mesaji"
     )
     return JsonResponse({"yarislar": list(yarislar)})
+
+
+def musabaka_listesi(request):
+    """Müsabakalar (Events) listesi ve arama sayfası."""
+    q = request.GET.get('q', '').strip()
+    sehir = request.GET.get('sehir', '').strip()
+    yil = request.GET.get('yil', '').strip()
+
+    qs = Event.objects.all()
+    if q:
+        qs = qs.filter(musabaka_adi__icontains=q)
+    if sehir:
+        qs = qs.filter(sehir__icontains=sehir)
+    if yil and yil.isdigit():
+        qs = qs.filter(yaris_tarihi_baslangic__startswith=yil)
+
+    paginator = Paginator(qs, 30)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    sehirler = Event.objects.exclude(sehir__isnull=True).exclude(sehir='').values_list('sehir', flat=True).distinct().order_by('sehir')
+
+    context = {
+        'page_obj': page_obj,
+        'q': q,
+        'sehir': sehir,
+        'yil': yil,
+        'sehirler': sehirler,
+        'total_count': paginator.count
+    }
+    return render(request, 'sonuclar/musabaka_listesi.html', context)
+
+
+def musabaka_detay(request, pk):
+    """Tekil müsabaka detay sayfası ve yarış sonuçları."""
+    event = get_object_or_404(Event, pk=pk)
+    sonuclar_qs = event.yaris_sonuclari.select_related('sporcu', 'kulup')
+
+    # Filtreleme (Yarış No & Durum)
+    secili_yaris_no = request.GET.get('yaris_no', '').strip()
+    secili_durum = request.GET.get('durum', '').strip()
+
+    if secili_yaris_no:
+        sonuclar_qs = sonuclar_qs.filter(yaris_no=secili_yaris_no)
+
+    if secili_durum == 'sonuc':
+        sonuclar_qs = sonuclar_qs.exclude(derece='Bekleniyor')
+    elif secili_durum == 'bekliyor':
+        sonuclar_qs = sonuclar_qs.filter(derece='Bekleniyor')
+
+    # Akıllı Sıralama: Sonuçlananlar (1, 2, 3...) önce, Bekleyenler (DNS) en altta
+    sonuclar_qs = sonuclar_qs.annotate(
+        is_pending=Case(
+            When(derece='Bekleniyor', then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ),
+        yaris_no_int=Cast('yaris_no', IntegerField()),
+        sira_int=Case(
+            When(sira='', then=Value(9999)),
+            When(sira__isnull=True, then=Value(9999)),
+            default=Cast('sira', IntegerField()),
+            output_field=IntegerField()
+        )
+    ).order_by('yaris_no_int', 'is_pending', 'sira_int', 'derece_saniye')
+
+    # Mevcut yarış numaraları listesi (filtre menüsü için)
+    yaris_nolari = (
+        event.yaris_sonuclari.exclude(yaris_no__isnull=True)
+        .exclude(yaris_no='')
+        .values_list('yaris_no', flat=True)
+        .distinct()
+    )
+    # Sayısal sırala
+    try:
+        yaris_nolari = sorted(list(set(yaris_nolari)), key=lambda x: int(x) if str(x).isdigit() else 9999)
+    except Exception:
+        yaris_nolari = sorted(list(set(yaris_nolari)))
+
+    total_count = sonuclar_qs.count()
+    completed_count = event.yaris_sonuclari.exclude(derece='Bekleniyor').count()
+    pending_count = event.yaris_sonuclari.filter(derece='Bekleniyor').count()
+
+    paginator = Paginator(sonuclar_qs, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'event': event,
+        'page_obj': page_obj,
+        'total_races': total_count,
+        'completed_count': completed_count,
+        'pending_count': pending_count,
+        'yaris_nolari': yaris_nolari,
+        'secili_yaris_no': secili_yaris_no,
+        'secili_durum': secili_durum
+    }
+    return render(request, 'sonuclar/musabaka_detay.html', context)
+
+
+@csrf_exempt
+def api_canli_startlist_sporculari(request):
+    """
+    Belirli bir müsabaka ve yarış no için start listesindeki sporcuları döner.
+    Gemini sonuç listesini ayrıştırırken bu ID'leri kullanarak doğrudan eşleştirir.
+    Parametreler (GET):
+        event_id veya canli_url veya musabaka_adi
+        yaris_no (ör: 1)
+    """
+    event_id = request.GET.get('event_id')
+    canli_url = request.GET.get('canli_url', '').strip()
+    musabaka_adi = request.GET.get('musabaka_adi', '').strip()
+    yaris_no = request.GET.get('yaris_no', '').strip()
+
+    qs = YarisSonucu.objects.all()
+
+    if event_id and str(event_id).isdigit():
+        canli_match = CanliYaris.objects.filter(id=int(event_id)).first()
+        if canli_match and canli_match.event_id:
+            qs = qs.filter(event_id=canli_match.event_id)
+        else:
+            qs = qs.filter(event_id=int(event_id))
+    elif canli_url:
+        canli = CanliYaris.objects.filter(canli_url=canli_url).first()
+        if canli and canli.event_id:
+            qs = qs.filter(event_id=canli.event_id)
+        elif canli and canli.musabaka_adi:
+            qs = qs.filter(event__musabaka_adi=canli.musabaka_adi)
+    elif musabaka_adi:
+        qs = qs.filter(event__musabaka_adi=musabaka_adi)
+    else:
+        return JsonResponse({"durum": "hata", "mesaj": "event_id, canli_url veya musabaka_adi parametresi gereklidir."}, status=400)
+
+    if yaris_no:
+        qs = qs.filter(yaris_no=yaris_no)
+
+    sporcular_list = []
+    for r in qs.select_related('sporcu', 'kulup').order_by('seri', 'kulvar', 'id'):
+        sporcular_list.append({
+            "id": r.id,  # YarisSonucu ID
+            "sporcu_adi": r.sporcu.sporcu_adi,
+            "kulup_adi": r.kulup.kulup_adi if r.kulup else "",
+            "dogum_yili": r.sporcu.dogum_yili,
+            "cinsiyet": r.cinsiyet or r.sporcu.cinsiyet,
+            "seri": r.seri,
+            "kulvar": r.kulvar,
+            "giris_derecesi": r.giris_derecesi,
+            "mevcut_derece": r.derece
+        })
+
+    return JsonResponse({
+        "durum": "basarili",
+        "yaris_no": yaris_no,
+        "toplam": len(sporcular_list),
+        "sporcular": sporcular_list
+    }, json_dumps_params={'ensure_ascii': False})
+
+
+@csrf_exempt
+@csrf_exempt
+def api_canli_dosya_kontrol(request):
+    """
+    Belirli bir dosyanın (PDF) daha önce işlenip işlenmediğini ve mevcut hash/etag durumunu döner.
+    Runner gereksiz indirme ve Gemini çağırmayı bu sayede önler.
+    GET query param veya POST JSON body destekler.
+    """
+    params = {}
+    if request.method == "POST":
+        try:
+            params = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            params = request.POST.dict()
+    else:
+        params = request.GET.dict()
+
+    dosya_adi = params.get('dosya_adi', '').strip()
+    event_id = params.get('event_id') or params.get('canli_yaris_id')
+    canli_url = params.get('canli_url', '').strip()
+    req_etag = params.get('etag', '').strip()
+    req_hash = params.get('content_hash', '').strip()
+
+    if not dosya_adi:
+        return JsonResponse({"durum": "hata", "mesaj": "dosya_adi parametresi gereklidir."}, status=400)
+
+    qs = CanliYarisDosya.objects.filter(dosya_adi=dosya_adi)
+    if event_id and str(event_id).isdigit():
+        canli_match = CanliYaris.objects.filter(id=int(event_id)).first()
+        target_eid = canli_match.event_id if (canli_match and canli_match.event_id) else int(event_id)
+        qs = qs.filter(event_id=target_eid)
+    elif canli_url:
+        canli = CanliYaris.objects.filter(canli_url=canli_url).first()
+        if canli and canli.event_id:
+            qs = qs.filter(event_id=canli.event_id)
+
+    dosya = qs.first()
+    if not dosya:
+        return JsonResponse({"durum": "bulunamadi", "islenmis_mi": False, "degisti_mi": True})
+
+    is_done = (dosya.durum == 'ISLENDI')
+    degisti_mi = True
+    if is_done:
+        if req_hash and dosya.content_hash:
+            degisti_mi = (req_hash != dosya.content_hash)
+        elif req_etag and dosya.etag:
+            degisti_mi = (req_etag != dosya.etag)
+        else:
+            degisti_mi = False
+
+    return JsonResponse({
+        "durum": "basarili",
+        "islenmis_mi": is_done,
+        "degisti_mi": degisti_mi,
+        "etag": dosya.etag,
+        "last_modified": dosya.last_modified,
+        "content_hash": dosya.content_hash,
+        "kayit_sayisi": dosya.kayit_sayisi
+    })
+
 
 
 

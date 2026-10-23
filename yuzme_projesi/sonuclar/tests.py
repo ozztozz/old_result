@@ -3,7 +3,7 @@ import json
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.db import connection
-from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris
+from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, Event, CanliYarisDosya
 
 
 class SporcuApiTests(TestCase):
@@ -11,6 +11,21 @@ class SporcuApiTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         with connection.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musabaka_adi TEXT NOT NULL,
+                sehir TEXT,
+                yaris_tarihi_ham TEXT,
+                yaris_tarihi_baslangic TEXT,
+                yaris_tarihi_bitis TEXT,
+                kaynak_turu TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
             cur.execute("""
             CREATE TABLE IF NOT EXISTS kulupler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,8 +63,36 @@ class SporcuApiTests(TestCase):
             );
             """)
             cur.execute("""
+            CREATE TABLE IF NOT EXISTS canli_yaris_dosyalari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_yaris_id INTEGER REFERENCES canli_yarislar(id),
+                dosya_adi TEXT NOT NULL,
+                dosya_url TEXT,
+                dosya_turu TEXT,
+                yaris_no TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                cinsiyet TEXT,
+                yas_grubu TEXT,
+                etag TEXT,
+                last_modified TEXT,
+                content_hash TEXT,
+                dosya_boyutu INTEGER,
+                durum TEXT DEFAULT 'BEKLIYOR',
+                kayit_sayisi INTEGER DEFAULT 0,
+                hata_mesaji TEXT,
+                son_kontrol_tarihi DATETIME,
+                son_islem_tarihi DATETIME,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            cur.execute("""
             CREATE TABLE IF NOT EXISTS yaris_sonuclari (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_dosya_id INTEGER REFERENCES canli_yaris_dosyalari(id),
                 sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
                 kulup_id INTEGER REFERENCES kulupler(id),
                 sporcu_kulup_tarihce_id INTEGER REFERENCES sporcu_kulup_tarihce(id),
@@ -57,11 +100,6 @@ class SporcuApiTests(TestCase):
                 dosya_adi TEXT,
                 sayfa_no INTEGER,
                 satir_no INTEGER,
-                musabaka_adi TEXT,
-                sehir TEXT,
-                yaris_tarihi_ham TEXT,
-                yaris_tarihi_baslangic TEXT,
-                yaris_tarihi_bitis TEXT,
                 yaris_no TEXT,
                 cinsiyet TEXT,
                 mesafe INTEGER,
@@ -86,6 +124,7 @@ class SporcuApiTests(TestCase):
             cur.execute("""
             CREATE TABLE IF NOT EXISTS canli_yarislar (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
                 musabaka_adi TEXT,
                 sehir TEXT,
                 tarih TEXT,
@@ -100,6 +139,32 @@ class SporcuApiTests(TestCase):
                 son_islem_tarihi TEXT,
                 olusturulma_tarihi TEXT,
                 guncellenme_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS canli_yaris_dosyalari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_yaris_id INTEGER REFERENCES canli_yarislar(id),
+                dosya_adi TEXT NOT NULL,
+                dosya_url TEXT,
+                dosya_turu TEXT,
+                yaris_no TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                cinsiyet TEXT,
+                yas_grubu TEXT,
+                etag TEXT,
+                last_modified TEXT,
+                content_hash TEXT,
+                dosya_boyutu INTEGER,
+                durum TEXT DEFAULT 'BEKLIYOR',
+                kayit_sayisi INTEGER DEFAULT 0,
+                hata_mesaji TEXT,
+                son_kontrol_tarihi DATETIME,
+                son_islem_tarihi DATETIME,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """)
 
@@ -133,13 +198,16 @@ class SporcuApiTests(TestCase):
             donem_sirasi=2
         )
 
+        self.event1 = Event.objects.create(
+            musabaka_adi="TYF 11-12 Yaş Müsabakası",
+            sehir="Ankara",
+            yaris_tarihi_baslangic="2024-03-10"
+        )
         self.yaris1 = YarisSonucu.objects.create(
+            event=self.event1,
             sporcu=self.sporcu,
             kulup=self.kulup,
             sporcu_kulup_tarihce=self.tarihce_kulup,
-            musabaka_adi="TYF 11-12 Yaş Müsabakası",
-            sehir="Ankara",
-            yaris_tarihi_baslangic="2024-03-10",
             yaris_no="1",
             mesafe=50,
             stil="Serbest",
@@ -158,13 +226,16 @@ class SporcuApiTests(TestCase):
             toplam_yaris_sayisi=1
         )
 
+        self.event2 = Event.objects.create(
+            musabaka_adi="Okul Sporları Yıldızlar İl Birinciliği",
+            sehir="Ankara",
+            yaris_tarihi_baslangic="2024-05-15"
+        )
         self.yaris2 = YarisSonucu.objects.create(
+            event=self.event2,
             sporcu=self.sporcu,
             kulup=self.okul,
             sporcu_kulup_tarihce=self.tarihce_okul,
-            musabaka_adi="Okul Sporları Yıldızlar İl Birinciliği",
-            sehir="Ankara",
-            yaris_tarihi_baslangic="2024-05-15",
             yaris_no="2",
             mesafe=100,
             stil="Serbest",
@@ -175,13 +246,16 @@ class SporcuApiTests(TestCase):
         )
 
         # 50m Serbest ikinci yarış (daha yavaş derece)
+        self.event3 = Event.objects.create(
+            musabaka_adi="TYF Vize Müsabakası",
+            sehir="Ankara",
+            yaris_tarihi_baslangic="2024-01-20"
+        )
         self.yaris3 = YarisSonucu.objects.create(
+            event=self.event3,
             sporcu=self.sporcu,
             kulup=self.kulup,
             sporcu_kulup_tarihce=self.tarihce_kulup,
-            musabaka_adi="TYF Vize Müsabakası",
-            sehir="Ankara",
-            yaris_tarihi_baslangic="2024-01-20",
             yaris_no="3",
             mesafe=50,
             stil="Serbest",
@@ -334,7 +408,7 @@ class SporcuApiTests(TestCase):
         self.assertEqual(data1['istatistikler']['eklenen_sonuc_sayisi'], 1)    # 1 start kaydı eklendi
 
         # Kaydın "Bekleniyor" olarak eklendiğini doğrula
-        yaris = YarisSonucu.objects.get(sporcu=self.cinar, musabaka_adi="TYF Bölge Müsabakası", mesafe=50, stil="Serbest")
+        yaris = YarisSonucu.objects.get(sporcu=self.cinar, event__musabaka_adi="TYF Bölge Müsabakası", mesafe=50, stil="Serbest")
         self.assertEqual(yaris.derece, "Bekleniyor")
         self.assertEqual(yaris.kulvar, 4)
 
@@ -372,7 +446,7 @@ class SporcuApiTests(TestCase):
         self.assertEqual(yaris.sira, "1")
 
         # Toplam yarış sayısının sadece 1 kez arttığını doğrula
-        self.assertEqual(YarisSonucu.objects.filter(sporcu=self.cinar, musabaka_adi="TYF Bölge Müsabakası").count(), 1)
+        self.assertEqual(YarisSonucu.objects.filter(sporcu=self.cinar, event__musabaka_adi="TYF Bölge Müsabakası").count(), 1)
 
         # 3. Aşama: Aynı Sonucun Tekrar Gönderilmesi (GitHub Actions tekrar çalıştığında)
         resp3 = self.client.post(url, data=json.dumps(result_payload), content_type='application/json')
@@ -412,6 +486,144 @@ class SporcuApiTests(TestCase):
         self.assertEqual(bora.dogum_yili, 2013)
         self.assertEqual(bora.okul(), "Özel Ankara İlkokulu")
 
+    def test_event_modeli_ve_yaris_iliskisi(self):
+        """Event modeli oluşturma ve YarisSonucu ilişkisi testi."""
+        event = Event.objects.create(
+            musabaka_adi="İstanbul İl Baraj Geçme Müsabakası",
+            sehir="İstanbul",
+            yaris_tarihi_baslangic="2026-06-01",
+            kaynak_turu="METIN_PDF"
+        )
+        self.assertIsNotNone(event.id)
+        self.assertEqual(str(event), "İstanbul İl Baraj Geçme Müsabakası (İstanbul / 2026-06-01)")
+
+        sporcu = Sporcu.objects.create(sporcu_adi="Deniz Aktaş", dogum_yili=2012)
+        yaris = YarisSonucu.objects.create(
+            event=event,
+            sporcu=sporcu,
+            mesafe=100,
+            stil="Serbest",
+            derece="1:02.15"
+        )
+        self.assertEqual(yaris.event.id, event.id)
+        self.assertEqual(yaris.musabaka_adi, "İstanbul İl Baraj Geçme Müsabakası")
+        self.assertEqual(yaris.sehir, "İstanbul")
+
+    def test_canli_dosya_ve_id_ile_sonuc_guncelleme(self):
+        """Start listesindeki id üzerinden doğrudan sonuç güncelleme ve dosya takibi testi."""
+        event = Event.objects.create(
+            musabaka_adi="Canlı Test Müsabakası",
+            sehir="İzmir",
+            yaris_tarihi_baslangic="2026-06-15"
+        )
+        canli_yaris = CanliYaris.objects.create(
+            event=event,
+            musabaka_adi="Canlı Test Müsabakası",
+            canli_url="https://canli.tyf.gov.tr/izmir/cs-9999/"
+        )
+
+        # 1. Start listesi aktarımı
+        start_payload = {
+            "tur": "start_listesi",
+            "canli_yaris_id": canli_yaris.id,
+            "musabaka_adi": event.musabaka_adi,
+            "dosya_adi": "StartList_1.pdf",
+            "dosya_url": "https://canli.tyf.gov.tr/izmir/cs-9999/StartList_1.pdf",
+            "etag": "w/123456",
+            "last_modified": "Mon, 15 Jun 2026 09:00:00 GMT",
+            "content_hash": "a1b2c3d4e5f67890",
+            "yaris_no": "1",
+            "mesafe": 50,
+            "stil": "Serbest",
+            "kayitlar": [
+                {
+                    "seri": "2",
+                    "kulvar": 3,
+                    "sporcu": self.sporcu.sporcu_adi,
+                    "dogum_yili": self.sporcu.dogum_yili,
+                    "kulup": self.kulup.kulup_adi,
+                    "giris_derecesi": "29.80"
+                }
+            ]
+        }
+        res_start = self.client.post(reverse('sonuclar:api_canli_aktar'), data=json.dumps(start_payload), content_type='application/json')
+        self.assertEqual(res_start.status_code, 200)
+
+        # Start kaydını kontrol et
+        yaris_kaydi = YarisSonucu.objects.filter(event=event, yaris_no="1", sporcu=self.sporcu).first()
+        self.assertIsNotNone(yaris_kaydi)
+        self.assertEqual(yaris_kaydi.derece, "Bekleniyor")
+        self.assertIsNotNone(yaris_kaydi.canli_dosya)
+        self.assertEqual(yaris_kaydi.canli_dosya.dosya_adi, "StartList_1.pdf")
+        self.assertEqual(yaris_kaydi.canli_dosya.content_hash, "a1b2c3d4e5f67890")
+
+        # 2. Start listesi sporcularını çeken API'yi test et
+        res_swimmers = self.client.get(reverse('sonuclar:api_canli_startlist_sporculari') + f"?event_id={event.id}&yaris_no=1")
+        self.assertEqual(res_swimmers.status_code, 200)
+        swimmers_data = res_swimmers.json()
+        self.assertEqual(swimmers_data["durum"], "basarili")
+        self.assertEqual(len(swimmers_data["sporcular"]), 1)
+        target_swimmer_id = swimmers_data["sporcular"][0]["id"]
+        self.assertEqual(target_swimmer_id, yaris_kaydi.id)
+
+        # 3. Dosya kontrol API'sini test et
+        res_check = self.client.get(reverse('sonuclar:api_canli_dosya_kontrol') + f"?event_id={event.id}&dosya_adi=StartList_1.pdf")
+        self.assertEqual(res_check.status_code, 200)
+        check_data = res_check.json()
+        self.assertTrue(check_data["islendi_mi"])
+        self.assertEqual(check_data["content_hash"], "a1b2c3d4e5f67890")
+
+        # 4. Sonuç listesi aktarımı (Gemini'nin bulduğu ID ile doğrudan güncelleme + yeni yedek sporcu)
+        result_payload = {
+            "tur": "sonuc_listesi",
+            "canli_yaris_id": canli_yaris.id,
+            "musabaka_adi": event.musabaka_adi,
+            "dosya_adi": "ResultList_1.pdf",
+            "dosya_url": "https://canli.tyf.gov.tr/izmir/cs-9999/ResultList_1.pdf",
+            "etag": "w/987654",
+            "last_modified": "Mon, 15 Jun 2026 11:30:00 GMT",
+            "content_hash": "f6e5d4c3b2a10000",
+            "yaris_no": "1",
+            "mesafe": 50,
+            "stil": "Serbest",
+            "kayitlar": [
+                {
+                    "id": target_swimmer_id,  # DOĞRUDAN START KAYDININ ID'Sİ
+                    "sira": "1",
+                    "derece": "28.15",
+                    "puan": 410,
+                    "baraj": "A2"
+                }
+            ],
+            "yeni_sporcular": [
+                {
+                    "sira": "2",
+                    "sporcu": "Yeni Yüzücü",
+                    "dogum_yili": "2013",
+                    "kulup": self.kulup.kulup_adi,
+                    "derece": "28.90",
+                    "puan": 380
+                }
+            ]
+        }
+        res_result = self.client.post(reverse('sonuclar:api_canli_aktar'), data=json.dumps(result_payload), content_type='application/json')
+        self.assertEqual(res_result.status_code, 200)
+
+        # Mevcut kaydın güncellendiğini doğrula
+        yaris_kaydi.refresh_from_db()
+        self.assertEqual(yaris_kaydi.derece, "28.15")
+        self.assertEqual(yaris_kaydi.sira, "1")
+        self.assertEqual(yaris_kaydi.puan, 410)
+        self.assertEqual(yaris_kaydi.kaynak_turu, "CANLI_SONUC")
+        self.assertEqual(yaris_kaydi.dosya_adi, "ResultList_1.pdf")
+        self.assertEqual(yaris_kaydi.canli_dosya.dosya_adi, "ResultList_1.pdf")
+
+        # Yedek/yeni sporcunun da eklendiğini doğrula
+        yeni_sonuc = YarisSonucu.objects.filter(event=event, yaris_no="1", sporcu__sporcu_adi="Yeni Yüzücü").first()
+        self.assertIsNotNone(yeni_sonuc)
+        self.assertEqual(yeni_sonuc.derece, "28.90")
+        self.assertEqual(yeni_sonuc.sira, "2")
+
 
 class CanliYarisTests(TestCase):
     @classmethod
@@ -419,8 +631,24 @@ class CanliYarisTests(TestCase):
         super().setUpClass()
         with connection.cursor() as cur:
             cur.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musabaka_adi TEXT NOT NULL,
+                sehir TEXT,
+                yaris_tarihi_ham TEXT,
+                yaris_tarihi_baslangic TEXT,
+                yaris_tarihi_bitis TEXT,
+                kaynak_turu TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            cur.execute("""
             CREATE TABLE IF NOT EXISTS canli_yarislar (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
                 musabaka_adi TEXT,
                 sehir TEXT,
                 tarih TEXT,
@@ -435,6 +663,32 @@ class CanliYarisTests(TestCase):
                 son_islem_tarihi TEXT,
                 olusturulma_tarihi TEXT,
                 guncellenme_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS canli_yaris_dosyalari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_yaris_id INTEGER REFERENCES canli_yarislar(id),
+                dosya_adi TEXT NOT NULL,
+                dosya_url TEXT,
+                dosya_turu TEXT,
+                yaris_no TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                cinsiyet TEXT,
+                yas_grubu TEXT,
+                etag TEXT,
+                last_modified TEXT,
+                content_hash TEXT,
+                dosya_boyutu INTEGER,
+                durum TEXT DEFAULT 'BEKLIYOR',
+                kayit_sayisi INTEGER DEFAULT 0,
+                hata_mesaji TEXT,
+                son_kontrol_tarihi DATETIME,
+                son_islem_tarihi DATETIME,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """)
 

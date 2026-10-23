@@ -11,6 +11,8 @@ urlpatterns = [
     path('kulupler/', views.kulup_listesi, name='kulup_listesi'),
     path('kulupler/<int:pk>/', views.kulup_detay, name='kulup_detay'),
     path('sonuclar/', views.yaris_sonuclari_ara, name='yaris_sonuclari_ara'),
+    path('musabakalar/', views.musabaka_listesi, name='musabaka_listesi'),
+    path('musabakalar/<int:pk>/', views.musabaka_detay, name='musabaka_detay'),
     path('sporcu-eslestirme/', views.sporcu_eslestir_sayfasi, name='sporcu_eslestir_sayfasi'),
     path('api/sporcu-ara/', views.api_sporcu_ara, name='api_sporcu_ara'),
     path('api/sporcu-eslestir/', views.api_sporcu_eslestir, name='api_sporcu_eslestir'),
@@ -27,5 +29,7 @@ urlpatterns = [
     path('canli/<int:pk>/sil/', views.canli_yaris_sil, name='canli_yaris_sil'),
     path('api/canli-durum-guncelle/', views.api_canli_durum_guncelle, name='api_canli_durum_guncelle'),
     path('api/canli-yarislar-durum/', views.api_canli_yarislar_durum, name='api_canli_yarislar_durum'),
+    path('api/canli-startlist-sporculari/', views.api_canli_startlist_sporculari, name='api_canli_startlist_sporculari'),
+    path('api/canli-dosya-kontrol/', views.api_canli_dosya_kontrol, name='api_canli_dosya_kontrol'),
 ]
 

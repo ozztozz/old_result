@@ -1,6 +1,25 @@
 # -*- coding: utf-8 -*-
 from django.contrib import admin
-from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris
+from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, Event, CanliYarisDosya
+
+
+@admin.register(CanliYarisDosya)
+class CanliYarisDosyaAdmin(admin.ModelAdmin):
+    list_display = ('dosya_adi', 'event', 'dosya_turu', 'yaris_no', 'mesafe', 'stil', 'durum', 'kayit_sayisi', 'etag', 'content_hash', 'son_islem_tarihi')
+    search_fields = ('dosya_adi', 'event__musabaka_adi', 'yaris_no', 'content_hash')
+    list_filter = ('dosya_turu', 'durum')
+    list_select_related = ('event', 'canli_yaris')
+    readonly_fields = ('content_hash', 'etag', 'last_modified', 'dosya_boyutu', 'kayit_sayisi', 'son_kontrol_tarihi', 'son_islem_tarihi', 'olusturulma_tarihi', 'guncellenme_tarihi')
+
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ('musabaka_adi', 'sehir', 'yaris_tarihi_baslangic', 'yaris_tarihi_bitis', 'toplam_yaris_sayisi', 'toplam_sporcu_sayisi', 'kaynak_turu')
+    search_fields = ('musabaka_adi', 'sehir')
+    list_filter = ('kaynak_turu', 'sehir')
+    ordering = ('-yaris_tarihi_baslangic',)
+    readonly_fields = ('toplam_yaris_sayisi', 'toplam_sporcu_sayisi', 'olusturulma_tarihi', 'guncellenme_tarihi')
 
 
 @admin.register(CanliYaris)
@@ -38,8 +57,9 @@ class SporcuKulupTarihceAdmin(admin.ModelAdmin):
 
 @admin.register(YarisSonucu)
 class YarisSonucuAdmin(admin.ModelAdmin):
-    list_display = ('sporcu', 'kulup', 'mesafe', 'stil', 'derece', 'puan', 'sira', 'musabaka_adi', 'yaris_tarihi_baslangic')
-    search_fields = ('sporcu__sporcu_adi', 'kulup__kulup_adi', 'musabaka_adi')
+    list_display = ('sporcu', 'kulup', 'mesafe', 'stil', 'derece', 'puan', 'sira', 'event')
+    search_fields = ('sporcu__sporcu_adi', 'kulup__kulup_adi', 'event__musabaka_adi')
     list_filter = ('stil', 'mesafe', 'cinsiyet')
-    ordering = ('-yaris_tarihi_baslangic',)
-    readonly_fields = ('sporcu', 'kulup', 'sporcu_kulup_tarihce', 'derece_saniye', 'ham_satir')
+    ordering = ('-event__yaris_tarihi_baslangic', '-id')
+    list_select_related = ('sporcu', 'kulup', 'event')
+    readonly_fields = ('sporcu', 'kulup', 'event', 'sporcu_kulup_tarihce', 'derece_saniye', 'ham_satir')
