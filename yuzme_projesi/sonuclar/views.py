@@ -1164,114 +1164,77 @@ def canli_yaris_listesi(request):
 
 
 def canli_yaris_tara(request, pk):
-    """Tekil bir canlı yarışın start listelerini veya sonuç listelerini tarama tetikleyicisi."""
+    """Canlı yarışı Cloud Run tarama sırasına (BEKLIYOR) alır veya yerel ortamda çalıştırır."""
     if request.method != "POST":
         return redirect("sonuclar:canli_yaris_listesi")
 
     yaris = get_object_or_404(CanliYaris, pk=pk)
 
-    mod = request.POST.get('mod', 'start_listesi')
+    mod = request.POST.get('mod', 'hepsi')
     limit_raw = request.POST.get('limit', '').strip()
     limit = int(limit_raw) if (limit_raw and limit_raw.isdigit()) else None
 
-    import os
-    import ssl
-    import urllib.request
-    cf_url = os.environ.get("GOOGLE_CLOUD_FUNCTION_URL")
     host = request.get_host().lower()
     is_localhost = host.startswith("127.0.0.1") or host.startswith("localhost")
 
-    # Eğer canlı sunucudaysak (PythonAnywhere) ve Cloud Run URL tanımlıysa asenkron Webhook mimarisini kullan
-    if cf_url and not is_localhost:
-        yaris.durum = "ISLENIYOR"
-        yaris.son_islem_tarihi = timezone.now()
-        yaris.save()
-
-        # Cloud Run'a 'async_mode' ile istek gönder - Cloud Run anında 200 döner, arka planda tarar
-        req_payload = json.dumps({
-            "event_id": yaris.id,
-            "event_url": yaris.canli_url,
-            "django_api_url": request.build_absolute_uri("/api/canli-aktar/"),
-            "callback_url": request.build_absolute_uri("/api/canli-durum-guncelle/"),
-            "async_mode": True,
-            "mod": mod,
-            "limit": limit
-        }).encode("utf-8")
-
-        try:
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            req = urllib.request.Request(cf_url, data=req_payload, headers={"Content-Type": "application/json"})
-            # Kısa timeout ile sadece tetikleme cevabını bekle (PythonAnywhere zaman aşımına uğramaz)
-            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
-                resp_data = json.loads(resp.read().decode("utf-8"))
-                toplam = resp_data.get("toplam_start_listesi", 0)
-                yaris.toplam_start_listesi = toplam
-                if resp_data.get("musabaka_adi"):
-                    yaris.musabaka_adi = resp_data["musabaka_adi"]
-                yaris.save()
-                messages.info(request, f"Google Cloud taraması başlatıldı ({toplam} liste tespit edildi). Sayfayı kapatabilirsiniz, sonuçlar arka planda yüklenecektir.")
-        except Exception as e:
-            yaris.durum = "HATA"
-            yaris.hata_mesaji = f"Cloud Run tetikleme hatası: {str(e)}"
-            yaris.save()
-            messages.error(request, f"Cloud Run tetiklenemedi: {str(e)}")
-
-        return redirect("sonuclar:canli_yaris_listesi")
-
-    # Yerel geliştirme ortamında doğrudan yerel worker ile arka planda çalıştır
-    def worker_thread(event_id, url, api_target, mod_val, limit_val):
-        try:
-            from src.live_startlist_worker import run_live_event_startlists
-            obj = CanliYaris.objects.get(id=event_id)
-            obj.durum = "ISLENIYOR"
-            obj.son_islem_tarihi = timezone.now()
-            obj.save()
-
-            stats = run_live_event_startlists(
-                event_url=url,
-                django_api_url=api_target,
-                limit=limit_val,
-                mod=mod_val,
-                canli_yaris_id=event_id
-            )
-
-            obj = CanliYaris.objects.get(id=event_id)
-            obj.durum = "TAMAMLANDI" if stats.get("basarili_sayisi", 0) > 0 else "HATA"
-            obj.musabaka_adi = stats.get("musabaka_adi") or obj.musabaka_adi
-            if stats.get("sehir"):
-                obj.sehir = stats["sehir"]
-            if stats.get("tarih"):
-                obj.tarih = stats["tarih"]
-            if mod_val == 'sonuc_listesi':
-                obj.toplam_sonuc_listesi = stats.get("toplam_liste", 0)
-                obj.islenen_sonuc_listesi = stats.get("basarili_sayisi", 0)
-            else:
-                obj.toplam_start_listesi = stats.get("toplam_liste", 0)
-                obj.islenen_start_listesi = stats.get("basarili_sayisi", 0)
-            obj.eklenen_kayit_sayisi = (obj.eklenen_kayit_sayisi or 0) + stats.get("toplam_kayit", 0)
-            obj.son_islem_tarihi = timezone.now()
-            obj.save()
-        except Exception as e:
+    # Yerel geliştirme ortamında doğrudan yerel worker ile arka planda çalıştırma seçeneği
+    if is_localhost and request.POST.get('yerel_calistir') == '1':
+        def worker_thread(event_id, url, api_target, mod_val, limit_val):
             try:
+                from src.live_startlist_worker import run_live_event_startlists
                 obj = CanliYaris.objects.get(id=event_id)
-                obj.durum = "HATA"
-                obj.hata_mesaji = str(e)
+                obj.durum = "ISLENIYOR"
                 obj.son_islem_tarihi = timezone.now()
                 obj.save()
-            except Exception:
-                pass
 
-    api_url = request.build_absolute_uri("/api/canli-aktar/")
-    t = threading.Thread(target=worker_thread, args=(yaris.id, yaris.canli_url, api_url, mod, limit), daemon=True)
-    t.start()
-    yaris.durum = "ISLENIYOR"
+                stats = run_live_event_startlists(
+                    event_url=url,
+                    django_api_url=api_target,
+                    limit=limit_val,
+                    mod=mod_val,
+                    canli_yaris_id=event_id
+                )
+
+                obj = CanliYaris.objects.get(id=event_id)
+                obj.durum = "TAMAMLANDI" if stats.get("basarili_sayisi", 0) > 0 else "HATA"
+                obj.musabaka_adi = stats.get("musabaka_adi") or obj.musabaka_adi
+                if stats.get("sehir"): obj.sehir = stats["sehir"]
+                if stats.get("tarih"): obj.tarih = stats["tarih"]
+                if mod_val == 'sonuc_listesi':
+                    obj.toplam_sonuc_listesi = stats.get("toplam_liste", 0)
+                    obj.islenen_sonuc_listesi = stats.get("basarili_sayisi", 0)
+                else:
+                    obj.toplam_start_listesi = stats.get("toplam_liste", 0)
+                    obj.islenen_start_listesi = stats.get("basarili_sayisi", 0)
+                obj.eklenen_kayit_sayisi = (obj.eklenen_kayit_sayisi or 0) + stats.get("toplam_kayit", 0)
+                obj.son_islem_tarihi = timezone.now()
+                obj.save()
+            except Exception as e:
+                try:
+                    obj = CanliYaris.objects.get(id=event_id)
+                    obj.durum = "HATA"
+                    obj.hata_mesaji = str(e)
+                    obj.son_islem_tarihi = timezone.now()
+                    obj.save()
+                except Exception:
+                    pass
+
+        api_target = request.build_absolute_uri("/api/canli-aktar/")
+        threading.Thread(
+            target=worker_thread,
+            args=(yaris.id, yaris.canli_url, api_target, mod, limit),
+            daemon=True
+        ).start()
+        messages.info(request, f"Yerel test taraması başlatıldı (ID #{yaris.id}).")
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    # Prod / Standart Mimari: Web uygulamasından Cloud Run tetiklenmez!
+    # Yarış 'BEKLIYOR' durumuna alınır; Cloud Run rutin taramasında bu linki otomatik alıp işler.
+    yaris.durum = "BEKLIYOR"
+    yaris.hata_mesaji = None
+    yaris.son_islem_tarihi = timezone.now()
     yaris.save()
-
-    mod_adi = "Sonuç Listesi" if mod == 'sonuc_listesi' else "Start Listesi"
-    limit_str = f" (İlk {limit} adet)" if limit else ""
-    messages.success(request, f"{mod_adi} taraması{limit_str} yerel ortamda başlatıldı. Gemini ile işleniyor...")
+    messages.success(request, f"'{yaris.musabaka_adi or yaris.canli_url}' tarama sırasına alındı (Durum: Bekliyor). Cloud Run periyodik taraması bu yarışı otomatik tarayacaktır.")
     return redirect("sonuclar:canli_yaris_listesi")
 
 
@@ -1354,6 +1317,44 @@ def api_canli_yarislar_durum(request):
         "eklenen_kayit_sayisi", "hata_mesaji"
     )
     return JsonResponse({"yarislar": list(yarislar)})
+
+
+@csrf_exempt
+def api_canli_bekleyen_yarislar(request):
+    """
+    Cloud Run rutin tarama botu için işlenmeyi bekleyen canlı yarışları döner.
+    Cloud Run bu endpoint'i periyodik (ör: Cloud Scheduler) çağırıp bekleyen yarışları çeker.
+    """
+    durum_param = request.GET.get('durum', '').strip()
+    if durum_param:
+        qs = CanliYaris.objects.filter(durum=durum_param)
+    else:
+        # Varsayılan: Bekleyen veya işlemde kalan yarışlar
+        qs = CanliYaris.objects.filter(durum__in=['BEKLIYOR', 'ISLENIYOR'])
+
+    yarislar_data = []
+    for y in qs.order_by('-olusturulma_tarihi'):
+        yarislar_data.append({
+            "id": y.id,
+            "event_id": y.event_id,
+            "canli_url": y.canli_url,
+            "musabaka_adi": y.musabaka_adi or "",
+            "sehir": y.gosterilen_sehir,
+            "tarih": y.gosterilen_tarih,
+            "durum": y.durum,
+            "toplam_start_listesi": y.toplam_start_listesi,
+            "islenen_start_listesi": y.islenen_start_listesi,
+            "toplam_sonuc_listesi": y.toplam_sonuc_listesi,
+            "islenen_sonuc_listesi": y.islenen_sonuc_listesi,
+            "eklenen_kayit_sayisi": y.eklenen_kayit_sayisi,
+            "son_islem_tarihi": y.son_islem_tarihi.isoformat() if y.son_islem_tarihi else None
+        })
+
+    return JsonResponse({
+        "durum": "basarili",
+        "toplam": len(yarislar_data),
+        "yarislar": yarislar_data
+    })
 
 
 def musabaka_listesi(request):
