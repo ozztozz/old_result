@@ -463,6 +463,12 @@ def _process_single_race_payload(payload: dict) -> dict:
     for sp in Sporcu.objects.filter(sporcu_adi__in=unique_names).select_related('birincil_kulup'):
         sporcu_exact_cache.setdefault(sp.sporcu_adi.lower(), []).append(sp)
 
+    races_to_create = []
+    races_to_update = []
+    sporcular_to_update = set()
+    kulupler_to_update = set()
+    tarihceler_to_save = set()
+
     for item in tum_kayitlar:
         derece_val = item.get('derece') or item.get('time')
         sira_val = str(item.get('sira') or item.get('rank') or '').strip()
@@ -491,9 +497,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                     target_race.dosya_adi = dosya_adi
                 if dosya_obj:
                     target_race.canli_dosya = dosya_obj
-                target_race.save(update_fields=[
-                    'derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'kaynak_turu', 'dosya_adi', 'canli_dosya'
-                ])
+                races_to_update.append(target_race)
                 stats['guncellenen_sonuc'] += 1
                 continue
             except YarisSonucu.DoesNotExist:
@@ -683,7 +687,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                         existing_race.canli_dosya = dosya_obj
                     if dosya_adi:
                         existing_race.dosya_adi = dosya_adi
-                    existing_race.save()
+                    races_to_update.append(existing_race)
                     stats['guncellenen_sonuc'] += 1
                 else:
                     # Zaten sonuçlanmış kayıt; birebir aynı mı kontrol et (MÜKERRERLİK KORUMASI)
@@ -706,7 +710,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.canli_dosya = dosya_obj
                         if dosya_adi:
                             existing_race.dosya_adi = dosya_adi
-                        existing_race.save()
+                        races_to_update.append(existing_race)
                         stats['guncellenen_sonuc'] += 1
             else: # start_listesi
                 if existing_race.derece != "Bekleniyor":
@@ -725,12 +729,12 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.giris_derecesi = str(giris_derecesi_val)
                         if dosya_obj:
                             existing_race.canli_dosya = dosya_obj
-                        existing_race.save()
+                        races_to_update.append(existing_race)
                         stats['guncellenen_sonuc'] += 1
         else:
             # YENİ YARIŞ SONUCU / START KAYDI
             yeni_derece = derece_val if tur == 'sonuc_listesi' else "Bekleniyor"
-            yeni_yaris = YarisSonucu.objects.create(
+            yeni_yaris = YarisSonucu(
                 event=event,
                 sporcu=sporcu,
                 kulup=kulup,
@@ -752,6 +756,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                 puan=puan_val if tur == 'sonuc_listesi' else None,
                 baraj=baraj_val
             )
+            races_to_create.append(yeni_yaris)
             existing_races_map[sporcu.id] = yeni_yaris
             stats['eklenen_sonuc'] += 1
 
@@ -762,13 +767,29 @@ def _process_single_race_payload(payload: dict) -> dict:
                     sporcu.ilk_yaris_tarihi = yaris_tarihi_baslangic
                 if not sporcu.son_yaris_tarihi or yaris_tarihi_baslangic > sporcu.son_yaris_tarihi:
                     sporcu.son_yaris_tarihi = yaris_tarihi_baslangic
-            sporcu.save(update_fields=['toplam_yaris_sayisi', 'ilk_yaris_tarihi', 'son_yaris_tarihi'])
+            sporcular_to_update.add(sporcu)
 
             tarihce.toplam_yaris_sayisi = (tarihce.toplam_yaris_sayisi or 0) + 1
-            tarihce.save(update_fields=['toplam_yaris_sayisi'])
+            tarihceler_to_save.add(tarihce)
 
             kulup.toplam_yaris_sayisi = (kulup.toplam_yaris_sayisi or 0) + 1
-            kulup.save(update_fields=['toplam_yaris_sayisi'])
+            kulupler_to_update.add(kulup)
+
+    # BULK İŞLEMLER (YÜKSEK PERFORMANSLI TOPLU YAZIM)
+    if races_to_create:
+        YarisSonucu.objects.bulk_create(races_to_create, batch_size=500)
+    if races_to_update:
+        YarisSonucu.objects.bulk_update(
+            races_to_update,
+            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu'],
+            batch_size=500
+        )
+    if sporcular_to_update:
+        Sporcu.objects.bulk_update(list(sporcular_to_update), ['toplam_yaris_sayisi', 'ilk_yaris_tarihi', 'son_yaris_tarihi'], batch_size=500)
+    if kulupler_to_update:
+        Kulup.objects.bulk_update(list(kulupler_to_update), ['toplam_yaris_sayisi'], batch_size=500)
+    for t in tarihceler_to_save:
+        t.save()
 
     if dosya_obj:
         dosya_obj.kayit_sayisi = len(tum_kayitlar)
