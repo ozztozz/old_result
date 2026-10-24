@@ -464,7 +464,7 @@ Format:
   ]
 }}
 * Start listesinde olmayan yedek/yeni bir sporcu yüzmüşse onu "yeni_sporcular" listesine ekle.
-SADECE JSON döndür."""
+SADECE JSON nesnesi (object) döndür."""
         else:
             prompt = f"""Bu bir TYF Splash Meet Manager START LİSTESİ PDF sayfasıdır.
 Sayfa {p_num}/{total_pages}.
@@ -491,7 +491,7 @@ Format:
     }}
   ]
 }}
-SADECE JSON döndür."""
+SADECE JSON nesnesi (object) döndür."""
 
         part = types.Part.from_bytes(data=p_bytes, mime_type="application/pdf")
         res = generate_content_with_fallback(
@@ -506,7 +506,28 @@ SADECE JSON döndür."""
             raw = re.sub(r"\s*```$", "", raw)
         parsed_json = json.loads(raw)
         if isinstance(parsed_json, list):
-            parsed_json = {"kayitlar": parsed_json}
+            if len(parsed_json) == 1 and isinstance(parsed_json[0], dict) and (
+                "kayitlar" in parsed_json[0] or "yeni_sporcular" in parsed_json[0]
+            ):
+                parsed_json = parsed_json[0]
+            else:
+                merged_records = []
+                merged_new = []
+                header_obj = {}
+                for elem in parsed_json:
+                    if isinstance(elem, dict):
+                        for hk in ("musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"):
+                            if elem.get(hk) and not header_obj.get(hk):
+                                header_obj[hk] = elem[hk]
+                        if "kayitlar" in elem and isinstance(elem["kayitlar"], list):
+                            merged_records.extend(elem["kayitlar"])
+                        elif "sporcu" in elem or "derece" in elem or "kulvar" in elem:
+                            merged_records.append(elem)
+                        if "yeni_sporcular" in elem and isinstance(elem["yeni_sporcular"], list):
+                            merged_new.extend(elem["yeni_sporcular"])
+                header_obj["kayitlar"] = merged_records
+                header_obj["yeni_sporcular"] = merged_new
+                parsed_json = header_obj
         elif not isinstance(parsed_json, dict):
             parsed_json = {"kayitlar": []}
         return p_idx, parsed_json

@@ -655,16 +655,16 @@ def _process_single_race_payload(payload: dict) -> dict:
                     cand_y_no = cand_meet.filter(yaris_no=yaris_no)
                     if cand_y_no.exists():
                         existing_race = cand_y_no.first()
-                if not existing_race and cand_meet.exists():
+                if not existing_race and not yaris_no and cand_meet.exists():
                     existing_race = cand_meet.first()
 
-            if not existing_race and yaris_tarihi_baslangic:
+            if not existing_race and not event and yaris_tarihi_baslangic:
                 cand_date = cand_qs.filter(event__yaris_tarihi_baslangic=yaris_tarihi_baslangic)
                 if yaris_no:
                     cand_d_no = cand_date.filter(yaris_no=yaris_no)
                     if cand_d_no.exists():
                         existing_race = cand_d_no.first()
-                if not existing_race and cand_date.exists():
+                if not existing_race and not yaris_no and cand_date.exists():
                     existing_race = cand_date.first()
 
             if existing_race:
