@@ -22,15 +22,18 @@ Bu servis Google Cloud Run veya Cloud Functions (gen2) altyapısında çalışı
 
 import os
 import re
-import ssl
 import json
 import time
 import hashlib
-import difflib
-import urllib.request
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urljoin
 from typing import Dict, List, Any, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
+
+import requests
+from requests.adapters import HTTPAdapter
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 try:
     import pymupdf as fitz
@@ -56,153 +59,60 @@ except ImportError:
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 DEFAULT_DJANGO_BASE_URL = os.environ.get("DJANGO_BASE_URL", "https://ozztozz.pythonanywhere.com").rstrip("/")
 DEFAULT_BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 5))
+STARTLIST_POST_DELAY_SEC = max(60, int(os.environ.get("STARTLIST_POST_DELAY_SEC", 60)))
 
-_TR_NORM_MAP = str.maketrans({
-    "İ": "i", "I": "ı", "i": "i", "ı": "ı",
-    "Ğ": "ğ", "Ü": "ü", "Ş": "ş", "Ö": "ö", "Ç": "ç",
-    "Â": "a", "Î": "i", "Û": "u", "â": "a", "î": "i", "û": "u",
-})
+# Kalıcı TCP/TLS bağlantı havuzu (HTTP Keep-Alive ile tekrarlı el sıkışma yükünü önler)
+_HTTP_SESSION: Optional[requests.Session] = None
 
 
-def normalize_tr(s: str) -> str:
-    """Türkçe karakter duyarlı küçük harf ve boşluk normalizasyonu."""
-    if not s:
-        return ""
-    s = str(s).translate(_TR_NORM_MAP).lower()
-    s = re.sub(r"[^a-z0-9ğüşıöç\s]", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
-
-
-def extract_race_no_from_filename(filename_or_url: str) -> Optional[str]:
-    """StartList_12.pdf veya ResultList_12.pdf gibi dosya adlarından yarış numarasını çıkarır."""
-    if not filename_or_url:
-        return None
-    fname = os.path.basename(str(filename_or_url))
-    m = re.search(r"(?:StartList|ResultList)_(\d+)\.pdf", fname, re.I)
-    if not m:
-        m = re.search(r"_(\d+)\.pdf", fname, re.I)
-    return m.group(1) if m else None
-
-
-def is_valid_swim_time(val: Any) -> Optional[str]:
-    """
-    Verilen değer geçerli bir yüzme derecesi ise (örn: '27.45', '1:04.32', '01:04,32')
-    noktalı standart formatta ('1:04.32') döner; değilse None döner.
-    """
-    if val is None:
-        return None
-    s = re.sub(r"\s+", "", str(val).strip()).replace(",", ".")
-    if not re.match(r"^(?:\d{1,2}:)?(?:\d{1,2}:)?\d{1,2}\.\d{2}$", s):
-        return None
-    return s
-
-
-def normalize_and_validate_derece(raw_derece: Any, rec: Optional[Dict[str, Any]] = None) -> Optional[str]:
-    """
-    Sonuç listesindeki bir kaydın 'derece' alanını doğrular.
-    - Geçerli yüzme süresi ise ('1:05.32', '28.91') temizlenmiş halini döner.
-    - Diskalifiye / Terk / Katılmadı ise 'DSQ', 'DNF' veya 'DNS' döner.
-    - Gemini sütun kaydırıp 'derece' içine sporcu adı yazmışsa ve zamanı 'baraj' alanına
-      kaydırmışsa zamanı kurtarır, sporcu adını da boşsa 'sporcu' alanına geri yazar.
-    - Geçersiz metin/sporcu adı ise asla derece olarak döndürmez (None döner).
-    """
-    rec = rec if isinstance(rec, dict) else {}
-    is_dsq_flag = bool(rec.get("diskalifiye")) or bool(rec.get("diskalifiye_nedeni"))
-
-    s = str(raw_derece or "").strip()
-    s_norm = normalize_tr(s)
-
-    dsq_tokens = ("dsq", "dq", "disk", "diskalifiye", "disqualified", "ihrac")
-    dns_tokens = ("dns", "katılmadı", "katilmadi", "girmedi", "did not start", "ns", "yuzmedi", "yüzmedi")
-    dnf_tokens = ("dnf", "terk", "yarış terk", "yaris terk", "did not finish", "bıraktı", "birakti")
-
-    if s_norm in dsq_tokens or s.lower().startswith("disk"):
-        return "DSQ"
-    if s_norm in dns_tokens:
-        return "DNS"
-    if s_norm in dnf_tokens:
-        return "DNF"
-
-    clean_t = is_valid_swim_time(s)
-    if clean_t:
-        return clean_t
-
-    # Metin içinde gömülü zaman var mı? (örn: "1:05.21 A2")
-    m_emb = re.search(r"\b((?:\d{1,2}:)?\d{1,2}[\.,]\d{2})\b", s)
-    if m_emb:
-        clean_emb = is_valid_swim_time(m_emb.group(1))
-        if clean_emb:
-            return clean_emb
-
-    # Sütun kayması kontrolü:
-    # Eğer 'derece' içine sporcu adı gelmişse (harf içeriyor ve rakam içermiyorsa) ve 'sporcu' alanı boşsa:
-    if s and not re.search(r"\d", s) and len(s) >= 4 and not rec.get("sporcu"):
-        rec["sporcu"] = s
-
-    # 'baraj' alanında geçerli bir yüzme zamanı var mı?
-    baraj_raw = str(rec.get("baraj") or "").strip()
-    if baraj_raw:
-        clean_b = is_valid_swim_time(baraj_raw)
-        if clean_b:
-            rec["baraj"] = None
-            return clean_b
-
-    if is_dsq_flag:
-        return "DSQ"
-
-    return None
-
-
-def get_ssl_context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+def get_http_session() -> requests.Session:
+    global _HTTP_SESSION
+    if _HTTP_SESSION is None:
+        session = requests.Session()
+        session.verify = False
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Connection": "keep-alive"
+        })
+        adapter = HTTPAdapter(pool_connections=16, pool_maxsize=16)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        _HTTP_SESSION = session
+    return _HTTP_SESSION
 
 
 def download_bytes(url: str) -> bytes:
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    )
-    with urllib.request.urlopen(req, context=get_ssl_context(), timeout=30) as resp:
-        return resp.read()
+    resp = get_http_session().get(url, timeout=30)
+    resp.raise_for_status()
+    return resp.content
 
 
 def download_file_with_meta(url: str) -> Tuple[bytes, Dict[str, Any]]:
-    """Dosyayı indirir ve ETag, Last-Modified, SHA-256 content_hash meta verilerini çıkarır."""
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    )
-    with urllib.request.urlopen(req, context=get_ssl_context(), timeout=30) as resp:
-        content = resp.read()
-        etag = (resp.headers.get("ETag") or "").strip('"')
-        last_modified = resp.headers.get("Last-Modified") or ""
-        content_hash = hashlib.sha256(content).hexdigest()
-        meta = {
-            "etag": etag,
-            "last_modified": last_modified,
-            "content_hash": content_hash,
-            "dosya_boyutu": len(content)
-        }
-        return content, meta
+    """Dosyayı indirir ve ETag, Last-Modified meta verilerini çıkarır."""
+    resp = get_http_session().get(url, timeout=30)
+    resp.raise_for_status()
+    content = resp.content
+    etag = (resp.headers.get("ETag") or "").strip('"')
+    last_modified = resp.headers.get("Last-Modified") or ""
+    meta = {
+        "etag": etag,
+        "last_modified": last_modified,
+        "dosya_boyutu": len(content)
+    }
+    return content, meta
 
 
 def get_remote_file_header(url: str) -> Tuple[str, Dict[str, str]]:
     """HTTP HEAD isteği ile dosyanın ETag ve Last-Modified başlıklarını çeker (0 bayt veri tüketir)."""
-    req = urllib.request.Request(
-        url,
-        method="HEAD",
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    )
     try:
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=10) as resp:
+        resp = get_http_session().head(url, timeout=10, allow_redirects=True)
+        if resp.ok:
             etag = (resp.headers.get("ETag") or "").strip('"')
             last_modified = resp.headers.get("Last-Modified") or ""
             return url, {"etag": etag, "last_modified": last_modified}
     except Exception:
-        return url, {}
+        pass
+    return url, {}
 
 
 def fetch_remote_headers_map(urls: List[str]) -> Dict[str, Dict[str, str]]:
@@ -230,8 +140,8 @@ def get_endpoint_url(django_url: str, endpoint: str) -> str:
 
 def check_file_already_processed(django_url: str, event_id: Any, filename: str, meta: Dict[str, Any], api_key: Optional[str] = None) -> bool:
     """
-    Django API'den dosyanın daha önce işlenip işlenmediğini, veritabanında geçerli kaydı olup olmadığını
-    ve değişip değişmediğini kontrol eder.
+    Django API'den dosyanın daha önce işlenip işlenmediğini ve değişip değişmediğini kontrol eder.
+    Eğer dosya daha önce işlenmişse ve ETag/Hash aynıysa gereksiz Gemini çağrısını önler.
     """
     if not django_url or not event_id:
         return False
@@ -240,62 +150,20 @@ def check_file_already_processed(django_url: str, event_id: Any, filename: str, 
         "canli_yaris_id": event_id,
         "dosya_adi": filename,
         "etag": meta.get("etag"),
-        "content_hash": meta.get("content_hash"),
         "last_modified": meta.get("last_modified"),
         "dosya_boyutu": meta.get("dosya_boyutu")
     }
     try:
-        data_json = json.dumps(payload).encode("utf-8")
         headers = {"Content-Type": "application/json; charset=utf-8"}
         if api_key:
             headers["X-Api-Key"] = api_key
-        req = urllib.request.Request(check_api, data=data_json, headers=headers)
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            is_valid = data.get("veri_gecerli_mi", True) is not False and (data.get("kayit_sayisi") or 0) > 0
-            return bool(data.get("islenmis_mi") is True and is_valid and data.get("degisti_mi") is False)
+        resp = get_http_session().post(check_api, json=payload, headers=headers, timeout=25)
+        resp.raise_for_status()
+        data = resp.json()
+        return bool(data.get("islenmis_mi") is True and data.get("degisti_mi") is False)
     except Exception as e:
         print(f"  [!] Dosya kontrol hatası ({filename}): {e}")
         return False
-
-
-def verify_file_saved_in_django(
-    django_url: str,
-    event_id: Any,
-    filename: str,
-    meta: Dict[str, Any],
-    api_key: Optional[str] = None
-) -> Tuple[bool, Dict[str, Any]]:
-    """
-    POST işleminden sonra Django veritabanında dosyanın gerçekten kaydedildiğini ve
-    eşleştirme/kilitlenme nedeniyle veri kaybı yaşanmadığını doğrular.
-    """
-    if not django_url or not event_id:
-        return True, {}
-    check_api = get_endpoint_url(django_url, "canli-dosya-kontrol")
-    payload = {
-        "canli_yaris_id": event_id,
-        "dosya_adi": filename,
-        "etag": meta.get("etag"),
-        "content_hash": meta.get("content_hash"),
-        "last_modified": meta.get("last_modified"),
-        "dosya_boyutu": meta.get("dosya_boyutu")
-    }
-    try:
-        data_json = json.dumps(payload).encode("utf-8")
-        headers = {"Content-Type": "application/json; charset=utf-8"}
-        if api_key:
-            headers["X-Api-Key"] = api_key
-        req = urllib.request.Request(check_api, data=data_json, headers=headers)
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            is_done = bool(data.get("islenmis_mi") is True)
-            is_valid = bool(data.get("veri_gecerli_mi", True) is not False)
-            saved_count = int(data.get("db_kayit_sayisi") or data.get("kayit_sayisi") or 0)
-            return (is_done and is_valid and saved_count > 0), data
-    except Exception as e:
-        print(f"  [!] POST sonrası doğrulama sorgusu hatası ({filename}): {e}")
-        return False, {}
 
 
 def fetch_known_files_map(django_url: str, event_id: Any, api_key: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
@@ -308,18 +176,17 @@ def fetch_known_files_map(django_url: str, event_id: Any, api_key: Optional[str]
     if not django_url or not event_id:
         return {}
     endpoint = get_endpoint_url(django_url, "canli-dosya-kontrol")
-    query = urlencode({"event_id": event_id})
-    full_url = f"{endpoint}?{query}"
+    headers = {"User-Agent": "TYF-CloudRunner/1.0"}
+    if api_key:
+        headers["X-Api-Key"] = api_key
     try:
-        req = urllib.request.Request(full_url, headers={"User-Agent": "TYF-CloudRunner/1.0"})
-        if api_key:
-            req.add_header("X-Api-Key", api_key)
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            if data.get("durum") == "basarili":
-                return data.get("dosyalar", {})
+        resp = get_http_session().get(endpoint, params={"event_id": event_id}, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("durum") == "basarili":
+            return data.get("dosyalar", {})
     except Exception as e:
-        print(f"  [!] Toplu dosya kontrolü hatası ({full_url}): {e}")
+        print(f"  [!] Toplu dosya kontrolü hatası ({endpoint}): {e}")
     return {}
 
 
@@ -328,17 +195,16 @@ def fetch_startlist_swimmers(django_url: str, event_id: Any, yaris_no: str, api_
     if not django_url:
         return []
     base_api = get_endpoint_url(django_url, "canli-startlist-sporculari")
-    query = urlencode({"event_id": event_id, "yaris_no": yaris_no})
-    full_url = f"{base_api}?{query}"
+    headers = {"User-Agent": "TYF-LiveRunner"}
+    if api_key:
+        headers["X-Api-Key"] = api_key
     try:
-        req = urllib.request.Request(full_url, headers={"User-Agent": "TYF-LiveRunner"})
-        if api_key:
-            req.add_header("X-Api-Key", api_key)
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data.get("sporcular", [])
+        resp = get_http_session().get(base_api, params={"event_id": event_id, "yaris_no": yaris_no}, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("sporcular", [])
     except Exception as e:
-        print(f"  [!] Start listesi sporcuları çekilemedi ({full_url}): {e}")
+        print(f"  [!] Start listesi sporcuları çekilemedi ({base_api}): {e}")
         return []
 
 
@@ -349,10 +215,10 @@ def fetch_pending_meets(base_url: str, api_key: Optional[str] = None) -> List[Di
     if api_key:
         headers["X-Api-Key"] = api_key
     try:
-        req = urllib.request.Request(endpoint, headers=headers)
-        with urllib.request.urlopen(req, context=get_ssl_context(), timeout=20) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data.get("yarislar", [])
+        resp = get_http_session().get(endpoint, headers=headers, timeout=20)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("yarislar", [])
     except Exception as e:
         print(f"[!] Bekleyen yarışlar çekilemedi ({endpoint}): {e}")
         return []
@@ -465,190 +331,18 @@ def detect_pdf_type(pdf_url: str, pdf_bytes: bytes = b"") -> str:
     return "start_listesi"
 
 
-def sanitize_and_match_records(
-    raw_records: List[Dict[str, Any]],
-    doc_type: str,
-    startlist_swimmers: Optional[List[Dict[str, Any]]] = None
-) -> List[Dict[str, Any]]:
-    """
-    Gemini'den dönen kayıtları doğrular, sütun kaymalarını (sporcu adının dereceye gelmesi vb.)
-    temizler ve sonuç listesinde StartList sporcularıyla deterministik Python eşleştirmesi yapar.
-    """
-    if not raw_records:
-        return []
-
-    if doc_type != "sonuc_listesi":
-        cleaned_starts = []
-        for r in raw_records:
-            if not isinstance(r, dict):
-                continue
-            sporcu = str(r.get("sporcu") or r.get("sporcu_adi") or r.get("name") or "").strip()
-            if not sporcu:
-                continue
-            r["sporcu"] = sporcu
-            cleaned_starts.append(r)
-        return cleaned_starts
-
-    # StartList sporcuları için hızlı arama tabloları hazırla
-    swimmers_by_id: Dict[int, Dict[str, Any]] = {}
-    swimmers_by_norm_name: Dict[str, List[Dict[str, Any]]] = {}
-    all_swimmers: List[Tuple[str, Dict[str, Any]]] = []
-
-    if startlist_swimmers:
-        for s in startlist_swimmers:
-            sid = s.get("id")
-            if sid is not None:
-                try:
-                    swimmers_by_id[int(sid)] = s
-                except (ValueError, TypeError):
-                    pass
-            sname = str(s.get("sporcu_adi") or s.get("sporcu") or "").strip()
-            norm_s = normalize_tr(sname)
-            if norm_s:
-                swimmers_by_norm_name.setdefault(norm_s, []).append(s)
-                all_swimmers.append((norm_s, s))
-
-    def _extract_birth_year(val: Any) -> Optional[int]:
-        if not val:
-            return None
-        m = re.search(r"(\d{2,4})", str(val).strip())
-        if not m:
-            return None
-        y = int(m.group(1))
-        if y < 100:
-            return 2000 + y if y <= 35 else 1900 + y
-        return y
-
-    def _match_swimmer_in_startlist(name_str: str, yb_val: Any) -> Optional[Dict[str, Any]]:
-        norm_q = normalize_tr(name_str)
-        if not norm_q or not all_swimmers:
-            return None
-        target_yb = _extract_birth_year(yb_val)
-
-        # 1. Tam normalize isim eşleşmesi
-        exact_cands = swimmers_by_norm_name.get(norm_q)
-        if exact_cands:
-            if len(exact_cands) == 1:
-                return exact_cands[0]
-            if target_yb:
-                for c in exact_cands:
-                    if _extract_birth_year(c.get("dogum_yili")) == target_yb:
-                        return c
-            return exact_cands[0]
-
-        # 2. Uzun isim kırpılması (Splash Meet Manager PDF sütun darlığı) veya bulanık eşleşme
-        best_score = 0.0
-        best_cand = None
-        for cand_norm, cand_obj in all_swimmers:
-            if len(norm_q) >= 8 and len(cand_norm) >= 8 and (cand_norm.startswith(norm_q) or norm_q.startswith(cand_norm)):
-                sim = 0.93
-            else:
-                sim = difflib.SequenceMatcher(None, norm_q, cand_norm).ratio()
-
-            cand_yb = _extract_birth_year(cand_obj.get("dogum_yili"))
-            if target_yb and cand_yb:
-                if target_yb == cand_yb:
-                    sim += 0.05
-                else:
-                    sim -= 0.15
-
-            if sim > best_score:
-                best_score = sim
-                best_cand = cand_obj
-
-        if best_cand and best_score >= 0.82:
-            return best_cand
-        return None
-
-    cleaned_results = []
-    for r in raw_records:
-        if not isinstance(r, dict):
-            continue
-
-        rec = dict(r)
-        sporcu = str(rec.get("sporcu") or rec.get("sporcu_adi") or rec.get("name") or "").strip()
-        if sporcu:
-            rec["sporcu"] = sporcu
-
-        # Dereceyi doğrula ve sütun kayması varsa düzelt
-        valid_derece = normalize_and_validate_derece(rec.get("derece") or rec.get("time"), rec)
-        if not valid_derece:
-            continue
-        rec["derece"] = valid_derece
-
-        # normalize_and_validate_derece 'sporcu' alanını kurtarmış olabilir
-        sporcu = str(rec.get("sporcu") or "").strip()
-
-        # Sıra ve puan temizliği
-        sira_raw = str(rec.get("sira") or rec.get("rank") or "").strip()
-        if sira_raw.endswith("."):
-            sira_raw = sira_raw[:-1].strip()
-        if valid_derece in ("DSQ", "DNS", "DNF"):
-            rec["sira"] = ""
-            rec["puan"] = None
-        else:
-            rec["sira"] = sira_raw
-
-        # StartList ID doğrulaması ve deterministik eşleştirme
-        raw_id = rec.get("id")
-        matched_swimmer = None
-        if raw_id is not None:
-            try:
-                rid = int(raw_id)
-                cand_sw = swimmers_by_id.get(rid)
-                if cand_sw:
-                    cand_name_norm = normalize_tr(cand_sw.get("sporcu_adi") or "")
-                    if not sporcu:
-                        # Gemini sadece ID döndürmüş -> sporcu adını, kulübünü ve doğum yılını StartList'ten tamamla!
-                        matched_swimmer = cand_sw
-                    else:
-                        rec_name_norm = normalize_tr(sporcu)
-                        sim = difflib.SequenceMatcher(None, rec_name_norm, cand_name_norm).ratio()
-                        if rec_name_norm == cand_name_norm or sim >= 0.72 or cand_name_norm.startswith(rec_name_norm) or rec_name_norm.startswith(cand_name_norm):
-                            matched_swimmer = cand_sw
-                        else:
-                            # Gemini yanlış sporcunun ID'sini yazmış! ID'yi sıfırla ve isimden bul.
-                            rec["id"] = None
-                else:
-                    rec["id"] = None
-            except (ValueError, TypeError):
-                rec["id"] = None
-
-        if not matched_swimmer and sporcu and all_swimmers:
-            matched_swimmer = _match_swimmer_in_startlist(sporcu, rec.get("dogum_yili"))
-
-        if matched_swimmer:
-            rec["id"] = matched_swimmer.get("id")
-            if not rec.get("sporcu"):
-                rec["sporcu"] = matched_swimmer.get("sporcu_adi") or ""
-            if not rec.get("kulup"):
-                rec["kulup"] = matched_swimmer.get("kulup_adi") or ""
-            if not rec.get("dogum_yili") and matched_swimmer.get("dogum_yili"):
-                rec["dogum_yili"] = str(matched_swimmer.get("dogum_yili"))
-
-        # Hem sporcu adı hem de geçerli ID yoksa bu kayıt işlenemez, atla
-        if not rec.get("sporcu") and not rec.get("id"):
-            continue
-
-        cleaned_results.append(rec)
-
-    return cleaned_results
-
-
 def parse_meet_pdf(pdf_bytes: bytes, client: genai.Client, pdf_url: str = "", model: str = DEFAULT_MODEL, startlist_swimmers: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """PDF sayfalarını Gemini Flash Lite ile paralel olarak yapılandırılmış JSON verisine dönüştürür."""
     doc_type = detect_pdf_type(pdf_url, pdf_bytes)
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     total_pages = len(doc)
 
-    fallback_race_no = extract_race_no_from_filename(pdf_url)
-
     header_data = {
         "tur": doc_type,
         "musabaka_adi": "",
         "sehir": "",
         "tarih": "",
-        "yaris_no": int(fallback_race_no) if (fallback_race_no and fallback_race_no.isdigit()) else fallback_race_no,
+        "yaris_no": None,
         "cinsiyet": "",
         "mesafe": None,
         "stil": "",
@@ -660,25 +354,16 @@ def parse_meet_pdf(pdf_bytes: bytes, client: genai.Client, pdf_url: str = "", mo
 
     pages_bytes = []
     for page_idx in range(total_pages):
-        page_text = ""
-        try:
-            page_text = (doc[page_idx].get_text("text") or "").strip()
-        except Exception:
-            page_text = ""
         single_page_doc = fitz.open()
         single_page_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
-        pages_bytes.append((page_idx, single_page_doc.tobytes(), page_text))
+        pages_bytes.append((page_idx, single_page_doc.tobytes()))
         single_page_doc.close()
     doc.close()
 
     def process_page(args):
-        p_idx, p_bytes, p_text = args
+        p_idx, p_bytes = args
         p_num = p_idx + 1
         is_first = (p_idx == 0)
-
-        text_hint = ""
-        if p_text and len(p_text) > 20:
-            text_hint = f"\nSAYFADAKİ HAM METİN (Sütunları ve dereceleri doğrulamak için referans al):\n---\n{p_text[:12000]}\n---\n"
 
         if doc_type == "sonuc_listesi":
             swimmers_context = ""
@@ -693,21 +378,13 @@ def parse_meet_pdf(pdf_bytes: bytes, client: genai.Client, pdf_url: str = "", mo
                         "seri": s.get("seri"),
                         "kulvar": s.get("kulvar")
                     })
-                swimmers_context = f"\nBU YARIŞTA YÜZEN START LİSTESİNDEKİ SPORCULAR (İsim eşleşiyorsa buradaki id değerini ata):\n{json.dumps(candidates, ensure_ascii=False)}\n"
+                swimmers_context = f"\nBU YARIŞTA YÜZEN START LİSTESİNDEKİ SPORCULAR (Eşleştirmede bu id değerlerini kullan):\n{json.dumps(candidates, ensure_ascii=False)}\n"
 
-            prompt = f"""Bu bir TYF Splash Meet Manager SONUÇ LİSTESİ (ResultList) PDF sayfasıdır.
+            prompt = f"""Bu bir TYF Splash Meet Manager SONUÇ LİSTESİ PDF sayfasıdır.
 Sayfa {p_num}/{total_pages}.
-{'1. Başlıktan musabaka_adi, sehir, tarih (YYYY-MM-DD), yaris_no (sadece sayı), cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yas_grubu çıkar.' if is_first else ''}
+{'1. Başlıktan müsabaka_adı, şehir, tarih (YYYY-MM-DD), yarış_no, cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yaş_grubu çıkar.' if is_first else ''}
 {swimmers_context}
-{text_hint}
-2. Sayfadaki TÜM yaş grubu bölümlerindeki (örn. 11 yaş, 12 yaş, 13 yaş, Açık Yaş vb.) normal dereceli sporcuları VE sayfa sonundaki diskalifiye (DSQ / disk.) veya terk/katılmadı sporcuların TAMAMINI eksiksiz çıkar.
-ÇOK ÖNEMLİ KURALLAR:
-- Her bir sporcu kaydında "sporcu" (Ad Soyad), "dogum_yili" (2 veya 4 haneli yıl), "kulup" ve "derece" alanlarını MUTLAKA doldur.
-- "derece" alanına ASLA sporcu adı veya kulüp adı YAZMA! "derece" alanı SADECE yüzme süresi (örn: "32.45", "1:08.12", "2:24.80") veya "DSQ", "DNS", "DNF" olabilir.
-- TYF sonuç listelerinde sütun sırası genellikle: [Sıra] [Sporcu Adı Soyadı] [Doğum Yılı (YB)] [Kulübü] [Derece (Zaman)] [Puan / Baraj] şeklindedir. Sütunları kesinlikle kaydırma!
-- Ara geçiş derecelerini (50m:, 100m:, 150m: vb. split zamanları) ayrı satır veya sonuç olarak EKLEME, sadece sporcunun nihai bitiş derecesini al.
-- Sayfada birden fazla yaş kategorisi başlığı varsa sadece sonuncuyu veya sadece diskalifiyeleri değil, sayfanın başından sonuna kadar TÜM sıralanmış sporcuları çıkar.
-
+2. Sayfadaki tüm sporcu sonuçlarını eksiksiz çıkar. Listedeki sporcularla eşleştirip "id" değerini ata.
 Format:
 {{
   "musabaka_adi": string veya null,
@@ -720,25 +397,34 @@ Format:
   "yas_grubu": string veya null,
   "kayitlar": [
     {{
-      "id": integer veya null,
-      "sira": integer veya string,
+      "id": integer veya null (start listesinde eşleşen sporcunun id değeri),
       "sporcu": string,
       "dogum_yili": string,
       "kulup": string,
+      "sira": integer veya string,
       "derece": string,
       "puan": integer veya null,
-      "yas_grubu": string veya null,
-      "baraj": string veya null,
-      "diskalifiye": boolean
+      "baraj": string veya null
+    }}
+  ],
+  "yeni_sporcular": [
+    {{
+      "sporcu": string,
+      "dogum_yili": string,
+      "kulup": string,
+      "sira": integer veya string,
+      "derece": string,
+      "puan": integer veya null,
+      "baraj": string veya null
     }}
   ]
 }}
-SADECE geçerli JSON döndür."""
+* Start listesinde olmayan yedek/yeni bir sporcu yüzmüşse onu "yeni_sporcular" listesine ekle.
+SADECE JSON döndür."""
         else:
             prompt = f"""Bu bir TYF Splash Meet Manager START LİSTESİ PDF sayfasıdır.
 Sayfa {p_num}/{total_pages}.
-{'1. Başlıktan musabaka_adi, sehir, tarih (YYYY-MM-DD), yaris_no (sadece sayı), cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yas_grubu çıkar.' if is_first else ''}
-{text_hint}
+{'1. Başlıktan müsabaka_adı, şehir, tarih (YYYY-MM-DD), yarış_no, cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yaş_grubu çıkar.' if is_first else ''}
 2. Sayfadaki her seriyi ve her kulvardaki sporcuları eksiksiz çıkar.
 Format:
 {{
@@ -761,39 +447,29 @@ Format:
     }}
   ]
 }}
-SADECE geçerli JSON döndür."""
+SADECE JSON döndür."""
 
         part = types.Part.from_bytes(data=p_bytes, mime_type="application/pdf")
-        last_err = None
-        for attempt in range(1, 4):
-            try:
-                res = client.models.generate_content(
-                    model=model,
-                    contents=[part, prompt],
-                    config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.0)
-                )
-                raw = (res.text or "").strip()
-                if raw.startswith("```"):
-                    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-                    raw = re.sub(r"\s*```$", "", raw)
-                parsed_json = json.loads(raw)
-                if isinstance(parsed_json, list):
-                    parsed_json = {"kayitlar": parsed_json}
-                elif not isinstance(parsed_json, dict):
-                    parsed_json = {"kayitlar": []}
-                return p_idx, parsed_json
-            except Exception as e:
-                last_err = e
-                print(f"  [!] Sayfa {p_num}/{total_pages} Gemini ayrıştırma hatası (Deneme {attempt}/3): {e}")
-                if attempt < 3:
-                    time.sleep(2 * attempt)
-        raise RuntimeError(f"Sayfa {p_num}/{total_pages} ayrıştırılamadı: {last_err}")
+        res = client.models.generate_content(
+            model=model,
+            contents=[part, prompt],
+            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
+        )
+        raw = (res.text or "").strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+        parsed_json = json.loads(raw)
+        if isinstance(parsed_json, list):
+            parsed_json = {"kayitlar": parsed_json}
+        elif not isinstance(parsed_json, dict):
+            parsed_json = {"kayitlar": []}
+        return p_idx, parsed_json
 
-    with ThreadPoolExecutor(max_workers=min(total_pages, 4)) as ex:
+    with ThreadPoolExecutor(max_workers=min(total_pages, 6)) as ex:
         results = list(ex.map(process_page, pages_bytes))
 
     results.sort(key=lambda x: x[0])
-    raw_all_records = []
     for p_idx, p_data in results:
         if not isinstance(p_data, dict):
             continue
@@ -803,21 +479,10 @@ SADECE geçerli JSON döndür."""
                     header_data[k] = p_data[k]
         records = p_data.get("kayitlar", [])
         if isinstance(records, list):
-            raw_all_records.extend(records)
+            header_data["kayitlar"].extend(records)
         new_swimmers = p_data.get("yeni_sporcular", [])
         if isinstance(new_swimmers, list):
-            raw_all_records.extend(new_swimmers)
-
-    # Yaris numarası dosya adından geliyorsa ve Gemini boş/farklı döndürdüyse dosya adını baz al
-    if fallback_race_no:
-        header_data["yaris_no"] = int(fallback_race_no) if fallback_race_no.isdigit() else fallback_race_no
-
-    header_data["kayitlar"] = sanitize_and_match_records(
-        raw_all_records,
-        doc_type=doc_type,
-        startlist_swimmers=startlist_swimmers
-    )
-    header_data["yeni_sporcular"] = []
+            header_data.setdefault("yeni_sporcular", []).extend(new_swimmers)
 
     return header_data
 
@@ -826,79 +491,24 @@ SADECE geçerli JSON döndür."""
 parse_start_list_pdf = parse_meet_pdf
 
 
-def post_to_django(
-    django_url: str,
-    payload: Dict[str, Any],
-    api_key: Optional[str] = None,
-    max_retries: int = 3,
-    verify_records: bool = False
-) -> bool:
-    """
-    Django API'ye veriyi POST eder.
-    verify_records=True ise (/api/canli-aktar/ için) dönen JSON içindeki
-    eklenen/güncellenen/mükerrer kayıt sayısının > 0 olduğunu da doğrular.
-    """
+def post_to_django(django_url: str, payload: Dict[str, Any], api_key: Optional[str] = None, max_retries: int = 3) -> bool:
+    """Django API'ye veriyi kalıcı HTTP oturumu (Keep-Alive) üzerinden POST eder."""
     data_json = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     headers = {"Content-Type": "application/json; charset=utf-8"}
     if api_key:
         headers["X-Api-Key"] = api_key
 
+    session = get_http_session()
     for attempt in range(1, max_retries + 1):
         try:
-            req = urllib.request.Request(django_url, data=data_json, headers=headers)
-            with urllib.request.urlopen(req, context=get_ssl_context(), timeout=90) as resp:
-                resp_body = resp.read().decode("utf-8", errors="ignore")
-                if resp.status in (200, 201):
-                    if not verify_records:
-                        return True
-                    try:
-                        resp_json = json.loads(resp_body)
-                    except Exception:
-                        resp_json = {}
-                    if resp_json.get("durum") == "basarili":
-                        ist = resp_json.get("istatistikler") or {}
-                        processed_total = (
-                            int(ist.get("eklenen_sonuc_sayisi") or 0) +
-                            int(ist.get("guncellenen_sonuc_sayisi") or 0) +
-                            int(ist.get("mukerrer_atlanilan_sayisi") or 0)
-                        )
-                        if processed_total > 0:
-                            return True
-                        print(f"  [!] Uyarı: Django 200 döndü ancak 0 kayıt işlendi ({django_url} - Deneme {attempt}/{max_retries}). Yanıt: {resp_body[:200]}")
-                    else:
-                        print(f"  [!] Uyarı: Django başarısız durum döndü ({django_url} - Deneme {attempt}/{max_retries}): {resp_body[:200]}")
+            resp = session.post(django_url, data=data_json, headers=headers, timeout=120)
+            if resp.status_code in (200, 201):
+                return True
+            print(f"  [!] Django HTTP {resp.status_code} yanıtı ({django_url} - Deneme {attempt}/{max_retries}): {resp.text[:200]}")
         except Exception as e:
             print(f"  [!] Django aktarım hatası ({django_url} - Deneme {attempt}/{max_retries}): {e}")
         if attempt < max_retries:
-            time.sleep(3 * attempt)
-    return False
-
-
-def deliver_and_verify_race_payload(
-    base_url: str,
-    event_id: Any,
-    filename: str,
-    meta: Dict[str, Any],
-    parsed_payload: Dict[str, Any],
-    api_key: Optional[str] = None,
-    max_attempts: int = 3
-) -> bool:
-    """
-    Ayrıştırılan PDF verisini Django'ya POST eder ve ardından /api/canli-dosya-kontrol/
-    üzerinden verinin veritabanına gerçekten yazıldığını (eşleştirme/lock yüzünden düşmediğini)
-    doğrular. Doğrulama başarısızsa yeniden gönderir.
-    """
-    aktar_url = get_endpoint_url(base_url, "canli-aktar")
-    for attempt in range(1, max_attempts + 1):
-        posted = post_to_django(aktar_url, parsed_payload, api_key=api_key, max_retries=2, verify_records=True)
-        if posted:
-            # Eşleştirme ve transaction commit sonrası veritabanından teyit al
-            ok, check_data = verify_file_saved_in_django(base_url, event_id, filename, meta, api_key=api_key)
-            if ok:
-                return True
-            print(f"  [!] POST sonrası DB doğrulaması başarısız ({filename} - Deneme {attempt}/{max_attempts}): {check_data}")
-        if attempt < max_attempts:
-            time.sleep(3 * attempt)
+            time.sleep(4)
     return False
 
 
@@ -914,8 +524,8 @@ def process_single_meet(
     """
     Tek bir canlı yarışın web sayfasını inceler:
     1. Django'dan bilinen tüm işlenmiş dosyaları tek sorguda çeker (/api/canli-dosya-kontrol/).
-    2. Daha önce işlenmiş (ISLENDI) ve veritabanında geçerli kaydı bulunan dosyaları SIFIR indirme ile atlar.
-    3. Henüz işlenmemiş veya verisi eksik/bozuk dosyaları BATCH_SIZE (varsayılan 5) gruplar halinde işler.
+    2. Daha önce işlenmiş (ISLENDI) dosyaları SIFIR indirme ile atlar (Ağ ve CPU tasarrufu).
+    3. Henüz işlenmemiş dosyaları BATCH_SIZE (varsayılan 5) gruplar halinde işler.
     4. Sırada bekleyen dosya varsa durumu 'ISLENIYOR' olarak korur (sonraki Scheduler tetiklemesi devam ettirir).
     5. Tüm dosyalar bittiğinde durumu 'TAMAMLANDI' yapar.
     """
@@ -975,14 +585,6 @@ def process_single_meet(
             kf = known_files.get(fname)
             if not kf or kf.get("durum") != "ISLENDI":
                 return False
-            # Django veritabanında bu dosyanın kayıtları eksik veya bozuksa yeniden işle
-            if kf.get("veri_gecerli_mi") is False:
-                return False
-            if int(kf.get("kayit_sayisi") or 0) <= 0:
-                return False
-            if "db_kayit_sayisi" in kf and int(kf.get("db_kayit_sayisi") or 0) <= 0:
-                return False
-
             rh = remote_headers.get(fname) or {}
             known_etag = (kf.get("etag") or "").strip('"')
             remote_etag = (rh.get("etag") or "").strip('"')
@@ -994,7 +596,7 @@ def process_single_meet(
                 return remote_etag == known_etag
             if remote_lm and known_lm:
                 return remote_lm == known_lm
-            return True  # Her ikisi de yoksa önceden işlenmiş ve verisi doğrulanmış ISLENDI durumunu kabul et
+            return True  # Her ikisi de yoksa önceden işlenmiş ISLENDI durumunu kabul et
 
         # İndirmeden filtreleme (ETag / Last-Modified eşleşenler 0 bayt ile atlanır)
         pending_start_urls = []
@@ -1059,7 +661,6 @@ def process_single_meet(
         # 6. Sadece bu batch içindeki dosyaları indir ve işle
         for doc_type, pdf_url in current_batch:
             filename = os.path.basename(pdf_url)
-            yaris_no = extract_race_no_from_filename(filename)
             try:
                 pdf_bytes, meta = download_file_with_meta(pdf_url)
 
@@ -1067,8 +668,6 @@ def process_single_meet(
                     print(f"  [>] {filename} ayrıştırılıyor (Start Listesi - Gemini Flash Lite)...")
                     parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model)
                     parsed["tur"] = "start_listesi"
-                    if yaris_no:
-                        parsed["yaris_no"] = yaris_no
                     if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
                         parsed["musabaka_adi"] = stats["musabaka_adi"]
                     if not parsed.get("sehir") and stats["sehir"]:
@@ -1084,23 +683,27 @@ def process_single_meet(
                     parsed["dosya_adi"] = filename
                     parsed["dosya_url"] = pdf_url
                     parsed["etag"] = meta.get("etag")
-                    parsed["content_hash"] = meta.get("content_hash")
                     parsed["last_modified"] = meta.get("last_modified")
                     parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
 
-                    record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
-                    if record_count <= 0:
-                        raise RuntimeError(f"{filename} içinden hiç geçerli sporcu kaydı çıkarılamadı.")
-
-                    if not deliver_and_verify_race_payload(base_url, event_id, filename, meta, parsed, api_key=api_key):
-                        raise RuntimeError(f"Django aktarımı veya DB doğrulaması başarısız oldu ({filename})")
+                    aktar_url = get_endpoint_url(base_url, "canli-aktar")
+                    if not post_to_django(aktar_url, parsed, api_key=api_key):
+                        raise RuntimeError(f"Django aktarımı başarısız oldu ({aktar_url})")
 
                     stats["basarili"] += 1
                     stats["islenen_start_listesi"] += 1
+                    record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
                     stats["toplam_sporcu"] += record_count
-                    print(f"  [+] {filename} başarıyla aktarıldı ve doğrulandı ({record_count} sporcu/kulvar)")
+                    print(f"  [+] {filename} başarıyla aktarıldı ({record_count} sporcu/kulvar)")
+                    print(f"  [*] Start listesi eşleştirme işlemi için {STARTLIST_POST_DELAY_SEC} sn bekleniyor...")
+                    time.sleep(STARTLIST_POST_DELAY_SEC)
 
                 else:  # sonuc_listesi
+                    m_no = re.search(r"(?:ResultList|StartList)_(\d+)\.pdf", filename, re.I)
+                    if not m_no:
+                        m_no = re.search(r"_(\d+)\.pdf", filename, re.I)
+                    yaris_no = m_no.group(1) if m_no else None
+
                     startlist_swimmers = None
                     if yaris_no:
                         startlist_swimmers = fetch_startlist_swimmers(base_url, event_id, yaris_no, api_key=api_key)
@@ -1110,8 +713,6 @@ def process_single_meet(
                     print(f"  [>] {filename} ayrıştırılıyor (Sonuç Listesi - Gemini Flash Lite)...")
                     parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model, startlist_swimmers=startlist_swimmers)
                     parsed["tur"] = "sonuc_listesi"
-                    if yaris_no:
-                        parsed["yaris_no"] = yaris_no
                     if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
                         parsed["musabaka_adi"] = stats["musabaka_adi"]
                     if not parsed.get("sehir") and stats["sehir"]:
@@ -1127,21 +728,18 @@ def process_single_meet(
                     parsed["dosya_adi"] = filename
                     parsed["dosya_url"] = pdf_url
                     parsed["etag"] = meta.get("etag")
-                    parsed["content_hash"] = meta.get("content_hash")
                     parsed["last_modified"] = meta.get("last_modified")
                     parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
 
-                    record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
-                    if record_count <= 0:
-                        raise RuntimeError(f"{filename} içinden hiç geçerli sonuç/derece çıkarılamadı.")
-
-                    if not deliver_and_verify_race_payload(base_url, event_id, filename, meta, parsed, api_key=api_key):
-                        raise RuntimeError(f"Django aktarımı veya DB doğrulaması başarısız oldu ({filename})")
+                    aktar_url = get_endpoint_url(base_url, "canli-aktar")
+                    if not post_to_django(aktar_url, parsed, api_key=api_key):
+                        raise RuntimeError(f"Django aktarımı başarısız oldu ({aktar_url})")
 
                     stats["basarili"] += 1
                     stats["islenen_sonuc_listesi"] += 1
+                    record_count = len(parsed.get("kayitlar", [])) + len(parsed.get("yeni_sporcular", []))
                     stats["toplam_sporcu"] += record_count
-                    print(f"  [+] {filename} sonuçları başarıyla aktarıldı ve doğrulandı ({record_count} derece)")
+                    print(f"  [+] {filename} sonuçları başarıyla aktarıldı ({record_count} derece)")
 
                 # PythonAnywhere tek iş parçacığına nefes aldır (web ziyaretçileri için)
                 time.sleep(1.5)

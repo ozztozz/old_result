@@ -209,23 +209,32 @@ def match_athlete(
         elif target_year and sp.dogum_yili in [target_year - 1, target_year + 1]:
             score += 3
 
-        # Kulüp adı uyuşuyorsa bonus puan (N+1 sorgu yaratmamak için select_related ile gelen birincil_kulup kullanılır)
-        if norm_club and sp.birincil_kulup:
-            k_norm = normalize_tr(sp.birincil_kulup.kulup_adi)
-            if k_norm:
-                if norm_club in k_norm or k_norm in norm_club:
-                    score += 8
-                elif fuzz and fuzz.partial_ratio(norm_club, k_norm) >= 80:
-                    score += 8
+        # Kulüp veya okul adı uyuşuyorsa bonus puan
+        if norm_club:
+            aktif_k = sp.aktif_kulup()
+            k_norm = normalize_tr(aktif_k.kulup_adi) if aktif_k else ""
+            okul_norm = normalize_tr(sp.okul()) if sp.okul() else ""
+            matched = False
+            for cand_text in (k_norm, okul_norm):
+                if not cand_text:
+                    continue
+                if norm_club in cand_text or cand_text in norm_club:
+                    matched = True
+                    break
+                if fuzz and fuzz.partial_ratio(norm_club, cand_text) >= 80:
+                    matched = True
+                    break
+            if matched:
+                score += 8
 
         score = min(round(float(score), 1), 99.5)
 
-        # %50 üzeri benzerlik barajı (Sadece en iyi limit kadar adayı serialize et)
+        # %50 üzeri benzerlik barajı
         if score >= 50.0:
-            scored_candidates.append((score, sp))
+            scored_candidates.append(_serialize_sporcu(sp, score))
 
-    scored_candidates.sort(key=lambda x: x[0], reverse=True)
-    top_candidates = [_serialize_sporcu(sp, sc) for sc, sp in scored_candidates[:limit]]
+    scored_candidates.sort(key=lambda x: x.get("benzerlik_orani", 0), reverse=True)
+    top_candidates = scored_candidates[:limit]
 
     # Eğer en üstteki aday %98+ ve doğum yılı tam uyuyorsa tam eşleşme say
     if top_candidates and top_candidates[0].get("benzerlik_orani", 0) >= 97.0 and target_year:

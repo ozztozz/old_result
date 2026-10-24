@@ -284,91 +284,17 @@ import re
 def _time_to_seconds(time_str):
     if not time_str:
         return None
-    s = str(time_str).strip().replace(',', '.')
-    # Sadece geçerli yüzme derecesi formatlarını kabul et (SS.ss, MM:SS.ss, HH:MM:SS.ss)
-    if not re.match(r'^(?:\d{1,2}:)?(?:\d{1,2}:)?\d{1,2}(?:\.\d{1,3})?$', s):
-        return None
+    s = str(time_str).strip()
     try:
         if ':' in s:
             parts = s.split(':')
             if len(parts) == 2:
-                val = round(float(parts[0]) * 60 + float(parts[1]), 2)
-                return val if val > 0 else None
+                return round(float(parts[0]) * 60 + float(parts[1]), 2)
             elif len(parts) == 3:
-                val = round(float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2]), 2)
-                return val if val > 0 else None
-        val = round(float(s), 2)
-        return val if val > 0 else None
+                return round(float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2]), 2)
+        return round(float(s), 2)
     except Exception:
         return None
-
-
-_TR_NORM_MAP = str.maketrans({
-    'İ': 'i', 'I': 'ı', 'i': 'i', 'ı': 'ı',
-    'Ğ': 'ğ', 'Ü': 'ü', 'Ş': 'ş', 'Ö': 'ö', 'Ç': 'ç',
-    'Â': 'a', 'Î': 'i', 'Û': 'u', 'â': 'a', 'î': 'i', 'û': 'u',
-})
-
-
-def _normalize_tr_name(s: str) -> str:
-    if not s:
-        return ""
-    s = str(s).translate(_TR_NORM_MAP).lower()
-    s = re.sub(r'[^a-z0-9ğüşıöç\s]', ' ', s)
-    return re.sub(r'\s+', ' ', s).strip()
-
-
-def _normalize_and_validate_derece(raw_derece, item=None):
-    """
-    Sonuç listesinden gelen derece değerini doğrular ve normalize eder.
-    - Geçerli yüzme zamanıysa: (temiz_derece_str, saniye_float) döner.
-    - Diskalifiye / DNS / DNF ise: ('DSQ' | 'DNS' | 'DNF', None) döner.
-    - Sporcu adı veya geçersiz metinse: eğer 'baraj' alanına zaman kaymışsa oradan kurtarır,
-      aksi halde (None, None) döner (böylece sporcu adı asla derece alanına yazılmaz).
-    """
-    item = item or {}
-    is_dsq_flag = bool(item.get('diskalifiye')) or bool(item.get('diskalifiye_nedeni'))
-
-    s = str(raw_derece or '').strip()
-    s_low = _normalize_tr_name(s)
-
-    dsq_tokens = ('dsq', 'dq', 'disk', 'diskalifiye', 'disqualified', 'ihrac')
-    dns_tokens = ('dns', 'katılmadı', 'katilmadi', 'girmedi', 'did not start', 'ns', 'yuzmedi', 'yüzmedi')
-    dnf_tokens = ('dnf', 'terk', 'yarış terk', 'yaris terk', 'did not finish', 'bıraktı', 'birakti')
-
-    if s_low in dsq_tokens or s.lower().startswith('disk'):
-        return 'DSQ', None
-    if s_low in dns_tokens:
-        return 'DNS', None
-    if s_low in dnf_tokens:
-        return 'DNF', None
-
-    # Geçerli yüzme süresi mi kontrol et (örn: 25.43, 1:05.32, 01:05,32)
-    s_time_cand = re.sub(r'\s+', '', s).replace(',', '.')
-    sec = _time_to_seconds(s_time_cand)
-    if sec is not None:
-        return s_time_cand, sec
-
-    # İçinde gömülü zaman var mı? (örn: "1:04.23 A1" gibi birleşik gelmişse)
-    m_time = re.search(r'\b((?:\d{1,2}:)?\d{1,2}[\.,]\d{2})\b', s)
-    if m_time:
-        t_str = m_time.group(1).replace(',', '.')
-        sec = _time_to_seconds(t_str)
-        if sec is not None:
-            return t_str, sec
-
-    # Sütun kayması kontrolü: Gemini 'derece' içine sporcu adını koyup zamanı 'baraj' veya 'puan' içine kaydırmış mı?
-    baraj_raw = str(item.get('baraj') or '').strip()
-    if baraj_raw:
-        b_cand = re.sub(r'\s+', '', baraj_raw).replace(',', '.')
-        b_sec = _time_to_seconds(b_cand)
-        if b_sec is not None:
-            return b_cand, b_sec
-
-    if is_dsq_flag:
-        return 'DSQ', None
-
-    return None, None
 
 
 def _process_single_race_payload(payload: dict) -> dict:
@@ -378,28 +304,17 @@ def _process_single_race_payload(payload: dict) -> dict:
     sehir = (payload.get('sehir') or '').strip()
     yaris_tarihi = (payload.get('yaris_tarihi') or payload.get('tarih') or '').strip()
     yaris_tarihi_baslangic = (payload.get('yaris_tarihi_baslangic') or yaris_tarihi).strip()
-    dosya_adi = (payload.get('dosya_adi') or '').strip()
-
-    raw_yaris_no = str(payload.get('yaris_no') or '').strip()
-    m_yno = re.search(r'(\d+)', raw_yaris_no)
-    if m_yno:
-        yaris_no = m_yno.group(1)
-    else:
-        m_fno = re.search(r'(?:StartList|ResultList)_(\d+)', dosya_adi, re.I)
-        if not m_fno:
-            m_fno = re.search(r'_(\d+)\.pdf', dosya_adi, re.I)
-        yaris_no = m_fno.group(1) if m_fno else raw_yaris_no
-
+    yaris_no = str(payload.get('yaris_no') or '').strip()
     cinsiyet = (payload.get('cinsiyet') or '').strip()
     mesafe = payload.get('mesafe')
     if mesafe:
         try:
-            m_dist = re.search(r'(\d+)', str(mesafe))
-            mesafe = int(m_dist.group(1)) if m_dist else int(mesafe)
+            mesafe = int(mesafe)
         except Exception:
-            mesafe = None
+            pass
     stil = (payload.get('stil') or '').strip()
     yas_grubu = (payload.get('yas_grubu') or '').strip()
+    dosya_adi = (payload.get('dosya_adi') or '').strip()
     kayitlar = payload.get('kayitlar', [])
     is_okul_musabakasi = bool(payload.get('okul_musabakasi')) or is_school_meet(musabaka_adi)
 
@@ -463,54 +378,11 @@ def _process_single_race_payload(payload: dict) -> dict:
         if dirty_event:
             event.save(update_fields=dirty_event)
 
-    # Bu müsabaka ve yarış numarası için var olan yarışları (StartList kayıtlarını) önbelleğe al
-    existing_races_map = {}
-    existing_by_id = {}
-    existing_by_norm_name = {}
-    healed_corrupted_races = []
-
-    q_init = None
-    if event and yaris_no:
-        q_init = YarisSonucu.objects.filter(event=event, yaris_no=yaris_no)
-    elif event and mesafe and stil:
-        q_init = YarisSonucu.objects.filter(event=event, mesafe=mesafe, stil=stil)
-    elif musabaka_adi and yaris_no:
-        q_init = YarisSonucu.objects.filter(event__musabaka_adi=musabaka_adi, yaris_no=yaris_no)
-    elif musabaka_adi and mesafe and stil:
-        q_init = YarisSonucu.objects.filter(event__musabaka_adi=musabaka_adi, mesafe=mesafe, stil=stil)
-
-    if q_init is not None:
-        for r in q_init.select_related('sporcu', 'kulup'):
-            # Sonuç listesinde başlık bilgisi eksik gelmişse StartList kaydından tamamla
-            if not mesafe and r.mesafe:
-                mesafe = r.mesafe
-            if not stil and r.stil:
-                stil = r.stil
-            if not cinsiyet and r.cinsiyet:
-                cinsiyet = r.cinsiyet
-            if not yas_grubu and r.yas_grubu:
-                yas_grubu = r.yas_grubu
-
-            # Önceki hatalı parse nedeniyle 'derece' alanına sporcu adı yazılmışsa otomatik temizle
-            if tur == 'sonuc_listesi' and r.derece and r.derece != 'Bekleniyor':
-                if r.derece_saniye is None and r.derece not in ('DSQ', 'DNS', 'DNF'):
-                    r.derece = 'Bekleniyor'
-                    r.sira = ''
-                    r.puan = None
-                    healed_corrupted_races.append(r)
-
-            existing_by_id[r.id] = r
-            existing_races_map[r.sporcu_id] = r
-            if r.sporcu and r.sporcu.sporcu_adi:
-                norm_n = _normalize_tr_name(r.sporcu.sporcu_adi)
-                if norm_n:
-                    existing_by_norm_name[norm_n] = r
-
     # Canlı Yarış Dosya Takip kaydı (ETag, Last-Modified, SHA-256 Hash)
     dosya_obj = None
     if dosya_adi and event:
         dosya_turu = "SONUC_LISTESI" if tur == 'sonuc_listesi' else "START_LISTESI"
-        dosya_obj, created_dosya = CanliYarisDosya.objects.get_or_create(
+        dosya_obj, _ = CanliYarisDosya.objects.get_or_create(
             event=event,
             dosya_adi=dosya_adi,
             defaults={
@@ -526,32 +398,33 @@ def _process_single_race_payload(payload: dict) -> dict:
                 'last_modified': payload.get('last_modified'),
                 'content_hash': payload.get('content_hash'),
                 'dosya_boyutu': payload.get('dosya_boyutu'),
-                'durum': 'ISLENIYOR',
+                'durum': 'ISLENDI',
                 'son_kontrol_tarihi': timezone.now(),
                 'son_islem_tarihi': timezone.now()
             }
         )
-        if not created_dosya:
-            if canli_yaris_obj and not dosya_obj.canli_yaris_id:
-                dosya_obj.canli_yaris = canli_yaris_obj
-            if yaris_no and not dosya_obj.yaris_no:
-                dosya_obj.yaris_no = yaris_no
-            if mesafe and not dosya_obj.mesafe:
-                dosya_obj.mesafe = mesafe
-            if stil and not dosya_obj.stil:
-                dosya_obj.stil = stil
-            if cinsiyet and not dosya_obj.cinsiyet:
-                dosya_obj.cinsiyet = cinsiyet
-            if payload.get('etag'):
-                dosya_obj.etag = payload.get('etag')
-            if payload.get('last_modified'):
-                dosya_obj.last_modified = payload.get('last_modified')
-            if payload.get('content_hash'):
-                dosya_obj.content_hash = payload.get('content_hash')
-            if payload.get('dosya_boyutu'):
-                dosya_obj.dosya_boyutu = payload.get('dosya_boyutu')
+        if not _:
+            if payload.get('etag'): dosya_obj.etag = payload.get('etag')
+            if payload.get('last_modified'): dosya_obj.last_modified = payload.get('last_modified')
+            if payload.get('content_hash'): dosya_obj.content_hash = payload.get('content_hash')
+            if payload.get('dosya_boyutu'): dosya_obj.dosya_boyutu = payload.get('dosya_boyutu')
+            dosya_obj.durum = 'ISLENDI'
             dosya_obj.son_islem_tarihi = timezone.now()
             dosya_obj.son_kontrol_tarihi = timezone.now()
+            dosya_obj.save()
+
+    # Bu müsabaka ve branş için var olan yarışları önbelleğe al
+    existing_races_map = {}
+    if musabaka_adi and mesafe and stil:
+        q_init = YarisSonucu.objects.filter(mesafe=mesafe, stil=stil)
+        if event:
+            q_init = q_init.filter(event=event)
+        else:
+            q_init = q_init.filter(event__musabaka_adi=musabaka_adi)
+        if yaris_no:
+            q_init = q_init.filter(yaris_no=yaris_no)
+        for r in q_init.select_related('sporcu', 'kulup'):
+            existing_races_map[r.sporcu_id] = r
 
     tum_kayitlar = list(kayitlar)
     for y_item in payload.get('yeni_sporcular', []):
@@ -571,12 +444,10 @@ def _process_single_race_payload(payload: dict) -> dict:
     club_cache = {}
     for k in Kulup.objects.filter(kulup_adi__in=unique_clubs):
         club_cache[k.kulup_adi.lower()] = k
-        club_cache[_normalize_tr_name(k.kulup_adi)] = k
 
     for c_name in unique_clubs:
         c_low = c_name.lower()
-        c_norm = _normalize_tr_name(c_name)
-        if c_low not in club_cache and c_norm not in club_cache:
+        if c_low not in club_cache:
             k_obj, k_created = Kulup.objects.get_or_create(kulup_adi=c_name)
             if k_created:
                 stats['yeni_kulup'] += 1
@@ -585,129 +456,64 @@ def _process_single_race_payload(payload: dict) -> dict:
                         k_obj.okul_mu = 1
                         k_obj.save(update_fields=['okul_mu'])
             club_cache[c_low] = k_obj
-            club_cache[c_norm] = k_obj
 
     # 2. Sporcuları tek SQL sorgusuyla önbelleğe al (1000x hızlı eşleştirme)
+    # Sporcuların %95'i tam isim eşleşmesiyle 0.001 ms'de bulunur, ağır LIKE sorguları engellenir
     sporcu_exact_cache = {}
     for sp in Sporcu.objects.filter(sporcu_adi__in=unique_names).select_related('birincil_kulup'):
         sporcu_exact_cache.setdefault(sp.sporcu_adi.lower(), []).append(sp)
-        norm_sp = _normalize_tr_name(sp.sporcu_adi)
-        if norm_sp:
-            sporcu_exact_cache.setdefault(norm_sp, []).append(sp)
-
-    # StartList üzerinde zaten bilinen sporcuları da önbelleğe ekle (ekstra SQL sorgusu olmadan)
-    for r_existing in existing_by_id.values():
-        if r_existing.sporcu:
-            sp_ex = r_existing.sporcu
-            sporcu_exact_cache.setdefault(sp_ex.sporcu_adi.lower(), []).append(sp_ex)
-            norm_sp = _normalize_tr_name(sp_ex.sporcu_adi)
-            if norm_sp:
-                sporcu_exact_cache.setdefault(norm_sp, []).append(sp_ex)
 
     races_to_create = []
     races_to_update = []
-    updated_race_ids = set()
     sporcular_to_update = set()
     kulupler_to_update = set()
     tarihceler_to_save = set()
 
     for item in tum_kayitlar:
-        raw_derece = item.get('derece') or item.get('time')
+        derece_val = item.get('derece') or item.get('time')
         sira_val = str(item.get('sira') or item.get('rank') or '').strip()
-        if sira_val.endswith('.'):
-            sira_val = sira_val[:-1].strip()
         puan_val = item.get('puan') or item.get('points')
-        if puan_val is not None and str(puan_val).strip() != '':
+        if puan_val:
             try:
-                puan_val = int(float(str(puan_val).strip()))
+                puan_val = int(puan_val)
             except Exception:
                 puan_val = None
-        else:
-            puan_val = None
-        baraj_val = str(item.get('baraj') or '').strip()
-        sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
-        norm_item_name = _normalize_tr_name(sporcu_adi)
+        baraj_val = item.get('baraj')
 
-        if tur == 'sonuc_listesi':
-            derece_val, derece_sn = _normalize_and_validate_derece(raw_derece, item=item)
-            if not derece_val:
-                # Geçersiz derece (örn: sporcu adı veya boş satır) -> veritabanını bozmamak için atla
-                continue
-            if derece_val == 'DSQ':
-                sira_val = ''
-                puan_val = None
-            # Eğer derece baraj alanından kurtarıldıysa baraj alanındaki zamanı temizle
-            if baraj_val and _time_to_seconds(baraj_val.replace(',', '.')) is not None:
-                baraj_val = ''
-        else:
-            derece_val = raw_derece
-            derece_sn = _time_to_seconds(derece_val)
-
-        # 1. DOĞRUDAN GEMINI VEYA PARSER'DAN GELEN ID İLE HIZLI GÜNCELLEME (O(1))
+        # 1. DOĞRUDAN GEMINI'DEN GELEN ID İLE HIZLI GÜNCELLEME (O(1))
         race_id = item.get('id')
-        if race_id and tur == 'sonuc_listesi':
-            target_race = None
+        if race_id:
             try:
-                rid_int = int(race_id)
-                target_race = existing_by_id.get(rid_int)
-                if not target_race:
-                    target_race = YarisSonucu.objects.select_related('sporcu', 'kulup').get(id=rid_int)
-            except (ValueError, TypeError, YarisSonucu.DoesNotExist):
-                target_race = None
-
-            # Eğer item içinde sporcu adı da gelmişse, ID'nin gerçekten o sporcuya ait olduğunu doğrula
-            if target_race and norm_item_name and target_race.sporcu and target_race.sporcu.sporcu_adi:
-                target_norm = _normalize_tr_name(target_race.sporcu.sporcu_adi)
-                if target_norm != norm_item_name:
-                    sim = difflib.SequenceMatcher(None, norm_item_name, target_norm).ratio()
-                    if sim < 0.72:
-                        # Gemini yanlış ID eşleştirmiş -> İsim üzerinden StartList kaydını bul
-                        target_race = existing_by_norm_name.get(norm_item_name)
-
-            if target_race:
-                is_identical = (
-                    (target_race.derece or '') == (derece_val or '') and
-                    (target_race.sira or '') == (sira_val or '') and
-                    (target_race.puan or None) == puan_val and
-                    target_race not in healed_corrupted_races
-                )
-                if is_identical:
-                    stats['mukerrer_atlanilan'] += 1
-                    continue
-
-                target_race.derece = derece_val
+                target_race = YarisSonucu.objects.select_related('sporcu').get(id=race_id)
+                derece_sn = _time_to_seconds(derece_val)
+                target_race.derece = derece_val or target_race.derece
                 target_race.derece_saniye = derece_sn
                 target_race.sira = sira_val
                 target_race.puan = puan_val
                 if baraj_val:
                     target_race.baraj = baraj_val
-                if item.get('yas_grubu') and not target_race.yas_grubu:
-                    target_race.yas_grubu = str(item.get('yas_grubu')).strip()
                 target_race.kaynak_turu = "CANLI_SONUC"
                 if dosya_adi:
                     target_race.dosya_adi = dosya_adi
                 if dosya_obj:
                     target_race.canli_dosya = dosya_obj
-                if target_race.id not in updated_race_ids:
-                    races_to_update.append(target_race)
-                    updated_race_ids.add(target_race.id)
+                races_to_update.append(target_race)
                 stats['guncellenen_sonuc'] += 1
-                stats['eslesen_sporcu'] += 1
                 continue
-
+            except YarisSonucu.DoesNotExist:
+                pass
+        sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
         kulup_adi = (item.get('kulup') or item.get('club') or item.get('kulup_adi') or 'Ferdi').strip()
         yb = item.get('dogum_yili') or item.get('yb') or item.get('yas') or item.get('birth_year')
 
         dogum_yili = None
         if yb:
             try:
-                m_yb = re.search(r'(\d{2,4})', str(yb).strip())
-                if m_yb:
-                    yb_int = int(m_yb.group(1))
-                    if yb_int < 100:
-                        dogum_yili = 2000 + yb_int if yb_int <= 35 else 1900 + yb_int
-                    else:
-                        dogum_yili = yb_int
+                yb_int = int(str(yb).strip())
+                if yb_int < 100:
+                    dogum_yili = 2000 + yb_int if yb_int <= 35 else 1900 + yb_int
+                else:
+                    dogum_yili = yb_int
             except Exception:
                 pass
 
@@ -723,40 +529,38 @@ def _process_single_race_payload(payload: dict) -> dict:
                 kulvar_val = None
 
         giris_derecesi_val = item.get('giris_derecesi') or item.get('seed_time')
+        derece_val = item.get('derece') or item.get('time')
+        sira_val = str(item.get('sira') or item.get('rank') or '').strip()
+        puan_val = item.get('puan') or item.get('points')
+        if puan_val:
+            try:
+                puan_val = int(puan_val)
+            except Exception:
+                puan_val = None
+        baraj_val = str(item.get('baraj') or '').strip()
 
         # 1. Takım / Kulüp Yönetimi (Önbellekten O(1))
-        kulup = club_cache.get(kulup_adi.lower()) or club_cache.get(_normalize_tr_name(kulup_adi))
+        kulup = club_cache.get(kulup_adi.lower())
         if not kulup:
             kulup, _ = Kulup.objects.get_or_create(kulup_adi=kulup_adi)
             club_cache[kulup_adi.lower()] = kulup
-            club_cache[_normalize_tr_name(kulup_adi)] = kulup
 
         # 2. Sporcu Yönetimi ve Akıllı Eşleştirme
         sporcu = None
-        # Önce bu yarışın StartList kayıtlarında aynı isimli sporcu var mı kontrol et (O(1))
-        if norm_item_name and norm_item_name in existing_by_norm_name:
-            cand_race = existing_by_norm_name[norm_item_name]
-            if cand_race and cand_race.sporcu:
-                sporcu = cand_race.sporcu
-                stats['eslesen_sporcu'] += 1
-
-        # Sonra O(1) in-memory tam/normalize isim eşleşme kontrolü:
-        if not sporcu:
-            cands = sporcu_exact_cache.get(sporcu_adi.lower()) or sporcu_exact_cache.get(norm_item_name)
-            if cands:
-                # Tekil sporcu listesi (aynı sporcu iki anahtardan gelmiş olabilir)
-                unique_cands = list({c.id: c for c in cands}.values())
-                if len(unique_cands) == 1:
-                    cand = unique_cands[0]
-                    if not dogum_yili or not cand.dogum_yili or cand.dogum_yili == dogum_yili:
+        # Önce O(1) in-memory tam eşleşme kontrolü:
+        cands = sporcu_exact_cache.get(sporcu_adi.lower())
+        if cands:
+            if len(cands) == 1:
+                cand = cands[0]
+                if not dogum_yili or not cand.dogum_yili or cand.dogum_yili == dogum_yili:
+                    sporcu = cand
+                    stats['eslesen_sporcu'] += 1
+            else:
+                for cand in cands:
+                    if dogum_yili and cand.dogum_yili == dogum_yili:
                         sporcu = cand
                         stats['eslesen_sporcu'] += 1
-                else:
-                    for cand in unique_cands:
-                        if dogum_yili and cand.dogum_yili == dogum_yili:
-                            sporcu = cand
-                            stats['eslesen_sporcu'] += 1
-                            break
+                        break
 
         # Tam eşleşme yoksa fuzzy fallback (match_athlete)
         if not sporcu:
@@ -774,11 +578,9 @@ def _process_single_race_payload(payload: dict) -> dict:
 
                 if found_id:
                     try:
-                        sporcu = Sporcu.objects.select_related('birincil_kulup').get(id=found_id)
+                        sporcu = Sporcu.objects.get(id=found_id)
                         stats['eslesen_sporcu'] += 1
                         sporcu_exact_cache.setdefault(sporcu_adi.lower(), []).append(sporcu)
-                        if norm_item_name:
-                            sporcu_exact_cache.setdefault(norm_item_name, []).append(sporcu)
                     except Sporcu.DoesNotExist:
                         sporcu = None
 
@@ -793,9 +595,6 @@ def _process_single_race_payload(payload: dict) -> dict:
                 toplam_yaris_sayisi=0
             )
             stats['yeni_sporcu'] += 1
-            sporcu_exact_cache.setdefault(sporcu_adi.lower(), []).append(sporcu)
-            if norm_item_name:
-                sporcu_exact_cache.setdefault(norm_item_name, []).append(sporcu)
         else:
             # Mevcut sporcuda eksik olan doğum yılı veya cinsiyeti güncelle
             sp_updates = []
@@ -833,14 +632,11 @@ def _process_single_race_payload(payload: dict) -> dict:
         tarihce.save()
 
         # 4. Yarış Kaydı ve Mükerrerlikten Koruma (Deduplication)
+        derece_sn = _time_to_seconds(derece_val)
         existing_race = existing_races_map.get(sporcu.id)
-        if not existing_race and norm_item_name:
-            existing_race = existing_by_norm_name.get(norm_item_name)
 
         if not existing_race:
-            cand_qs = YarisSonucu.objects.filter(sporcu=sporcu)
-            if mesafe and stil:
-                cand_qs = cand_qs.filter(mesafe=mesafe, stil=stil)
+            cand_qs = YarisSonucu.objects.filter(sporcu=sporcu, mesafe=mesafe, stil=stil)
             if event:
                 cand_meet = cand_qs.filter(event=event)
             elif musabaka_adi:
@@ -853,10 +649,10 @@ def _process_single_race_payload(payload: dict) -> dict:
                     cand_y_no = cand_meet.filter(yaris_no=yaris_no)
                     if cand_y_no.exists():
                         existing_race = cand_y_no.first()
-                if not existing_race and mesafe and stil and cand_meet.exists():
+                if not existing_race and cand_meet.exists():
                     existing_race = cand_meet.first()
 
-            if not existing_race and yaris_tarihi_baslangic and mesafe and stil:
+            if not existing_race and yaris_tarihi_baslangic:
                 cand_date = cand_qs.filter(event__yaris_tarihi_baslangic=yaris_tarihi_baslangic)
                 if yaris_no:
                     cand_d_no = cand_date.filter(yaris_no=yaris_no)
@@ -879,8 +675,6 @@ def _process_single_race_payload(payload: dict) -> dict:
                     existing_race.kaynak_turu = "CANLI_SONUC"
                     if baraj_val:
                         existing_race.baraj = baraj_val
-                    if item.get('yas_grubu') and not existing_race.yas_grubu:
-                        existing_race.yas_grubu = str(item.get('yas_grubu')).strip()
                     if seri_val:
                         existing_race.seri = str(seri_val)
                     if kulvar_val is not None:
@@ -893,10 +687,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                         existing_race.canli_dosya = dosya_obj
                     if dosya_adi:
                         existing_race.dosya_adi = dosya_adi
-                    if getattr(existing_race, 'id', None):
-                        if existing_race.id not in updated_race_ids:
-                            races_to_update.append(existing_race)
-                            updated_race_ids.add(existing_race.id)
+                    races_to_update.append(existing_race)
                     stats['guncellenen_sonuc'] += 1
                 else:
                     # Zaten sonuçlanmış kayıt; birebir aynı mı kontrol et (MÜKERRERLİK KORUMASI)
@@ -915,18 +706,13 @@ def _process_single_race_payload(payload: dict) -> dict:
                         existing_race.puan = puan_val
                         if baraj_val:
                             existing_race.baraj = baraj_val
-                        if item.get('yas_grubu') and not existing_race.yas_grubu:
-                            existing_race.yas_grubu = str(item.get('yas_grubu')).strip()
                         if dosya_obj:
                             existing_race.canli_dosya = dosya_obj
                         if dosya_adi:
                             existing_race.dosya_adi = dosya_adi
-                        if getattr(existing_race, 'id', None):
-                            if existing_race.id not in updated_race_ids:
-                                races_to_update.append(existing_race)
-                                updated_race_ids.add(existing_race.id)
+                        races_to_update.append(existing_race)
                         stats['guncellenen_sonuc'] += 1
-            else:  # start_listesi
+            else: # start_listesi
                 if existing_race.derece != "Bekleniyor":
                     # Sonuç zaten girilmiş, ezme
                     stats['mukerrer_atlanilan'] += 1
@@ -943,10 +729,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.giris_derecesi = str(giris_derecesi_val)
                         if dosya_obj:
                             existing_race.canli_dosya = dosya_obj
-                        if getattr(existing_race, 'id', None):
-                            if existing_race.id not in updated_race_ids:
-                                races_to_update.append(existing_race)
-                                updated_race_ids.add(existing_race.id)
+                        races_to_update.append(existing_race)
                         stats['guncellenen_sonuc'] += 1
         else:
             # YENİ YARIŞ SONUCU / START KAYDI
@@ -975,8 +758,6 @@ def _process_single_race_payload(payload: dict) -> dict:
             )
             races_to_create.append(yeni_yaris)
             existing_races_map[sporcu.id] = yeni_yaris
-            if norm_item_name:
-                existing_by_norm_name[norm_item_name] = yeni_yaris
             stats['eklenen_sonuc'] += 1
 
             # YALNIZCA YENİ YARIŞ EKLENDİĞİNDE SAYAÇLARI ARTIR
@@ -994,19 +775,13 @@ def _process_single_race_payload(payload: dict) -> dict:
             kulup.toplam_yaris_sayisi = (kulup.toplam_yaris_sayisi or 0) + 1
             kulupler_to_update.add(kulup)
 
-    # Önceden bozulmuş ancak bu sonuç listesinde güncellenmeyen kayıtları da 'Bekleniyor' olarak düzelt
-    for hr in healed_corrupted_races:
-        if hr.id and hr.id not in updated_race_ids:
-            races_to_update.append(hr)
-            updated_race_ids.add(hr.id)
-
     # BULK İŞLEMLER (YÜKSEK PERFORMANSLI TOPLU YAZIM)
     if races_to_create:
         YarisSonucu.objects.bulk_create(races_to_create, batch_size=500)
     if races_to_update:
         YarisSonucu.objects.bulk_update(
             races_to_update,
-            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'yas_grubu', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu'],
+            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu'],
             batch_size=500
         )
     if sporcular_to_update:
@@ -1017,12 +792,8 @@ def _process_single_race_payload(payload: dict) -> dict:
         t.save()
 
     if dosya_obj:
-        actual_processed = stats['eklenen_sonuc'] + stats['guncellenen_sonuc'] + stats['mukerrer_atlanilan']
-        dosya_obj.kayit_sayisi = actual_processed
-        dosya_obj.durum = 'ISLENDI' if actual_processed > 0 else 'HATA'
-        dosya_obj.son_islem_tarihi = timezone.now()
-        dosya_obj.son_kontrol_tarihi = timezone.now()
-        dosya_obj.save()
+        dosya_obj.kayit_sayisi = len(tum_kayitlar)
+        dosya_obj.save(update_fields=['kayit_sayisi'])
 
     return stats
 
@@ -1760,9 +1531,7 @@ def api_canli_startlist_sporculari(request):
     event_id = request.GET.get('event_id')
     canli_url = request.GET.get('canli_url', '').strip()
     musabaka_adi = request.GET.get('musabaka_adi', '').strip()
-    raw_yaris_no = request.GET.get('yaris_no', '').strip()
-    m_yno = re.search(r'(\d+)', raw_yaris_no)
-    yaris_no = m_yno.group(1) if m_yno else raw_yaris_no
+    yaris_no = request.GET.get('yaris_no', '').strip()
 
     qs = YarisSonucu.objects.all()
 
@@ -1790,7 +1559,6 @@ def api_canli_startlist_sporculari(request):
     for r in qs.select_related('sporcu', 'kulup').order_by('seri', 'kulvar', 'id'):
         sporcular_list.append({
             "id": r.id,  # YarisSonucu ID
-            "sporcu_id": r.sporcu_id,
             "sporcu_adi": r.sporcu.sporcu_adi,
             "kulup_adi": r.kulup.kulup_adi if r.kulup else "",
             "dogum_yili": r.sporcu.dogum_yili,
@@ -1807,76 +1575,6 @@ def api_canli_startlist_sporculari(request):
         "toplam": len(sporcular_list),
         "sporcular": sporcular_list
     }, json_dumps_params={'ensure_ascii': False})
-
-
-def _compute_event_race_health(event_id_val):
-    """
-    Bir müsabakadaki her yarış_no için veritabanındaki gerçek kayıt sayılarını ve
-    derece bütünlüğünü (bozuk derece veya sadece DSQ kalmış sonuç listesi) hesaplar.
-    """
-    race_stats = {}
-    if not event_id_val:
-        return race_stats
-
-    rows = YarisSonucu.objects.filter(event_id=event_id_val).values('yaris_no', 'derece', 'derece_saniye')
-    for r in rows:
-        yno = str(r.get('yaris_no') or '').strip()
-        if not yno:
-            continue
-        st = race_stats.setdefault(yno, {
-            'toplam': 0,
-            'sonuclanan': 0,
-            'gecerli_zaman': 0,
-            'bozuk_derece': 0
-        })
-        st['toplam'] += 1
-        d_str = (r.get('derece') or '').strip()
-        d_sec = r.get('derece_saniye')
-        if d_str and d_str != 'Bekleniyor':
-            st['sonuclanan'] += 1
-            if d_sec is not None and d_sec > 0:
-                st['gecerli_zaman'] += 1
-            elif d_str not in ('DSQ', 'DNS', 'DNF'):
-                st['bozuk_derece'] += 1
-    return race_stats
-
-
-def _evaluate_dosya_health(dosya_dict, race_stats_map):
-    """
-    CanliYarisDosya kaydının veritabanında gerçekten sağlıklı veriye sahip olup olmadığını denetler.
-    Cloud Run'da 'parse edildi' görünüp DB'de karşılığı olmayan veya bozuk dereceli dosyaları yakalar.
-    """
-    durum = dosya_dict.get('durum')
-    kayit_sayisi = dosya_dict.get('kayit_sayisi') or 0
-    fname = dosya_dict.get('dosya_adi') or ''
-    dosya_turu = dosya_dict.get('dosya_turu') or ('SONUC_LISTESI' if 'result' in fname.lower() or 'sonuc' in fname.lower() else 'START_LISTESI')
-
-    raw_yno = str(dosya_dict.get('yaris_no') or '').strip()
-    m_no = re.search(r'(\d+)', raw_yno)
-    if not m_no:
-        m_no = re.search(r'(?:StartList|ResultList)_(\d+)', fname, re.I)
-    if not m_no:
-        m_no = re.search(r'_(\d+)\.pdf', fname, re.I)
-    yno = m_no.group(1) if m_no else raw_yno
-
-    r_st = race_stats_map.get(yno, {'toplam': 0, 'sonuclanan': 0, 'gecerli_zaman': 0, 'bozuk_derece': 0}) if yno else None
-
-    veri_gecerli_mi = True
-    if durum != 'ISLENDI' or kayit_sayisi <= 0:
-        veri_gecerli_mi = False
-    elif r_st is not None:
-        if r_st['toplam'] <= 0:
-            veri_gecerli_mi = False
-        elif dosya_turu == 'SONUC_LISTESI':
-            if r_st['sonuclanan'] <= 0:
-                veri_gecerli_mi = False
-            elif r_st['bozuk_derece'] > 0:
-                veri_gecerli_mi = False
-            elif r_st['gecerli_zaman'] == 0 and r_st['toplam'] > 3:
-                # 3'ten fazla sporcusu olan yarışta hiç geçerli süre yok (sadece DSQ gelmiş) -> yeniden parse edilmeli
-                veri_gecerli_mi = False
-
-    return veri_gecerli_mi, r_st
 
 
 @csrf_exempt
@@ -1901,7 +1599,6 @@ def api_canli_dosya_kontrol(request):
     canli_url = params.get('canli_url', '').strip()
     req_etag = (params.get('etag') or '').strip().strip('"')
     req_last_modified = (params.get('last_modified') or '').strip()
-    req_hash = (params.get('content_hash') or '').strip()
 
     canli_match = None
     target_eid = None
@@ -1926,26 +1623,10 @@ def api_canli_dosya_kontrol(request):
             if canli_match:
                 q_filter |= Q(canli_yaris=canli_match)
 
-            dosyalar = list(CanliYarisDosya.objects.filter(q_filter).values(
-                "dosya_adi", "dosya_turu", "yaris_no", "etag", "content_hash",
-                "dosya_boyutu", "durum", "last_modified", "kayit_sayisi", "event_id"
-            ))
-            eff_eid = target_eid or (dosyalar[0]["event_id"] if dosyalar else None)
-            race_stats_map = _compute_event_race_health(eff_eid)
-
-            dosyalar_map = {}
-            for d in dosyalar:
-                veri_gecerli, r_st = _evaluate_dosya_health(d, race_stats_map)
-                d["veri_gecerli_mi"] = veri_gecerli
-                if r_st is not None:
-                    d["db_kayit_sayisi"] = r_st["toplam"]
-                    d["sonuclanan_kayit_sayisi"] = r_st["sonuclanan"]
-                    d["gecerli_zaman_sayisi"] = r_st["gecerli_zaman"]
-                    d["bozuk_derece_sayisi"] = r_st["bozuk_derece"]
-                if not veri_gecerli and d.get("durum") == "ISLENDI":
-                    d["durum"] = "EKSIK_VERI"
-                dosyalar_map[d["dosya_adi"]] = d
-
+            dosyalar = CanliYarisDosya.objects.filter(q_filter).values(
+                "dosya_adi", "etag", "dosya_boyutu", "durum", "last_modified", "kayit_sayisi"
+            )
+            dosyalar_map = {d["dosya_adi"]: d for d in dosyalar}
             return JsonResponse({
                 "durum": "basarili",
                 "toplam": len(dosyalar_map),
@@ -1953,40 +1634,21 @@ def api_canli_dosya_kontrol(request):
             })
         return JsonResponse({"durum": "hata", "mesaj": "dosya_adi veya event_id parametresi gereklidir."}, status=400)
 
-    # TEKİL DOSYA KONTROLÜ (ETag, Last-Modified, Hash ve DB Veri Bütünlüğü kontrolü)
+    # TEKİL DOSYA KONTROLÜ (ETag ve Last-Modified ile değişim kontrolü)
     qs = CanliYarisDosya.objects.filter(dosya_adi=dosya_adi)
     if target_eid:
         qs = qs.filter(event_id=target_eid)
 
     dosya = qs.first()
     if not dosya:
-        return JsonResponse({
-            "durum": "bulunamadi",
-            "islenmis_mi": False,
-            "islendi_mi": False,
-            "veri_gecerli_mi": False,
-            "degisti_mi": True
-        })
+        return JsonResponse({"durum": "bulunamadi", "islenmis_mi": False, "degisti_mi": True})
 
-    race_stats_map = _compute_event_race_health(dosya.event_id)
-    dosya_dict = {
-        "dosya_adi": dosya.dosya_adi,
-        "dosya_turu": dosya.dosya_turu,
-        "yaris_no": dosya.yaris_no,
-        "durum": dosya.durum,
-        "kayit_sayisi": dosya.kayit_sayisi
-    }
-    veri_gecerli_mi, r_st = _evaluate_dosya_health(dosya_dict, race_stats_map)
-    is_done = (dosya.durum == 'ISLENDI') and veri_gecerli_mi
-
+    is_done = (dosya.durum == 'ISLENDI')
     degisti_mi = True
     if is_done:
         known_etag = (dosya.etag or '').strip().strip('"')
         known_lm = (dosya.last_modified or '').strip()
-        known_hash = (dosya.content_hash or '').strip()
-        if req_hash and known_hash:
-            degisti_mi = (req_hash != known_hash)
-        elif req_etag and known_etag:
+        if req_etag and known_etag:
             degisti_mi = (req_etag != known_etag)
         elif req_last_modified and known_lm:
             degisti_mi = (req_last_modified != known_lm)
@@ -1996,17 +1658,10 @@ def api_canli_dosya_kontrol(request):
     return JsonResponse({
         "durum": "basarili",
         "islenmis_mi": is_done,
-        "islendi_mi": is_done,
-        "veri_gecerli_mi": veri_gecerli_mi,
         "degisti_mi": degisti_mi,
         "etag": dosya.etag,
-        "content_hash": dosya.content_hash,
         "last_modified": dosya.last_modified,
-        "kayit_sayisi": dosya.kayit_sayisi,
-        "db_kayit_sayisi": r_st["toplam"] if r_st else dosya.kayit_sayisi,
-        "sonuclanan_kayit_sayisi": r_st["sonuclanan"] if r_st else 0,
-        "gecerli_zaman_sayisi": r_st["gecerli_zaman"] if r_st else 0,
-        "bozuk_derece_sayisi": r_st["bozuk_derece"] if r_st else 0
+        "kayit_sayisi": dosya.kayit_sayisi
     })
 
 
