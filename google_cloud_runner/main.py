@@ -59,7 +59,7 @@ except ImportError:
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 DEFAULT_DJANGO_BASE_URL = os.environ.get("DJANGO_BASE_URL", "https://ozztozz.pythonanywhere.com").rstrip("/")
 DEFAULT_BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 5))
-STARTLIST_POST_DELAY_SEC = max(60, int(os.environ.get("STARTLIST_POST_DELAY_SEC", 60)))
+STARTLIST_POST_DELAY_SEC = max(120, int(os.environ.get("STARTLIST_POST_DELAY_SEC", 60)))
 
 # Kalıcı TCP/TLS bağlantı havuzu (HTTP Keep-Alive ile tekrarlı el sıkışma yükünü önler)
 _HTTP_SESSION: Optional[requests.Session] = None
