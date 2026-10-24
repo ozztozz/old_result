@@ -76,6 +76,42 @@ def normalize_comma_name(raw_name: str) -> str:
     return raw_name.replace(",", " ")
 
 
+def _tr_upper(s: str) -> str:
+    return (
+        s.replace("i\u0307", "i")
+        .replace("i", "İ")
+        .replace("ı", "I")
+        .replace("ç", "Ç")
+        .replace("ğ", "Ğ")
+        .replace("ö", "Ö")
+        .replace("ş", "Ş")
+        .replace("ü", "Ü")
+        .upper()
+    )
+
+
+def _tr_lower(s: str) -> str:
+    return (
+        s.replace("i\u0307", "i")
+        .replace("İ", "i")
+        .replace("I", "ı")
+        .replace("Ç", "ç")
+        .replace("Ğ", "ğ")
+        .replace("Ö", "ö")
+        .replace("Ş", "ş")
+        .replace("Ü", "ü")
+        .lower()
+    )
+
+
+def _tr_capitalize(w: str) -> str:
+    if not w:
+        return ""
+    if "-" in w:
+        return "-".join(_tr_capitalize(p) for p in w.split("-"))
+    return _tr_upper(w[0]) + _tr_lower(w[1:])
+
+
 def standardize_swimmer_name(name: str) -> str:
     """
     Sporcu adını standart 'İlk İsim(ler) SOYADI' formatına çevirir.
@@ -94,11 +130,11 @@ def standardize_swimmer_name(name: str) -> str:
     if not words:
         return ""
     if len(words) == 1:
-        return words[0].upper()
+        return _tr_upper(words[0])
 
-    # İlk isimler Title Case, son kelime (soyadı) UPPERCASE
-    first_names = [w.capitalize() if not w.isupper() else w.capitalize() for w in words[:-1]]
-    last_name = words[-1].upper()
+    # İlk isimler Türkçe duyarlı Title Case, son kelime (soyadı) Türkçe duyarlı UPPERCASE
+    first_names = [_tr_capitalize(w) for w in words[:-1]]
+    last_name = _tr_upper(words[-1])
     return f"{' '.join(first_names)} {last_name}"
 
 

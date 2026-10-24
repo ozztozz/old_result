@@ -63,6 +63,50 @@ STARTLIST_POST_DELAY_SEC = max(60, int(os.environ.get("STARTLIST_POST_DELAY_SEC"
 
 # Kalıcı TCP/TLS bağlantı havuzu (HTTP Keep-Alive ile tekrarlı el sıkışma yükünü önler)
 _HTTP_SESSION: Optional[requests.Session] = None
+_FALLBACK_GEMINI_CLIENT: Optional[genai.Client] = None
+_USE_FALLBACK_KEY: bool = False
+
+
+def _is_quota_error(exc: Exception) -> bool:
+    """Hatanın Gemini API kota / rate limit (429 / RESOURCE_EXHAUSTED) kaynaklı olup olmadığını kontrol eder."""
+    msg = str(exc).lower()
+    return any(tok in msg for tok in ("429", "resource_exhausted", "quota", "rate limit", "ratelimit", "too many requests", "exhausted"))
+
+
+def get_fallback_gemini_client() -> Optional[genai.Client]:
+    """Ortam değişkenlerinde tanımlıysa GEMINI_API_KEY_2 ile yedek istemci döndürür."""
+    global _FALLBACK_GEMINI_CLIENT
+    if _FALLBACK_GEMINI_CLIENT is None:
+        key2 = (os.environ.get("GEMINI_API_KEY_2") or "").strip().strip("'\"")
+        if key2:
+            _FALLBACK_GEMINI_CLIENT = genai.Client(api_key=key2)
+    return _FALLBACK_GEMINI_CLIENT
+
+
+def generate_content_with_fallback(
+    primary_client: genai.Client,
+    model: str,
+    contents: List[Any],
+    config: types.GenerateContentConfig
+):
+    """
+    Önce birincil GEMINI_API_KEY ile istek atar; kota/limit hatası alınırsa
+    otomatik olarak GEMINI_API_KEY_2'ye geçer ve kalan isteklerde yedek anahtarı kullanır.
+    """
+    global _USE_FALLBACK_KEY
+    fallback_client = get_fallback_gemini_client()
+
+    if _USE_FALLBACK_KEY and fallback_client is not None:
+        return fallback_client.models.generate_content(model=model, contents=contents, config=config)
+
+    try:
+        return primary_client.models.generate_content(model=model, contents=contents, config=config)
+    except Exception as e:
+        if fallback_client is not None and _is_quota_error(e):
+            _USE_FALLBACK_KEY = True
+            print(f"  [!] GEMINI_API_KEY kota hatası verdi ({e}). GEMINI_API_KEY_2 ile devam ediliyor...")
+            return fallback_client.models.generate_content(model=model, contents=contents, config=config)
+        raise
 
 
 def get_http_session() -> requests.Session:
@@ -450,7 +494,8 @@ Format:
 SADECE JSON döndür."""
 
         part = types.Part.from_bytes(data=p_bytes, mime_type="application/pdf")
-        res = client.models.generate_content(
+        res = generate_content_with_fallback(
+            primary_client=client,
             model=model,
             contents=[part, prompt],
             config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
@@ -807,7 +852,7 @@ def tyf_startlist_handler(request):
     ).rstrip("/")
 
     api_key = req_json.get("api_key") or request.args.get("api_key") or os.environ.get("DJANGO_API_KEY")
-    gemini_key = req_json.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
+    gemini_key = req_json.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY_2")
     model = req_json.get("model") or request.args.get("model") or os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
     limit = req_json.get("limit") or request.args.get("limit")
     if limit:
@@ -881,9 +926,9 @@ if __name__ == "__main__":
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Gemini Model Adı")
     args = parser.parse_args()
 
-    gemini_key = os.environ.get("GEMINI_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY_2")
     if not gemini_key:
-        print("[!] Hata: GEMINI_API_KEY bulunamadı. Lütfen .env dosyasında veya ortam değişkenlerinde tanımlayın.")
+        print("[!] Hata: GEMINI_API_KEY veya GEMINI_API_KEY_2 bulunamadı. Lütfen .env dosyasında veya ortam değişkenlerinde tanımlayın.")
         exit(1)
 
     client = genai.Client(api_key=gemini_key.strip().strip("'\""))

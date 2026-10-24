@@ -14,6 +14,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, Event, CanliYarisDosya, is_school_team
 from .athlete_matcher import match_athlete
+from .turkish_names import standardize_turkish_athlete_name, tr_fold
 
 
 def is_school_meet(meet_name: str) -> bool:
@@ -440,6 +441,9 @@ def _process_single_race_payload(payload: dict) -> dict:
         s_name = (it.get('sporcu') or it.get('name') or it.get('sporcu_adi') or '').strip()
         if s_name:
             unique_names.add(s_name)
+            s_std = standardize_turkish_athlete_name(s_name)
+            if s_std:
+                unique_names.add(s_std)
 
     club_cache = {}
     for k in Kulup.objects.filter(kulup_adi__in=unique_clubs):
@@ -461,7 +465,7 @@ def _process_single_race_payload(payload: dict) -> dict:
     # Sporcuların %95'i tam isim eşleşmesiyle 0.001 ms'de bulunur, ağır LIKE sorguları engellenir
     sporcu_exact_cache = {}
     for sp in Sporcu.objects.filter(sporcu_adi__in=unique_names).select_related('birincil_kulup'):
-        sporcu_exact_cache.setdefault(sp.sporcu_adi.lower(), []).append(sp)
+        sporcu_exact_cache.setdefault(tr_fold(sp.sporcu_adi), []).append(sp)
 
     races_to_create = []
     races_to_update = []
@@ -502,7 +506,8 @@ def _process_single_race_payload(payload: dict) -> dict:
                 continue
             except YarisSonucu.DoesNotExist:
                 pass
-        sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
+        raw_sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
+        sporcu_adi = standardize_turkish_athlete_name(raw_sporcu_adi) or raw_sporcu_adi
         kulup_adi = (item.get('kulup') or item.get('club') or item.get('kulup_adi') or 'Ferdi').strip()
         yb = item.get('dogum_yili') or item.get('yb') or item.get('yas') or item.get('birth_year')
 
@@ -548,7 +553,7 @@ def _process_single_race_payload(payload: dict) -> dict:
         # 2. Sporcu Yönetimi ve Akıllı Eşleştirme
         sporcu = None
         # Önce O(1) in-memory tam eşleşme kontrolü:
-        cands = sporcu_exact_cache.get(sporcu_adi.lower())
+        cands = sporcu_exact_cache.get(tr_fold(sporcu_adi))
         if cands:
             if len(cands) == 1:
                 cand = cands[0]
@@ -580,7 +585,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                     try:
                         sporcu = Sporcu.objects.get(id=found_id)
                         stats['eslesen_sporcu'] += 1
-                        sporcu_exact_cache.setdefault(sporcu_adi.lower(), []).append(sporcu)
+                        sporcu_exact_cache.setdefault(tr_fold(sporcu_adi), []).append(sporcu)
                     except Sporcu.DoesNotExist:
                         sporcu = None
 
@@ -594,6 +599,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                 birincil_kulup=kulup if kulup.okul_mu == 0 else None,
                 toplam_yaris_sayisi=0
             )
+            sporcu_exact_cache.setdefault(tr_fold(sporcu_adi), []).append(sporcu)
             stats['yeni_sporcu'] += 1
         else:
             # Mevcut sporcuda eksik olan doğum yılı veya cinsiyeti güncelle
