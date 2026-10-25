@@ -1524,18 +1524,35 @@ def musabaka_detay(request, pk):
         )
     ).order_by('yaris_no_int', 'is_pending', 'sira_int', 'derece_saniye')
 
-    # Mevcut yarış numaraları listesi (filtre menüsü için)
-    yaris_nolari = (
+    # Mevcut yarış numaraları listesi (filtre menüsü için: yarış no + mesafe + stil)
+    yaris_rows = (
         event.yaris_sonuclari.exclude(yaris_no__isnull=True)
         .exclude(yaris_no='')
-        .values_list('yaris_no', flat=True)
+        .values('yaris_no', 'mesafe', 'stil')
         .distinct()
     )
+    yaris_map = {}
+    for row in yaris_rows:
+        yno = str(row['yaris_no']).strip()
+        if not yno:
+            continue
+        if yno not in yaris_map:
+            yaris_map[yno] = {
+                'no': yno,
+                'mesafe': row.get('mesafe'),
+                'stil': (row.get('stil') or '').strip(),
+            }
+        else:
+            if not yaris_map[yno]['mesafe'] and row.get('mesafe'):
+                yaris_map[yno]['mesafe'] = row.get('mesafe')
+            if not yaris_map[yno]['stil'] and row.get('stil'):
+                yaris_map[yno]['stil'] = (row.get('stil') or '').strip()
+
     # Sayısal sırala
     try:
-        yaris_nolari = sorted(list(set(yaris_nolari)), key=lambda x: int(x) if str(x).isdigit() else 9999)
+        yaris_nolari = sorted(yaris_map.values(), key=lambda x: int(x['no']) if str(x['no']).isdigit() else 9999)
     except Exception:
-        yaris_nolari = sorted(list(set(yaris_nolari)))
+        yaris_nolari = sorted(yaris_map.values(), key=lambda x: str(x['no']))
 
     total_count = sonuclar_qs.count()
     event_toplam_yaris = event.toplam_yaris_sayisi or event.yaris_sonuclari.count()

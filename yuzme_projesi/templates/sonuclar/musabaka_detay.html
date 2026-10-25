@@ -134,9 +134,9 @@
             <a href="?durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="badge rounded-pill text-decoration-none {% if not secili_yaris_no %}bg-dark text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
                 Tümü
             </a>
-            {% for yno in yaris_nolari %}
-            <a href="?yaris_no={{ yno }}&durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="badge rounded-pill text-decoration-none {% if secili_yaris_no == yno %}bg-primary text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
-                Yarış {{ yno }}
+            {% for y in yaris_nolari %}
+            <a href="?yaris_no={{ y.no }}&durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="badge rounded-pill text-decoration-none {% if secili_yaris_no == y.no %}bg-primary text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
+                Yarış {{ y.no }}{% if y.mesafe or y.stil %} - {% if y.mesafe %}{{ y.mesafe }}m {% endif %}{{ y.stil }}{% endif %}
             </a>
             {% endfor %}
         </div>
