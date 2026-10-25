@@ -68,7 +68,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "yuzme_projesi.wsgi.application"
-
+"""
 # Database
 # Öncelik output/yuzme_veritabani.db, yoksa proje içi dosya
 DB_PATH = (BASE_DIR.parent / "output" / "yuzme_veritabani.db").resolve()
@@ -93,7 +93,7 @@ DATABASES = {
         "NAME": DATABASE_DIR / "yuzme_veritabani.db",
     }
 }
-"""
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
