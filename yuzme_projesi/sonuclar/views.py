@@ -1461,14 +1461,47 @@ def musabaka_listesi(request):
 def musabaka_detay(request, pk):
     """Tekil müsabaka detay sayfası ve yarış sonuçları."""
     event = get_object_or_404(Event, pk=pk)
-    sonuclar_qs = event.yaris_sonuclari.select_related('sporcu', 'kulup')
+    base_qs = event.yaris_sonuclari.select_related('sporcu', 'kulup')
 
-    # Filtreleme (Yarış No & Durum)
+    # Filtreleme (Yarış No, Durum, Kulüp/Takım & Sporcu)
     secili_yaris_no = request.GET.get('yaris_no', '').strip()
     secili_durum = request.GET.get('durum', '').strip()
+    secili_kulup = request.GET.get('kulup', '').strip()
+    secili_sporcu = request.GET.get('sporcu', '').strip()
 
+    # Sadece bu müsabakaya katılan kulüpler / takımlar
+    katilan_kulupler = list(
+        event.yaris_sonuclari.exclude(kulup__isnull=True)
+        .values('kulup_id', 'kulup__kulup_adi')
+        .distinct()
+        .order_by('kulup__kulup_adi')
+    )
+
+    # Sadece bu müsabakaya katılan sporcular (takım filtresi seçiliyse o takımın sporcuları öncelikli/filtrelenebilir)
+    sporcular_raw = (
+        event.yaris_sonuclari.exclude(sporcu__isnull=True)
+        .values('sporcu_id', 'sporcu__sporcu_adi', 'sporcu__dogum_yili', 'kulup_id', 'kulup__kulup_adi')
+        .distinct()
+        .order_by('sporcu__sporcu_adi')
+    )
+    seen_sp = set()
+    katilan_sporcular = []
+    for s in sporcular_raw:
+        sid = s['sporcu_id']
+        if sid not in seen_sp:
+            seen_sp.add(sid)
+            katilan_sporcular.append(s)
+
+    sonuclar_qs = base_qs
     if secili_yaris_no:
         sonuclar_qs = sonuclar_qs.filter(yaris_no=secili_yaris_no)
+    if secili_kulup and secili_kulup.isdigit():
+        sonuclar_qs = sonuclar_qs.filter(kulup_id=int(secili_kulup))
+    if secili_sporcu and secili_sporcu.isdigit():
+        sonuclar_qs = sonuclar_qs.filter(sporcu_id=int(secili_sporcu))
+
+    completed_count = sonuclar_qs.exclude(derece='Bekleniyor').count()
+    pending_count = sonuclar_qs.filter(derece='Bekleniyor').count()
 
     if secili_durum == 'sonuc':
         sonuclar_qs = sonuclar_qs.exclude(derece='Bekleniyor')
@@ -1505,8 +1538,8 @@ def musabaka_detay(request, pk):
         yaris_nolari = sorted(list(set(yaris_nolari)))
 
     total_count = sonuclar_qs.count()
-    completed_count = event.yaris_sonuclari.exclude(derece='Bekleniyor').count()
-    pending_count = event.yaris_sonuclari.filter(derece='Bekleniyor').count()
+    event_toplam_yaris = event.toplam_yaris_sayisi or event.yaris_sonuclari.count()
+    event_toplam_sporcu = event.toplam_sporcu_sayisi or len(katilan_sporcular)
 
     paginator = Paginator(sonuclar_qs, 50)
     page_number = request.GET.get('page')
@@ -1514,13 +1547,19 @@ def musabaka_detay(request, pk):
 
     context = {
         'event': event,
+        'event_toplam_yaris': event_toplam_yaris,
+        'event_toplam_sporcu': event_toplam_sporcu,
         'page_obj': page_obj,
         'total_races': total_count,
         'completed_count': completed_count,
         'pending_count': pending_count,
         'yaris_nolari': yaris_nolari,
+        'katilan_kulupler': katilan_kulupler,
+        'katilan_sporcular': katilan_sporcular,
         'secili_yaris_no': secili_yaris_no,
-        'secili_durum': secili_durum
+        'secili_durum': secili_durum,
+        'secili_kulup': int(secili_kulup) if secili_kulup.isdigit() else '',
+        'secili_sporcu': int(secili_sporcu) if secili_sporcu.isdigit() else '',
     }
     return render(request, 'sonuclar/musabaka_detay.html', context)
 

@@ -35,13 +35,13 @@
         <div class="col-md-4">
             <div class="p-3 bg-light rounded-3 text-center">
                 <span class="d-block text-muted small text-uppercase fw-semibold">Toplam Yarış Sonucu</span>
-                <span class="fs-4 fw-bold text-primary">{{ event.toplam_yaris_sayisi|intcomma }}</span>
+                <span class="fs-4 fw-bold text-primary">{{ event_toplam_yaris|default:event.toplam_yaris_sayisi|intcomma }}</span>
             </div>
         </div>
         <div class="col-md-4">
             <div class="p-3 bg-light rounded-3 text-center">
                 <span class="d-block text-muted small text-uppercase fw-semibold">Katılan Sporcu Sayısı</span>
-                <span class="fs-4 fw-bold text-success">{{ event.toplam_sporcu_sayisi|intcomma }}</span>
+                <span class="fs-4 fw-bold text-success">{{ event_toplam_sporcu|default:event.toplam_sporcu_sayisi|intcomma }}</span>
             </div>
         </div>
         <div class="col-md-4">
@@ -66,27 +66,76 @@
             
             <!-- Durum Filtresi (Hap Butonlar) -->
             <div class="btn-group btn-group-sm" role="group">
-                <a href="?yaris_no={{ secili_yaris_no }}" class="btn {% if not secili_durum %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                    Tümü ({{ total_races }})
+                <a href="?yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="btn {% if not secili_durum %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Tümü ({{ completed_count|add:pending_count }})
                 </a>
-                <a href="?durum=sonuc&yaris_no={{ secili_yaris_no }}" class="btn {% if secili_durum == 'sonuc' %}btn-success{% else %}btn-outline-success{% endif %}">
+                <a href="?durum=sonuc&yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="btn {% if secili_durum == 'sonuc' %}btn-success{% else %}btn-outline-success{% endif %}">
                     <i class="bi bi-check2-circle me-1"></i>Sonuçlananlar ({{ completed_count }})
                 </a>
-                <a href="?durum=bekliyor&yaris_no={{ secili_yaris_no }}" class="btn {% if secili_durum == 'bekliyor' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                <a href="?durum=bekliyor&yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="btn {% if secili_durum == 'bekliyor' %}btn-warning{% else %}btn-outline-warning{% endif %}">
                     <i class="bi bi-clock me-1"></i>Bekleyenler ({{ pending_count }})
                 </a>
             </div>
         </div>
 
+        <!-- Takım / Kulüp ve Sporcu Seçim Filtresi (Sadece Bu Müsabakaya Katılanlar) -->
+        <form method="get" id="musabakaFilterForm" class="row g-2 align-items-end mt-3 pt-3 border-top">
+            {% if secili_yaris_no %}
+            <input type="hidden" name="yaris_no" value="{{ secili_yaris_no }}">
+            {% endif %}
+            {% if secili_durum %}
+            <input type="hidden" name="durum" value="{{ secili_durum }}">
+            {% endif %}
+
+            <div class="col-md-5">
+                <label for="kulupSelect" class="form-label small fw-semibold text-muted mb-1">
+                    <i class="bi bi-shield-shaded text-primary me-1"></i>Takım / Kulüp ({{ katilan_kulupler|length }})
+                </label>
+                <select name="kulup" id="kulupSelect" class="form-select form-select-sm">
+                    <option value="">Tüm Katılan Takımlar ({{ katilan_kulupler|length }})</option>
+                    {% for k in katilan_kulupler %}
+                    <option value="{{ k.kulup_id }}" {% if secili_kulup == k.kulup_id %}selected{% endif %}>
+                        {{ k.kulup__kulup_adi }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-5">
+                <label for="sporcuSelect" class="form-label small fw-semibold text-muted mb-1">
+                    <i class="bi bi-person-badge text-success me-1"></i>Sporcu ({{ katilan_sporcular|length }})
+                </label>
+                <select name="sporcu" id="sporcuSelect" class="form-select form-select-sm">
+                    <option value="">Tüm Katılan Sporcular ({{ katilan_sporcular|length }})</option>
+                    {% for s in katilan_sporcular %}
+                    <option value="{{ s.sporcu_id }}" data-kulup-id="{{ s.kulup_id|default:'' }}" {% if secili_sporcu == s.sporcu_id %}selected{% endif %}>
+                        {{ s.sporcu__sporcu_adi }}{% if s.sporcu__dogum_yili %} ({{ s.sporcu__dogum_yili }}){% endif %}{% if s.kulup__kulup_adi %} - {{ s.kulup__kulup_adi }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-funnel-fill me-1"></i>Filtrele
+                </button>
+                {% if secili_kulup or secili_sporcu or secili_yaris_no or secili_durum %}
+                <a href="?" class="btn btn-outline-secondary btn-sm" title="Filtreleri Temizle">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
         <!-- Yarış No Filtresi -->
         {% if yaris_nolari %}
         <div class="d-flex flex-wrap align-items-center gap-1 mt-3 pt-3 border-top">
             <span class="small fw-semibold text-muted me-2"><i class="bi bi-filter me-1"></i>Yarış No:</span>
-            <a href="?durum={{ secili_durum }}" class="badge rounded-pill text-decoration-none {% if not secili_yaris_no %}bg-dark text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
+            <a href="?durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="badge rounded-pill text-decoration-none {% if not secili_yaris_no %}bg-dark text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
                 Tümü
             </a>
             {% for yno in yaris_nolari %}
-            <a href="?yaris_no={{ yno }}&durum={{ secili_durum }}" class="badge rounded-pill text-decoration-none {% if secili_yaris_no == yno %}bg-primary text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
+            <a href="?yaris_no={{ yno }}&durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" class="badge rounded-pill text-decoration-none {% if secili_yaris_no == yno %}bg-primary text-white{% else %}bg-light text-dark border{% endif %} px-2 py-1">
                 Yarış {{ yno }}
             </a>
             {% endfor %}
@@ -176,17 +225,54 @@
         <span class="small text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
         <ul class="pagination pagination-sm mb-0">
             {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page=1{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">&laquo; İlk</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">Önceki</a></li>
+                <li class="page-item"><a class="page-link" href="?page=1{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}">&laquo; İlk</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}">Önceki</a></li>
             {% endif %}
             <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
             {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">Sonraki</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}">Son &raquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}">Sonraki</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}">Son &raquo;</a></li>
             {% endif %}
         </ul>
     </div>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("musabakaFilterForm");
+    const kulupSelect = document.getElementById("kulupSelect");
+    const sporcuSelect = document.getElementById("sporcuSelect");
+    if (!form || !kulupSelect || !sporcuSelect) return;
+
+    function filterAthletesByClub(resetAthlete) {
+        const selectedClub = kulupSelect.value;
+        const options = sporcuSelect.querySelectorAll("option[data-kulup-id]");
+        options.forEach(function (opt) {
+            const optClub = opt.getAttribute("data-kulup-id") || "";
+            const visible = !selectedClub || optClub === selectedClub;
+            opt.hidden = !visible;
+            opt.disabled = !visible;
+        });
+        if (resetAthlete && sporcuSelect.selectedOptions.length > 0) {
+            const curOpt = sporcuSelect.selectedOptions[0];
+            if (curOpt && curOpt.disabled) {
+                sporcuSelect.value = "";
+            }
+        }
+    }
+
+    filterAthletesByClub(false);
+
+    kulupSelect.addEventListener("change", function () {
+        filterAthletesByClub(true);
+        form.submit();
+    });
+
+    sporcuSelect.addEventListener("change", function () {
+        form.submit();
+    });
+});
+</script>
 {% endblock %}
 
