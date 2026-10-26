@@ -16,6 +16,8 @@ src/iller_pdf/
 
 # Temporary / Scratch
 scratch/test_tyf/
+staticfiles/
+yuzme_projesi/staticfiles/
 .gemini/
 .env
 *.env
