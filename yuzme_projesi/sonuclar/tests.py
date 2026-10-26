@@ -375,6 +375,35 @@ class SporcuApiTests(TestCase):
         qs_upper = Sporcu.objects.filter(sporcu_adi__icontains="ÇINAR KÖYSÜREN")
         self.assertIn(self.cinar, qs_upper)
 
+    def test_athlete_matcher_omer_kaya_vs_merve_kayak(self):
+        """Ömer KAYA'nın Merve KAYAK ile asla eşleşmemesi ve cinsiyet / ad koruması testi."""
+        from sonuclar.athlete_matcher import match_athlete
+
+        merve = Sporcu.objects.create(
+            sporcu_adi="Merve KAYAK",
+            dogum_yili=2014,
+            yas_dogum_yili="2014",
+            cinsiyet="KADIN",
+            birincil_kulup=self.kulup
+        )
+        omer = Sporcu.objects.create(
+            sporcu_adi="Ömer KAYA",
+            dogum_yili=2015,
+            yas_dogum_yili="2015",
+            cinsiyet="ERKEK",
+            birincil_kulup=self.kulup
+        )
+
+        # 1. Erkek cinsiyeti ve Ömer, KAYA sorgusu Merve KAYAK ile eşleşmemeli
+        res = match_athlete(name="Ömer, KAYA", birth_year_or_date=14, club=self.kulup.kulup_adi, gender="ERKEK")
+        self.assertEqual(res["durum"], "basarili")
+        self.assertNotEqual(res.get("bulunan_id"), merve.id)
+        # Muhtemel eşleşmelerde de kadın sporcu bulunmamalı
+        matched_ids = [m["id"] for m in res.get("muhtemel_eslesmeler", [])]
+        self.assertNotIn(merve.id, matched_ids)
+        # Kulübü ve adı tutan Ömer KAYA bulunmalı
+        self.assertEqual(res.get("bulunan_id"), omer.id)
+
     def test_api_canli_aktar_matching_and_deduplication(self):
         """GitHub Action start ve sonuç aktarımı, sporcu eşleştirmesi ve mükerrerlik koruması testi."""
         url = reverse('sonuclar:api_canli_aktar')

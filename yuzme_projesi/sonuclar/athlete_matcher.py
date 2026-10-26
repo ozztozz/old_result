@@ -63,6 +63,7 @@ def match_athlete(
     name: str,
     birth_year_or_date: Any = None,
     club: Optional[str] = None,
+    gender: Optional[str] = None,
     limit: int = 10
 ) -> Dict[str, Any]:
     """
@@ -75,7 +76,7 @@ def match_athlete(
         "bulunan_id": int | None,
         "sporcu": { ... } | None,
         "muhtemel_eslesmeler": [ { ... }, ... ],
-        "sorgu": { "ad": ..., "dogum_yili": ..., "kulup": ... }
+        "sorgu": { "ad": ..., "dogum_yili": ..., "kulup": ..., "cinsiyet": ... }
     }
     """
     if not name or len(name.strip()) < 2:
@@ -86,24 +87,35 @@ def match_athlete(
             "sporcu": None,
             "muhtemel_eslesmeler": [],
             "mesaj": "Geçerli bir sporcu adı belirtilmelidir.",
-            "sorgu": {"ad": name, "dogum_yili": birth_year_or_date, "kulup": club}
+            "sorgu": {"ad": name, "dogum_yili": birth_year_or_date, "kulup": club, "cinsiyet": gender}
         }
 
     norm_input = normalize_tr(name)
     target_year = parse_year(birth_year_or_date)
     norm_club = normalize_tr(club) if club else None
 
+    target_gender = None
+    if gender:
+        g = str(gender).strip().upper()
+        if g.startswith("E") or "BOY" in g or "MALE" in g or "MEN" in g:
+            target_gender = "ERKEK"
+        elif g.startswith("K") or "GIRL" in g or "FEMALE" in g or "WOMEN" in g:
+            target_gender = "KADIN"
+
     sorgu_info = {
         "ad": name.strip(),
         "normalize_ad": norm_input,
         "dogum_yili": target_year,
-        "kulup": club.strip() if club else None
+        "kulup": club.strip() if club else None,
+        "cinsiyet": target_gender
     }
 
     # ---------------------------------------------------------
     # 1. Aşama: Tam Eşleşme (Exact Match) Arama
     # ---------------------------------------------------------
     exact_qs = Sporcu.objects.select_related('birincil_kulup')
+    if target_gender:
+        exact_qs = exact_qs.filter(Q(cinsiyet__iexact=target_gender) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
     if target_year:
         exact_qs = exact_qs.filter(
             Q(dogum_yili=target_year) | Q(yas_dogum_yili=str(target_year)[-2:])
@@ -124,6 +136,20 @@ def match_athlete(
                     if sp not in exact_matches:
                         exact_matches.append(sp)
 
+    # Doğum yılı +-1 toleransı ve kulüp geçmişi ile tam isim eşleşmesi kontrolü
+    if not exact_matches and target_year and norm_club:
+        tol_filter = Q(dogum_yili__in=[target_year, target_year - 1, target_year + 1]) | Q(yas_dogum_yili=str(target_year)[-2:])
+        if target_gender:
+            tol_filter &= (Q(cinsiyet__iexact=target_gender) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
+        cand_tol = list(Sporcu.objects.filter(tol_filter, sporcu_adi__iexact=name.strip()).select_related('birincil_kulup'))
+        if not cand_tol and tokens:
+            cand_tol = list(Sporcu.objects.filter(tol_filter, sporcu_adi__iexact=" ".join(tokens)).select_related('birincil_kulup'))
+        for sp in cand_tol:
+            cand_clubs = [normalize_tr(sp.birincil_kulup.kulup_adi)] if sp.birincil_kulup else []
+            cand_clubs.extend([normalize_tr(h.kulup.kulup_adi) for h in sp.kulup_tarihcesi.all()])
+            if any(c and (norm_club in c or c in norm_club) for c in cand_clubs):
+                exact_matches.append(sp)
+
     if len(exact_matches) == 1:
         sp = exact_matches[0]
         return {
@@ -141,8 +167,9 @@ def match_athlete(
                 aktif_k = sp.aktif_kulup()
                 k_norm = normalize_tr(aktif_k.kulup_adi) if aktif_k else ""
                 okul_norm = normalize_tr(sp.okul()) if sp.okul() else ""
-                if (k_norm and (norm_club in k_norm or k_norm in norm_club)) or \
-                   (okul_norm and (norm_club in okul_norm or okul_norm in norm_club)):
+                cand_clubs = [k_norm, okul_norm]
+                cand_clubs.extend([normalize_tr(h.kulup.kulup_adi) for h in sp.kulup_tarihcesi.all()])
+                if any(c and (norm_club in c or c in norm_club) for c in cand_clubs):
                     return {
                         "durum": "basarili",
                         "sonuc": "tam_eslesme",
@@ -172,19 +199,24 @@ def match_athlete(
             Q(dogum_yili__in=[target_year, target_year - 1, target_year + 1]) |
             Q(yas_dogum_yili=str(target_year)[-2:])
         )
+    if target_gender:
+        cand_filter &= (Q(cinsiyet__iexact=target_gender) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
 
-    token_filter = Q()
-    for tok in tokens:
-        token_filter |= Q(sporcu_adi__icontains=tok)
+    # Aday havuzu önceliklendirme: Önce TÜM tokenları içerenleri al
+    pool_qs = []
+    if len(tokens) >= 2:
+        all_tokens_filter = Q()
+        for tok in tokens:
+            all_tokens_filter &= Q(sporcu_adi__icontains=tok)
+        pool_qs.extend(list(Sporcu.objects.filter(cand_filter & all_tokens_filter).select_related('birincil_kulup')[:100]))
 
-    pool_qs = Sporcu.objects.filter(cand_filter & token_filter).select_related('birincil_kulup')[:250]
-
-    # Eğer filtre çok dar kaldıysa sadece tokenlerle veya sadece yılla havuz al
-    if not pool_qs.exists():
-        if token_filter:
-            pool_qs = Sporcu.objects.filter(token_filter).select_related('birincil_kulup')[:200]
-        elif target_year:
-            pool_qs = Sporcu.objects.filter(cand_filter).select_related('birincil_kulup')[:200]
+    if len(pool_qs) < 50 and tokens:
+        exist_ids = {p.id for p in pool_qs}
+        partial_filter = Q()
+        for tok in tokens:
+            partial_filter |= Q(sporcu_adi__icontains=tok)
+        extra = Sporcu.objects.filter(cand_filter & partial_filter).exclude(id__in=exist_ids).select_related('birincil_kulup')[:150]
+        pool_qs.extend(list(extra))
 
     scored_candidates: List[Dict[str, Any]] = []
 
@@ -193,39 +225,51 @@ def match_athlete(
         if not cand_norm:
             continue
 
+        # Cinsiyet zıtlığı kontrolü
+        if target_gender and sp.cinsiyet:
+            sp_gen = sp.cinsiyet.strip().upper()
+            if sp_gen and sp_gen != target_gender:
+                continue
+
+        # İlk ad ve soyad benzerliği ayrımı (Farklı ilk adları kesinlikle engelle)
+        c_tokens = cand_norm.split()
+        if len(tokens) >= 2 and len(c_tokens) >= 2:
+            first_in = ' '.join(tokens[:-1])
+            first_cand = ' '.join(c_tokens[:-1])
+            sur_in = tokens[-1]
+            sur_cand = c_tokens[-1]
+
+            f_ratio = fuzz.ratio(first_in, first_cand) if fuzz else 100
+            s_ratio = fuzz.ratio(sur_in, sur_cand) if fuzz else 100
+
+            # İlk adlar tamamen farklıysa (Örn: Ömer vs Merve) -> kesinlikle elenir
+            if f_ratio < 70.0 and not (first_in in first_cand or first_cand in first_in):
+                continue
+            # Soyadlar tamamen farklıysa -> elenir
+            if s_ratio < 70.0:
+                continue
+
         if fuzz:
             r_sort = fuzz.token_sort_ratio(norm_input, cand_norm)
-            r_set = fuzz.token_set_ratio(norm_input, cand_norm)
-            r_part = fuzz.partial_ratio(norm_input, cand_norm)
-            score = max(r_sort, r_set, (r_sort * 0.6 + r_part * 0.4))
+            r_ratio = fuzz.ratio(norm_input, cand_norm)
+            score = max(r_sort, r_ratio)
         else:
             # Fallback (difflib)
             import difflib
             score = difflib.SequenceMatcher(None, norm_input, cand_norm).ratio() * 100
 
-        # Doğum yılı tam tutuyorsa bonus puan
-        if target_year and sp.dogum_yili == target_year:
-            score += 10
-        elif target_year and sp.dogum_yili in [target_year - 1, target_year + 1]:
-            score += 3
+        # Doğum yılı ve kulüp bonusları sadece temel ad benzerliği yüksekse (>= 75) eklenir
+        if score >= 75.0:
+            if target_year and sp.dogum_yili == target_year:
+                score += 5
+            elif target_year and sp.dogum_yili in [target_year - 1, target_year + 1]:
+                score += 2
 
-        # Kulüp veya okul adı uyuşuyorsa bonus puan
-        if norm_club:
-            aktif_k = sp.aktif_kulup()
-            k_norm = normalize_tr(aktif_k.kulup_adi) if aktif_k else ""
-            okul_norm = normalize_tr(sp.okul()) if sp.okul() else ""
-            matched = False
-            for cand_text in (k_norm, okul_norm):
-                if not cand_text:
-                    continue
-                if norm_club in cand_text or cand_text in norm_club:
-                    matched = True
-                    break
-                if fuzz and fuzz.partial_ratio(norm_club, cand_text) >= 80:
-                    matched = True
-                    break
-            if matched:
-                score += 8
+            if norm_club:
+                cand_clubs = [normalize_tr(sp.birincil_kulup.kulup_adi)] if sp.birincil_kulup else []
+                cand_clubs.extend([normalize_tr(h.kulup.kulup_adi) for h in sp.kulup_tarihcesi.all()])
+                if any(c and (norm_club in c or c in norm_club) for c in cand_clubs):
+                    score += 8
 
         score = min(round(float(score), 1), 99.5)
 

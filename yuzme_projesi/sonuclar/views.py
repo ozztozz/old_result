@@ -561,31 +561,54 @@ def _process_single_race_payload(payload: dict) -> dict:
         # Önce O(1) in-memory tam eşleşme kontrolü:
         cands = sporcu_exact_cache.get(tr_fold(sporcu_adi))
         if cands:
-            if len(cands) == 1:
-                cand = cands[0]
-                if not dogum_yili or not cand.dogum_yili or cand.dogum_yili == dogum_yili:
-                    sporcu = cand
-                    stats['eslesen_sporcu'] += 1
-            else:
-                for cand in cands:
-                    if dogum_yili and cand.dogum_yili == dogum_yili:
+            # A. Birebir doğum yılı ve cinsiyet uyumu
+            for cand in cands:
+                if dogum_yili and cand.dogum_yili == dogum_yili:
+                    if not cinsiyet or not cand.cinsiyet or cand.cinsiyet.upper().startswith(cinsiyet[0].upper()):
                         sporcu = cand
                         stats['eslesen_sporcu'] += 1
                         break
+            # B. Doğum yılı +-1 toleransı ve kulüp geçmişi uyumu
+            if not sporcu and kulup_adi:
+                norm_target_club = kulup_adi.lower().strip()
+                for cand in cands:
+                    if not cinsiyet or not cand.cinsiyet or cand.cinsiyet.upper().startswith(cinsiyet[0].upper()):
+                        if not dogum_yili or not cand.dogum_yili or abs(cand.dogum_yili - dogum_yili) <= 1:
+                            cand_clubs = [cand.birincil_kulup.kulup_adi.lower()] if cand.birincil_kulup else []
+                            cand_clubs.extend([h.kulup.kulup_adi.lower() for h in cand.kulup_tarihcesi.all()])
+                            if any(norm_target_club in c or c in norm_target_club for c in cand_clubs):
+                                sporcu = cand
+                                stats['eslesen_sporcu'] += 1
+                                break
+            # C. Eğer listede tek aday varsa ve doğum yılı bilgisi yoksa
+            if not sporcu and len(cands) == 1 and not dogum_yili:
+                sporcu = cands[0]
+                stats['eslesen_sporcu'] += 1
 
         # Tam eşleşme yoksa fuzzy fallback (match_athlete)
         if not sporcu:
             match_res = match_athlete(
                 name=sporcu_adi,
                 birth_year_or_date=dogum_yili,
-                club=kulup_adi
+                club=kulup_adi,
+                gender=cinsiyet
             )
             if match_res.get('durum') == 'basarili':
                 found_id = match_res.get('bulunan_id')
                 if not found_id and match_res.get('muhtemel_eslesmeler'):
                     top_cand = match_res['muhtemel_eslesmeler'][0]
-                    if top_cand.get('benzerlik_orani', 0) >= 88.0:
-                        found_id = top_cand.get('id')
+                    cand_score = top_cand.get('benzerlik_orani', 0)
+                    cand_gender = (top_cand.get('cinsiyet') or '').upper()
+                    in_gender = (cinsiyet or '').upper()
+                    gender_ok = not in_gender or not cand_gender or in_gender.startswith(cand_gender[0]) or cand_gender.startswith(in_gender[0])
+
+                    if gender_ok:
+                        if cand_score >= 95.0:
+                            found_id = top_cand.get('id')
+                        elif cand_score >= 90.0 and kulup_adi:
+                            cand_club = (top_cand.get('kulup') or '').lower()
+                            if kulup_adi.lower() in cand_club or cand_club in kulup_adi.lower():
+                                found_id = top_cand.get('id')
 
                 if found_id:
                     try:
@@ -904,6 +927,7 @@ def api_sporcu_eslestir(request):
         name = data.get('sporcu_adi') or data.get('ad_soyad') or data.get('ad') or data.get('name') or data.get('sporcu') or ''
         birth_info = data.get('dogum_yili') or data.get('dogum_tarihi') or data.get('birth_date') or data.get('yb')
         club = data.get('kulup') or data.get('club')
+        gender = data.get('cinsiyet') or data.get('gender')
         if data.get('limit'):
             try:
                 limit = int(data.get('limit'))
@@ -913,13 +937,14 @@ def api_sporcu_eslestir(request):
         name = request.GET.get('sporcu_adi') or request.GET.get('ad_soyad') or request.GET.get('ad') or request.GET.get('name') or request.GET.get('q') or ''
         birth_info = request.GET.get('dogum_yili') or request.GET.get('dogum_tarihi') or request.GET.get('birth_date') or request.GET.get('yb')
         club = request.GET.get('kulup') or request.GET.get('club')
+        gender = request.GET.get('cinsiyet') or request.GET.get('gender')
         if request.GET.get('limit'):
             try:
                 limit = int(request.GET.get('limit'))
             except Exception:
                 limit = 10
 
-    res = match_athlete(name=name, birth_year_or_date=birth_info, club=club, limit=limit)
+    res = match_athlete(name=name, birth_year_or_date=birth_info, club=club, gender=gender, limit=limit)
     status_code = 200 if res.get("durum") in ["basarili", "bulunamadi"] else 400
     return JsonResponse(res, status=status_code, json_dumps_params={'ensure_ascii': False})
 
@@ -931,11 +956,12 @@ def sporcu_eslestir_sayfasi(request):
     name = request.GET.get('ad', '').strip()
     birth_info = request.GET.get('dogum_yili', '').strip()
     club = request.GET.get('kulup', '').strip()
+    cinsiyet = request.GET.get('cinsiyet', '').strip()
 
     sonuc = None
     en_iyi_dereceler = []
     if name:
-        sonuc = match_athlete(name=name, birth_year_or_date=birth_info, club=club)
+        sonuc = match_athlete(name=name, birth_year_or_date=birth_info, club=club, gender=cinsiyet)
         if sonuc and sonuc.get("bulunan_id"):
             sp = Sporcu.objects.filter(id=sonuc["bulunan_id"]).first()
             if sp:
@@ -945,6 +971,7 @@ def sporcu_eslestir_sayfasi(request):
         'ad': name,
         'dogum_yili': birth_info,
         'kulup': club,
+        'cinsiyet': cinsiyet,
         'sonuc': sonuc,
         'en_iyi_dereceler': en_iyi_dereceler,
     }
