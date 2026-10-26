@@ -1,0 +1,180 @@
+{% if sonuc %}
+    {% if sonuc.sonuc == 'tam_eslesme' %}
+        <!-- TAM EŞLEŞME KARTI -->
+        <div class="swim-card mb-4 overflow-hidden">
+            <div class="swim-panel-success p-4 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="bi bi-patch-check-fill text-2xl"></i>
+                    <div>
+                        <h2 class="text-sm sm:text-base font-bold">TAM EŞLEŞME SAĞLANDI</h2>
+                        <span class="text-xs swim-text-muted">Sistemde birebir uyuşan sporcu kaydı bulundu</span>
+                    </div>
+                </div>
+                <span class="swim-badge swim-badge-success text-sm font-bold font-mono px-3 py-1">
+                    ID: {{ sonuc.sporcu.id }}
+                </span>
+            </div>
+            <div class="p-4 sm:p-6 bg-white">
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold swim-text-main">{{ sonuc.sporcu.sporcu_adi }}</h3>
+                        <p class="text-xs sm:text-sm swim-text-muted mt-1 flex items-center gap-1.5 flex-wrap">
+                            <i class="bi bi-shield-fill swim-text-primary"></i> {{ sonuc.sporcu.kulup }}
+                            {% if sonuc.sporcu.okul %}
+                                <span class="swim-badge swim-badge-neutral text-xs">
+                                    <i class="bi bi-mortarboard mr-1"></i> Okul: {{ sonuc.sporcu.okul }}
+                                </span>
+                            {% endif %}
+                        </p>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <span class="swim-badge swim-badge-neutral text-xs">
+                                <i class="bi bi-calendar-event swim-text-primary mr-1"></i> Doğum: <strong>{{ sonuc.sporcu.dogum_yili|default:sonuc.sporcu.yas_dogum_yili }}</strong>
+                            </span>
+                            {% if sonuc.sporcu.cinsiyet %}
+                                <span class="swim-badge swim-badge-neutral text-xs">
+                                    <i class="bi bi-gender-ambiguous swim-text-primary mr-1"></i> {{ sonuc.sporcu.cinsiyet }}
+                                </span>
+                            {% endif %}
+                            <span class="swim-badge swim-badge-neutral text-xs">
+                                <i class="bi bi-stopwatch swim-text-success mr-1"></i> Yarış: <strong>{{ sonuc.sporcu.toplam_yaris_sayisi }}</strong>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 w-full sm:w-auto shrink-0">
+                        <a href="{{ sonuc.sporcu.profil_url }}" class="swim-btn-outline-primary swim-btn-sm text-center">
+                            <i class="bi bi-person-lines-fill"></i> Sporcu Profilini Aç
+                        </a>
+                        <button type="button" class="swim-btn-success swim-btn-sm copy-id-btn" data-id="{{ sonuc.sporcu.id }}">
+                            <i class="bi bi-clipboard-check"></i> ID'yi Kopyala ({{ sonuc.sporcu.id }})
+                        </button>
+                    </div>
+                </div>
+
+                {% if en_iyi_dereceler %}
+                    <div class="pt-4 swim-border-t">
+                        <div class="flex justify-between items-center mb-2.5">
+                            <h4 class="text-xs font-bold swim-text-main uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="bi bi-trophy-fill swim-text-warning"></i> Kişisel En İyi Dereceler (PB)
+                            </h4>
+                            <span class="swim-badge swim-badge-primary">{{ en_iyi_dereceler|length }} Branş</span>
+                        </div>
+                        <div class="swim-table-wrapper">
+                            <table class="swim-table text-xs">
+                                <thead class="swim-thead">
+                                    <tr>
+                                        <th class="swim-th">Branş</th>
+                                        <th class="swim-th">En İyi Derece</th>
+                                        <th class="swim-th">Puan</th>
+                                        <th class="swim-th">Tarih</th>
+                                        <th class="swim-th">Kulüp</th>
+                                        <th class="swim-th text-right">Detay</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pb in en_iyi_dereceler %}
+                                        <tr class="swim-tr">
+                                            <td class="swim-td font-semibold swim-text-primary">
+                                                {{ pb.mesafe }}m {{ pb.stil }}
+                                            </td>
+                                            <td class="swim-td font-bold font-mono swim-text-main">
+                                                {{ pb.derece }}
+                                            </td>
+                                            <td class="swim-td font-mono">
+                                                {% if pb.puan %}{{ pb.puan }} P{% else %}-{% endif %}
+                                            </td>
+                                            <td class="swim-td swim-text-subtle font-mono">{{ pb.yaris_tarihi_baslangic|default:pb.yaris_tarihi_ham }}</td>
+                                            <td class="swim-td swim-text-muted truncate max-w-[120px]">{{ pb.kulup.kulup_adi }}</td>
+                                            <td class="swim-td text-right">
+                                                <a href="{% url 'sonuclar:sporcu_detay' sonuc.sporcu.id %}?kategori={{ pb.stil }}&mesafe={{ pb.mesafe }}" class="swim-btn-secondary swim-btn-sm py-0.5 px-2 text-[0.68rem]">
+                                                    Grafik &rarr;
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif sonuc.sonuc == 'muhtemel_eslesmeler' %}
+        <!-- MUHTEMEL EŞLEŞMELER LİSTESİ -->
+        <div class="swim-card mb-4 overflow-hidden">
+            <div class="swim-panel-warning p-4 flex items-center gap-2.5">
+                <i class="bi bi-exclamation-triangle-fill text-2xl"></i>
+                <div>
+                    <h2 class="text-sm sm:text-base font-bold">TAM EŞLEŞME BULUNAMADI — MUHTEMEL ADAYLAR</h2>
+                    <span class="text-xs swim-text-main">Girdiğiniz isim ve tarihle en yüksek benzerliğe sahip sporcular:</span>
+                </div>
+            </div>
+            <div class="swim-table-wrapper border-0 rounded-none">
+                <table class="swim-table">
+                    <thead class="swim-thead">
+                        <tr>
+                            <th class="swim-th w-24">Benzerlik</th>
+                            <th class="swim-th w-24">Sistem ID</th>
+                            <th class="swim-th">Sporcu Adı</th>
+                            <th class="swim-th text-center w-24">D.Yılı</th>
+                            <th class="swim-th">Kulüp</th>
+                            <th class="swim-th text-right w-36">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sp in sonuc.muhtemel_eslesmeler %}
+                            <tr class="swim-tr">
+                                <td class="swim-td">
+                                    {% if sp.benzerlik_orani >= 85 %}
+                                        <span class="swim-badge swim-badge-success text-xs font-bold">%{{ sp.benzerlik_orani }}</span>
+                                    {% elif sp.benzerlik_orani >= 70 %}
+                                        <span class="swim-badge swim-badge-primary text-xs font-bold">%{{ sp.benzerlik_orani }}</span>
+                                    {% else %}
+                                        <span class="swim-badge swim-badge-warning text-xs font-bold">%{{ sp.benzerlik_orani }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="swim-td text-xs font-mono font-semibold swim-text-muted">
+                                    #{{ sp.id }}
+                                </td>
+                                <td class="swim-td font-bold">
+                                    <a href="{{ sp.profil_url }}" class="swim-text-main hover:swim-text-primary transition">
+                                        {{ sp.sporcu_adi }}
+                                    </a>
+                                </td>
+                                <td class="swim-td text-center text-xs font-mono swim-text-muted">{{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}</td>
+                                <td class="swim-td text-xs swim-text-muted truncate max-w-[150px]">
+                                    {{ sp.kulup }}
+                                </td>
+                                <td class="swim-td text-right">
+                                    <button type="button" class="swim-btn-secondary swim-btn-sm text-xs copy-id-btn" data-id="{{ sp.id }}" title="Bu ID'yi kopyala">
+                                        <i class="bi bi-check2"></i> ID: {{ sp.id }}
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- BULUNAMADI KARTI -->
+        <div class="swim-card p-8 sm:p-12 text-center mb-4">
+            <div class="swim-text-subtle mb-3 text-4xl"><i class="bi bi-person-x"></i></div>
+            <h3 class="text-base sm:text-lg font-bold swim-text-main">Hiçbir Eşleşme Bulunamadı</h3>
+            <p class="text-xs sm:text-sm swim-text-muted mt-1 max-w-md mx-auto">
+                "<strong>{{ ad }}</strong>" adında ve belirtilen kriterlerde veritabanında herhangi bir sporcu kaydı tespit edilemedi. Lütfen isim yazımını veya doğum yılını kontrol ediniz.
+            </p>
+        </div>
+    {% endif %}
+{% else %}
+    <!-- Henüz Arama Yapılmadıysa Bilgi Paneli -->
+    <div class="swim-card p-8 sm:p-12 text-center h-full flex flex-col justify-center items-center">
+        <div class="swim-text-primary mb-3 text-4xl"><i class="bi bi-person-bounding-box"></i></div>
+        <h3 class="text-base sm:text-lg font-bold swim-text-main">Sorgulama Yapmaya Hazır</h3>
+        <p class="text-xs sm:text-sm swim-text-muted mt-2 max-w-md">
+            Sol taraftaki formdan sporcunun adını ve doğum yılını girerek sorgulama yapabilirsiniz. Sistemimiz tam eşleşme bulursa doğrudan <strong>Sporcu ID</strong>'sini, aksi halde en olası adayları benzerlik yüzdeleriyle birlikte sunar.
+        </p>
+    </div>
+{% endif %}
+

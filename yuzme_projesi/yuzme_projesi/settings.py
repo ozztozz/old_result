@@ -68,25 +68,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "yuzme_projesi.wsgi.application"
-"""
+
 # Database
 # Öncelik output/yuzme_veritabani.db, yoksa proje içi dosya
-DB_PATH = (BASE_DIR.parent / "output" / "yuzme_veritabani.db").resolve()
-if not DB_PATH.exists():
-    DB_PATH = (BASE_DIR / "yuzme_veritabani.db").resolve()
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": str(DB_PATH),
-        "OPTIONS": {
-            "timeout": 30,
-        },
-    }
-}
-
-"""
-DATABASE_DIR = BASE_DIR.parent.parent / "database"
+DATABASE_DIR = BASE_DIR.parent / "database"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

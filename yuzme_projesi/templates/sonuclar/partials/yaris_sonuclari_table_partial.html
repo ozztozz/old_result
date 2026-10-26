@@ -1,0 +1,117 @@
+{% load humanize %}
+<div class="swim-card mb-6">
+    <div class="swim-table-wrapper border-0 rounded-none">
+        <table class="swim-table">
+            <thead class="swim-thead">
+                <tr>
+                    <th class="swim-th w-28">Tarih</th>
+                    <th class="swim-th">Sporcu Adı</th>
+                    <th class="swim-th">Kulüp</th>
+                    <th class="swim-th">Branş</th>
+                    <th class="swim-th text-center w-16">Sıra</th>
+                    <th class="swim-th text-right w-28">Derece</th>
+                    <th class="swim-th text-center w-16">Puan</th>
+                    <th class="swim-th">Müsabaka Adı</th>
+                    <th class="swim-th text-center w-20">Baraj</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in page_obj %}
+                <tr class="swim-tr">
+                    <td class="swim-td text-xs swim-text-muted font-mono whitespace-nowrap">{{ r.yaris_tarihi_baslangic|default:r.yaris_tarihi_ham }}</td>
+                    <td class="swim-td">
+                        <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="font-bold swim-text-main hover:swim-text-primary transition block">
+                            {{ r.sporcu.sporcu_adi }}
+                        </a>
+                        <span class="text-[0.7rem] swim-text-subtle block mt-0.5">
+                            {% if r.hesaplanan_yas %}{{ r.hesaplanan_yas }} Yaşında{% elif r.sporcu.dogum_yili %}D.Yılı: {{ r.sporcu.dogum_yili }}{% endif %}
+                        </span>
+                    </td>
+                    <td class="swim-td text-xs swim-text-muted max-w-[180px] truncate">
+                        {% if r.kulup %}
+                            <a href="{% url 'sonuclar:kulup_detay' r.kulup.id %}" class="hover:swim-text-primary transition truncate block">
+                                {{ r.kulup.kulup_adi }}
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="swim-td font-semibold swim-text-main whitespace-nowrap">
+                        <span class="swim-badge swim-badge-neutral mr-1">{{ r.mesafe }}m</span>
+                        {{ r.stil }}
+                        {% if r.seri or r.kulvar %}
+                            <div class="text-[0.7rem] swim-text-subtle font-normal">
+                                {{ r.seri|default:"" }}{% if r.kulvar %} <span class="swim-badge swim-badge-info text-[0.65rem] px-1 py-0">K: {{ r.kulvar }}</span>{% endif %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-center font-semibold swim-text-muted text-xs">{{ r.sira|default:"-" }}</td>
+                    <td class="swim-td text-right font-bold font-mono">
+                        {% if r.derece == 'Bekleniyor' %}
+                            <span class="swim-badge swim-badge-warning">Bekleniyor</span>
+                        {% else %}
+                            <span class="swim-text-primary">{{ r.derece }}</span>
+                        {% endif %}
+                        {% if r.giris_derecesi %}
+                            <div class="text-[0.68rem] swim-text-subtle font-normal mt-0.5" title="Giriş Derecesi">G: {{ r.giris_derecesi }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-center font-semibold text-xs font-mono">{{ r.puan|default:"-" }}</td>
+                    <td class="swim-td text-xs swim-text-muted max-w-[220px] truncate" title="{{ r.musabaka_adi }}">
+                        {{ r.musabaka_adi|default:"-" }}
+                    </td>
+                    <td class="swim-td text-center">
+                        {% if r.baraj %}
+                            <span class="swim-badge swim-badge-success text-[0.68rem]">{{ r.baraj }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="swim-td text-center py-10 swim-text-muted">
+                        <i class="bi bi-search text-3xl swim-text-subtle block mb-2"></i>
+                        Seçilen kriterlere uygun yarış sonucu bulunamadı.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama (HTMX ile Anlık Sayfa Geçişi) -->
+    {% if page_obj.has_other_pages %}
+    <div class="swim-card-footer">
+        <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (Toplam {{ total_count|intcomma }} sonuç)</span>
+        <div class="flex items-center gap-1">
+            {% if page_obj.has_previous %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page=1&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-get="{% url 'sonuclar:yaris_sonuclari_ara' %}?page=1&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-target="#yarisSonuclariContent"
+                   hx-push-url="true">&laquo; İlk</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.previous_page_number }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-get="{% url 'sonuclar:yaris_sonuclari_ara' %}?page={{ page_obj.previous_page_number }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-target="#yarisSonuclariContent"
+                   hx-push-url="true">Önceki</a>
+            {% endif %}
+            <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.next_page_number }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-get="{% url 'sonuclar:yaris_sonuclari_ara' %}?page={{ page_obj.next_page_number }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-target="#yarisSonuclariContent"
+                   hx-push-url="true">Sonraki</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.paginator.num_pages }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-get="{% url 'sonuclar:yaris_sonuclari_ara' %}?page={{ page_obj.paginator.num_pages }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}"
+                   hx-target="#yarisSonuclariContent"
+                   hx-push-url="true">Son &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

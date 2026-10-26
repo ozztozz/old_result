@@ -1,0 +1,94 @@
+{% load humanize %}
+<div class="swim-card mb-6">
+    <div class="swim-table-wrapper border-0 rounded-none">
+        <table class="swim-table">
+            <thead class="swim-thead">
+                <tr>
+                    <th class="swim-th w-32">Tarih</th>
+                    <th class="swim-th">Müsabaka Adı</th>
+                    <th class="swim-th w-32">Şehir</th>
+                    <th class="swim-th text-center w-32">Yarış Sonucu</th>
+                    <th class="swim-th text-center w-32">Katılan Sporcu</th>
+                    <th class="swim-th text-right w-28">Detay</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ev in page_obj %}
+                <tr class="swim-tr">
+                    <td class="swim-td whitespace-nowrap text-xs font-mono swim-text-muted">
+                        {{ ev.yaris_tarihi_baslangic|default:ev.yaris_tarihi_ham|default:"-" }}
+                    </td>
+                    <td class="swim-td font-semibold">
+                        <a href="{% url 'sonuclar:musabaka_detay' ev.id %}" class="swim-text-main hover:swim-text-primary transition block">
+                            {{ ev.musabaka_adi }}
+                        </a>
+                        {% if ev.kaynak_turu %}
+                            <span class="swim-badge swim-badge-neutral text-[0.68rem] mt-1">{{ ev.kaynak_turu }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-xs swim-text-muted">
+                        <i class="bi bi-geo-alt swim-text-danger mr-1"></i>{{ ev.sehir|default:"-" }}
+                    </td>
+                    <td class="swim-td text-center">
+                        <span class="swim-badge swim-badge-primary">
+                            {{ ev.toplam_yaris_sayisi|intcomma }} sonuç
+                        </span>
+                    </td>
+                    <td class="swim-td text-center">
+                        <span class="swim-badge swim-badge-success">
+                            {{ ev.toplam_sporcu_sayisi|intcomma }} sporcu
+                        </span>
+                    </td>
+                    <td class="swim-td text-right">
+                        <a href="{% url 'sonuclar:musabaka_detay' ev.id %}" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill">
+                            Sonuçlar <i class="bi bi-chevron-right ml-1"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="swim-td text-center py-10 swim-text-muted">
+                        <i class="bi bi-calendar-x text-3xl swim-text-subtle block mb-2"></i>
+                        Kriterlere uygun müsabaka bulunamadı.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama (HTMX ile Anlık Sayfa Geçişi) -->
+    {% if page_obj.has_other_pages %}
+    <div class="swim-card-footer">
+        <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (Toplam {{ total_count|intcomma }} müsabaka)</span>
+        <div class="flex items-center gap-1">
+            {% if page_obj.has_previous %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page=1&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-get="{% url 'sonuclar:musabaka_listesi' %}?page=1&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-target="#musabakaTableContainer"
+                   hx-push-url="true">&laquo; İlk</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.previous_page_number }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-get="{% url 'sonuclar:musabaka_listesi' %}?page={{ page_obj.previous_page_number }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-target="#musabakaTableContainer"
+                   hx-push-url="true">Önceki</a>
+            {% endif %}
+            <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.next_page_number }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-get="{% url 'sonuclar:musabaka_listesi' %}?page={{ page_obj.next_page_number }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-target="#musabakaTableContainer"
+                   hx-push-url="true">Sonraki</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-get="{% url 'sonuclar:musabaka_listesi' %}?page={{ page_obj.paginator.num_pages }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}"
+                   hx-target="#musabakaTableContainer"
+                   hx-push-url="true">Son &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

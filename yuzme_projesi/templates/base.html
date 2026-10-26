@@ -1,196 +1,270 @@
-{% load static humanize %}
+{% load static %}
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Türkiye Yüzme Sonuçları & İstatistik Portalı{% endblock %}</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f8fafc">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Yüzme">
+    <title>{% block title %}Türkiye Yüzme Federasyonu - Yarış Sonuçları{% endblock %}</title>
+
+    <!-- Immediate Zero-Flicker Theme Initialization -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('swim_theme') || 'sis-mavisi';
+          document.documentElement.setAttribute('data-theme', saved);
+        } catch(e) {}
+      })();
+    </script>
+
+    <!-- PWA Web App Manifest & App Icons -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/icon-192.png' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/icon.svg' %}">
+
+    <!-- Central Design System (Tailwind CSS with Dynamic Theme Variables) -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        :root {
-            --primary-navy: #0f172a;
-            --accent-blue: #0284c7;
-            --accent-cyan: #06b6d4;
-            --bg-light: #f8fafc;
-        }
-        body {
-            background-color: var(--bg-light);
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            color: #334155;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .navbar-custom {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .nav-link {
-            font-weight: 500;
-            color: #cbd5e1 !important;
-            transition: color 0.2s;
-        }
-        .nav-link:hover, .nav-link.active {
-            color: #38bdf8 !important;
-        }
-        .stat-card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
-            background: white;
-        }
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-        .badge-style {
-            font-weight: 600;
-            padding: 0.4em 0.7em;
-            border-radius: 6px;
-        }
-        .table-custom {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .table-custom th {
-            background-color: #f1f5f9;
-            color: #475569;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .timeline-item {
-            position: relative;
-            padding-left: 30px;
-            margin-bottom: 25px;
-        }
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: 8px;
-            top: 25px;
-            bottom: -20px;
-            width: 2px;
-            background: #e2e8f0;
-        }
-        .timeline-item:last-child::before {
-            display: none;
-        }
-        .timeline-dot {
-            position: absolute;
-            left: 0;
-            top: 4px;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #0284c7;
-            border: 3px solid #e0f2fe;
-        }
-        .timeline-dot.active {
-            background: #10b981;
-            border-color: #d1fae5;
-        }
-        footer {
-            margin-top: auto;
-            background-color: #0f172a;
-            color: #94a3b8;
-        }
-    </style>
+
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="swim-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom py-3 sticky-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center fw-bold fs-4 text-white" href="{% url 'sonuclar:index' %}">
-                <i class="bi bi-water me-2 text-info fs-3"></i>
-                <span>Yüzme<span class="text-info">Sonuçları</span></span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'sonuclar:index' %}">
-                            <i class="bi bi-speedometer2 me-1"></i> Ana Sayfa
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'sporcu' in request.path %}active{% endif %}" href="{% url 'sonuclar:sporcu_listesi' %}">
-                            <i class="bi bi-people me-1"></i> Sporcular
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'kulup' in request.path %}active{% endif %}" href="{% url 'sonuclar:kulup_listesi' %}">
-                            <i class="bi bi-shield me-1"></i> Kulüpler
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'musabaka' in request.path %}active{% endif %}" href="{% url 'sonuclar:musabaka_listesi' %}">
-                            <i class="bi bi-calendar-event me-1"></i> Müsabakalar
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'yaris_sonuclari_ara' %}active{% endif %}" href="{% url 'sonuclar:yaris_sonuclari_ara' %}">
-                            <i class="bi bi-trophy me-1"></i> Yarış Sonuçları
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'canli' in request.path %}active{% endif %}" href="{% url 'sonuclar:canli_yaris_listesi' %}">
-                            <i class="bi bi-broadcast text-danger me-1"></i> Canlı Yarışlar
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'eslestir' in request.path %}active{% endif %}" href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}">
-                            <i class="bi bi-person-check me-1"></i> Sporcu Eşleştirme
-                        </a>
-                    </li>
-                </ul>
-                <form class="d-flex" action="{% url 'sonuclar:sporcu_listesi' %}" method="get">
-                    <div class="input-group">
-                        <input class="form-control form-control-sm bg-dark text-white border-secondary" type="search" name="q" placeholder="Sporcu ara..." value="{{ q }}">
-                        <button class="btn btn-sm btn-info text-dark fw-semibold" type="submit">
-                            <i class="bi bi-search"></i>
+    <header class="swim-navbar">
+        <div class="swim-container">
+            <div class="swim-navbar-inner">
+                <!-- Brand Logo -->
+                <a class="swim-brand" href="{% url 'sonuclar:index' %}">
+                    <span class="swim-brand-icon">
+                        <i class="bi bi-water text-lg"></i>
+                    </span>
+                    <span>Yüzme<span class="swim-brand-accent">Sonuçları</span></span>
+                </a>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden lg:flex items-center gap-1">
+                    <a class="swim-nav-link {% if request.resolver_match.url_name == 'index' %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:index' %}">
+                        <i class="bi bi-speedometer2"></i> Ana Sayfa
+                    </a>
+                    <a class="swim-nav-link {% if 'sporcu' in request.path and not 'eslestir' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:sporcu_listesi' %}">
+                        <i class="bi bi-people"></i> Sporcular
+                    </a>
+                    <a class="swim-nav-link {% if 'kulup' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:kulup_listesi' %}">
+                        <i class="bi bi-shield"></i> Kulüpler
+                    </a>
+                    <a class="swim-nav-link {% if 'musabaka' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:musabaka_listesi' %}">
+                        <i class="bi bi-calendar-event"></i> Müsabakalar
+                    </a>
+                    <a class="swim-nav-link {% if request.resolver_match.url_name == 'yaris_sonuclari_ara' %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:yaris_sonuclari_ara' %}">
+                        <i class="bi bi-trophy"></i> Yarış Sonuçları
+                    </a>
+                    <a class="swim-nav-link {% if 'canli' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:canli_yaris_listesi' %}">
+                        <i class="bi bi-broadcast swim-text-danger"></i> Canlı Yarışlar
+                    </a>
+                    <a class="swim-nav-link {% if 'eslestir' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}">
+                        <i class="bi bi-person-check swim-text-primary"></i> Eşleştirme
+                    </a>
+                </nav>
+
+                <!-- Right Side: Search, Theme Selector & Mobile Toggle -->
+                <div class="flex items-center gap-2">
+                    <form class="hidden sm:flex items-center relative" action="{% url 'sonuclar:sporcu_listesi' %}" method="get">
+                        <input class="swim-nav-search" type="search" name="q" placeholder="Sporcu ara..." value="{{ q }}">
+                        <i class="bi bi-search absolute left-2.5 text-xs swim-text-subtle"></i>
+                    </form>
+
+                    <!-- Theme Switcher Dropdown -->
+                    <div class="relative">
+                        <button id="swimThemeToggle" type="button" class="swim-theme-btn" aria-label="Tema Seç" title="Tema Değiştir">
+                            <i class="bi bi-palette2 text-sm"></i>
+                            <span class="hidden md:inline" data-swim-theme-label>Sis Mavisi</span>
+                            <i class="bi bi-chevron-down text-[10px] swim-text-subtle"></i>
+                        </button>
+                        <div id="swimThemeDropdown" class="swim-theme-dropdown hidden">
+                            <div class="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider swim-text-subtle">
+                                Renk Teması
+                            </div>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="sis-mavisi">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-sis-mavisi"></span>
+                                    <span>Sis Mavisi (Açık)</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="okyanus-gece">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-okyanus-gece"></span>
+                                    <span>Okyanus Gece (Koyu)</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="klasik-lacivert">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-klasik-lacivert"></span>
+                                    <span>Klasik Lacivert</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="zumrut">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-zumrut"></span>
+                                    <span>Zümrüt Su</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="pine-teal">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-pine-teal"></span>
+                                    <span>Pine Teal</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="lavanta-sisi">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-lavanta-sisi"></span>
+                                    <span>Lavanta Sisi</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                            <button type="button" class="swim-theme-option" data-swim-theme-set="kizil-gumus">
+                                <span class="flex items-center gap-2">
+                                    <span class="swim-theme-color-dot swim-theme-dot-kizil-gumus"></span>
+                                    <span>Kızıl & Gümüş</span>
+                                </span>
+                                <i class="bi bi-check2 text-base swim-theme-check hidden"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <a href="/admin/" class="swim-nav-btn">
+                        <i class="bi bi-person-lock"></i> Yönetim
+                    </a>
+
+                    <!-- Mobile Hamburger Button -->
+                    <button id="swimMobileToggle" type="button" class="lg:hidden swim-nav-mobile-btn" aria-label="Menüyü Aç">
+                        <i class="bi bi-list text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation Drawer -->
+            <div id="swimMobileMenu" class="hidden lg:hidden py-3 swim-border-t">
+                <form class="mb-3 relative" action="{% url 'sonuclar:sporcu_listesi' %}" method="get">
+                    <input class="swim-nav-search-mobile" type="search" name="q" placeholder="Sporcu ara..." value="{{ q }}">
+                    <i class="bi bi-search absolute left-3 top-3.5 text-sm swim-text-subtle"></i>
+                </form>
+
+                <!-- Mobile Theme Selector -->
+                <div class="mb-3 pt-2 swim-border-t">
+                    <div class="text-[11px] font-semibold uppercase tracking-wider swim-text-subtle mb-1.5 px-1">
+                        Görünüm Teması
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="sis-mavisi">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-sis-mavisi"></span>
+                                <span>Sis Mavisi</span>
+                            </span>
+                        </button>
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="okyanus-gece">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-okyanus-gece"></span>
+                                <span>Okyanus Gece</span>
+                            </span>
+                        </button>
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="klasik-lacivert">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-klasik-lacivert"></span>
+                                <span>Klasik Lacivert</span>
+                            </span>
+                        </button>
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="zumrut">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-zumrut"></span>
+                                <span>Zümrüt Su</span>
+                            </span>
+                        </button>
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="pine-teal">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-pine-teal"></span>
+                                <span>Pine Teal</span>
+                            </span>
+                        </button>
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="lavanta-sisi">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-lavanta-sisi"></span>
+                                <span>Lavanta Sisi</span>
+                            </span>
+                        </button>
+                        <button type="button" class="swim-theme-option p-2 rounded-xl text-left" data-swim-theme-set="kizil-gumus">
+                            <span class="flex items-center gap-2">
+                                <span class="swim-theme-color-dot swim-theme-dot-kizil-gumus"></span>
+                                <span>Kızıl & Gümüş</span>
+                            </span>
                         </button>
                     </div>
-                </form>
-                <a href="/admin/" class="btn btn-sm btn-outline-light ms-2">
-                    <i class="bi bi-person-lock"></i> Yönetim
-                </a>
+                </div>
+
+                <nav class="flex flex-col gap-1 swim-border-t pt-2">
+                    <a class="swim-nav-link {% if request.resolver_match.url_name == 'index' %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:index' %}">
+                        <i class="bi bi-speedometer2"></i> Ana Sayfa
+                    </a>
+                    <a class="swim-nav-link {% if 'sporcu' in request.path and not 'eslestir' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:sporcu_listesi' %}">
+                        <i class="bi bi-people"></i> Sporcular
+                    </a>
+                    <a class="swim-nav-link {% if 'kulup' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:kulup_listesi' %}">
+                        <i class="bi bi-shield"></i> Kulüpler
+                    </a>
+                    <a class="swim-nav-link {% if 'musabaka' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:musabaka_listesi' %}">
+                        <i class="bi bi-calendar-event"></i> Müsabakalar
+                    </a>
+                    <a class="swim-nav-link {% if request.resolver_match.url_name == 'yaris_sonuclari_ara' %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:yaris_sonuclari_ara' %}">
+                        <i class="bi bi-trophy"></i> Yarış Sonuçları
+                    </a>
+                    <a class="swim-nav-link {% if 'canli' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:canli_yaris_listesi' %}">
+                        <i class="bi bi-broadcast swim-text-danger"></i> Canlı Yarışlar
+                    </a>
+                    <a class="swim-nav-link {% if 'eslestir' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}">
+                        <i class="bi bi-person-check swim-text-primary"></i> Sporcu Eşleştirme
+                    </a>
+                    <a class="swim-nav-link" href="/admin/">
+                        <i class="bi bi-person-lock"></i> Yönetim Portalı
+                    </a>
+                </nav>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <!-- Main Content -->
-    <main class="py-4">
-        <div class="container">
+    <!-- Main Content Container -->
+    <main class="swim-main">
+        <div class="swim-container">
             {% block content %}{% endblock %}
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="py-4 mt-5">
-        <div class="container text-center text-md-between d-md-flex justify-content-between align-items-center">
-            <div class="mb-2 mb-md-0">
-                <span class="fw-semibold text-white">Türkiye Yüzme Federasyonu Sonuç Veritabanı</span> &copy; 2026
+    <footer class="swim-footer">
+        <div class="swim-container flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div>
+                <span class="font-semibold swim-text-main">Türkiye Yüzme Federasyonu Sonuç Veritabanı</span> &copy; 2026
             </div>
-            <div class="small">
-                <span><i class="bi bi-database me-1"></i> SQLite İlişkisel Veritabanı</span> | 
-                <span><i class="bi bi-lightning-charge me-1"></i> Django 6.0</span>
+            <div class="flex items-center gap-3 swim-text-subtle text-xs">
+                <span><i class="bi bi-database me-1"></i> SQLite İlişkisel Veritabanı</span>
+                <span>&bull;</span>
+                <span><i class="bi bi-lightning-charge me-1"></i> Django 6.0 + Tailwind CSS</span>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <!-- SwimUI Lightweight Controller -->
+    <script src="{% static 'js/swim-ui.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-

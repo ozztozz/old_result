@@ -8,8 +8,8 @@ from django.contrib import messages
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Count, Case, When, Value, IntegerField
-from django.db.models.functions import Cast
+from django.db.models import Q, Count, Case, When, Value, IntegerField, FloatField, BooleanField, CharField, F
+from django.db.models.functions import Cast, Concat
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, Event, CanliYarisDosya, is_school_team
@@ -89,6 +89,8 @@ def sporcu_listesi(request):
         'sirala': sirala,
         'total_count': paginator.count,
     }
+    if request.headers.get('HX-Request'):
+        return render(request, 'sonuclar/partials/sporcu_table_partial.html', context)
     return render(request, 'sonuclar/sporcu_listesi.html', context)
 
 
@@ -181,6 +183,8 @@ def kulup_listesi(request):
         'sirala': sirala,
         'total_count': paginator.count,
     }
+    if request.headers.get('HX-Request'):
+        return render(request, 'sonuclar/partials/kulup_table_partial.html', context)
     return render(request, 'sonuclar/kulup_listesi.html', context)
 
 
@@ -255,6 +259,8 @@ def yaris_sonuclari_ara(request):
         'mesafeler': mesafeler,
         'total_count': paginator.count,
     }
+    if request.headers.get('HX-Request'):
+        return render(request, 'sonuclar/partials/yaris_sonuclari_table_partial.html', context)
     return render(request, 'sonuclar/yaris_sonuclari.html', context)
 
 
@@ -940,6 +946,8 @@ def sporcu_eslestir_sayfasi(request):
         'sonuc': sonuc,
         'en_iyi_dereceler': en_iyi_dereceler,
     }
+    if request.headers.get('HX-Request'):
+        return render(request, 'sonuclar/partials/sporcu_eslestir_sonuc_partial.html', context)
     return render(request, 'sonuclar/sporcu_eslestir.html', context)
 
 
@@ -1455,6 +1463,8 @@ def musabaka_listesi(request):
         'sehirler': sehirler,
         'total_count': paginator.count
     }
+    if request.headers.get('HX-Request'):
+        return render(request, 'sonuclar/partials/musabaka_table_partial.html', context)
     return render(request, 'sonuclar/musabaka_listesi.html', context)
 
 
@@ -1508,57 +1518,238 @@ def musabaka_detay(request, pk):
     elif secili_durum == 'bekliyor':
         sonuclar_qs = sonuclar_qs.filter(derece='Bekleniyor')
 
-    # Akıllı Sıralama: Sonuçlananlar (1, 2, 3...) önce, Bekleyenler (DNS) en altta
+    # Müsabaka yılı tespiti (Hesaplanan yaş için: Yarış Yılı - Doğum Yılı)
+    event_year = None
+    if event.yaris_tarihi_baslangic and len(event.yaris_tarihi_baslangic) >= 4 and event.yaris_tarihi_baslangic[:4].isdigit():
+        event_year = int(event.yaris_tarihi_baslangic[:4])
+    elif event.yaris_tarihi_ham:
+        m = re.search(r'\b(20\d{2})\b', event.yaris_tarihi_ham)
+        if m:
+            event_year = int(m.group(1))
+    if not event_year:
+        event_year = timezone.now().year
+
+    # Sıralama: Önce Yarış No, ardından Hesaplanan Yaş (13 yaş ve üstü tek grup: 13+ Yaş Grubu), ardından Derece, diskalifiyeler ve sonuçsuzlar en altta
     sonuclar_qs = sonuclar_qs.annotate(
-        is_pending=Case(
-            When(derece='Bekleniyor', then=Value(1)),
-            default=Value(0),
+        yaris_no_int=Cast('yaris_no', IntegerField()),
+        raw_sporcu_yas_int=Cast('sporcu_yas', IntegerField()),
+        raw_yas_grubu_int=Cast('yas_grubu', IntegerField()),
+        raw_hesaplanan_yas_int=Case(
+            When(hesaplanan_yas__isnull=False, hesaplanan_yas__gt=0, then=F('hesaplanan_yas')),
+            When(sporcu__dogum_yili__isnull=False, sporcu__dogum_yili__gt=1900, then=Value(event_year) - F('sporcu__dogum_yili')),
+            When(sporcu_yas__isnull=False, sporcu_yas__gt='', then='raw_sporcu_yas_int'),
+            When(yas_grubu__isnull=False, yas_grubu__gt='', then='raw_yas_grubu_int'),
+            default=Value(999),
             output_field=IntegerField()
         ),
-        yaris_no_int=Cast('yaris_no', IntegerField()),
+        # 13 yaş ve üstü sporcuları tek bir grupta toplar (yas_int = 13)
+        yas_int=Case(
+            When(raw_hesaplanan_yas_int__gte=13, raw_hesaplanan_yas_int__lt=900, then=Value(13)),
+            When(raw_hesaplanan_yas_int__lte=0, then=Value(900)),
+            default='raw_hesaplanan_yas_int',
+            output_field=IntegerField()
+        ),
+        yas_gosterim=Case(
+            When(hesaplanan_yas__isnull=False, hesaplanan_yas__gt=0, then=Cast(F('hesaplanan_yas'), CharField())),
+            When(sporcu__dogum_yili__isnull=False, sporcu__dogum_yili__gt=1900, then=Cast(Value(event_year) - F('sporcu__dogum_yili'), CharField())),
+            When(sporcu_yas__isnull=False, sporcu_yas__gt='', then=F('sporcu_yas')),
+            When(yas_grubu__isnull=False, yas_grubu__gt='', then=F('yas_grubu')),
+            default=Value(''),
+            output_field=CharField()
+        ),
+        # 13 yaş ve üstü için '13+ Yaş Grubu', küçükler için örn. '11 Yaş Grubu', '12 Yaş Grubu'
+        yas_grup_adi=Case(
+            When(raw_hesaplanan_yas_int__gte=13, raw_hesaplanan_yas_int__lt=900, then=Value('13+ Yaş Grubu')),
+            When(Q(raw_hesaplanan_yas_int__gt=0) & Q(raw_hesaplanan_yas_int__lt=13), then=Concat(Cast('raw_hesaplanan_yas_int', CharField()), Value(' Yaş Grubu'))),
+            When(yas_grubu__isnull=False, yas_grubu__gt='', then=F('yas_grubu')),
+            default=Value('Genel Sıralama'),
+            output_field=CharField()
+        ),
+        # 1: Geçerli dereceler (en üstte, süreye göre hızlıdan yavaşa)
+        # 2: Diskalifiyeler (DQ, SW, disk., DNF)
+        # 3: Sonuç olmayanlar (Bekleniyor, yarışa girmeyen, boş) -> EN ALTA
+        derece_kategori=Case(
+            When(
+                Q(sira__icontains='disk') | Q(derece__icontains='disk') | 
+                Q(sira__icontains='dq') | Q(derece__icontains='dq') | 
+                Q(derece__startswith='SW') | Q(sira__startswith='SW') |
+                Q(derece__iexact='dnf') | Q(sira__iexact='dnf'),
+                then=Value(2)
+            ),
+            When(
+                Q(derece='Bekleniyor') | Q(derece__isnull=True) | Q(derece='') | Q(derece='-') |
+                Q(sira__icontains='dns') | Q(derece__icontains='dns') |
+                Q(derece_saniye__isnull=True) | Q(derece_saniye__lte=0),
+                then=Value(3)
+            ),
+            default=Value(1),
+            output_field=IntegerField()
+        ),
+        is_dq=Case(
+            When(
+                Q(sira__icontains='disk') | Q(derece__icontains='disk') | 
+                Q(sira__icontains='dq') | Q(derece__icontains='dq') | 
+                Q(derece__startswith='SW') | Q(sira__startswith='SW') |
+                Q(derece__iexact='dnf') | Q(sira__iexact='dnf'),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+        saniyesi=Case(
+            When(derece_saniye__isnull=True, then=Value(999999.0)),
+            When(derece_saniye__lte=0, then=Value(999999.0)),
+            default=F('derece_saniye'),
+            output_field=FloatField()
+        ),
         sira_int=Case(
             When(sira='', then=Value(9999)),
             When(sira__isnull=True, then=Value(9999)),
+            When(Q(sira__icontains='disk') | Q(sira__icontains='dq') | Q(sira__startswith='SW'), then=Value(9999)),
             default=Cast('sira', IntegerField()),
             output_field=IntegerField()
         )
-    ).order_by('yaris_no_int', 'is_pending', 'sira_int', 'derece_saniye')
+    ).order_by('yaris_no_int', 'yas_int', 'derece_kategori', 'saniyesi', 'sira_int', 'seri', 'kulvar')
 
-    # Mevcut yarış numaraları listesi (filtre menüsü için: yarış no + mesafe + stil)
-    yaris_rows = (
-        event.yaris_sonuclari.exclude(yaris_no__isnull=True)
-        .exclude(yaris_no='')
-        .values('yaris_no', 'mesafe', 'stil')
-        .distinct()
+    # Canlı yarış oturumu bağlantısı (varsa)
+    canli_yaris = CanliYaris.objects.filter(event_id=event.id).first()
+
+    # Seçili kulüp istatistikleri (Yarış programı bazında)
+    kulup_yaris_counts = {}
+    secili_kulup_id = int(secili_kulup) if secili_kulup and secili_kulup.isdigit() else None
+    secili_kulup_obj = None
+    kulup_toplam_yaris_sayisi = 0
+    kulup_toplam_sporcu_sayisi = 0
+    kulup_katilinan_yaris_sayisi = 0
+
+    if secili_kulup_id:
+        secili_kulup_obj = Kulup.objects.filter(id=secili_kulup_id).first()
+        kc_qs = (
+            event.yaris_sonuclari.filter(kulup_id=secili_kulup_id)
+            .exclude(yaris_no__isnull=True).exclude(yaris_no='')
+            .values('yaris_no')
+            .annotate(
+                kulup_toplam=Count('id'),
+                kulup_tamamlanan=Count('id', filter=~Q(derece='Bekleniyor')),
+                kulup_bekleyen=Count('id', filter=Q(derece='Bekleniyor')),
+            )
+        )
+        for kc in kc_qs:
+            yno_str = str(kc['yaris_no']).strip()
+            kulup_yaris_counts[yno_str] = {
+                'toplam': kc['kulup_toplam'],
+                'tamamlanan': kc['kulup_tamamlanan'],
+                'bekleyen': kc['kulup_bekleyen'],
+            }
+            kulup_toplam_yaris_sayisi += kc['kulup_toplam']
+        
+        kulup_katilinan_yaris_sayisi = len(kulup_yaris_counts)
+        kulup_toplam_sporcu_sayisi = (
+            event.yaris_sonuclari.filter(kulup_id=secili_kulup_id)
+            .values('sporcu_id').distinct().count()
+        )
+
+    # Yarış programı ve anlık durum istatistikleri (Toplu ORM sorgusu)
+    races_qs = (
+        event.yaris_sonuclari.exclude(yaris_no__isnull=True).exclude(yaris_no='')
+        .values('yaris_no', 'mesafe', 'stil', 'cinsiyet', 'yas_grubu')
+        .annotate(
+            toplam=Count('id'),
+            tamamlanan=Count('id', filter=~Q(derece='Bekleniyor')),
+            bekleyen=Count('id', filter=Q(derece='Bekleniyor')),
+        )
     )
-    yaris_map = {}
-    for row in yaris_rows:
-        yno = str(row['yaris_no']).strip()
+
+    yaris_dict = {}
+    for r in races_qs:
+        yno = str(r['yaris_no']).strip()
         if not yno:
             continue
-        if yno not in yaris_map:
-            yaris_map[yno] = {
+        if yno not in yaris_dict:
+            yaris_dict[yno] = {
                 'no': yno,
-                'mesafe': row.get('mesafe'),
-                'stil': (row.get('stil') or '').strip(),
+                'yaris_no': yno,
+                'mesafe': r['mesafe'],
+                'stil': (r['stil'] or '').strip(),
+                'cinsiyet': (r['cinsiyet'] or '').strip(),
+                'yas_grubu': (r['yas_grubu'] or '').strip(),
+                'toplam': r['toplam'],
+                'tamamlanan': r['tamamlanan'],
+                'bekleyen': r['bekleyen'],
             }
         else:
-            if not yaris_map[yno]['mesafe'] and row.get('mesafe'):
-                yaris_map[yno]['mesafe'] = row.get('mesafe')
-            if not yaris_map[yno]['stil'] and row.get('stil'):
-                yaris_map[yno]['stil'] = (row.get('stil') or '').strip()
+            yaris_dict[yno]['toplam'] += r['toplam']
+            yaris_dict[yno]['tamamlanan'] += r['tamamlanan']
+            yaris_dict[yno]['bekleyen'] += r['bekleyen']
+            if not yaris_dict[yno]['mesafe'] and r['mesafe']:
+                yaris_dict[yno]['mesafe'] = r['mesafe']
+            if not yaris_dict[yno]['stil'] and r['stil']:
+                yaris_dict[yno]['stil'] = (r['stil'] or '').strip()
+            if not yaris_dict[yno]['cinsiyet'] and r['cinsiyet']:
+                yaris_dict[yno]['cinsiyet'] = (r['cinsiyet'] or '').strip()
 
-    # Sayısal sırala
-    try:
-        yaris_nolari = sorted(yaris_map.values(), key=lambda x: int(x['no']) if str(x['no']).isdigit() else 9999)
-    except Exception:
-        yaris_nolari = sorted(yaris_map.values(), key=lambda x: str(x['no']))
+    yaris_programi = []
+    toplam_biten_yaris = 0
+    toplam_bekleyen_yaris = 0
+    toplam_canli_yaris = 0
+
+    for yno, data in yaris_dict.items():
+        toplam = data['toplam']
+        tamamlanan = data['tamamlanan']
+        bekleyen = data['bekleyen']
+
+        # Kural: Eğer en az 1 sonuç varsa 'Sonuçlandı', hiç sonuç yoksa 'Start Listesi'
+        if tamamlanan > 0:
+            durum_kodu = 'tamamlandi'
+            durum_etiketi = 'Sonuçlandı'
+            durum_renk = 'success'
+            durum_ikon = 'bi-check2-circle'
+            toplam_biten_yaris += 1
+        else:
+            durum_kodu = 'bekliyor'
+            durum_etiketi = 'Start Listesi'
+            durum_renk = 'warning'
+            durum_ikon = 'bi-clock-history'
+            toplam_bekleyen_yaris += 1
+
+        # Kulübe ait yarış istatistikleri
+        k_info = kulup_yaris_counts.get(yno)
+        if k_info:
+            kulup_sporcu_sayisi = k_info['toplam']
+            kulup_tamamlanan = k_info['tamamlanan']
+            kulup_bekleyen = k_info['bekleyen']
+        else:
+            kulup_sporcu_sayisi = 0 if secili_kulup_id else None
+            kulup_tamamlanan = 0
+            kulup_bekleyen = 0
+
+        data.update({
+            'durum_kodu': durum_kodu,
+            'durum_etiketi': durum_etiketi,
+            'durum_renk': durum_renk,
+            'durum_ikon': durum_ikon,
+            'kulup_sporcu_sayisi': kulup_sporcu_sayisi,
+            'kulup_tamamlanan': kulup_tamamlanan,
+            'kulup_bekleyen': kulup_bekleyen,
+        })
+        yaris_programi.append(data)
+
+    def _sort_yaris(x):
+        try:
+            return int(x['no'])
+        except (ValueError, TypeError):
+            return 9999
+
+    yaris_programi.sort(key=_sort_yaris)
+
+    secili_yaris_detay = next((y for y in yaris_programi if y['no'] == secili_yaris_no), None)
 
     total_count = sonuclar_qs.count()
     event_toplam_yaris = event.toplam_yaris_sayisi or event.yaris_sonuclari.count()
     event_toplam_sporcu = event.toplam_sporcu_sayisi or len(katilan_sporcular)
 
-    paginator = Paginator(sonuclar_qs, 50)
+    per_page = 250 if secili_yaris_no else 50
+    paginator = Paginator(sonuclar_qs, per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -1570,15 +1761,81 @@ def musabaka_detay(request, pk):
         'total_races': total_count,
         'completed_count': completed_count,
         'pending_count': pending_count,
-        'yaris_nolari': yaris_nolari,
+        'yaris_nolari': yaris_programi,
+        'yaris_programi': yaris_programi,
+        'toplam_biten_yaris': toplam_biten_yaris,
+        'toplam_canli_yaris': toplam_canli_yaris,
+        'toplam_bekleyen_yaris': toplam_bekleyen_yaris,
+        'secili_yaris_detay': secili_yaris_detay,
+        'canli_yaris': canli_yaris,
         'katilan_kulupler': katilan_kulupler,
         'katilan_sporcular': katilan_sporcular,
         'secili_yaris_no': secili_yaris_no,
         'secili_durum': secili_durum,
         'secili_kulup': int(secili_kulup) if secili_kulup.isdigit() else '',
+        'secili_kulup_obj': secili_kulup_obj,
+        'kulup_toplam_yaris_sayisi': kulup_toplam_yaris_sayisi,
+        'kulup_toplam_sporcu_sayisi': kulup_toplam_sporcu_sayisi,
+        'kulup_katilinan_yaris_sayisi': kulup_katilinan_yaris_sayisi,
         'secili_sporcu': int(secili_sporcu) if secili_sporcu.isdigit() else '',
     }
+
+    # HTMX kismi yanit destegi (SPA akiciligi)
+    if request.headers.get('HX-Request'):
+        target = request.headers.get('HX-Target') or request.GET.get('target', '')
+        if target in ('programContent', '#programContent'):
+            return render(request, 'sonuclar/partials/musabaka_program_partial.html', context)
+        if target in ('sonuclarContent', '#sonuclarContent'):
+            return render(request, 'sonuclar/partials/musabaka_sonuclar_partial.html', context)
+        return render(request, 'sonuclar/partials/musabaka_sonuclar_modal_content.html', context)
+
     return render(request, 'sonuclar/musabaka_detay.html', context)
+
+def musabaka_sporcu_modal(request, event_id, sporcu_id):
+    """Müsabaka detay sayfasında sporcuya tıklandığında HTMX ile sadece o müsabakadaki yarışlarını modal olarak getirir."""
+    event = get_object_or_404(Event, pk=event_id)
+    sporcu = get_object_or_404(Sporcu, pk=sporcu_id)
+
+    # Sporcunun sadece bu müsabakadaki yarışları
+    sonuclar = (
+        YarisSonucu.objects.filter(event=event, sporcu=sporcu)
+        .select_related('kulup')
+        .annotate(
+            yaris_no_int=Cast('yaris_no', IntegerField()),
+            saniyesi=Case(
+                When(derece_saniye__isnull=True, then=Value(999999.0)),
+                When(derece_saniye__lte=0, then=Value(999999.0)),
+                default=F('derece_saniye'),
+                output_field=FloatField()
+            )
+        )
+        .order_by('yaris_no_int', 'saniyesi')
+    )
+
+    kulup = sonuclar.first().kulup if sonuclar.exists() else None
+
+    # Müsabaka yılı ve sporcu yaşı
+    event_year = None
+    if event.yaris_tarihi_baslangic and len(event.yaris_tarihi_baslangic) >= 4 and event.yaris_tarihi_baslangic[:4].isdigit():
+        event_year = int(event.yaris_tarihi_baslangic[:4])
+    elif event.yaris_tarihi_ham:
+        m = re.search(r'\b(20\d{2})\b', event.yaris_tarihi_ham)
+        if m:
+            event_year = int(m.group(1))
+    if not event_year:
+        event_year = timezone.now().year
+
+    sporcu_yasi = (event_year - sporcu.dogum_yili) if sporcu.dogum_yili else None
+
+    context = {
+        'event': event,
+        'sporcu': sporcu,
+        'kulup': kulup,
+        'sonuclar': sonuclar,
+        'sporcu_yasi': sporcu_yasi,
+    }
+    return render(request, 'sonuclar/partials/sporcu_musabaka_modal.html', context)
+
 
 
 @csrf_exempt

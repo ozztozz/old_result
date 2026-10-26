@@ -4,154 +4,62 @@
 {% block title %}Sporcular Listesi ({{ total_count|intcomma }}) - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
     <div>
-        <h2 class="fw-bold mb-1"><i class="bi bi-people text-primary me-2"></i> Lisanslı Yüzücüler</h2>
-        <p class="text-muted mb-0">Toplam <strong>{{ total_count|intcomma }}</strong> sporcu profili listeleniyor.</p>
+        <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
+            <i class="bi bi-people swim-text-primary"></i> Lisanslı Yüzücüler
+        </h1>
+        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> sporcu profili listeleniyor.</p>
     </div>
 </div>
 
-<!-- Filtreleme Kartı -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-    <form method="get" class="row g-3">
-        <div class="col-md-4">
-            <label class="form-label small fw-semibold text-muted">Sporcu Adı</label>
-            <div class="input-group">
-                <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                <input type="text" name="q" class="form-control" placeholder="Ad veya Soyadı ara..." value="{{ q }}">
+<!-- Filtreleme Kartı (HTMX Canlı Arama ile) -->
+<div class="swim-card p-4 sm:p-5 mb-4">
+    <form method="get" 
+          action="{% url 'sonuclar:sporcu_listesi' %}"
+          hx-get="{% url 'sonuclar:sporcu_listesi' %}" 
+          hx-target="#sporcuTableContainer" 
+          hx-push-url="true"
+          hx-trigger="input changed delay:300ms from:input, change from:select"
+          class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+        <div class="sm:col-span-4">
+            <label class="swim-label">Sporcu Adı</label>
+            <div class="relative">
+                <input type="text" name="q" class="swim-input text-xs pl-8" placeholder="Ad veya Soyadı ara..." value="{{ q }}">
+                <i class="bi bi-person absolute left-2.5 top-2.5 text-xs swim-text-subtle"></i>
             </div>
         </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted">Kulüp</label>
-            <div class="input-group">
-                <span class="input-group-text bg-light"><i class="bi bi-shield"></i></span>
-                <input type="text" name="kulup" class="form-control" placeholder="Kulüp adı..." value="{{ kulup_adi }}">
+        <div class="sm:col-span-3">
+            <label class="swim-label">Kulüp</label>
+            <div class="relative">
+                <input type="text" name="kulup" class="swim-input text-xs pl-8" placeholder="Kulüp adı..." value="{{ kulup_adi }}">
+                <i class="bi bi-shield absolute left-2.5 top-2.5 text-xs swim-text-subtle"></i>
             </div>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small fw-semibold text-muted">Cinsiyet</label>
-            <select name="cinsiyet" class="form-select">
+        <div class="sm:col-span-2">
+            <label class="swim-label">Cinsiyet</label>
+            <select name="cinsiyet" class="swim-select text-xs">
                 <option value="">Tümü</option>
                 <option value="ERKEK" {% if cinsiyet == 'ERKEK' %}selected{% endif %}>Erkek</option>
                 <option value="KADIN" {% if cinsiyet == 'KADIN' %}selected{% endif %}>Kadın</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small fw-semibold text-muted">Sıralama</label>
-            <select name="sirala" class="form-select">
+        <div class="sm:col-span-2">
+            <label class="swim-label">Sıralama</label>
+            <select name="sirala" class="swim-select text-xs">
                 <option value="isim" {% if sirala == 'isim' %}selected{% endif %}>Ada Göre (A-Z)</option>
                 <option value="yaris" {% if sirala == 'yaris' %}selected{% endif %}>En Çok Yarışan</option>
                 <option value="tarih" {% if sirala == 'tarih' %}selected{% endif %}>En Son Yarışan</option>
             </select>
         </div>
-        <div class="col-md-1 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter"></i></button>
+        <div class="sm:col-span-1">
+            <button type="submit" class="swim-btn-primary w-full text-xs"><i class="bi bi-filter"></i></button>
         </div>
     </form>
 </div>
 
-<!-- Sporcu Tablosu -->
-<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>#ID</th>
-                    <th>Sporcu Adı Soyadı</th>
-                    <th class="text-center">Doğum Yılı</th>
-                    <th>Cinsiyet</th>
-                    <th>Birincil / Temsil Ettiği Kulüp</th>
-                    <th class="text-center">Kariyer Tarihi</th>
-                    <th class="text-end">Toplam Yarış</th>
-                    <th class="text-center">İncele</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sp in page_obj %}
-                <tr>
-                    <td class="text-muted small">#{{ sp.id }}</td>
-                    <td>
-                        <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="fw-bold text-decoration-none text-dark d-block">
-                            {{ sp.sporcu_adi }}
-                        </a>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-secondary-subtle text-secondary fw-semibold">
-                            {{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if sp.cinsiyet == 'ERKEK' %}
-                            <span class="badge bg-primary-subtle text-primary"><i class="bi bi-gender-male"></i> Erkek</span>
-                        {% elif sp.cinsiyet == 'KADIN' %}
-                            <span class="badge bg-danger-subtle text-danger"><i class="bi bi-gender-female"></i> Kadın</span>
-                        {% else %}
-                            <span class="badge bg-light text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if sp.birincil_kulup %}
-                            <a href="{% url 'sonuclar:kulup_detay' sp.birincil_kulup.id %}" class="text-decoration-none text-muted">
-                                <i class="bi bi-shield me-1 small"></i>{{ sp.birincil_kulup.kulup_adi }}
-                            </a>
-                        {% else %}
-                            <span class="text-muted small">Kulüpsüz / Belirtilmemiş</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center small text-muted">
-                        {% if sp.ilk_yaris_tarihi %}
-                            {{ sp.ilk_yaris_tarihi|slice:":4" }} - {{ sp.son_yaris_tarihi|slice:":4" }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td class="text-end fw-bold text-primary">{{ sp.toplam_yaris_sayisi }}</td>
-                    <td class="text-center">
-                        <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="btn btn-sm btn-light border">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="text-center py-5 text-muted">
-                        <i class="bi bi-search fs-2 d-block mb-2"></i>
-                        Aradığınız kriterlere uygun sporcu bulunamadı.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<!-- Sporcu Tablosu (HTMX Dinamik Kapsayıcısı) -->
+<div id="sporcuTableContainer">
+    {% include 'sonuclar/partials/sporcu_table_partial.html' %}
 </div>
-
-<!-- Sayfalama (Pagination) -->
-{% if page_obj.has_other_pages %}
-<nav class="d-flex justify-content-center">
-    <ul class="pagination">
-        {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page=1&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}">&laquo; İlk</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}">Önceki</a>
-            </li>
-        {% endif %}
-
-        <li class="page-item active">
-            <span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-        </li>
-
-        {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}">Sonraki</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}">Son &raquo;</a>
-            </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
 {% endblock %}
-

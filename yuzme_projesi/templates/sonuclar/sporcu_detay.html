@@ -5,131 +5,130 @@
 
 {% block content %}
 <!-- Sporcu Profil Başlığı -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-    <div class="row align-items-center">
-        <div class="col-md-8">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-1 rounded-pill">
-                    {% if sporcu.cinsiyet == 'ERKEK' %}<i class="bi bi-gender-male me-1"></i>Erkek
-                    {% elif sporcu.cinsiyet == 'KADIN' %}<i class="bi bi-gender-female me-1"></i>Kadın
+<div class="swim-card p-4 sm:p-6 mb-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="swim-badge {% if sporcu.cinsiyet == 'ERKEK' %}swim-badge-primary{% elif sporcu.cinsiyet == 'KADIN' %}swim-badge-danger{% else %}swim-badge-neutral{% endif %}">
+                    {% if sporcu.cinsiyet == 'ERKEK' %}<i class="bi bi-gender-male"></i> Erkek
+                    {% elif sporcu.cinsiyet == 'KADIN' %}<i class="bi bi-gender-female"></i> Kadın
                     {% else %}Sporcu{% endif %}
                 </span>
                 {% if sporcu.dogum_yili %}
-                    <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-1 rounded-pill">
-                        <i class="bi bi-calendar-event me-1"></i>Doğum Yılı: {{ sporcu.dogum_yili }}
+                    <span class="swim-badge swim-badge-neutral">
+                        <i class="bi bi-calendar-event"></i> Doğum Yılı: {{ sporcu.dogum_yili }}
                     </span>
                 {% elif sporcu.yas_dogum_yili %}
-                    <span class="badge bg-secondary-subtle text-secondary fs-6 px-3 py-1 rounded-pill">
+                    <span class="swim-badge swim-badge-neutral">
                         D.Yılı / Yaş: {{ sporcu.yas_dogum_yili }}
                     </span>
                 {% endif %}
             </div>
-            <h1 class="display-6 fw-bold text-dark mb-1">{{ sporcu.sporcu_adi }}</h1>
-            <p class="text-muted mb-0">
-                <i class="bi bi-shield me-1 text-primary"></i>
+            <h1 class="text-xl sm:text-3xl font-extrabold swim-text-main tracking-tight">{{ sporcu.sporcu_adi }}</h1>
+            <p class="text-xs sm:text-sm swim-text-muted mt-1 flex items-center gap-1.5">
+                <i class="bi bi-shield swim-text-primary"></i>
                 Birincil Kulüp: 
                 {% if sporcu.birincil_kulup %}
-                    <a href="{% url 'sonuclar:kulup_detay' sporcu.birincil_kulup.id %}" class="fw-semibold text-decoration-none">
+                    <a href="{% url 'sonuclar:kulup_detay' sporcu.birincil_kulup.id %}" class="font-semibold swim-text-main hover:swim-text-primary transition">
                         {{ sporcu.birincil_kulup.kulup_adi }}
                     </a>
                 {% else %}
-                    <span class="text-muted">Kulüpsüz / Belirtilmemiş</span>
+                    <span class="swim-text-subtle">Kulüpsüz / Belirtilmemiş</span>
                 {% endif %}
             </p>
         </div>
-        <div class="col-md-4 mt-3 mt-md-0 text-md-end">
-            <div class="d-inline-block bg-light p-3 rounded-4 border text-center">
-                <div class="fs-3 fw-bold text-primary">{{ sporcu.toplam_yaris_sayisi }}</div>
-                <div class="small text-muted text-uppercase fw-semibold">Toplam Yarış</div>
-                <div class="small text-muted mt-1">{{ sporcu.ilk_yaris_tarihi|slice:":4" }} - {{ sporcu.son_yaris_tarihi|slice:":4" }}</div>
+        <div class="shrink-0">
+            <div class="swim-stat-box p-3 min-w-[120px] ">
+                <div class="swim-stat-val text-2xl sm:text-3xl swim-text-primary font-mono">{{ sporcu.toplam_yaris_sayisi }}</div>
+                <div class="swim-stat-lbl text-[0.68rem]">Toplam Yarış</div>
+                <div class="text-[0.68rem] swim-text-subtle mt-0.5 font-mono">{{ sporcu.ilk_yaris_tarihi|slice:":4" }} - {{ sporcu.son_yaris_tarihi|slice:":4" }}</div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-4">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
     <!-- Kulüp Transfer ve Temsil Tarihçesi -->
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
-            <h5 class="fw-bold text-dark mb-4">
-                <i class="bi bi-clock-history text-primary me-2"></i> Kulüp Transfer ve Temsil Tarihçesi
-            </h5>
-            <div class="timeline ps-2">
+    <div class="lg:col-span-6">
+        <div class="swim-card h-full p-4 sm:p-6">
+            <h2 class="text-sm sm:text-base font-bold swim-text-main mb-4 flex items-center gap-2">
+                <i class="bi bi-clock-history swim-text-primary"></i> Kulüp Transfer ve Temsil Tarihçesi
+            </h2>
+            <div class="swim-timeline">
                 {% for t in tarihce %}
-                <div class="timeline-item">
-                    <div class="timeline-dot {% if t.aktif_kulup_mu %}active{% endif %}"></div>
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="relative">
+                    <div class="swim-timeline-dot {% if t.aktif_kulup_mu %}swim-timeline-dot-active{% endif %}"></div>
+                    <div class="flex justify-between items-start gap-2">
                         <div>
-                            <div class="fw-bold text-dark fs-6">
-                                <a href="{% url 'sonuclar:kulup_detay' t.kulup.id %}" class="text-decoration-none text-dark">
+                            <div class="font-bold swim-text-main text-sm">
+                                <a href="{% url 'sonuclar:kulup_detay' t.kulup.id %}" class="hover:swim-text-primary transition">
                                     {{ t.kulup.kulup_adi }}
                                 </a>
                             </div>
-                            <div class="small text-muted mt-1">
-                                <i class="bi bi-calendar3 me-1"></i>
+                            <div class="text-xs swim-text-subtle mt-0.5 flex items-center gap-1 font-mono">
+                                <i class="bi bi-calendar3"></i>
                                 {{ t.ilk_yaris_tarihi|default:"Bilinmiyor" }} &rarr; {{ t.son_yaris_tarihi|default:"Bilinmiyor" }}
                             </div>
                         </div>
-                        <div class="text-end">
+                        <div class="text-right shrink-0">
                             {% if t.aktif_kulup_mu %}
-                                <span class="badge bg-success-subtle text-success badge-style mb-1">AKTİF KULÜP</span>
+                                <span class="swim-badge swim-badge-success text-[0.68rem]">AKTİF KULÜP</span>
                             {% else %}
-                                <span class="badge bg-light text-muted border badge-style mb-1">{{ t.donem_sirasi }}. DÖNEM</span>
+                                <span class="swim-badge swim-badge-neutral text-[0.68rem]">{{ t.donem_sirasi }}. DÖNEM</span>
                             {% endif %}
-                            <div class="small text-primary fw-semibold">{{ t.toplam_yaris_sayisi }} Yarış</div>
+                            <div class="text-xs swim-text-primary font-semibold font-mono mt-0.5">{{ t.toplam_yaris_sayisi }} Yarış</div>
                         </div>
                     </div>
                 </div>
                 {% empty %}
-                <p class="text-muted">Kayıtlı kulüp tarihçesi bulunamadı.</p>
+                <p class="text-xs swim-text-subtle">Kayıtlı kulüp tarihçesi bulunamadı.</p>
                 {% endfor %}
             </div>
         </div>
     </div>
 
     <!-- Kişisel En İyi Dereceler (PB) -->
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0">
-                    <i class="bi bi-trophy text-warning me-2"></i> Kişisel En İyi Dereceler (PB)
-                </h5>
-                <small class="text-muted"><i class="bi bi-hand-index-thumb me-1"></i>Branşa tıklayarak grafiğini görün</small>
+    <div class="lg:col-span-6">
+        <div class="swim-card h-full flex flex-col justify-between">
+            <div class="swim-card-header">
+                <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+                    <i class="bi bi-trophy swim-text-warning"></i> Kişisel En İyi Dereceler (PB)
+                </h2>
+                <span class="text-xs swim-text-subtle"><i class="bi bi-hand-index-thumb mr-1"></i>Branşa tıklayın</span>
             </div>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0">
-                    <thead class="table-light">
+            <div class="swim-table-wrapper border-0 rounded-none flex-1">
+                <table class="swim-table">
+                    <thead class="swim-thead">
                         <tr>
-                            <th>Mesafe & Stil</th>
-                            <th class="text-center">En İyi Derece</th>
-                            <th class="text-end">Müsabaka / Tarih</th>
+                            <th class="swim-th">Mesafe & Stil</th>
+                            <th class="swim-th text-center w-28">En İyi Derece</th>
+                            <th class="swim-th text-right">Müsabaka / Tarih</th>
                         </tr>
                     </thead>
                     <tbody id="pb-table-body">
                         {% for pb in pbs %}
-                        <tr class="pb-branch-row" 
-                            style="cursor: pointer; transition: all 0.2s;"
+                        <tr class="swim-tr pb-branch-row cursor-pointer" 
                             data-stil="{{ pb.stil }}" 
                             data-mesafe="{{ pb.mesafe }}"
                             data-etkinlik="{{ pb.mesafe }}m {{ pb.stil }}"
                             onclick="selectBranch('{{ pb.stil }}', '{{ pb.mesafe }}', '{{ pb.mesafe }}m {{ pb.stil }}', this, true)"
-                            title="Tıkla: Bu branşın derece gelişim grafiğini ve tüm yarışlarını göster">
-                            <td class="fw-bold">
-                                <div class="d-flex align-items-center">
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-2">{{ pb.mesafe }}m</span>
-                                    <span class="branch-text">{{ pb.stil }}</span>
-                                    <span class="badge bg-light text-muted border ms-auto small" style="font-size: 10px;">📈 Grafik</span>
+                            title="Tıkla: Bu branşın derece gelişim grafiğini göster">
+                            <td class="swim-td font-semibold">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="swim-badge swim-badge-primary">{{ pb.mesafe }}m</span>
+                                    <span class="branch-text swim-text-main">{{ pb.stil }}</span>
+                                    <span class="swim-badge swim-badge-neutral text-[0.65rem] ml-auto">📈 Grafik</span>
                                 </div>
                             </td>
-                            <td class="text-center fw-bold text-primary fs-6 font-monospace">{{ pb.derece }}</td>
-                            <td class="text-end small text-muted">
-                                <div>{{ pb.yaris_tarihi_baslangic }}</div>
-                                <div class="text-truncate" style="max-width: 170px;" title="{{ pb.musabaka_adi }}">{{ pb.musabaka_adi }}</div>
+                            <td class="swim-td text-center font-bold swim-text-primary font-mono text-sm">{{ pb.derece }}</td>
+                            <td class="swim-td text-right text-xs swim-text-muted">
+                                <div class="font-mono">{{ pb.yaris_tarihi_baslangic }}</div>
+                                <div class="truncate max-w-[150px] swim-text-subtle" title="{{ pb.musabaka_adi }}">{{ pb.musabaka_adi }}</div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center py-4 text-muted">Kayıtlı derece bulunamadı.</td>
+                            <td colspan="3" class="swim-td text-center py-8 swim-text-muted">Kayıtlı derece bulunamadı.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -142,116 +141,114 @@
 <!-- =====================================================================
      SEÇİLİ BRANŞ: ZAMAN GRAFİĞİ VE TÜM YARIŞ SONUÇLARI LİSTESİ
 ====================================================================== -->
-<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4" id="branchDetailCard">
+<div class="swim-card p-4 sm:p-6 mb-6" id="branchDetailCard">
     <!-- Başlık ve Branş İstatistikleri -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+    <div class="flex flex-wrap justify-between items-center gap-3 pb-3 mb-4 swim-border-b">
         <div>
-            <div class="d-flex align-items-center gap-2">
-                <span class="spinner-grow spinner-grow-sm text-primary" id="branchLiveIndicator" role="status"></span>
-                <h5 class="fw-bold text-dark mb-0" id="branchSectionTitle">
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full swim-live-dot" id="branchLiveIndicator"></span>
+                <h2 class="text-base sm:text-lg font-bold swim-text-main" id="branchSectionTitle">
                     Branş Derece Gelişimi & Yarış Sonuçları
-                </h5>
+                </h2>
             </div>
-            <small class="text-muted" id="branchSectionSubtitle">
+            <p class="text-xs swim-text-muted mt-0.5" id="branchSectionSubtitle">
                 Kronolojik derece gelişimi ve bu branştaki tüm müsabaka geçmişi
-            </small>
+            </p>
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge bg-warning-subtle text-dark border border-warning px-3 py-2 fs-6 rounded-pill" id="branchPbBadge">
+        <div class="flex flex-wrap items-center gap-1.5">
+            <span class="swim-badge swim-badge-warning text-xs" id="branchPbBadge">
                 🏆 PB: <strong id="branchPbValue">-</strong>
             </span>
-            <span class="badge bg-light text-secondary border px-3 py-2 fs-6 rounded-pill" id="branchCountBadge">
+            <span class="swim-badge swim-badge-neutral text-xs" id="branchCountBadge">
                 🏊 <span id="branchCountValue">0</span> Yarış
             </span>
-            <span class="badge bg-info-subtle text-info-emphasis border border-info px-3 py-2 fs-6 rounded-pill" id="branchPuanBadge" style="display: none;">
+            <span class="swim-badge swim-badge-info text-xs" id="branchPuanBadge" style="display: none;">
                 ⭐ En İyi: <strong id="branchPuanValue">-</strong> P
             </span>
-            <span class="badge bg-success-subtle text-success border border-success px-3 py-2 fs-6 rounded-pill" id="branchDiffBadge" style="display: none;">
+            <span class="swim-badge swim-badge-success text-xs" id="branchDiffBadge" style="display: none;">
                 <span id="branchDiffValue">-</span>
             </span>
-            <a href="{% url 'sonuclar:api_sporcu_sonuclari_query' %}?sporcu_id={{ sporcu.id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="branchJsonApiLink" title="Bu sorgunun canlı JSON API yanıtını yeni sekmede inceleyin">
-                <i class="bi bi-braces me-1"></i> JSON API
+            <a href="{% url 'sonuclar:api_sporcu_sonuclari_query' %}?sporcu_id={{ sporcu.id }}" target="_blank" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill" id="branchJsonApiLink" title="Bu sorgunun canlı JSON API yanıtını inceleyin">
+                <i class="bi bi-braces"></i> JSON API
             </a>
         </div>
     </div>
 
     <!-- Hızlı Branş & Sıralama Filtre Kontrolleri -->
-    <div class="row g-2 align-items-center mb-4 bg-light p-3 rounded-3 border">
-        <div class="col-md-4">
-            <label class="form-label small fw-semibold text-muted mb-1">Kategori / Stil</label>
-            <select id="filterKategoriSelect" class="form-select form-select-sm" onchange="onFilterChange()">
+    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 swim-panel border /80 mb-5 items-end">
+        <div class="sm:col-span-4">
+            <label class="swim-label">Kategori / Stil</label>
+            <select id="filterKategoriSelect" class="swim-select text-xs" onchange="onFilterChange()">
                 <option value="">Tüm Kategoriler</option>
                 {% for st in mevcut_stiller %}
                     <option value="{{ st }}" {% if secilen_kategori == st %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted mb-1">Mesafe</label>
-            <select id="filterMesafeSelect" class="form-select form-select-sm" onchange="onFilterChange()">
+        <div class="sm:col-span-3">
+            <label class="swim-label">Mesafe</label>
+            <select id="filterMesafeSelect" class="swim-select text-xs" onchange="onFilterChange()">
                 <option value="">Tüm Mesafeler</option>
                 {% for m in mevcut_mesafeler %}
                     <option value="{{ m }}" {% if secilen_mesafe == m %}selected{% endif %}>{{ m }}m</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted mb-1">Sıralama</label>
-            <select id="filterSiralaSelect" class="form-select form-select-sm" onchange="onFilterChange()">
+        <div class="sm:col-span-3">
+            <label class="swim-label">Sıralama</label>
+            <select id="filterSiralaSelect" class="swim-select text-xs" onchange="onFilterChange()">
                 <option value="tarih_asc" selected>Tarih (Kronolojik Gelişim)</option>
                 <option value="tarih_desc">Tarih (Yeniden Eskiye)</option>
                 <option value="derece">Derece (En Hızlı Önce)</option>
             </select>
         </div>
-        <div class="col-md-2 d-flex align-items-end pt-md-4">
-            <button type="button" class="btn btn-primary btn-sm w-100" onclick="onFilterChange()">
-                <i class="bi bi-arrow-repeat me-1"></i> Yenile
+        <div class="sm:col-span-2">
+            <button type="button" class="swim-btn-primary swim-btn-sm w-full" onclick="onFilterChange()">
+                <i class="bi bi-arrow-repeat"></i> Yenile
             </button>
         </div>
     </div>
 
     <!-- Yükleniyor Göstergesi -->
-    <div id="branchLoadingSpinner" class="text-center py-5" style="display: none;">
-        <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
-            <span class="visually-hidden">Yükleniyor...</span>
-        </div>
-        <div class="small text-muted mt-2 fw-medium">Sonuçlar ve zaman grafiği yükleniyor...</div>
+    <div id="branchLoadingSpinner" class="text-center py-8" style="display: none;">
+        <div class="swim-spinner mb-2"></div>
+        <div class="text-xs swim-text-muted font-medium">Sonuçlar ve zaman grafiği yükleniyor...</div>
     </div>
 
     <!-- 1. ZAMAN / DERECE GELİŞİM GRAFİĞİ -->
-    <div id="branchChartContainerWrapper" class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="small fw-bold text-muted text-uppercase d-flex align-items-center gap-1.5">
-                <i class="bi bi-graph-up text-primary"></i> Zaman / Derece Gelişim Grafiği
+    <div id="branchChartContainerWrapper" class="mb-6">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold swim-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <i class="bi bi-graph-up swim-text-primary"></i> Zaman / Derece Gelişim Grafiği
             </span>
-            <small class="text-muted">(Yukarı çıktıkça saniye düşer ve yüzücü hızlanır)</small>
+            <span class="text-xs swim-text-subtle hidden sm:inline">(Yukarı çıktıkça saniye düşer ve yüzücü hızlanır)</span>
         </div>
-        <div class="position-relative w-100 bg-white rounded-3 p-3 border overflow-visible" style="min-height: 250px;">
-            <div id="swimDetailSvgContainer" class="w-100 h-100 d-flex align-items-center justify-content-center" style="overflow-x: auto; -webkit-overflow-scrolling: touch;"></div>
-            <div id="swimDetailTooltip" class="position-absolute pointer-events-none shadow-lg rounded-3 p-2.5 text-white bg-dark border border-secondary" style="display: none; transform: translate(-50%, -100%); margin-top: -12px; z-index: 1050; font-size: 11px;"></div>
+        <div class="relative w-full bg-white rounded-2xl p-3 border /80 overflow-visible min-h-[250px]">
+            <div id="swimDetailSvgContainer" class="w-full h-full flex items-center justify-center overflow-x-auto"></div>
+            <div id="swimDetailTooltip" class="swim-tooltip absolute pointer-events-none" style="display: none; transform: translate(-50%, -100%); margin-top: -12px; z-index: 50;"></div>
         </div>
     </div>
 
     <!-- 2. FİLTRELİ YARIŞ SONUÇLARI TABLOSU -->
     <div id="branchTableWrapper">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="small fw-bold text-muted text-uppercase d-flex align-items-center gap-1.5">
-                <i class="bi bi-list-check text-info"></i> Filtreli Müsabaka Sonuçları
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold swim-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                <i class="bi bi-list-check swim-text-primary"></i> Filtreli Müsabaka Sonuçları
             </span>
-            <small id="branchTableSummaryText" class="text-muted font-monospace fw-semibold"></small>
+            <span id="branchTableSummaryText" class="text-xs swim-text-muted font-mono font-semibold"></span>
         </div>
-        <div class="table-responsive border rounded-3 overflow-hidden shadow-xs">
-            <table class="table table-hover align-middle mb-0 text-sm">
-                <thead class="table-light">
+        <div class="swim-table-wrapper">
+            <table class="swim-table">
+                <thead class="swim-thead">
                     <tr>
-                        <th class="ps-3 py-2.5">Tarih</th>
-                        <th class="py-2.5">Derece</th>
-                        <th class="py-2.5">Puan</th>
-                        <th class="py-2.5 text-center">Sıra</th>
-                        <th class="py-2.5 text-center">Seri / Kulvar</th>
-                        <th class="py-2.5 text-center">Baraj</th>
-                        <th class="py-2.5">Müsabaka & Şehir</th>
-                        <th class="py-2.5 pe-3">Temsil Ettiği Kulüp / Okul</th>
+                        <th class="swim-th w-28">Tarih</th>
+                        <th class="swim-th w-32">Derece</th>
+                        <th class="swim-th w-24">Puan</th>
+                        <th class="swim-th text-center w-16">Sıra</th>
+                        <th class="swim-th text-center w-28">Seri / Kulvar</th>
+                        <th class="swim-th text-center w-20">Baraj</th>
+                        <th class="swim-th">Müsabaka & Şehir</th>
+                        <th class="swim-th">Temsil Ettiği Kulüp / Okul</th>
                     </tr>
                 </thead>
                 <tbody id="branchResultsTableBody">
@@ -272,21 +269,20 @@
 
     // Branş seçildiğinde tetiklenir
     window.selectBranch = function(stil, mesafe, etkinlik, rowEl, isUserClick) {
-        // Tablodaki seçili satır vurgusu
         document.querySelectorAll('.pb-branch-row').forEach(function(r) {
-            r.classList.remove('table-primary', 'border-primary');
-            var icon = r.querySelector('.badge.bg-light, .badge.bg-primary');
+            r.classList.remove('swim-row-active');
+            var icon = r.querySelector('.swim-badge.swim-badge-primary, .swim-badge:last-child');
             if (icon) {
-                icon.className = "badge bg-light text-muted border ms-auto small";
+                icon.className = "swim-badge swim-badge-neutral text-[0.65rem] ml-auto";
                 icon.textContent = "📈 Grafik";
             }
         });
 
         if (rowEl) {
-            rowEl.classList.add('table-primary', 'border-primary');
-            var activeBadge = rowEl.querySelector('.badge.bg-light, .badge.bg-primary');
+            rowEl.classList.add('swim-row-active');
+            var activeBadge = rowEl.querySelector('.swim-badge:last-child');
             if (activeBadge) {
-                activeBadge.className = "badge bg-primary text-white border-0 ms-auto small";
+                activeBadge.className = "swim-badge swim-badge-primary text-[0.65rem] ml-auto";
                 activeBadge.textContent = "✓ Seçili";
             }
             if (isUserClick) {
@@ -297,7 +293,6 @@
             }
         }
 
-        // Filtre dropdownlarını senkronize et
         var katSel = document.getElementById('filterKategoriSelect');
         var mesSel = document.getElementById('filterMesafeSelect');
         if (katSel && stil) katSel.value = stil;
@@ -306,7 +301,6 @@
         fetchAndRenderBranch(stil, mesafe, etkinlik);
     };
 
-    // Dropdown filtreleri değiştiğinde tetiklenir
     window.onFilterChange = function() {
         var katSel = document.getElementById('filterKategoriSelect');
         var mesSel = document.getElementById('filterMesafeSelect');
@@ -314,7 +308,6 @@
         var mesafe = mesSel ? mesSel.value : '';
         var etkinlik = (mesafe ? mesafe + "m " : "") + (stil || "Tüm Branşlar");
 
-        // Uygun PB satırı varsa onu aktif yap
         var matchedRow = null;
         document.querySelectorAll('.pb-branch-row').forEach(function(r) {
             var rStil = r.getAttribute('data-stil') || '';
@@ -328,7 +321,7 @@
             selectBranch(stil, mesafe, etkinlik, matchedRow);
         } else {
             document.querySelectorAll('.pb-branch-row').forEach(function(r) {
-                r.classList.remove('table-primary', 'border-primary');
+                r.classList.remove('swim-row-active');
             });
             fetchAndRenderBranch(stil, mesafe, etkinlik);
         }
@@ -339,129 +332,86 @@
         var sirala = siralaSel ? siralaSel.value : 'tarih_asc';
 
         var titleEl = document.getElementById('branchSectionTitle');
+        var subEl = document.getElementById('branchSectionSubtitle');
+        if (titleEl) titleEl.textContent = etkinlik + " - Gelişim & Müsabaka Geçmişi";
+        if (subEl) subEl.textContent = (mesafe ? mesafe + "m " : "") + (stil ? stil : "Tüm Branşlar") + " yarış sonuçları analizi";
+
         var spinner = document.getElementById('branchLoadingSpinner');
         var chartWrap = document.getElementById('branchChartContainerWrapper');
         var tableWrap = document.getElementById('branchTableWrapper');
-        var apiLink = document.getElementById('branchJsonApiLink');
-
-        if (titleEl) {
-            titleEl.textContent = (etkinlik || "Branş") + " — Derece Gelişimi & Yarış Sonuçları";
-        }
-
-        // URL Hazırla
-        var params = new URLSearchParams();
-        params.set('sporcu_id', sporcuId);
-        if (stil) params.set('stil', stil);
-        if (mesafe) params.set('mesafe', mesafe);
-        if (sirala) params.set('sirala', sirala);
-
-        var requestUrl = apiBaseUrl + "?" + params.toString();
-        if (apiLink) {
-            apiLink.href = requestUrl;
-        }
 
         if (spinner) spinner.style.display = 'block';
-        if (chartWrap) chartWrap.style.opacity = '0.35';
-        if (tableWrap) tableWrap.style.opacity = '0.35';
+        if (chartWrap) chartWrap.style.opacity = '0.3';
+        if (tableWrap) tableWrap.style.opacity = '0.3';
 
-        fetch(requestUrl)
-            .then(function(res) {
-                if (!res.ok) throw new Error("HTTP " + res.status);
-                return res.json();
-            })
+        var params = new URLSearchParams({
+            sporcu_id: sporcuId,
+            stil: stil || '',
+            mesafe: mesafe || '',
+            sirala: sirala
+        });
+
+        var jsonLink = document.getElementById('branchJsonApiLink');
+        if (jsonLink) {
+            jsonLink.href = apiBaseUrl + "?" + params.toString();
+        }
+
+        fetch(apiBaseUrl + "?" + params.toString())
+            .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (spinner) spinner.style.display = 'none';
                 if (chartWrap) chartWrap.style.opacity = '1';
                 if (tableWrap) tableWrap.style.opacity = '1';
-                renderDataToUI(data, etkinlik);
+                updateBranchUI(data, etkinlik);
             })
             .catch(function(err) {
+                console.error("API error:", err);
                 if (spinner) spinner.style.display = 'none';
                 if (chartWrap) chartWrap.style.opacity = '1';
                 if (tableWrap) tableWrap.style.opacity = '1';
-                console.error("Branş sonuçları yüklenemedi:", err);
-                var tbody = document.getElementById('branchResultsTableBody');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Sonuçlar alınamadı: ' + err.message + '</td></tr>';
-                }
             });
     }
 
-    function renderDataToUI(data, etkinlik) {
-        // Sonuclar dizisi (farklı şemaları destekler)
-        var sonuclar = Array.isArray(data) ? data : ((data && data.sonuclar) ? data.sonuclar : ((data && data.en_iyi_sonuclar) ? data.en_iyi_sonuclar : []));
-        var pbObj = data ? data.en_iyi_derece : null;
-
-        // PB Rozeti
-        var pbVal = document.getElementById('branchPbValue');
-        if (pbVal) {
-            if (pbObj && pbObj.derece) {
-                pbVal.textContent = pbObj.derece;
-            } else if (sonuclar.length > 0) {
-                var validRacesWithSec = sonuclar.filter(function(s) { return parseFloat(s.derece_saniye) > 0; });
-                if (validRacesWithSec.length > 0) {
-                    var minSec = Math.min.apply(null, validRacesWithSec.map(function(s){ return parseFloat(s.derece_saniye); }));
-                    var minRace = validRacesWithSec.find(function(s){ return parseFloat(s.derece_saniye) === minSec; });
-                    pbVal.textContent = minRace ? minRace.derece : "-";
-                } else {
-                    pbVal.textContent = "-";
-                }
-            } else {
-                pbVal.textContent = "-";
-            }
-        }
-
-        // Yarış Sayısı Rozeti
-        var countVal = document.getElementById('branchCountValue');
-        if (countVal) {
-            countVal.textContent = sonuclar.length;
-        }
-
-        // FINA Puanı Rozeti
-        var maxPuan = 0;
-        sonuclar.forEach(function(s) {
-            var p = parseInt(s.puan, 10);
-            if (!isNaN(p) && p > maxPuan) maxPuan = p;
-        });
+    function updateBranchUI(data, etkinlik) {
+        var sonuclar = data.sonuclar || [];
+        var pbEl = document.getElementById('branchPbValue');
+        var countEl = document.getElementById('branchCountValue');
+        var puanEl = document.getElementById('branchPuanValue');
         var puanBadge = document.getElementById('branchPuanBadge');
-        var puanVal = document.getElementById('branchPuanValue');
-        if (puanBadge && puanVal) {
-            if (maxPuan > 0) {
-                puanVal.textContent = maxPuan;
-                puanBadge.style.display = 'inline-block';
-            } else {
-                puanBadge.style.display = 'none';
-            }
+        var diffBadge = document.getElementById('branchDiffBadge');
+        var diffSpan = document.getElementById('branchDiffValue');
+
+        if (countEl) countEl.textContent = data.toplam_sayisi || sonuclar.length;
+        if (pbEl) pbEl.textContent = data.pb_derece || "-";
+
+        if (data.en_iyi_puan && puanEl && puanBadge) {
+            puanEl.textContent = data.en_iyi_puan;
+            puanBadge.style.display = 'inline-flex';
+        } else if (puanBadge) {
+            puanBadge.style.display = 'none';
         }
 
-        // Gelişim Farkı Rozeti
-        var diffSpan = document.getElementById('branchDiffValue');
-        var diffBadge = document.getElementById('branchDiffBadge');
-
-        // Kronolojik sıralı kopya
         var chronoList = sonuclar.slice().sort(function(a, b) {
-            var tA = a.tarih || "";
-            var tB = b.tarih || "";
-            return tA.localeCompare(tB);
+            return (a.tarih || '').localeCompare(b.tarih || '');
         });
 
-        if (chronoList.length >= 2 && diffSpan && diffBadge) {
+        if (chronoList.length >= 2 && diffBadge && diffSpan) {
             var firstSec = parseFloat(chronoList[0].derece_saniye);
             var lastSec = parseFloat(chronoList[chronoList.length - 1].derece_saniye);
             if (firstSec && lastSec) {
-                var diff = firstSec - lastSec; // Pozitif ise derece iyileşmiş
+                var diff = firstSec - lastSec;
                 if (diff > 0) {
                     var pct = ((diff / firstSec) * 100).toFixed(1);
                     diffSpan.textContent = "▼ " + diff.toFixed(2) + " sn Gelişim (%" + pct + ")";
-                    diffBadge.className = "badge bg-success-subtle text-success border border-success px-3 py-2 fs-6 rounded-pill";
+                    diffBadge.className = "swim-badge swim-badge-success text-xs";
                 } else if (diff < 0) {
                     diffSpan.textContent = "▲ " + Math.abs(diff).toFixed(2) + " sn";
-                    diffBadge.className = "badge bg-secondary-subtle text-secondary border px-3 py-2 fs-6 rounded-pill";
+                    diffBadge.className = "swim-badge swim-badge-neutral text-xs";
                 } else {
                     diffSpan.textContent = "Derece Eşit";
-                    diffBadge.className = "badge bg-light text-muted border px-3 py-2 fs-6 rounded-pill";
+                    diffBadge.className = "swim-badge swim-badge-neutral text-xs";
                 }
-                diffBadge.style.display = 'inline-block';
+                diffBadge.style.display = 'inline-flex';
             } else {
                 diffBadge.style.display = 'none';
             }
@@ -469,10 +419,7 @@
             diffBadge.style.display = 'none';
         }
 
-        // 1. ZAMAN GRAFİĞİNİ ÇİZ
         renderSvgChart(chronoList, etkinlik);
-
-        // 2. SONUÇ TABLOSUNU DOLDUR
         renderTable(sonuclar);
     }
 
@@ -486,7 +433,7 @@
         });
 
         if (validRaces.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted py-5 small"><i class="bi bi-info-circle me-1"></i>Bu branşta geçerli derece / zaman verisi bulunamadı.</div>';
+            container.innerHTML = '<div class="text-center swim-text-subtle py-10 text-xs"><i class="bi bi-info-circle mr-1"></i>Bu branşta geçerli derece / zaman verisi bulunamadı.</div>';
             return;
         }
 
@@ -509,7 +456,6 @@
         var yMax = maxSec + secPadding;
         var totalRange = yMax - yMin;
 
-        // Y Koordinatı: Yüzmede saniye düştükçe yukarı çıksın (hızlı olan tepeye)
         function getY(sec) {
             return padTop + ((sec - yMin) / totalRange) * plotH;
         }
@@ -531,7 +477,6 @@
             return sec.toFixed(1) + "s";
         }
 
-        // Grid çizgileri
         var gridSteps = 4;
         var gridHtml = '';
         for (var g = 0; g <= gridSteps; g++) {
@@ -542,7 +487,6 @@
                 '<text x="' + (padLeft - 10) + '" y="' + (gY + 3.5).toFixed(1) + '" font-size="10.5" font-family="monospace" text-anchor="end" fill="#94a3b8">' + formatSecLabel(gSec) + '</text>';
         }
 
-        // Noktalar
         var pts = validRaces.map(function(r, idx) {
             return {
                 x: getX(idx),
@@ -551,7 +495,6 @@
             };
         });
 
-        // Pürüzsüz Bézier Spline Oluşturucu
         function buildSmoothSpline(points, tension) {
             if (points.length <= 1) return "";
             if (points.length === 2) {
@@ -588,13 +531,11 @@
                     " L " + pts[pts.length - 1].x.toFixed(1) + " " + stemBottom.toFixed(1) + " Z";
         }
 
-        // Kılavuz çizgileri (Dikey kesikli stem drop lines)
         var stemLinesHtml = '';
         pts.forEach(function(p) {
             stemLinesHtml += '<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' + p.x.toFixed(1) + '" y2="' + (padTop + plotH).toFixed(1) + '" stroke="#e2e8f0" stroke-dasharray="2,3" stroke-width="1"/>';
         });
 
-        // Noktalar, rozetler ve tarihler
         var dotsHtml = '';
         var dateY = H - 14;
         pts.forEach(function(p, i) {
@@ -635,7 +576,7 @@
             }
         });
 
-        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-100" style="height: auto; max-width: 100%; display: block; overflow: visible; font-family: monospace;">' +
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-full" style="height: auto; max-width: 100%; display: block; overflow: visible; font-family: monospace;">' +
             '<defs>' +
                 '<linearGradient id="swimAreaGrad" x1="0" y1="0" x2="0" y2="1">' +
                     '<stop offset="0%" stop-color="#0284c7" stop-opacity="0.30"/>' +
@@ -667,7 +608,6 @@
             container.scrollLeft = container.scrollWidth - container.clientWidth;
         }
 
-        // Tooltip bağla
         container.querySelectorAll('.swim-detail-dot-group').forEach(function(dot) {
             dot.addEventListener('mouseenter', function() {
                 var idx = parseInt(this.getAttribute('data-idx'));
@@ -680,16 +620,16 @@
                     tooltip.style.left = ((p.x / W) * 100) + '%';
                     tooltip.style.top = ((p.y / H) * 100) + '%';
                     tooltip.innerHTML = 
-                        '<div class="fw-bold text-warning d-flex align-items-center gap-1.5">' +
+                        '<div class="font-bold swim-text-warning flex items-center gap-1.5">' +
                             '<span>⏱ ' + r.derece + '</span>' +
-                            (isPb ? '<span class="badge bg-warning text-dark px-1.5 py-0.5 ms-1">🏆 PB</span>' : '') +
+                            (isPb ? '<span class="swim-badge swim-badge-warning text-[0.65rem] px-1 py-0 ml-1">🏆 PB</span>' : '') +
                         '</div>' +
-                        '<div class="text-white-50 mt-1">📅 ' + (r.tarih || '-') + '</div>' +
-                        (r.musabaka_adi ? '<div class="text-truncate mt-0.5" style="max-width: 220px;">🏊 ' + r.musabaka_adi + (r.sehir ? ' (' + r.sehir + ')' : '') + '</div>' : '') +
-                        '<div class="d-flex align-items-center gap-2 text-white-50 mt-1 pt-1 border-top border-secondary small">' +
+                        '<div class="swim-text-subtle mt-1">📅 ' + (r.tarih || '-') + '</div>' +
+                        (r.musabaka_adi ? '<div class="truncate mt-0.5 max-w-[220px]">🏊 ' + r.musabaka_adi + (r.sehir ? ' (' + r.sehir + ')' : '') + '</div>' : '') +
+                        '<div class="flex items-center gap-2 swim-text-subtle mt-1 pt-1 swim-border-t text-[0.68rem]">' +
                             (r.puan ? '<span>⭐ ' + r.puan + ' P</span>' : '') +
                             (r.sira ? '<span>🏅 Sıra: #' + r.sira + '</span>' : '') +
-                            (r.kulup ? '<span class="text-truncate" style="max-width: 130px;">🏛 ' + r.kulup + '</span>' : '') +
+                            (r.kulup ? '<span class="truncate max-w-[130px]">🏛 ' + r.kulup + '</span>' : '') +
                         '</div>';
                     tooltip.style.display = 'block';
                 }
@@ -712,11 +652,10 @@
         }
 
         if (sonuclar.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="bi bi-inbox me-1"></i>Bu branşta kayıtlı yarış sonucu bulunamadı.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="swim-td text-center py-8 swim-text-subtle"><i class="bi bi-inbox mr-1"></i>Bu branşta kayıtlı yarış sonucu bulunamadı.</td></tr>';
             return;
         }
 
-        // En iyi dereceyi tespit et
         var validSecs = sonuclar.filter(function(r){ return parseFloat(r.derece_saniye) > 0; }).map(function(r){ return parseFloat(r.derece_saniye); });
         var minSec = validSecs.length > 0 ? Math.min.apply(null, validSecs) : null;
 
@@ -725,44 +664,42 @@
             var rSec = parseFloat(r.derece_saniye);
             var isPb = (minSec !== null && rSec === minSec) || r.kisisel_en_iyi_mi;
 
-            if (isPb) {
-                tr.className = "table-warning-subtle";
-            }
+            tr.className = "swim-tr" + (isPb ? " swim-tr-highlight" : "");
 
             var pbBadgeHtml = isPb 
-                ? '<span class="badge bg-warning text-dark border border-warning ms-1.5"><i class="bi bi-trophy-fill me-1"></i>PB</span>' 
+                ? '<span class="swim-badge swim-badge-warning text-[0.65rem] ml-1.5"><i class="bi bi-trophy-fill mr-0.5"></i>PB</span>' 
                 : '';
 
             var barajHtml = (r.baraj === 'EVET' || r.baraj === 'BARAJ')
-                ? '<span class="badge bg-success-subtle text-success border border-success-subtle">EVET</span>'
-                : '<span class="text-muted small">-</span>';
+                ? '<span class="swim-badge swim-badge-success text-[0.65rem]">EVET</span>'
+                : '<span class="swim-text-subtle text-xs">-</span>';
 
             var puanHtml = r.puan 
-                ? '<span class="fw-semibold text-primary font-monospace">' + r.puan + ' P</span>'
-                : '<span class="text-muted">-</span>';
+                ? '<span class="font-semibold swim-text-primary font-mono text-xs">' + r.puan + ' P</span>'
+                : '<span class="swim-text-subtle text-xs">-</span>';
 
             var seriKulvar = (r.seri || r.kulvar)
                 ? (r.seri ? 'S:' + r.seri : '') + (r.kulvar ? ' (K:' + r.kulvar + ')' : '')
-                : '<span class="text-muted">-</span>';
+                : '<span class="swim-text-subtle text-xs">-</span>';
 
             var kulupHtml = r.kulup || "-";
             if (r.kulup_okul_mu) {
-                kulupHtml += ' <span class="badge bg-indigo-subtle text-indigo border ms-1" style="font-size: 10px;">Okul</span>';
+                kulupHtml += ' <span class="swim-badge swim-badge-neutral text-[0.65rem] ml-1">Okul</span>';
             }
 
             tr.innerHTML = 
-                '<td class="ps-3 small font-monospace text-muted text-nowrap">' + (r.tarih || '-') + '</td>' +
-                '<td class="fw-bold font-monospace text-primary text-nowrap">' +
+                '<td class="swim-td text-xs font-mono swim-text-muted whitespace-nowrap">' + (r.tarih || '-') + '</td>' +
+                '<td class="swim-td font-bold font-mono swim-text-primary whitespace-nowrap">' +
                     r.derece + pbBadgeHtml +
                 '</td>' +
-                '<td class="text-nowrap">' + puanHtml + '</td>' +
-                '<td class="text-center fw-medium text-nowrap">#' + (r.sira || '-') + '</td>' +
-                '<td class="text-center small text-muted text-nowrap">' + seriKulvar + '</td>' +
-                '<td class="text-center text-nowrap">' + barajHtml + '</td>' +
-                '<td class="small text-truncate" style="max-width: 240px;" title="' + (r.musabaka_adi || '') + '">' +
+                '<td class="swim-td whitespace-nowrap">' + puanHtml + '</td>' +
+                '<td class="swim-td text-center font-semibold whitespace-nowrap text-xs">#' + (r.sira || '-') + '</td>' +
+                '<td class="swim-td text-center text-xs swim-text-subtle whitespace-nowrap">' + seriKulvar + '</td>' +
+                '<td class="swim-td text-center whitespace-nowrap">' + barajHtml + '</td>' +
+                '<td class="swim-td text-xs truncate max-w-[240px]" title="' + (r.musabaka_adi || '') + '">' +
                     (r.musabaka_adi || '-') + (r.sehir ? ' (' + r.sehir + ')' : '') +
                 '</td>' +
-                '<td class="small pe-3 text-muted text-truncate" style="max-width: 190px;" title="' + (r.kulup || '') + '">' +
+                '<td class="swim-td text-xs swim-text-muted truncate max-w-[190px]" title="' + (r.kulup || '') + '">' +
                     kulupHtml +
                 '</td>';
 
@@ -770,14 +707,12 @@
         });
     }
 
-    // İlk yüklemede çalıştır
     function init() {
         var secilenKat = "{{ secilen_kategori|default:'' }}";
         var secilenMes = "{{ secilen_mesafe|default:'' }}";
         var sonYarisKat = "{{ son_yaris.stil|default:'' }}";
         var sonYarisMes = "{{ son_yaris.mesafe|default:'' }}";
 
-        // URL filtresi verilmemişse sporcunun en son katıldığı yarışın branşını seç
         var hedefKat = secilenKat || sonYarisKat;
         var hedefMes = secilenMes || sonYarisMes;
 
@@ -800,7 +735,6 @@
         if (targetRow) {
             targetRow.click();
         } else {
-            // PB yoksa filtredeki değerlerle çek
             onFilterChange();
         }
     }
@@ -813,4 +747,3 @@
 })();
 </script>
 {% endblock %}
-

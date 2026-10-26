@@ -20,6 +20,12 @@ scratch/test_tyf/
 .env
 *.env
 
+# Node & Dependencies
+node_modules/
+yuzme_projesi/node_modules/
+package-lock.json
+yuzme_projesi/package-lock.json
+
 # OS Specific
 .DS_Store
 Thumbs.db

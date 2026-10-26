@@ -1,0 +1,141 @@
+{% load humanize %}
+<div class="swim-card mb-6">
+    <div class="swim-card-header">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-2">
+            <div>
+                <h2 class="swim-section-title flex items-center gap-1.5">
+                    <i class="bi bi-calendar2-check swim-text-primary"></i> Müsabaka Yarış Programı
+                </h2>
+                <span class="swim-text-muted">Yarış sonuçlarını modal olarak görüntülemek için yarışa tıklayın</span>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <!-- Tüm Sonuçları Modal Olarak Açma Butonu -->
+                <button type="button"
+                        hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?target=modalContent{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}"
+                        hx-target="#yarisSonuclarModalContent"
+                        data-swim-modal="#yarisSonuclarModal"
+                        class="swim-btn-outline-primary swim-btn-sm shrink-0"
+                        title="Tüm Sonuçları Modal Olarak Gör">
+                    <i class="bi bi-list-ol"></i> Tüm Sonuçlar
+                </button>
+
+                <!-- Kulüp Filtresi (HTMX ile Anlık Değişim) -->
+                <form method="get" 
+                      action="{% url 'sonuclar:musabaka_detay' event.id %}"
+                      hx-get="{% url 'sonuclar:musabaka_detay' event.id %}" 
+                      hx-target="#programContent" 
+                      hx-push-url="true"
+                      class="flex items-center gap-1.5 flex-1 sm:w-auto">
+                    <input type="hidden" name="target" value="programContent">
+                    {% if secili_durum %}<input type="hidden" name="durum" value="{{ secili_durum }}">{% endif %}
+                    {% if secili_sporcu %}<input type="hidden" name="sporcu" value="{{ secili_sporcu }}">{% endif %}
+                    <select name="kulup" id="programKulupSelect" class="swim-select py-1.5 text-xs flex-1 sm:w-56" onchange="this.form.requestSubmit()">
+                        <option value="">Tüm Kulüpler ({{ katilan_kulupler|length }})</option>
+                        {% for k in katilan_kulupler %}
+                        <option value="{{ k.kulup_id }}" {% if secili_kulup == k.kulup_id %}selected{% endif %}>
+                            {{ k.kulup__kulup_adi }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if secili_kulup %}
+                    <a href="?{% if secili_durum %}durum={{ secili_durum }}{% endif %}" 
+                       hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?target=programContent{% if secili_durum %}&durum={{ secili_durum }}{% endif %}" 
+                       hx-target="#programContent" 
+                       hx-push-url="true"
+                       class="swim-btn-secondary swim-btn-sm" 
+                       title="Filtreyi Temizle">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        {% if secili_kulup_obj %}
+        <div class="w-full swim-text-muted pt-2.5 mt-2 swim-border-t flex justify-between items-center flex-wrap gap-2 text-xs">
+            <span class="flex items-center gap-1">
+                <i class="bi bi-shield-shaded swim-text-primary"></i>
+                <strong class="swim-text-main">{{ secili_kulup_obj.kulup_adi }}</strong>: {{ kulup_katilinan_yaris_sayisi }} yarışta {{ kulup_toplam_yaris_sayisi }} start ({{ kulup_toplam_sporcu_sayisi }} sporcu)
+            </span>
+            <a href="?{% if secili_durum %}durum={{ secili_durum }}{% endif %}" 
+               hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?target=programContent{% if secili_durum %}&durum={{ secili_durum }}{% endif %}" 
+               hx-target="#programContent" 
+               hx-push-url="true"
+               class="swim-link-danger">
+                Filtreyi Kaldır
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Mobilde ve Masaüstünde Sıfır Kaydırma ile Liste Düzeni -->
+    <div class="swim-divide">
+        {% for y in yaris_programi %}
+        <div hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?yaris_no={{ y.no }}&target=modalContent{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}" 
+             hx-target="#yarisSonuclarModalContent" 
+             data-swim-modal="#yarisSonuclarModal"
+             class="swim-mobile-card flex justify-between items-center gap-3 cursor-pointer">
+            
+            <!-- Sol Taraf: Yarış No, Branş ve Kategori -->
+            <div class="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                <!-- Yarış No Rozeti -->
+                <span class="swim-badge {% if y.durum_kodu == 'tamamlandi' %}swim-badge-success{% else %}swim-badge-neutral{% endif %} text-xs sm:text-sm font-bold px-2.5 py-1.5 rounded-xl min-w-[46px] justify-center shrink-0 font-mono">
+                    #{{ y.no }}
+                </span>
+                <div class="min-w-0">
+                    <!-- Mesafe & Stil -->
+                    <div class="font-bold swim-text-main text-sm sm:text-base truncate flex items-center gap-1.5">
+                        <span>{{ y.mesafe }}m {{ y.stil }}</span>
+                        <span class="swim-text-primary text-xs font-normal hidden sm:inline">&bull; Sonuçları Gör &rarr;</span>
+                    </div>
+                    <!-- Kategori & Cinsiyet -->
+                    <div class="swim-text-muted truncate flex items-center flex-wrap gap-1 mt-0.5 text-xs">
+                        {% if y.cinsiyet %}
+                            <span class="{% if 'Erkek' in y.cinsiyet %}swim-text-primary{% else %}swim-text-danger{% endif %} font-semibold">{{ y.cinsiyet }}</span>
+                        {% endif %}
+                        {% if y.yas_grubu %}
+                            <span>&bull; {{ y.yas_grubu }}</span>
+                        {% endif %}
+                        {% if secili_kulup and y.kulup_sporcu_sayisi > 0 %}
+                            <span class="swim-badge swim-badge-primary text-[0.68rem] px-1.5 py-0">
+                                {{ y.kulup_sporcu_sayisi }} Sporcu
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sağ Taraf: Durum Rozeti ve Katılım Sayısı -->
+            <div class="text-right shrink-0 flex items-center gap-2">
+                <div>
+                    {% if y.durum_kodu == 'tamamlandi' %}
+                        <span class="swim-badge swim-badge-success mb-1">
+                            <i class="bi bi-check2-circle"></i> Sonuçlandı
+                        </span>
+                    {% else %}
+                        <span class="swim-badge swim-badge-warning mb-1">
+                            <i class="bi bi-clock-history"></i> Start Listesi
+                        </span>
+                    {% endif %}
+                    <div class="swim-text-muted text-xs whitespace-nowrap">
+                        {% if secili_kulup and y.kulup_sporcu_sayisi > 0 %}
+                            <strong class="swim-text-primary">{{ y.kulup_sporcu_sayisi }}</strong> / {{ y.toplam }} Sporcu
+                        {% elif secili_kulup and y.kulup_sporcu_sayisi == 0 %}
+                            <span>{{ y.toplam }} Sporcu</span>
+                        {% else %}
+                            {% if y.durum_kodu == 'tamamlandi' %}{{ y.tamamlanan }} Sonuç{% else %}{{ y.toplam }} Sporcu{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                <i class="bi bi-box-arrow-up-right swim-text-subtle text-xs ml-1"></i>
+            </div>
+        </div>
+        {% empty %}
+        <div class="swim-empty-state">
+            <i class="bi bi-info-circle text-2xl block mb-2 swim-text-subtle"></i>
+            Bu müsabakaya ait yarış programı bulunamadı.
+        </div>
+        {% endfor %}
+    </div>
+</div>

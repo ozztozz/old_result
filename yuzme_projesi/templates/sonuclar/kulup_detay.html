@@ -5,75 +5,77 @@
 
 {% block content %}
 <!-- Kulüp Başlığı -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-    <div class="row align-items-center">
-        <div class="col-md-8">
-            <span class="badge bg-success-subtle text-success fs-6 px-3 py-1 rounded-pill mb-2">
+<div class="swim-card p-4 sm:p-6 mb-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <span class="swim-badge swim-badge-success mb-2">
                 <i class="bi bi-shield-check me-1"></i> Resmî Kulüp Kaydı #{{ kulup.id }}
             </span>
-            <h1 class="display-6 fw-bold text-dark mb-1">{{ kulup.kulup_adi }}</h1>
-            <p class="text-muted mb-0">
-                <i class="bi bi-calendar3 me-1"></i> Faaliyet Aralığı: 
-                <strong>{{ kulup.ilk_yaris_tarihi|default:"Bilinmiyor" }}</strong> &rarr; <strong>{{ kulup.son_yaris_tarihi|default:"Bilinmiyor" }}</strong>
+            <h1 class="text-xl sm:text-3xl font-extrabold swim-text-main tracking-tight">{{ kulup.kulup_adi }}</h1>
+            <p class="text-xs sm:text-sm swim-text-muted mt-1 flex items-center gap-1.5">
+                <i class="bi bi-calendar3 swim-text-primary"></i> Faaliyet Aralığı: 
+                <strong class="swim-text-main">{{ kulup.ilk_yaris_tarihi|default:"Bilinmiyor" }}</strong> &rarr; <strong class="swim-text-main">{{ kulup.son_yaris_tarihi|default:"Bilinmiyor" }}</strong>
             </p>
         </div>
-        <div class="col-md-4 mt-3 mt-md-0 text-md-end">
-            <div class="d-inline-flex gap-2">
-                <div class="bg-light p-3 rounded-4 border text-center">
-                    <div class="fs-4 fw-bold text-info">{{ kulup.toplam_sporcu_sayisi|intcomma }}</div>
-                    <div class="small text-muted text-uppercase fw-semibold">Sporcu</div>
-                </div>
-                <div class="bg-light p-3 rounded-4 border text-center">
-                    <div class="fs-4 fw-bold text-success">{{ kulup.toplam_yaris_sayisi|intcomma }}</div>
-                    <div class="small text-muted text-uppercase fw-semibold">Toplam Yarış</div>
-                </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <div class="swim-stat-box p-3 min-w-[100px] ">
+                <div class="swim-stat-val text-xl swim-text-primary">{{ kulup.toplam_sporcu_sayisi|intcomma }}</div>
+                <div class="swim-stat-lbl text-[0.68rem]">Sporcu</div>
+            </div>
+            <div class="swim-stat-box p-3 min-w-[100px] ">
+                <div class="swim-stat-val text-xl swim-text-success">{{ kulup.toplam_yaris_sayisi|intcomma }}</div>
+                <div class="swim-stat-lbl text-[0.68rem]">Toplam Yarış</div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-4">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
     <!-- Kulübün Sporcuları -->
-    <div class="col-lg-7">
-        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people text-primary me-2"></i> Bu Kulüpte Yarışan Sporcular ({{ total_swimmers }})</h5>
+    <div class="lg:col-span-7">
+        <div class="swim-card h-full flex flex-col justify-between">
+            <div class="swim-card-header">
+                <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+                    <i class="bi bi-people swim-text-primary"></i> Kulüp Sporcuları ({{ total_swimmers }})
+                </h2>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+            <div class="swim-table-wrapper border-0 rounded-none flex-1">
+                <table class="swim-table">
+                    <thead class="swim-thead">
                         <tr>
-                            <th>Sporcu</th>
-                            <th>D.Yılı</th>
-                            <th>Kulüpteki Tarih Aralığı</th>
-                            <th class="text-center">Durum</th>
-                            <th class="text-end">Kulüp Yarışları</th>
+                            <th class="swim-th">Sporcu</th>
+                            <th class="swim-th">D.Yılı</th>
+                            <th class="swim-th">Dönem</th>
+                            <th class="swim-th text-center">Durum</th>
+                            <th class="swim-th text-right">Yarış Sayısı</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for t in page_obj %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'sonuclar:sporcu_detay' t.sporcu.id %}" class="fw-bold text-decoration-none text-dark">
+                        <tr class="swim-tr">
+                            <td class="swim-td font-semibold">
+                                <a href="{% url 'sonuclar:sporcu_detay' t.sporcu.id %}" class="swim-text-main hover:swim-text-primary transition">
                                     {{ t.sporcu.sporcu_adi }}
                                 </a>
                             </td>
-                            <td><span class="badge bg-light text-muted border">{{ t.sporcu.dogum_yili|default:t.sporcu.yas_dogum_yili|default:"-" }}</span></td>
-                            <td class="small text-muted">
+                            <td class="swim-td text-xs swim-text-muted font-mono">
+                                <span class="swim-badge swim-badge-neutral">{{ t.sporcu.dogum_yili|default:t.sporcu.yas_dogum_yili|default:"-" }}</span>
+                            </td>
+                            <td class="swim-td text-xs swim-text-muted font-mono">
                                 {{ t.ilk_yaris_tarihi|slice:":4" }} - {{ t.son_yaris_tarihi|slice:":4" }}
                             </td>
-                            <td class="text-center">
+                            <td class="swim-td text-center">
                                 {% if t.aktif_kulup_mu %}
-                                    <span class="badge bg-success-subtle text-success small">AKTİF</span>
+                                    <span class="swim-badge swim-badge-success text-[0.68rem]">AKTİF</span>
                                 {% else %}
-                                    <span class="badge bg-light text-muted small">GEÇMİŞ</span>
+                                    <span class="swim-badge swim-badge-neutral text-[0.68rem]">GEÇMİŞ</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end fw-bold text-primary">{{ t.toplam_yaris_sayisi }}</td>
+                            <td class="swim-td text-right font-bold font-mono swim-text-primary">{{ t.toplam_yaris_sayisi }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">Kayıtlı sporcu bulunamadı.</td>
+                            <td colspan="5" class="swim-td text-center py-8 swim-text-muted">Kayıtlı sporcu bulunamadı.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -82,55 +84,60 @@
 
             <!-- Sayfalama -->
             {% if page_obj.has_other_pages %}
-            <nav class="d-flex justify-content-center mt-3">
-                <ul class="pagination pagination-sm mb-0">
+            <div class="swim-card-footer">
+                <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                <div class="flex items-center gap-1">
                     {% if page_obj.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Önceki</a></li>
+                        <a class="swim-btn-secondary swim-btn-sm" href="?page=1">&laquo;</a>
+                        <a class="swim-btn-secondary swim-btn-sm" href="?page={{ page_obj.previous_page_number }}">Önceki</a>
                     {% endif %}
-                    <li class="page-item active"><span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                    <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
                     {% if page_obj.has_next %}
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Sonraki</a></li>
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                        <a class="swim-btn-secondary swim-btn-sm" href="?page={{ page_obj.next_page_number }}">Sonraki</a>
+                        <a class="swim-btn-secondary swim-btn-sm" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
                     {% endif %}
-                </ul>
-            </nav>
+                </div>
+            </div>
             {% endif %}
         </div>
     </div>
 
     <!-- Son Yarış Sonuçları -->
-    <div class="col-lg-5">
-        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
-            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history text-info me-2"></i> Son Yarış Sonuçları</h5>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0">
-                    <thead class="table-light">
+    <div class="lg:col-span-5">
+        <div class="swim-card h-full flex flex-col justify-between">
+            <div class="swim-card-header">
+                <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+                    <i class="bi bi-clock-history swim-text-primary"></i> Son Yarış Sonuçları
+                </h2>
+            </div>
+            <div class="swim-table-wrapper border-0 rounded-none flex-1">
+                <table class="swim-table">
+                    <thead class="swim-thead">
                         <tr>
-                            <th>Sporcu</th>
-                            <th>Branş</th>
-                            <th class="text-end">Derece</th>
-                            <th class="text-end">Tarih</th>
+                            <th class="swim-th">Sporcu</th>
+                            <th class="swim-th">Branş</th>
+                            <th class="swim-th text-right">Derece</th>
+                            <th class="swim-th text-right">Tarih</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for r in son_sonuclar %}
-                        <tr>
-                            <td class="small">
-                                <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="fw-semibold text-decoration-none text-dark">
+                        <tr class="swim-tr">
+                            <td class="swim-td font-medium text-xs">
+                                <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="swim-text-main hover:swim-text-primary transition truncate block max-w-[120px]">
                                     {{ r.sporcu.sporcu_adi }}
                                 </a>
                             </td>
-                            <td class="small">
-                                <span class="badge bg-light text-dark border me-1">{{ r.mesafe }}m</span>
+                            <td class="swim-td text-xs">
+                                <span class="swim-badge swim-badge-neutral text-[0.68rem] mr-1">{{ r.mesafe }}m</span>
                                 {{ r.stil }}
                             </td>
-                            <td class="text-end fw-bold text-primary small">{{ r.derece }}</td>
-                            <td class="text-end small text-muted text-nowrap">{{ r.yaris_tarihi_baslangic }}</td>
+                            <td class="swim-td text-right font-bold font-mono swim-text-primary text-xs">{{ r.derece }}</td>
+                            <td class="swim-td text-right text-xs swim-text-subtle font-mono whitespace-nowrap">{{ r.yaris_tarihi_baslangic }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center py-4 text-muted">Kayıtlı yarış bulunamadı.</td>
+                            <td colspan="4" class="swim-td text-center py-8 swim-text-muted">Kayıtlı yarış bulunamadı.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -140,4 +147,3 @@
     </div>
 </div>
 {% endblock %}
-

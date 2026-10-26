@@ -4,72 +4,78 @@
 {% block title %}Sporcu Eşleştirme Motoru & API - Türkiye Yüzme Sonuçları{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="p-4 p-md-5 bg-white rounded-4 shadow-sm border-start border-4 border-info">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="badge bg-info-subtle text-info fs-6 px-3 py-2 rounded-pill fw-semibold">
-                    <i class="bi bi-cpu me-1"></i> Akıllı Kimlik (ID) Çözümleme
-                </span>
-                <span class="badge bg-success-subtle text-success fs-6 px-3 py-2 rounded-pill fw-semibold">
-                    <i class="bi bi-shield-check me-1"></i> Açık REST API
-                </span>
-            </div>
-            <h1 class="display-6 fw-bold text-dark mt-2">Sporcu Eşleştirme ve ID Bulma Motoru</h1>
-            <p class="lead text-muted mb-0">
-                Dış sistemlerden gelen sporcu adı ve doğum tarihi / yılı verilerini arşivimizdeki <strong>51.000+</strong> kayıtla akıllı algoritmalarla eşleştirin; tam eşleşme veya muhtemel adayların sistem ID'lerini anında elde edin.
-            </p>
+<div class="mb-6">
+    <div class="swim-card p-6 sm:p-8 border-l-4 border-l-sky-500">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="swim-badge swim-badge-info">
+                <i class="bi bi-cpu"></i> Akıllı Kimlik (ID) Çözümleme
+            </span>
+            <span class="swim-badge swim-badge-success">
+                <i class="bi bi-shield-check"></i> Açık REST API
+            </span>
         </div>
+        <h1 class="text-xl sm:text-3xl font-extrabold swim-text-main tracking-tight mt-1">
+            Sporcu Eşleştirme ve ID Bulma Motoru
+        </h1>
+        <p class="text-xs sm:text-sm swim-text-muted mt-2 leading-relaxed">
+            Dış sistemlerden gelen sporcu adı ve doğum tarihi / yılı verilerini arşivimizdeki <strong class="swim-text-main">51.000+</strong> kayıtla akıllı algoritmalarla eşleştirin; tam eşleşme veya muhtemel adayların sistem ID'lerini anında elde edin.
+        </p>
     </div>
 </div>
 
-<div class="row g-4 mb-5">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
     <!-- Sol Taraf: Arama / Eşleştirme Formu -->
-    <div class="col-lg-5">
-        <div class="card stat-card p-4 h-100">
-            <h5 class="fw-bold text-dark mb-3">
-                <i class="bi bi-search me-1 text-primary"></i> Sporcu Bilgilerini Sorgula
-            </h5>
-            <form method="get" action="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}" id="matchForm">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary">Sporcu Adı Soyadı <span class="text-danger">*</span></label>
-                    <input type="text" name="ad" id="inputAd" class="form-control form-control-lg" placeholder="Örn: Efe İŞLER, Derin Ayhan..." value="{{ ad }}" required autofocus>
-                    <div class="form-text">Büyük/küçük harf veya Türkçe karakter yazım hataları otomatik tolere edilir.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary">Doğum Yılı veya Tarihi</label>
-                    <input type="text" name="dogum_yili" id="inputYil" class="form-control" placeholder="Örn: 2007, 07, 24.04.2007 veya 2007-04-24" value="{{ dogum_yili }}">
-                    <div class="form-text">Tam yıl (2007), iki hane (07) veya gün-ay-yıl formatı girilebilir.</div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label fw-semibold text-secondary">Kulüp Adı <span class="text-muted fw-normal">(Opsiyonel Ayırt Edici)</span></label>
-                    <input type="text" name="kulup" id="inputKulup" class="form-control" placeholder="Örn: Enka, Fenerbahçe, Galatasaray..." value="{{ kulup }}">
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg shadow-sm">
-                        <i class="bi bi-search me-2"></i> Sporcuyu Eşleştir
-                    </button>
-                    <a href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Formu Temizle
-                    </a>
-                </div>
-            </form>
-
-            <hr class="my-4">
-
+    <div class="lg:col-span-5">
+        <div class="swim-card p-4 sm:p-6 h-full flex flex-col justify-between">
             <div>
-                <span class="text-muted small fw-semibold d-block mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Hızlı Test Örnekleri:</span>
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-sm btn-light border sample-btn" data-ad="Efe İŞLER" data-yil="2007" data-kulup="Enka">
-                        Efe İŞLER (2007 - Tam Eşleşme)
+                <h2 class="text-sm sm:text-base font-bold swim-text-main mb-4 flex items-center gap-2">
+                    <i class="bi bi-search swim-text-primary"></i> Sporcu Bilgilerini Sorgula
+                </h2>
+                <form method="get" 
+                      action="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}" 
+                      hx-get="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}" 
+                      hx-target="#eslestirSonucContainer" 
+                      hx-push-url="true"
+                      id="matchForm" 
+                      class="space-y-4">
+                    <div>
+                        <label class="swim-label">Sporcu Adı Soyadı <span class="swim-text-danger">*</span></label>
+                        <input type="text" name="ad" id="inputAd" class="swim-input text-sm" placeholder="Örn: Efe İŞLER, Derin Ayhan..." value="{{ ad }}" required autofocus>
+                        <p class="text-[0.68rem] swim-text-subtle mt-1">Büyük/küçük harf veya Türkçe karakter yazım hataları otomatik tolere edilir.</p>
+                    </div>
+
+                    <div>
+                        <label class="swim-label">Doğum Yılı veya Tarihi</label>
+                        <input type="text" name="dogum_yili" id="inputYil" class="swim-input text-sm" placeholder="Örn: 2007, 07, 24.04.2007 veya 2007-04-24" value="{{ dogum_yili }}">
+                        <p class="text-[0.68rem] swim-text-subtle mt-1">Tam yıl (2007), iki hane (07) veya gün-ay-yıl formatı girilebilir.</p>
+                    </div>
+
+                    <div>
+                        <label class="swim-label">Kulüp Adı <span class="swim-text-subtle font-normal">(Opsiyonel Ayırt Edici)</span></label>
+                        <input type="text" name="kulup" id="inputKulup" class="swim-input text-sm" placeholder="Örn: Enka, Fenerbahçe, Galatasaray..." value="{{ kulup }}">
+                    </div>
+
+                    <div class="pt-2 flex flex-col gap-2">
+                        <button type="submit" class="swim-btn-primary w-full">
+                            <i class="bi bi-search"></i> Sporcuyu Eşleştir
+                        </button>
+                        <a href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}" class="swim-btn-secondary swim-btn-sm w-full">
+                            <i class="bi bi-arrow-counterclockwise"></i> Formu Temizle
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="pt-4 mt-6 swim-border-t">
+                <span class="text-xs font-semibold swim-text-muted block mb-2"><i class="bi bi-lightning-charge-fill swim-text-warning mr-1"></i> Hızlı Test Örnekleri:</span>
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" class="swim-badge swim-badge-neutral opacity-80 transition cursor-pointer sample-btn py-1" data-ad="Efe İŞLER" data-yil="2007" data-kulup="Enka">
+                        Efe İŞLER (2007 - Tam)
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border sample-btn" data-ad="Derin Ayhn" data-yil="10" data-kulup="Anabilim">
-                        Derin Ayhn (Yazım Hatalı - Muhtemel)
+                    <button type="button" class="swim-badge swim-badge-neutral opacity-80 transition cursor-pointer sample-btn py-1" data-ad="Derin Ayhn" data-yil="10" data-kulup="Anabilim">
+                        Derin Ayhn (Muhtemel)
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border sample-btn" data-ad="Mert Vapurcu" data-yil="2011" data-kulup="Fenerbahçe">
+                    <button type="button" class="swim-badge swim-badge-neutral opacity-80 transition cursor-pointer sample-btn py-1" data-ad="Mert Vapurcu" data-yil="2011" data-kulup="Fenerbahçe">
                         Mert Vapurcu (2011)
                     </button>
                 </div>
@@ -77,237 +83,32 @@
         </div>
     </div>
 
-    <!-- Sağ Taraf: Eşleştirme Sonuçları -->
-    <div class="col-lg-7">
-        {% if sonuc %}
-            {% if sonuc.sonuc == 'tam_eslesme' %}
-                <!-- TAM EŞLEŞME KARTI -->
-                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-                    <div class="bg-success text-white p-3 px-4 d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-patch-check-fill fs-3"></i>
-                            <div>
-                                <h5 class="mb-0 fw-bold">TAM EŞLEŞME SAĞLANDI</h5>
-                                <small class="text-white-50">Sistemde birebir uyuşan sporcu kaydı bulundu</small>
-                            </div>
-                        </div>
-                        <span class="badge bg-white text-success fs-5 px-3 py-2 rounded-pill fw-bold">
-                            ID: {{ sonuc.sporcu.id }}
-                        </span>
-                    </div>
-                    <div class="card-body p-4 bg-white">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h3 class="fw-bold text-dark mb-1">{{ sonuc.sporcu.sporcu_adi }}</h3>
-                                <p class="text-muted mb-3 fs-6">
-                                    <i class="bi bi-shield-fill text-primary me-1"></i> {{ sonuc.sporcu.kulup }}
-                                    {% if sonuc.sporcu.okul %}
-                                        <span class="ms-2 badge bg-light text-dark border">
-                                            <i class="bi bi-mortarboard me-1 text-secondary"></i> Okul: {{ sonuc.sporcu.okul }}
-                                        </span>
-                                    {% endif %}
-                                </p>
-                                <div class="d-flex flex-wrap gap-2 mb-3">
-                                    <span class="badge bg-light text-dark border px-3 py-2">
-                                        <i class="bi bi-calendar-event me-1 text-primary"></i> Doğum Yılı: <strong>{{ sonuc.sporcu.dogum_yili|default:sonuc.sporcu.yas_dogum_yili }}</strong>
-                                    </span>
-                                    {% if sonuc.sporcu.cinsiyet %}
-                                        <span class="badge bg-light text-dark border px-3 py-2">
-                                            <i class="bi bi-gender-ambiguous me-1 text-info"></i> {{ sonuc.sporcu.cinsiyet }}
-                                        </span>
-                                    {% endif %}
-                                    <span class="badge bg-light text-dark border px-3 py-2">
-                                        <i class="bi bi-stopwatch me-1 text-success"></i> Toplam Yarış: <strong>{{ sonuc.sporcu.toplam_yaris_sayisi }}</strong>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                <a href="{{ sonuc.sporcu.profil_url }}" class="btn btn-outline-primary w-100 mb-2">
-                                    <i class="bi bi-person-lines-fill me-1"></i> Sporcu Profilini Aç
-                                </a>
-                                <a href="/api/sporcular/{{ sonuc.sporcu.id }}/sonuclar/" target="_blank" class="btn btn-outline-info w-100 mb-2">
-                                    <i class="bi bi-filetype-json me-1"></i> Sonuçları Getir (API / JSON)
-                                </a>
-                                <button class="btn btn-success w-100 copy-id-btn" data-id="{{ sonuc.sporcu.id }}">
-                                    <i class="bi bi-clipboard-check me-1"></i> ID'yi Kopyala ({{ sonuc.sporcu.id }})
-                                </button>
-                            </div>
-                        </div>
-
-                        {% if en_iyi_dereceler %}
-                            <hr class="my-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold text-dark mb-0">
-                                    <i class="bi bi-trophy-fill text-warning me-1"></i> Stil ve Mesafe Bazında En İyi Sonuçlar (Kişisel En İyi Dereceler - PB)
-                                </h6>
-                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ en_iyi_dereceler|length }} Branş</span>
-                            </div>
-                            <div class="table-responsive rounded-3 border">
-                                <table class="table table-sm table-hover align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="ps-3">Branş / Etkinlik</th>
-                                            <th>En İyi Derece</th>
-                                            <th>Puan</th>
-                                            <th>Tarih</th>
-                                            <th>Temsil Ettiği Kurum</th>
-                                            <th>Müsabaka</th>
-                                            <th class="pe-3 text-end">Sonuçlar & API</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for pb in en_iyi_dereceler %}
-                                            <tr>
-                                                <td class="ps-3 fw-bold text-primary">
-                                                    {{ pb.mesafe }}m {{ pb.stil }}
-                                                </td>
-                                                <td class="fw-bold font-monospace fs-6">
-                                                    {{ pb.derece }}
-                                                </td>
-                                                <td>
-                                                    {% if pb.puan %}
-                                                        <span class="badge bg-secondary-subtle text-dark">{{ pb.puan }} P</span>
-                                                    {% else %}
-                                                        <span class="text-muted">-</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td><small class="text-muted">{{ pb.yaris_tarihi_baslangic|default:pb.yaris_tarihi_ham }}</small></td>
-                                                <td>
-                                                    <small class="text-dark fw-semibold">{{ pb.kulup.kulup_adi|truncatechars:26 }}</small>
-                                                    {% if pb.kulup.okul_mu %}
-                                                        <span class="badge bg-light text-secondary border ms-1">Okul</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td><small class="text-muted">{{ pb.musabaka_adi|truncatechars:30 }}</small></td>
-                                                <td class="pe-3 text-end">
-                                                    <a href="{% url 'sonuclar:sporcu_detay' sonuc.sporcu.id %}?kategori={{ pb.stil }}&mesafe={{ pb.mesafe }}" class="btn btn-outline-primary btn-sm py-0 px-2 small" title="Bu branştaki tüm yarış sonuçlarını incele">
-                                                        <i class="bi bi-list-ul"></i> Tüm Yarışlar
-                                                    </a>
-                                                    <a href="{% url 'sonuclar:api_sporcu_sonuclari' sonuc.sporcu.id %}{{ pb.stil }}/{{ pb.mesafe }}/" target="_blank" class="btn btn-outline-secondary btn-sm py-0 px-1 small" title="API JSON Yanıtı">
-                                                        <i class="bi bi-braces"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-            {% elif sonuc.sonuc == 'muhtemel_eslesmeler' %}
-                <!-- MUHTEMEL EŞLEŞMELER LİSTESİ -->
-                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-                    <div class="bg-warning text-dark p-3 px-4 d-flex align-items-center gap-2">
-                        <i class="bi bi-exclamation-triangle-fill fs-3 text-dark"></i>
-                        <div>
-                            <h5 class="mb-0 fw-bold">TAM EŞLEŞME BULUNAMADI — MUHTEMEL ADAYLAR</h5>
-                            <small class="text-dark">Girdiğiniz isim ve tarihle en yüksek benzerliğe sahip sporcular:</small>
-                        </div>
-                    </div>
-                    <div class="card-body p-0 bg-white">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-3">Benzerlik</th>
-                                        <th>Sistem ID</th>
-                                        <th>Sporcu Adı</th>
-                                        <th>D.Yılı</th>
-                                        <th>Kulüp</th>
-                                        <th class="text-end pe-3">İşlem</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for sp in sonuc.muhtemel_eslesmeler %}
-                                        <tr>
-                                            <td class="ps-3">
-                                                {% if sp.benzerlik_orani >= 85 %}
-                                                    <span class="badge bg-success-subtle text-success fs-6 fw-bold">%{{ sp.benzerlik_orani }}</span>
-                                                {% elif sp.benzerlik_orani >= 70 %}
-                                                    <span class="badge bg-primary-subtle text-primary fs-6 fw-bold">%{{ sp.benzerlik_orani }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning-subtle text-warning fs-6 fw-bold">%{{ sp.benzerlik_orani }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-light text-dark border font-monospace">#{{ sp.id }}</span>
-                                            </td>
-                                            <td class="fw-bold">
-                                                <a href="{{ sp.profil_url }}" class="text-dark text-decoration-none hover-primary">
-                                                    {{ sp.sporcu_adi }}
-                                                </a>
-                                            </td>
-                                            <td>{{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}</td>
-                                            <td>
-                                                <div class="fw-semibold text-dark">{{ sp.kulup|truncatechars:28 }}</div>
-                                                {% if sp.okul %}
-                                                    <div><small class="text-muted"><i class="bi bi-mortarboard me-1 text-secondary"></i>{{ sp.okul|truncatechars:26 }}</small></div>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-end pe-3">
-                                                <a href="/api/sporcular/{{ sp.id }}/sonuclar/" target="_blank" class="btn btn-sm btn-outline-info me-1" title="API Sonuçlarını JSON Gör">
-                                                    <i class="bi bi-filetype-json"></i> Sonuçlar
-                                                </a>
-                                                <button class="btn btn-sm btn-outline-success copy-id-btn" data-id="{{ sp.id }}" title="Bu ID'yi kopyala">
-                                                    <i class="bi bi-check2"></i> ID Seç: {{ sp.id }}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-            {% else %}
-                <!-- BULUNAMADI KARTI -->
-                <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white mb-4">
-                    <div class="text-muted mb-3 fs-1"><i class="bi bi-person-x"></i></div>
-                    <h4 class="fw-bold text-dark">Hiçbir Eşleşme Bulunamadı</h4>
-                    <p class="text-muted mb-0">
-                        "<strong>{{ ad }}</strong>" adında ve belirtilen kriterlerde veritabanında herhangi bir sporcu kaydı tespit edilemedi. Lütfen isim yazımını veya doğum yılını kontrol ediniz.
-                    </p>
-                </div>
-            {% endif %}
-        {% else %}
-            <!-- Henüz Arama Yapılmadıysa Bilgi Paneli -->
-            <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white h-100 d-flex flex-column justify-content-center">
-                <div class="text-primary mb-3 fs-1"><i class="bi bi-person-bounding-box"></i></div>
-                <h4 class="fw-bold text-dark">Sorgulama Yapmaya Hazır</h4>
-                <p class="text-muted mx-auto" style="max-width: 480px;">
-                    Sol taraftaki formdan sporcunun adını ve doğum yılını girerek sorgulama yapabilirsiniz. Sistemimiz tam eşleşme bulursa doğrudan <strong>Sporcu ID</strong>'sini, aksi halde en olası adayları benzerlik yüzdeleriyle birlikte sunar.
-                </p>
-            </div>
-        {% endif %}
+    <!-- Sağ Taraf: Eşleştirme Sonuçları (HTMX Kapsayıcısı) -->
+    <div class="lg:col-span-7" id="eslestirSonucContainer">
+        {% include 'sonuclar/partials/sporcu_eslestir_sonuc_partial.html' %}
     </div>
 </div>
 
-<!-- Alt Kısım: REST API Dokümantasyonu ve Canlı Entegrasyon Rehberi -->
-<div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="card-header bg-dark text-white p-3 px-4 d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-code-slash text-info fs-4"></i>
-                    <h5 class="mb-0 fw-bold">Geliştiriciler İçin REST API Dokümantasyonu</h5>
-                </div>
-                <span class="badge bg-info text-dark fw-bold">Doğrudan Veri Dönüşü (Açık Endpoint)</span>
-            </div>
-            <div class="card-body p-4 bg-white">
-                <p class="text-muted mb-4">
-                    Herhangi bir token veya oturum açma gerekmeden bu API endpoint'ine <code>GET</code> veya <code>POST</code> istekleri gönderebilir ve doğrudan JSON formatında sporcu ID eşleşmesini alabilirsiniz.
-                </p>
+<!-- Alt Kısım: REST API Dokümantasyonu -->
+<div class="swim-card mb-6 overflow-hidden">
+    <div class="swim-card-header">
+        <h2 class="text-sm sm:text-base font-bold flex items-center gap-2">
+            <i class="bi bi-code-slash swim-text-primary"></i> Geliştiriciler İçin REST API Dokümantasyonu
+        </h2>
+        <span class="swim-badge swim-badge-info">Doğrudan Veri Dönüşü (Açık Endpoint)</span>
+    </div>
+    <div class="p-4 sm:p-6 space-y-4">
+        <p class="text-xs swim-text-muted">
+            Herhangi bir token veya oturum açma gerekmeden bu API endpoint'ine <code class="font-mono swim-text-main font-semibold">GET</code> veya <code class="font-mono swim-text-main font-semibold">POST</code> istekleri gönderebilir ve doğrudan JSON formatında sporcu ID eşleşmesini alabilirsiniz.
+        </p>
 
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-link-45deg text-primary"></i> 1. Sporcu Eşleştirme (İsim + D.Yılı)</h6>
-                        <pre class="bg-light p-3 rounded-3 border text-dark font-monospace small"><code>GET /api/sporcu-eslestir/?sporcu_adi=Efe+İŞLER&dogum_yili=2007</code></pre>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+                <h3 class="text-xs font-bold swim-text-main uppercase tracking-wider mb-1.5"><i class="bi bi-link-45deg swim-text-primary mr-1"></i> 1. GET ile Eşleştirme</h3>
+                <pre class="swim-code-block"><code>GET /api/sporcu-eslestir/?sporcu_adi=Efe+İŞLER&dogum_yili=2007</code></pre>
 
-                        <h6 class="fw-bold text-dark mt-3 mb-2"><i class="bi bi-arrow-down-left-square text-primary"></i> 2. POST (JSON) ile Eşleştirme</h6>
-                        <pre class="bg-light p-3 rounded-3 border text-dark font-monospace small"><code>POST /api/sporcu-eslestir/
+                <h3 class="text-xs font-bold swim-text-main uppercase tracking-wider mt-3 mb-1.5"><i class="bi bi-arrow-down-left-square swim-text-primary mr-1"></i> 2. POST (JSON) ile Eşleştirme</h3>
+                <pre class="swim-code-block"><code>POST /api/sporcu-eslestir/
 Content-Type: application/json
 
 {
@@ -315,86 +116,59 @@ Content-Type: application/json
   "dogum_yili": 2007,
   "kulup": "Enka"  // Opsiyonel
 }</code></pre>
+            </div>
 
-                        <h6 class="fw-bold text-dark mt-3 mb-2"><i class="bi bi-stopwatch text-success"></i> 3. Sporcu ID ile Sonuçları ve Dereceleri Getirme</h6>
-                        <pre class="bg-light p-3 rounded-3 border text-dark font-monospace small"><code>GET /api/sporcular/242/sonuclar/
-GET /api/sporcu-sonuclari/?sporcu_id=242&stil=Serbest&limit=20
-POST /api/sporcu-sonuclari/  {"sporcu_id": 242, "sadece_en_iyi": 1}</code></pre>
-                    </div>
-
-                    <div class="col-md-6">
-                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-filetype-json text-success"></i> 4. Örnek JSON Yanıtı (Sonuçlar ve PB)</h6>
-                        <pre class="bg-dark text-light p-3 rounded-3 font-monospace small" style="max-height: 380px; overflow-y: auto;"><code>{
+            <div>
+                <h3 class="text-xs font-bold swim-text-main uppercase tracking-wider mb-1.5"><i class="bi bi-filetype-json swim-text-success mr-1"></i> 3. Örnek JSON Yanıtı</h3>
+                <pre class="swim-code-block max-h-[220px]"><code>{
   "durum": "basarili",
+  "sonuc": "tam_eslesme",
   "sporcu": {
     "id": 242,
-    "sporcu_adi": "Mansur Mert YARDIMCI",
-    "dogum_yili": 2015,
+    "sporcu_adi": "Efe İŞLER",
+    "dogum_yili": 2007,
     "cinsiyet": "ERKEK",
-    "kulup": "Vamos Spor Kulübü",
-    "okul": "Beytepe Ortaokulu",
-    "toplam_yaris_sayisi": 18
-  },
-  "en_iyi_dereceler": [
-    {
-      "etkinlik": "50m Serbest",
-      "derece": "38.77",
-      "derece_saniye": 38.77,
-      "puan": 145,
-      "tarih": "2025-12-13"
-    }
-  ],
-  "sonuclar": [
-    {
-      "etkinlik": "100m Serbest",
-      "derece": "1:27.73",
-      "sira": "1",
-      "puan": 152,
-      "tarih": "2026-02-25",
-      "musabaka_adi": "Okul Sporları...",
-      "kulup": "Beytepe Ortaokulu"
-    }
-  ]
+    "kulup": "Enka Spor Kulübü"
+  }
 }</code></pre>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_head %}
+{% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Hızlı Test Butonları
+    // Hızlı Test Butonları (HTMX Ajax ile çalıştır)
     document.querySelectorAll(".sample-btn").forEach(function(btn) {
         btn.addEventListener("click", function() {
             document.getElementById("inputAd").value = this.dataset.ad;
             document.getElementById("inputYil").value = this.dataset.yil || "";
             document.getElementById("inputKulup").value = this.dataset.kulup || "";
-            document.getElementById("matchForm").submit();
+            const form = document.getElementById("matchForm");
+            if (form) {
+                htmx.trigger(form, 'submit');
+            }
         });
     });
 
-    // ID Kopyalama Butonları
-    document.querySelectorAll(".copy-id-btn").forEach(function(btn) {
-        btn.addEventListener("click", function() {
-            const id = this.dataset.id;
-            navigator.clipboard.writeText(id).then(() => {
-                const originalText = this.innerHTML;
-                this.innerHTML = '<i class="bi bi-check-all"></i> Kopyalandı!';
-                this.classList.remove("btn-outline-success", "btn-success");
-                this.classList.add("btn-dark");
-                setTimeout(() => {
-                    this.innerHTML = originalText;
-                    this.classList.remove("btn-dark");
-                    this.classList.add("btn-success");
-                }, 2000);
-            });
-        });
+    // ID Kopyalama Butonları (Delegated listener for HTMX swapped elements)
+    document.addEventListener("click", function(e) {
+        const copyBtn = e.target.closest('.copy-id-btn');
+        if (copyBtn) {
+            const id = copyBtn.dataset.id;
+            if (id) {
+                navigator.clipboard.writeText(id).then(() => {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="bi bi-check-all"></i> Kopyalandı!';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                    }, 2000);
+                });
+            }
+        }
     });
 });
 </script>
 {% endblock %}
-

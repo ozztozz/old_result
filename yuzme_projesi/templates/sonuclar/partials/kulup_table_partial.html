@@ -1,0 +1,86 @@
+{% load humanize %}
+<div class="swim-card mb-6">
+    <div class="swim-table-wrapper border-0 rounded-none">
+        <table class="swim-table">
+            <thead class="swim-thead">
+                <tr>
+                    <th class="swim-th w-20">#ID</th>
+                    <th class="swim-th">Kulüp Adı</th>
+                    <th class="swim-th text-center w-36">Sporcu Sayısı</th>
+                    <th class="swim-th text-center w-40">Faaliyet Yılları</th>
+                    <th class="swim-th text-right w-36">Toplam Yarış</th>
+                    <th class="swim-th text-center w-28">İncele</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kl in page_obj %}
+                <tr class="swim-tr">
+                    <td class="swim-td text-xs swim-text-subtle font-mono">#{{ kl.id }}</td>
+                    <td class="swim-td font-semibold">
+                        <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="swim-text-main hover:swim-text-primary transition flex items-center gap-2">
+                            <i class="bi bi-shield-shaded swim-text-primary"></i>{{ kl.kulup_adi }}
+                        </a>
+                    </td>
+                    <td class="swim-td text-center">
+                        <span class="swim-badge swim-badge-info">
+                            {{ kl.toplam_sporcu_sayisi|intcomma }} sporcu
+                        </span>
+                    </td>
+                    <td class="swim-td text-center text-xs swim-text-muted font-mono">
+                        {{ kl.ilk_yaris_tarihi|slice:":4"|default:"-" }} - {{ kl.son_yaris_tarihi|slice:":4"|default:"-" }}
+                    </td>
+                    <td class="swim-td text-right font-bold font-mono swim-text-success">
+                        {{ kl.toplam_yaris_sayisi|intcomma }}
+                    </td>
+                    <td class="swim-td text-center">
+                        <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill">
+                            İncele <i class="bi bi-chevron-right ml-1"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="swim-td text-center py-10 swim-text-muted">
+                        Kayıtlı kulüp bulunamadı.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama (HTMX ile Anlık Sayfa Geçişi) -->
+    {% if page_obj.has_other_pages %}
+    <div class="swim-card-footer">
+        <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (Toplam {{ total_count|intcomma }} kulüp)</span>
+        <div class="flex items-center gap-1">
+            {% if page_obj.has_previous %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page=1&q={{ q }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:kulup_listesi' %}?page=1&q={{ q }}&sirala={{ sirala }}"
+                   hx-target="#kulupTableContainer"
+                   hx-push-url="true">&laquo;</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.previous_page_number }}&q={{ q }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:kulup_listesi' %}?page={{ page_obj.previous_page_number }}&q={{ q }}&sirala={{ sirala }}"
+                   hx-target="#kulupTableContainer"
+                   hx-push-url="true">Önceki</a>
+            {% endif %}
+            <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.next_page_number }}&q={{ q }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:kulup_listesi' %}?page={{ page_obj.next_page_number }}&q={{ q }}&sirala={{ sirala }}"
+                   hx-target="#kulupTableContainer"
+                   hx-push-url="true">Sonraki</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:kulup_listesi' %}?page={{ page_obj.paginator.num_pages }}&q={{ q }}&sirala={{ sirala }}"
+                   hx-target="#kulupTableContainer"
+                   hx-push-url="true">&raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

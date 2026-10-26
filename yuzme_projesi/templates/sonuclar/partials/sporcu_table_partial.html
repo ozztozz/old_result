@@ -1,0 +1,107 @@
+{% load humanize %}
+<div class="swim-card mb-6">
+    <div class="swim-table-wrapper border-0 rounded-none">
+        <table class="swim-table">
+            <thead class="swim-thead">
+                <tr>
+                    <th class="swim-th w-20">#ID</th>
+                    <th class="swim-th">Sporcu Adı Soyadı</th>
+                    <th class="swim-th text-center w-28">Doğum Yılı</th>
+                    <th class="swim-th w-28">Cinsiyet</th>
+                    <th class="swim-th">Birincil Kulüp</th>
+                    <th class="swim-th text-center w-36">Kariyer Tarihi</th>
+                    <th class="swim-th text-right w-28">Toplam Yarış</th>
+                    <th class="swim-th text-center w-20">İncele</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sp in page_obj %}
+                <tr class="swim-tr">
+                    <td class="swim-td text-xs swim-text-subtle font-mono">#{{ sp.id }}</td>
+                    <td class="swim-td font-semibold">
+                        <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="swim-text-main hover:swim-text-primary transition block">
+                            {{ sp.sporcu_adi }}
+                        </a>
+                    </td>
+                    <td class="swim-td text-center text-xs swim-text-muted font-mono">
+                        <span class="swim-badge swim-badge-neutral">{{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}</span>
+                    </td>
+                    <td class="swim-td text-xs">
+                        {% if sp.cinsiyet == 'ERKEK' %}
+                            <span class="swim-badge swim-badge-primary"><i class="bi bi-gender-male"></i> Erkek</span>
+                        {% elif sp.cinsiyet == 'KADIN' %}
+                            <span class="swim-badge swim-badge-danger"><i class="bi bi-gender-female"></i> Kadın</span>
+                        {% else %}
+                            <span class="swim-text-subtle">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-xs swim-text-muted truncate max-w-[180px]">
+                        {% if sp.birincil_kulup %}
+                            <a href="{% url 'sonuclar:kulup_detay' sp.birincil_kulup.id %}" class="hover:swim-text-primary transition truncate block">
+                                <i class="bi bi-shield swim-text-subtle mr-1"></i>{{ sp.birincil_kulup.kulup_adi }}
+                            </a>
+                        {% else %}
+                            <span class="swim-text-subtle">Kulüpsüz / Belirtilmemiş</span>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-center text-xs swim-text-muted font-mono">
+                        {% if sp.ilk_yaris_tarihi %}
+                            {{ sp.ilk_yaris_tarihi|slice:":4" }} - {{ sp.son_yaris_tarihi|slice:":4" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-right font-bold font-mono swim-text-primary">{{ sp.toplam_yaris_sayisi }}</td>
+                    <td class="swim-td text-center">
+                        <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="swim-btn-secondary swim-btn-sm p-1.5" title="Profili Görüntüle">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="swim-td text-center py-10 swim-text-muted">
+                        <i class="bi bi-search text-3xl swim-text-subtle block mb-2"></i>
+                        Aradığınız kriterlere uygun sporcu bulunamadı.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama (HTMX ile Anlık Sayfa Geçişi) -->
+    {% if page_obj.has_other_pages %}
+    <div class="swim-card-footer">
+        <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} (Toplam {{ total_count|intcomma }} sporcu)</span>
+        <div class="flex items-center gap-1">
+            {% if page_obj.has_previous %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page=1&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:sporcu_listesi' %}?page=1&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-target="#sporcuTableContainer"
+                   hx-push-url="true">&laquo; İlk</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.previous_page_number }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:sporcu_listesi' %}?page={{ page_obj.previous_page_number }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-target="#sporcuTableContainer"
+                   hx-push-url="true">Önceki</a>
+            {% endif %}
+            <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.next_page_number }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:sporcu_listesi' %}?page={{ page_obj.next_page_number }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-target="#sporcuTableContainer"
+                   hx-push-url="true">Sonraki</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-get="{% url 'sonuclar:sporcu_listesi' %}?page={{ page_obj.paginator.num_pages }}&q={{ q }}&cinsiyet={{ cinsiyet }}&kulup={{ kulup_adi }}&sirala={{ sirala }}"
+                   hx-target="#sporcuTableContainer"
+                   hx-push-url="true">Son &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

@@ -1,0 +1,178 @@
+<!-- Modal Header -->
+<div class="swim-modal-header">
+    <div class="min-w-0 pr-3">
+        <h5 class="swim-title-sm flex items-center gap-1.5" id="sporcuMusabakaModalLabel">
+            <i class="bi bi-person-fill swim-text-primary"></i>{{ sporcu.sporcu_adi }}
+        </h5>
+        <div class="swim-text-muted mt-1 flex items-center flex-wrap gap-2 text-xs">
+            {% if kulup %}
+                <span class="flex items-center gap-1"><i class="bi bi-shield swim-text-primary"></i>{{ kulup.kulup_adi }}</span>
+            {% endif %}
+            {% if sporcu.dogum_yili %}
+                <span>&bull; Doğum: {{ sporcu.dogum_yili }}</span>
+            {% endif %}
+            {% if sporcu_yasi %}
+                <span class="swim-badge swim-badge-neutral">{{ sporcu_yasi }} Yaş</span>
+            {% endif %}
+        </div>
+    </div>
+    <button type="button" class="swim-modal-close" data-swim-dismiss aria-label="Kapat">
+        <i class="bi bi-x-lg text-base"></i>
+    </button>
+</div>
+
+<!-- Modal Body -->
+<div class="swim-modal-body">
+    <!-- Müsabaka Bilgi Şeridi -->
+    <div class="swim-filter-bar flex justify-between items-center gap-2">
+        <div class="swim-text-muted text-xs truncate flex items-center gap-1.5">
+            <i class="bi bi-trophy-fill swim-text-warning"></i>
+            <span class="font-semibold swim-text-main">{{ event.musabaka_adi }}</span>
+        </div>
+        <span class="swim-badge swim-badge-primary shrink-0">
+            {{ sonuclar|length }} Yarış
+        </span>
+    </div>
+
+    <!-- Yarış Sonuçları Tablosu (Masaüstü & Tablet) -->
+    <div class="hidden sm:block">
+        <table class="swim-table">
+            <thead class="swim-thead">
+                <tr>
+                    <th class="swim-th w-16">Yarış</th>
+                    <th class="swim-th">Branş</th>
+                    <th class="swim-th text-center w-24">Seri/Klv</th>
+                    <th class="swim-th text-right w-24">Giriş</th>
+                    <th class="swim-th text-right w-28">Derece</th>
+                    <th class="swim-th text-center w-16">Sıra</th>
+                    <th class="swim-th text-center w-20">Baraj/P</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in sonuclar %}
+                <tr class="swim-tr">
+                    <td class="swim-td font-medium">
+                        <button type="button"
+                                hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?yaris_no={{ r.yaris_no }}&target=modalContent"
+                                hx-target="#yarisSonuclarModalContent"
+                                data-swim-dismiss
+                                class="swim-badge swim-badge-primary hover:opacity-80 transition cursor-pointer font-mono text-xs"
+                                title="Yarış #{{ r.yaris_no }} Sonuçlarına Git">
+                            #{{ r.yaris_no }}
+                        </button>
+                    </td>
+                    <td class="swim-td font-semibold swim-text-main">
+                        <span class="swim-badge swim-badge-neutral mr-1.5">{{ r.mesafe }}m</span>
+                        {{ r.stil }}
+                    </td>
+                    <td class="swim-td text-center text-xs swim-text-muted">
+                        {% if r.seri or r.kulvar %}
+                            S:{{ r.seri|default:"-" }} K:{{ r.kulvar|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-right text-xs swim-text-subtle font-mono">
+                        {{ r.giris_derecesi|default:"-" }}
+                    </td>
+                    <td class="swim-td text-right font-bold font-mono">
+                        {% if r.derece == 'Bekleniyor' %}
+                            <span class="swim-badge swim-badge-warning">Bekleniyor</span>
+                        {% elif 'disk' in r.derece|lower or 'disk' in r.sira|lower or 'sw' in r.derece|lower or 'sw' in r.sira|lower or 'dq' in r.derece|lower %}
+                            <span class="swim-badge swim-badge-danger">
+                                {% if 'sw' in r.derece|lower or 'sw' in r.sira|lower %}{{ r.derece|default:r.sira }}{% else %}Diskalifiye{% endif %}
+                            </span>
+                        {% else %}
+                            <span class="swim-text-primary">{{ r.derece }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-center font-semibold">
+                        {% if 'disk' in r.sira|lower or 'dq' in r.sira|lower or 'sw' in r.sira|lower %}
+                            <span class="swim-badge swim-badge-danger">DQ</span>
+                        {% elif r.sira == '1' %}
+                            <span class="swim-badge swim-rank-1">1</span>
+                        {% elif r.sira == '2' %}
+                            <span class="swim-badge swim-rank-2">2</span>
+                        {% elif r.sira == '3' %}
+                            <span class="swim-badge swim-rank-3">3</span>
+                        {% else %}
+                            <span class="swim-badge swim-badge-neutral">{{ r.sira|default:"-" }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="swim-td text-center text-xs">
+                        {% if r.baraj %}
+                            <span class="swim-badge swim-badge-success">{{ r.baraj }}</span>
+                        {% elif r.puan and r.puan != '-' %}
+                            <span class="swim-badge swim-badge-neutral">{{ r.puan }}P</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="swim-td text-center py-8 swim-text-muted">Bu müsabakada kayıtlı yarış bulunamadı.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Yarış Sonuçları Kartları (Mobilde Tam Uyumlu & Sıfır Yatay Kaydırma) -->
+    <div class="sm:hidden swim-divide">
+        {% for r in sonuclar %}
+        <div class="swim-mobile-card">
+            <div class="flex justify-between items-center mb-1">
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?yaris_no={{ r.yaris_no }}&target=modalContent"
+                            hx-target="#yarisSonuclarModalContent"
+                            data-swim-dismiss
+                            class="swim-badge swim-badge-primary hover:opacity-80 transition cursor-pointer font-mono text-xs"
+                            title="Yarış #{{ r.yaris_no }} Sonuçlarına Git">
+                        #{{ r.yaris_no }}
+                    </button>
+                    <strong class="swim-text-main text-sm">{{ r.mesafe }}m {{ r.stil }}</strong>
+                </div>
+                <div>
+                    {% if r.derece == 'Bekleniyor' %}
+                        <span class="swim-badge swim-badge-warning">Bekleniyor</span>
+                    {% elif 'disk' in r.derece|lower or 'disk' in r.sira|lower or 'sw' in r.derece|lower or 'sw' in r.sira|lower or 'dq' in r.derece|lower %}
+                        <span class="swim-badge swim-badge-danger">
+                            {% if 'sw' in r.derece|lower or 'sw' in r.sira|lower %}{{ r.derece|default:r.sira }}{% else %}DQ{% endif %}
+                        </span>
+                    {% else %}
+                        <span class="font-bold swim-text-primary font-mono text-base">{{ r.derece }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex justify-between items-center text-xs swim-text-muted mt-2">
+                <span>
+                    {% if r.seri or r.kulvar %}Seri {{ r.seri|default:"-" }} / Kulvar {{ r.kulvar|default:"-" }}{% endif %}
+                    {% if r.giris_derecesi %} &bull; Giriş: {{ r.giris_derecesi }}{% endif %}
+                </span>
+                <div class="flex gap-1.5 items-center">
+                    {% if r.sira and r.sira != '-' %}
+                        <span class="swim-badge swim-badge-neutral">Sıra: {{ r.sira }}</span>
+                    {% endif %}
+                    {% if r.baraj %}
+                        <span class="swim-badge swim-badge-success">{{ r.baraj }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="swim-empty-state">Bu müsabakada kayıtlı yarış bulunamadı.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Footer -->
+<div class="swim-modal-footer">
+    <a href="{% url 'sonuclar:sporcu_detay' sporcu.id %}" target="_blank" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill">
+        <i class="bi bi-box-arrow-up-right"></i> Tüm Kariyerini Gör
+    </a>
+    <button type="button" class="swim-btn-secondary swim-btn-sm swim-btn-pill" data-swim-dismiss>
+        Kapat
+    </button>
+</div>

@@ -4,160 +4,72 @@
 {% block title %}Yarış Sonuçları Arama & Filtreleme ({{ total_count|intcomma }}) - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
     <div>
-        <h2 class="fw-bold mb-1"><i class="bi bi-trophy text-primary me-2"></i> Bireysel Yarış Sonuçları</h2>
-        <p class="text-muted mb-0">Toplam <strong>{{ total_count|intcomma }}</strong> sonuç kriterlerinize uyuyor.</p>
+        <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
+            <i class="bi bi-trophy swim-text-primary"></i> Bireysel Yarış Sonuçları
+        </h1>
+        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> sonuç kriterlerinize uyuyor.</p>
     </div>
 </div>
 
-<!-- Filtreleme Motoru -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-    <form method="get" class="row g-3">
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted">Sporcu Adı</label>
-            <input type="text" name="sporcu" class="form-control form-control-sm" placeholder="Örn: Bahar, Alp..." value="{{ q_sporcu }}">
+<!-- Filtreleme Motoru (HTMX Canlı Filtreleme) -->
+<div class="swim-card p-4 sm:p-5 mb-4">
+    <form method="get" 
+          action="{% url 'sonuclar:yaris_sonuclari_ara' %}"
+          hx-get="{% url 'sonuclar:yaris_sonuclari_ara' %}" 
+          hx-target="#yarisSonuclariContent" 
+          hx-push-url="true"
+          hx-trigger="input changed delay:350ms from:input, change from:select"
+          class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+        <div class="sm:col-span-3">
+            <label class="swim-label">Sporcu Adı</label>
+            <input type="text" name="sporcu" class="swim-input text-xs" placeholder="Örn: Bahar, Alp..." value="{{ q_sporcu }}">
         </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted">Kulüp Adı</label>
-            <input type="text" name="kulup" class="form-control form-control-sm" placeholder="Örn: Fenerbahçe..." value="{{ q_kulup }}">
+        <div class="sm:col-span-3">
+            <label class="swim-label">Kulüp Adı</label>
+            <input type="text" name="kulup" class="swim-input text-xs" placeholder="Örn: Fenerbahçe..." value="{{ q_kulup }}">
         </div>
-        <div class="col-md-2">
-            <label class="form-label small fw-semibold text-muted">Müsabaka Adı</label>
-            <input type="text" name="musabaka" class="form-control form-control-sm" placeholder="Müsabaka ara..." value="{{ q_musabaka }}">
+        <div class="sm:col-span-2">
+            <label class="swim-label">Müsabaka Adı</label>
+            <input type="text" name="musabaka" class="swim-input text-xs" placeholder="Müsabaka ara..." value="{{ q_musabaka }}">
         </div>
-        <div class="col-md-1">
-            <label class="form-label small fw-semibold text-muted">Stil</label>
-            <select name="stil" class="form-select form-select-sm">
+        <div class="sm:col-span-1">
+            <label class="swim-label">Stil</label>
+            <select name="stil" class="swim-select text-xs">
                 <option value="">Tümü</option>
                 {% for s in stiller %}
                     <option value="{{ s }}" {% if stil == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-1">
-            <label class="form-label small fw-semibold text-muted">Mesafe</label>
-            <select name="mesafe" class="form-select form-select-sm">
+        <div class="sm:col-span-1">
+            <label class="swim-label">Mesafe</label>
+            <select name="mesafe" class="swim-select text-xs">
                 <option value="">Tümü</option>
                 {% for m in mesafeler %}
                     <option value="{{ m }}" {% if mesafe == m|stringformat:"i" %}selected{% endif %}>{{ m }}m</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-1">
-            <label class="form-label small fw-semibold text-muted">Cinsiyet</label>
-            <select name="cinsiyet" class="form-select form-select-sm">
+        <div class="sm:col-span-1">
+            <label class="swim-label">Cinsiyet</label>
+            <select name="cinsiyet" class="swim-select text-xs">
                 <option value="">Tümü</option>
                 <option value="Erkekler" {% if cinsiyet == 'Erkekler' %}selected{% endif %}>Erkek</option>
                 <option value="Kızlar" {% if cinsiyet == 'Kızlar' %}selected{% endif %}>Kız / Bayan</option>
             </select>
         </div>
-        <div class="col-md-1 d-flex align-items-end">
-            <button type="submit" class="btn btn-sm btn-primary w-100 fw-bold">
+        <div class="sm:col-span-1">
+            <button type="submit" class="swim-btn-primary w-full text-xs">
                 <i class="bi bi-funnel"></i> Filtrele
             </button>
         </div>
     </form>
 </div>
 
-<!-- Sonuçlar Tablosu -->
-<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Tarih</th>
-                    <th>Sporcu Adı</th>
-                    <th>Kulüp</th>
-                    <th>Branş</th>
-                    <th class="text-center">Sıra</th>
-                    <th class="text-end">Derece</th>
-                    <th class="text-center">Puan</th>
-                    <th>Müsabaka Adı</th>
-                    <th>Baraj</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in page_obj %}
-                <tr>
-                    <td class="small text-muted text-nowrap">{{ r.yaris_tarihi_baslangic|default:r.yaris_tarihi_ham }}</td>
-                    <td>
-                        <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="fw-bold text-decoration-none text-dark">
-                            {{ r.sporcu.sporcu_adi }}
-                        </a>
-                        <span class="small text-muted d-block">
-                            {% if r.hesaplanan_yas %}{{ r.hesaplanan_yas }} Yaşında{% elif r.sporcu.dogum_yili %}D.Yılı: {{ r.sporcu.dogum_yili }}{% endif %}
-                        </span>
-                    </td>
-                    <td class="small text-muted" style="max-width: 180px;">
-                        {% if r.kulup %}
-                            <a href="{% url 'sonuclar:kulup_detay' r.kulup.id %}" class="text-decoration-none text-muted d-inline-block text-truncate w-100">
-                                {{ r.kulup.kulup_adi }}
-                            </a>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td class="fw-semibold text-nowrap">
-                        <span class="badge bg-light text-dark border me-1">{{ r.mesafe }}m</span>
-                        {{ r.stil }}
-                        {% if r.seri or r.kulvar %}
-                            <div class="small text-muted fw-normal">
-                                {{ r.seri|default:"" }}{% if r.kulvar %} <span class="badge bg-info-subtle text-info border">K: {{ r.kulvar }}</span>{% endif %}
-                            </div>
-                        {% endif %}
-                    </td>
-                    <td class="text-center fw-semibold text-secondary">{{ r.sira|default:"-" }}</td>
-                    <td class="text-end fw-bold">
-                        {% if r.derece == 'Bekleniyor' %}
-                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Bekleniyor</span>
-                        {% else %}
-                            <span class="text-primary">{{ r.derece }}</span>
-                        {% endif %}
-                        {% if r.giris_derecesi %}
-                            <div class="small text-muted fw-normal" title="Yarış Başlangıç / Giriş Derecesi">Giriş: {{ r.giris_derecesi }}</div>
-                        {% endif %}
-                    </td>
-                    <td class="text-center fw-semibold">{{ r.puan|default:"-" }}</td>
-                    <td class="small text-muted" style="max-width: 220px;">
-                        <span class="d-inline-block text-truncate w-100" title="{{ r.musabaka_adi }}">
-                            {{ r.musabaka_adi|default:"-" }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if r.baraj %}
-                            <span class="badge bg-success-subtle text-success small">{{ r.baraj }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">
-                        <i class="bi bi-search fs-2 d-block mb-2"></i>
-                        Seçilen kriterlere uygun yarış sonucu bulunamadı.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<!-- Sonuçlar Tablosu (HTMX Kapsayıcısı) -->
+<div id="yarisSonuclariContent">
+    {% include 'sonuclar/partials/yaris_sonuclari_table_partial.html' %}
 </div>
-
-<!-- Sayfalama -->
-{% if page_obj.has_other_pages %}
-<nav class="d-flex justify-content-center">
-    <ul class="pagination">
-        {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}">&laquo; İlk</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}">Önceki</a></li>
-        {% endif %}
-        <li class="page-item active"><span class="page-link">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
-        {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}">Sonraki</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&sporcu={{ q_sporcu }}&kulup={{ q_kulup }}&musabaka={{ q_musabaka }}&stil={{ stil }}&mesafe={{ mesafe }}&cinsiyet={{ cinsiyet }}">Son &raquo;</a></li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
 {% endblock %}
-

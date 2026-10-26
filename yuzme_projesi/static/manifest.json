@@ -1,0 +1,33 @@
+{
+  "name": "Türkiye Yüzme Sonuçları & Analiz Portalı",
+  "short_name": "Yüzme Sonuç",
+  "description": "Türkiye Yüzme Federasyonu Resmî Yarış Sonuçları, Canlı Takip ve Sporcu Analiz Portalı",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["sports", "analytics", "utilities"],
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

@@ -5,158 +5,166 @@
 
 {% block content %}
 <!-- Hero Section -->
-<div class="row align-items-center mb-5 py-4 bg-white rounded-4 shadow-sm px-4">
-    <div class="col-lg-7">
-        <span class="badge bg-primary-subtle text-primary mb-2 px-3 py-2 fs-6 rounded-pill fw-semibold">
-            <i class="bi bi-award me-1"></i> Resmî Sonuç Arşivi (Metin & OCR)
-        </span>
-        <h1 class="display-5 fw-bold text-dark mt-2">Türkiye Yüzme Sonuçları & Analiz Platformu</h1>
-        <p class="lead text-muted mt-3">
-            Federasyon arşivlerindeki <strong>{{ toplam_yaris|intcomma }}</strong> yarış sonucunu, sporcuların kariyer gelişimini, en iyi derecelerini ve kulüp transfer tarihçelerini tek çatı altında keşfedin.
-        </p>
-        <div class="d-flex flex-wrap gap-2 mt-4">
-            <a href="{% url 'sonuclar:sporcu_listesi' %}" class="btn btn-primary btn-lg px-4 shadow-sm">
-                <i class="bi bi-people me-2"></i> Sporcuları İncele
-            </a>
-            <a href="{% url 'sonuclar:kulup_listesi' %}" class="btn btn-outline-secondary btn-lg px-4">
-                <i class="bi bi-shield me-2"></i> Kulüpleri Keşfet
-            </a>
+<div class="swim-card p-6 sm:p-10 mb-6 ">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div class="lg:col-span-7">
+            <span class="swim-badge swim-badge-primary mb-3">
+                <i class="bi bi-award me-1"></i> Resmî Sonuç Arşivi (Metin & OCR)
+            </span>
+            <h1 class="text-2xl sm:text-4xl font-extrabold swim-text-main tracking-tight leading-tight mt-1">
+                Türkiye Yüzme Sonuçları & Analiz Platformu
+            </h1>
+            <p class="swim-text-muted text-sm sm:text-base leading-relaxed mt-3">
+                Federasyon arşivlerindeki <strong class="swim-text-main font-semibold">{{ toplam_yaris|intcomma }}</strong> yarış sonucunu, sporcuların kariyer gelişimini, en iyi derecelerini ve kulüp transfer tarihçelerini tek çatı altında keşfedin.
+            </p>
+            <div class="flex flex-wrap gap-2.5 mt-5">
+                <a href="{% url 'sonuclar:sporcu_listesi' %}" class="swim-btn-primary">
+                    <i class="bi bi-people"></i> Sporcuları İncele
+                </a>
+                <a href="{% url 'sonuclar:kulup_listesi' %}" class="swim-btn-secondary">
+                    <i class="bi bi-shield"></i> Kulüpleri Keşfet
+                </a>
+            </div>
         </div>
-    </div>
-    <div class="col-lg-5 mt-4 mt-lg-0 text-center">
-        <div class="p-4 bg-light rounded-4 border">
-            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-search me-1 text-primary"></i> Hızlı Sporcu & Kulüp Arama</h5>
-            <form action="{% url 'sonuclar:sporcu_listesi' %}" method="get" class="mb-3">
-                <div class="input-group input-group-lg">
-                    <input type="text" name="q" class="form-control" placeholder="Sporcu adı (örn: Bahar, Meriç)...">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
-                </div>
-            </form>
-            <form action="{% url 'sonuclar:kulup_listesi' %}" method="get">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Kulüp adı (örn: Fenerbahçe, Enka)...">
-                    <button class="btn btn-outline-primary" type="submit"><i class="bi bi-shield-fill"></i></button>
-                </div>
-            </form>
+
+        <div class="lg:col-span-5">
+            <div class="swim-panel shadow-2xs">
+                <h2 class="text-sm font-bold swim-text-main mb-3 flex items-center gap-1.5">
+                    <i class="bi bi-search swim-text-primary"></i> Hızlı Sporcu & Kulüp Arama
+                </h2>
+                <form action="{% url 'sonuclar:sporcu_listesi' %}" method="get" class="mb-2.5">
+                    <div class="flex gap-1.5">
+                        <input type="text" name="q" class="swim-input text-xs" placeholder="Sporcu adı (örn: Bahar, Meriç)...">
+                        <button class="swim-btn-primary swim-btn-sm shrink-0" type="submit"><i class="bi bi-search"></i></button>
+                    </div>
+                </form>
+                <form action="{% url 'sonuclar:kulup_listesi' %}" method="get">
+                    <div class="flex gap-1.5">
+                        <input type="text" name="q" class="swim-input text-xs" placeholder="Kulüp adı (örn: Fenerbahçe, Enka)...">
+                        <button class="swim-btn-secondary swim-btn-sm shrink-0" type="submit"><i class="bi bi-shield-fill swim-text-primary"></i></button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- İstatistik Kartları -->
-<div class="row g-4 mb-5">
-    <div class="col-md-3">
-        <div class="card stat-card p-4 text-center border-start border-4 border-primary">
-            <div class="text-primary mb-2 fs-1"><i class="bi bi-stopwatch"></i></div>
-            <h2 class="fw-bold mb-1 text-dark">{{ toplam_yaris|intcomma }}</h2>
-            <span class="text-muted text-uppercase fw-semibold small">Bireysel Yarış Sonucu</span>
-        </div>
+<!-- İstatistik Kartları (Mobilde 2 sütun, masaüstünde 4 sütun) -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <div class="swim-stat-box border-l-4 border-l-blue-600">
+        <div class="swim-text-primary mb-1 text-2xl"><i class="bi bi-stopwatch"></i></div>
+        <div class="swim-stat-val">{{ toplam_yaris|intcomma }}</div>
+        <div class="swim-stat-lbl">Bireysel Yarış Sonucu</div>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card p-4 text-center border-start border-4 border-info">
-            <div class="text-info mb-2 fs-1"><i class="bi bi-people-fill"></i></div>
-            <h2 class="fw-bold mb-1 text-dark">{{ toplam_sporcu|intcomma }}</h2>
-            <span class="text-muted text-uppercase fw-semibold small">Tekil Lisanslı Sporcu</span>
-        </div>
+    <div class="swim-stat-box border-l-4 border-l-sky-500">
+        <div class="swim-text-primary mb-1 text-2xl"><i class="bi bi-people-fill"></i></div>
+        <div class="swim-stat-val">{{ toplam_sporcu|intcomma }}</div>
+        <div class="swim-stat-lbl">Tekil Lisanslı Sporcu</div>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card p-4 text-center border-start border-4 border-success">
-            <div class="text-success mb-2 fs-1"><i class="bi bi-shield-shaded"></i></div>
-            <h2 class="fw-bold mb-1 text-dark">{{ toplam_kulup|intcomma }}</h2>
-            <span class="text-muted text-uppercase fw-semibold small">Kulüp & Okul Takımı</span>
-        </div>
+    <div class="swim-stat-box border-l-4 border-l-emerald-500">
+        <div class="swim-text-success mb-1 text-2xl"><i class="bi bi-shield-shaded"></i></div>
+        <div class="swim-stat-val">{{ toplam_kulup|intcomma }}</div>
+        <div class="swim-stat-lbl">Kulüp & Okul Takımı</div>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card p-4 text-center border-start border-4 border-warning">
-            <div class="text-warning mb-2 fs-1"><i class="bi bi-arrow-left-right"></i></div>
-            <h2 class="fw-bold mb-1 text-dark">{{ toplam_transfer|intcomma }}</h2>
-            <span class="text-muted text-uppercase fw-semibold small">Kulüp Temsil Dönemi</span>
-        </div>
+    <div class="swim-stat-box border-l-4 border-l-amber-500">
+        <div class="swim-text-warning mb-1 text-2xl"><i class="bi bi-arrow-left-right"></i></div>
+        <div class="swim-stat-val">{{ toplam_transfer|intcomma }}</div>
+        <div class="swim-stat-lbl">Kulüp Temsil Dönemi</div>
     </div>
 </div>
 
 <!-- Tablolar: En Çok Yarışanlar & En Büyük Kulüpler -->
-<div class="row g-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
     <!-- En Çok Yarışan Sporcular -->
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-fire text-danger me-2"></i> En Aktif Sporcular</h5>
-                <a href="{% url 'sonuclar:sporcu_listesi' %}?sirala=yaris" class="btn btn-sm btn-outline-primary">Tümünü Gör</a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Sporcu</th>
-                            <th>D.Yılı</th>
-                            <th>Birincil Kulüp</th>
-                            <th class="text-end">Yarış Sayısı</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for sp in en_cok_yarisan_sporcular %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="fw-semibold text-decoration-none text-dark">
-                                    {{ sp.sporcu_adi }}
+    <div class="swim-card flex flex-col justify-between">
+        <div class="swim-card-header">
+            <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+                <i class="bi bi-fire swim-text-danger"></i> En Aktif Sporcular
+            </h2>
+            <a href="{% url 'sonuclar:sporcu_listesi' %}?sirala=yaris" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill">
+                Tümünü Gör
+            </a>
+        </div>
+        <div class="swim-table-wrapper border-0 rounded-none flex-1">
+            <table class="swim-table">
+                <thead class="swim-thead">
+                    <tr>
+                        <th class="swim-th">Sporcu</th>
+                        <th class="swim-th">D.Yılı</th>
+                        <th class="swim-th">Birincil Kulüp</th>
+                        <th class="swim-th text-right">Yarış Sayısı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sp in en_cok_yarisan_sporcular %}
+                    <tr class="swim-tr">
+                        <td class="swim-td font-semibold">
+                            <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="swim-text-main hover:swim-text-primary transition">
+                                {{ sp.sporcu_adi }}
+                            </a>
+                        </td>
+                        <td class="swim-td text-xs swim-text-muted">
+                            <span class="swim-badge swim-badge-neutral">{{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}</span>
+                        </td>
+                        <td class="swim-td text-xs swim-text-muted truncate max-w-[160px]">
+                            {% if sp.birincil_kulup %}
+                                <a href="{% url 'sonuclar:kulup_detay' sp.birincil_kulup.id %}" class="hover:swim-text-primary transition truncate block">
+                                    {{ sp.birincil_kulup.kulup_adi }}
                                 </a>
-                            </td>
-                            <td><span class="badge bg-secondary-subtle text-secondary">{{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}</span></td>
-                            <td class="text-truncate" style="max-width: 180px;">
-                                {% if sp.birincil_kulup %}
-                                    <a href="{% url 'sonuclar:kulup_detay' sp.birincil_kulup.id %}" class="text-muted small text-decoration-none">
-                                        {{ sp.birincil_kulup.kulup_adi }}
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted small">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end fw-bold text-primary">{{ sp.toplam_yaris_sayisi|intcomma }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            {% else %}
+                                <span>-</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-right font-bold font-mono swim-text-primary">
+                            {{ sp.toplam_yaris_sayisi|intcomma }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
     <!-- En Çok Sporcusu Olan Kulüpler -->
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-trophy text-warning me-2"></i> En Büyük Kulüpler</h5>
-                <a href="{% url 'sonuclar:kulup_listesi' %}?sirala=sporcu" class="btn btn-sm btn-outline-primary">Tümünü Gör</a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Kulüp Adı</th>
-                            <th class="text-center">Sporcu Sayısı</th>
-                            <th class="text-end">Toplam Yarış</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for kl in en_buyuk_kulupler %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="fw-semibold text-decoration-none text-dark">
-                                    {{ kl.kulup_adi }}
-                                </a>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-info-subtle text-info-emphasis fw-bold">
-                                    {{ kl.toplam_sporcu_sayisi|intcomma }}
-                                </span>
-                            </td>
-                            <td class="text-end fw-bold text-success">{{ kl.toplam_yaris_sayisi|intcomma }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="swim-card flex flex-col justify-between">
+        <div class="swim-card-header">
+            <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+                <i class="bi bi-trophy swim-text-warning"></i> En Büyük Kulüpler
+            </h2>
+            <a href="{% url 'sonuclar:kulup_listesi' %}?sirala=sporcu" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill">
+                Tümünü Gör
+            </a>
+        </div>
+        <div class="swim-table-wrapper border-0 rounded-none flex-1">
+            <table class="swim-table">
+                <thead class="swim-thead">
+                    <tr>
+                        <th class="swim-th">Kulüp Adı</th>
+                        <th class="swim-th text-center">Sporcu Sayısı</th>
+                        <th class="swim-th text-right">Toplam Yarış</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kl in en_buyuk_kulupler %}
+                    <tr class="swim-tr">
+                        <td class="swim-td font-semibold">
+                            <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="swim-text-main hover:swim-text-primary transition">
+                                {{ kl.kulup_adi }}
+                            </a>
+                        </td>
+                        <td class="swim-td text-center">
+                            <span class="swim-badge swim-badge-info">
+                                {{ kl.toplam_sporcu_sayisi|intcomma }}
+                            </span>
+                        </td>
+                        <td class="swim-td text-right font-bold font-mono swim-text-success">
+                            {{ kl.toplam_yaris_sayisi|intcomma }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 {% endblock %}
-

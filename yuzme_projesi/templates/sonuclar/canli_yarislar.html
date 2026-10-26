@@ -3,20 +3,20 @@
 {% block title %}Canlı Yarış Takibi - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="py-2">
     <!-- Başlık ve Yeni Ekleme -->
-    <div class="row align-items-center mb-4">
-        <div class="col-md-7">
-            <h2 class="fw-bold mb-1">
-                <i class="bi bi-broadcast text-danger me-2"></i>TYF Canlı Yarış Takip Paneli
-            </h2>
-            <p class="text-muted mb-0">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+            <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
+                <i class="bi bi-broadcast swim-text-danger"></i> TYF Canlı Yarış Takip Paneli
+            </h1>
+            <p class="text-xs sm:text-sm swim-text-muted mt-0.5">
                 Aynı gün yayınlanan Start Listelerini Gemini Flash Lite ile anlık tarayıp sisteme aktarın.
             </p>
         </div>
-        <div class="col-md-5 text-md-end mt-3 mt-md-0">
-            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#yeniYarisFormu">
-                <i class="bi bi-plus-circle me-1"></i> Yeni Canlı Yarış Ekle
+        <div class="shrink-0">
+            <button class="swim-btn-primary" type="button" data-swim-target="#yeniYarisFormu" data-bs-toggle="collapse">
+                <i class="bi bi-plus-circle"></i> Yeni Canlı Yarış Ekle
             </button>
         </div>
     </div>
@@ -24,200 +24,152 @@
     <!-- Mesajlar -->
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="swim-panel-primary mb-3 text-xs flex justify-between items-center" role="alert">
+                <span>{{ message }}</span>
             </div>
         {% endfor %}
     {% endif %}
 
     <!-- Yeni Yarış Ekleme Formu -->
-    <div class="collapse mb-4" id="yeniYarisFormu">
-        <div class="card card-custom border-0 shadow-sm">
-            <div class="card-body p-4">
-                <h5 class="fw-bold mb-3"><i class="bi bi-link-45deg text-primary me-2"></i>Yeni TYF Canlı Yarış Bağlantısı</h5>
-                <form method="post" action="{% url 'sonuclar:canli_yaris_listesi' %}">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">TYF Canlı Yarış Sayfası Linki</label>
-                            <input type="url" name="canli_url" class="form-control" placeholder="https://canli.tyf.gov.tr/istanbul/cs-1005380/" required>
-                            <div class="form-text">
-                                TYF canlı sonuç portalındaki yarış ana sayfası linki (Örn: <code>https://canli.tyf.gov.tr/istanbul/cs-1005380/</code>).
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Müsabaka Adı (İsteğe Bağlı)</label>
-                            <input type="text" name="musabaka_adi" class="form-control" placeholder="Boş bırakılırsa sayfadan otomatik çekilir">
-                        </div>
-                        <div class="col-12 text-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-toggle="collapse" data-bs-target="#yeniYarisFormu">Vazgeç</button>
-                            <button type="submit" class="btn btn-success px-4">
-                                <i class="bi bi-check-lg me-1"></i> Listeye Ekle
-                            </button>
-                        </div>
+    <div class="hidden mb-4" id="yeniYarisFormu">
+        <div class="swim-card p-4 sm:p-6 swim-panel">
+            <h2 class="text-sm sm:text-base font-bold swim-text-main mb-3 flex items-center gap-2">
+                <i class="bi bi-link-45deg swim-text-primary"></i> Yeni TYF Canlı Yarış Bağlantısı
+            </h2>
+            <form method="post" action="{% url 'sonuclar:canli_yaris_listesi' %}">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div class="sm:col-span-8">
+                        <label class="swim-label">TYF Canlı Yarış Sayfası Linki</label>
+                        <input type="url" name="canli_url" class="swim-input text-xs" placeholder="https://canli.tyf.gov.tr/istanbul/cs-1005380/" required>
+                        <p class="text-[0.7rem] swim-text-subtle mt-1">
+                            TYF canlı sonuç portalındaki yarış ana sayfası linki (Örn: <code class="font-mono swim-text-muted">https://canli.tyf.gov.tr/istanbul/cs-1005380/</code>).
+                        </p>
                     </div>
-                </form>
-            </div>
+                    <div class="sm:col-span-4">
+                        <label class="swim-label">Müsabaka Adı (İsteğe Bağlı)</label>
+                        <input type="text" name="musabaka_adi" class="swim-input text-xs" placeholder="Boş bırakılırsa sayfadan otomatik çekilir">
+                    </div>
+                    <div class="sm:col-span-12 flex justify-end gap-2 pt-2">
+                        <button type="button" class="swim-btn-secondary swim-btn-sm" data-swim-target="#yeniYarisFormu" data-bs-toggle="collapse">Vazgeç</button>
+                        <button type="submit" class="swim-btn-success swim-btn-sm">
+                            <i class="bi bi-check-lg"></i> Listeye Ekle
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
     <!-- Canlı Yarışlar Tablosu -->
-    <div class="card card-custom border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Müsabaka</th>
-                            <th>Şehir / Tarih</th>
-                            <th>Canlı Link</th>
-                            <th>Durum</th>
-                            <th>Start / Sonuç Listesi</th>
-                            <th>Aktarılan Sporcu</th>
-                            <th>Son İşlem</th>
-                            <th class="text-end pe-4">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for yaris in yarislar %}
-                        <tr id="yaris-row-{{ yaris.id }}" data-yaris-id="{{ yaris.id }}" data-durum="{{ yaris.durum }}">
-                            <td class="ps-4">
-                                <div class="fw-bold text-dark" id="yaris-ad-{{ yaris.id }}">
-                                    {% if yaris.event %}
-                                        <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="text-decoration-none text-primary" title="Müsabaka Sonuçlarını Görüntüle">
-                                            {{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }} <i class="bi bi-arrow-right-circle small"></i>
-                                        </a>
-                                    {% else %}
-                                        {{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }}
-                                    {% endif %}
-                                </div>
-                                <small class="text-muted">Kayıt ID: #{{ yaris.id }}</small>
-                            </td>
-                            <td>
-                                <div class="fw-semibold">{{ yaris.gosterilen_sehir }}</div>
-                                <small class="text-muted">{{ yaris.gosterilen_tarih }}</small>
-                            </td>
-                            <td>
-                                <a href="{{ yaris.canli_url }}" target="_blank" class="text-decoration-none">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i>TYF Sayfası
-                                </a>
-                            </td>
-                            <td id="yaris-durum-{{ yaris.id }}">
-                                {% if yaris.durum == 'BEKLIYOR' %}
-                                    <span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Bekliyor</span>
-                                {% elif yaris.durum == 'ISLENIYOR' %}
-                                    <span class="badge bg-warning text-dark"><i class="bi bi-arrow-repeat spin me-1"></i>İşleniyor</span>
-                                {% elif yaris.durum == 'TAMAMLANDI' %}
-                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Tamamlandı</span>
-                                {% else %}
-                                    <span class="badge bg-danger" title="{{ yaris.hata_mesaji }}"><i class="bi bi-exclamation-triangle me-1"></i>{{ yaris.durum }}</span>
-                                {% endif %}
-                            </td>
-                            <td id="yaris-liste-{{ yaris.id }}">
-                                <div><span class="badge bg-primary-subtle text-primary border"><i class="bi bi-card-list me-1"></i>Start: {{ yaris.islenen_start_listesi }}/{{ yaris.toplam_start_listesi }}</span></div>
-                                {% if yaris.toplam_sonuc_listesi %}
-                                    <div class="mt-1"><span class="badge bg-success-subtle text-success border"><i class="bi bi-check2-circle me-1"></i>Sonuç: {{ yaris.islenen_sonuc_listesi }}/{{ yaris.toplam_sonuc_listesi }}</span></div>
-                                {% endif %}
-                            </td>
-                            <td id="yaris-sporcu-{{ yaris.id }}">
-                                <span class="badge bg-info text-dark fw-bold px-2 py-1">{{ yaris.eklenen_kayit_sayisi }} sporcu</span>
-                            </td>
-                            <td>
-                                <small class="text-muted">{{ yaris.son_islem_tarihi|date:"d.m.Y H:i"|default:"-" }}</small>
-                            </td>
-                            <td class="text-end pe-4">
-                                <div class="btn-group btn-group-sm">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %}>
-                                            <i class="bi bi-play-fill"></i> Tara
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                            <li><h6 class="dropdown-header text-uppercase small">Test Modu (Sadece 3 Liste)</h6></li>
-                                            <li>
-                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="mod" value="start_listesi">
-                                                    <input type="hidden" name="limit" value="3">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="bi bi-123 text-primary me-2"></i><strong>İlk 3 Start Listesi</strong> (Test)
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="mod" value="sonuc_listesi">
-                                                    <input type="hidden" name="limit" value="3">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="bi bi-award text-success me-2"></i><strong>İlk 3 Sonuç Listesi</strong> (Test & Güncelle)
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><h6 class="dropdown-header text-uppercase small">Tam Tarama</h6></li>
-                                            <li>
-                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="mod" value="start_listesi">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="bi bi-card-checklist text-primary me-2"></i>Tüm Start Listeleri
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="mod" value="sonuc_listesi">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="bi bi-trophy text-success me-2"></i>Tüm Sonuç Listeleri (Güncelle)
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    {% if yaris.event %}
-                                    <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="btn btn-outline-info ms-1" title="Müsabaka Sonuçları Sayfasına Git">
-                                        <i class="bi bi-table"></i>
+    <div class="swim-card mb-6">
+        <div class="swim-table-wrapper border-0 rounded-none">
+            <table class="swim-table">
+                <thead class="swim-thead">
+                    <tr>
+                        <th class="swim-th">Müsabaka</th>
+                        <th class="swim-th w-36">Şehir / Tarih</th>
+                        <th class="swim-th w-28">Canlı Link</th>
+                        <th class="swim-th w-28">Durum</th>
+                        <th class="swim-th w-40">Start / Sonuç</th>
+                        <th class="swim-th text-center w-28">Aktarılan</th>
+                        <th class="swim-th w-32">Son İşlem</th>
+                        <th class="swim-th text-right w-48">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for yaris in yarislar %}
+                    <tr id="yaris-row-{{ yaris.id }}" data-yaris-id="{{ yaris.id }}" data-durum="{{ yaris.durum }}" class="swim-tr">
+                        <td class="swim-td">
+                            <div class="font-bold swim-text-main" id="yaris-ad-{{ yaris.id }}">
+                                {% if yaris.event %}
+                                    <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="hover:swim-text-primary transition flex items-center gap-1.5" title="Müsabaka Sonuçlarını Görüntüle">
+                                        {{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }} <i class="bi bi-arrow-right-circle text-xs swim-text-primary"></i>
                                     </a>
-                                    {% endif %}
-                                    <form method="post" action="{% url 'sonuclar:canli_yaris_sil' yaris.id %}" class="d-inline ms-1" onsubmit="return confirm('Bu canlı yarış kaydını silmek istediğinizden emin misiniz?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-danger" title="Sil">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-broadcast fs-1 text-secondary d-block mb-3"></i>
-                                Henüz eklenmiş bir canlı yarış bulunmuyor.<br>
-                                Yukarıdaki <strong>"Yeni Canlı Yarış Ekle"</strong> butonuna tıklayarak TYF canlı linkini ekleyebilirsiniz.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                {% else %}
+                                    {{ yaris.musabaka_adi|default:"(Başlık bekleniyor)" }}
+                                {% endif %}
+                            </div>
+                            <span class="text-[0.68rem] swim-text-subtle font-mono">Kayıt ID: #{{ yaris.id }}</span>
+                        </td>
+                        <td class="swim-td text-xs">
+                            <div class="font-semibold swim-text-main">{{ yaris.gosterilen_sehir }}</div>
+                            <span class="swim-text-subtle font-mono">{{ yaris.gosterilen_tarih }}</span>
+                        </td>
+                        <td class="swim-td text-xs">
+                            <a href="{{ yaris.canli_url }}" target="_blank" class="swim-btn-outline swim-btn-sm text-[0.68rem] py-1 px-2">
+                                <i class="bi bi-box-arrow-up-right"></i> TYF
+                            </a>
+                        </td>
+                        <td class="swim-td" id="yaris-durum-{{ yaris.id }}">
+                            {% if yaris.durum == 'BEKLIYOR' %}
+                                <span class="swim-badge swim-badge-neutral"><i class="bi bi-clock mr-1"></i>Bekliyor</span>
+                            {% elif yaris.durum == 'ISLENIYOR' %}
+                                <span class="swim-badge swim-badge-warning"><i class="bi bi-arrow-repeat mr-1 animate-spin"></i>İşleniyor</span>
+                            {% elif yaris.durum == 'TAMAMLANDI' %}
+                                <span class="swim-badge swim-badge-success"><i class="bi bi-check-circle mr-1"></i>Tamamlandı</span>
+                            {% else %}
+                                <span class="swim-badge swim-badge-danger" title="{{ yaris.hata_mesaji }}"><i class="bi bi-exclamation-triangle mr-1"></i>{{ yaris.durum }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td" id="yaris-liste-{{ yaris.id }}">
+                            <div><span class="swim-badge swim-badge-primary text-[0.68rem]"><i class="bi bi-card-list mr-1"></i>Start: {{ yaris.islenen_start_listesi }}/{{ yaris.toplam_start_listesi }}</span></div>
+                            {% if yaris.toplam_sonuc_listesi %}
+                                <div class="mt-1"><span class="swim-badge swim-badge-success text-[0.68rem]"><i class="bi bi-check2-circle mr-1"></i>Sonuç: {{ yaris.islenen_sonuc_listesi }}/{{ yaris.toplam_sonuc_listesi }}</span></div>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-center" id="yaris-sporcu-{{ yaris.id }}">
+                            <span class="swim-badge swim-badge-info text-xs">{{ yaris.eklenen_kayit_sayisi }} sporcu</span>
+                        </td>
+                        <td class="swim-td text-xs swim-text-subtle font-mono">
+                            {{ yaris.son_islem_tarihi|date:"d.m.Y H:i"|default:"-" }}
+                        </td>
+                        <td class="swim-td text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="mod" value="start_listesi">
+                                    <button type="submit" class="swim-btn-primary swim-btn-sm text-xs py-1 px-2.5" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %} title="Start Listelerini Tara">
+                                        <i class="bi bi-play-fill"></i> Tara
+                                    </button>
+                                </form>
+                                {% if yaris.event %}
+                                <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" title="Müsabaka Sonuçları Sayfasına Git">
+                                    <i class="bi bi-table"></i>
+                                </a>
+                                {% endif %}
+                                <form method="post" action="{% url 'sonuclar:canli_yaris_sil' yaris.id %}" class="inline" onsubmit="return confirm('Bu canlı yarış kaydını silmek istediğinizden emin misiniz?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="swim-btn-danger swim-btn-sm text-xs py-1 px-2" title="Sil">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="swim-td text-center py-10 swim-text-muted">
+                            <i class="bi bi-broadcast text-3xl swim-text-subtle block mb-2"></i>
+                            Henüz eklenmiş bir canlı yarış bulunmuyor.<br>
+                            Yukarıdaki <strong>"Yeni Canlı Yarış Ekle"</strong> butonuna tıklayarak TYF canlı linkini ekleyebilirsiniz.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- PythonAnywhere & Google Cloud Bilgi Kartı -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card bg-light border-0 shadow-sm p-3">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-info-circle-fill text-primary fs-3 me-3"></i>
-                    <div>
-                        <h6 class="fw-bold mb-1">PythonAnywhere ve Google Altyapısı Entegrasyonu</h6>
-                        <small class="text-muted">
-                            PythonAnywhere ücretsiz sürümü harici sitelerden doğrudan PDF indirmeye izin vermediği için, tarama işlemi <strong>Google Cloud Function</strong> veya <strong>GitHub Actions</strong> üzerinden tetiklenir. Google altyapısında Gemini Flash Lite ile taranan start listeleri bu Django paneline otomatik iletilir.
-                        </small>
-                    </div>
-                </div>
+    <!-- Bilgi Kartı -->
+    <div class="swim-card p-4 swim-panel">
+        <div class="flex items-start gap-3">
+            <i class="bi bi-info-circle-fill swim-text-primary text-2xl shrink-0 mt-0.5"></i>
+            <div>
+                <h3 class="text-sm font-bold swim-text-main mb-1">PythonAnywhere ve Bulut Altyapısı Entegrasyonu</h3>
+                <p class="text-xs swim-text-muted leading-relaxed">
+                    PythonAnywhere harici sitelerden doğrudan PDF indirmeye izin vermediği durumlar için, tarama işlemi <strong>Google Cloud Function</strong> veya <strong>GitHub Actions</strong> üzerinden asenkron tetiklenir. Google altyapısında Gemini Flash Lite ile taranan start listeleri bu Django paneline otomatik iletilir.
+                </p>
             </div>
         </div>
     </div>
@@ -238,85 +190,23 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(res => res.json())
             .then(data => {
                 if (!data || !data.yarislar) return;
-                let anyChanged = false;
-
-                data.yarislar.forEach(item => {
-                    const row = document.getElementById("yaris-row-" + item.id);
-                    if (!row) return;
-
-                    const prevDurum = row.getAttribute("data-durum");
-                    if (prevDurum !== item.durum) {
-                        row.setAttribute("data-durum", item.durum);
-                        anyChanged = true;
-
-                        // Durum rozeti güncelle
-                        const durumCell = document.getElementById("yaris-durum-" + item.id);
-                        if (durumCell) {
-                            if (item.durum === "ISLENIYOR") {
-                                durumCell.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-arrow-repeat spin me-1"></i>İşleniyor</span>';
-                            } else if (item.durum === "TAMAMLANDI") {
-                                durumCell.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Tamamlandı</span>';
-                            } else if (item.durum === "HATA") {
-                                durumCell.innerHTML = '<span class="badge bg-danger" title="' + (item.hata_mesaji || '') + '"><i class="bi bi-exclamation-triangle me-1"></i>Hata</span>';
-                            } else {
-                                durumCell.innerHTML = '<span class="badge bg-secondary">' + item.durum + '</span>';
-                            }
-                        }
-
-                        // Tara butonu güncelle
-                        const taraBtn = document.getElementById("yaris-tara-btn-" + item.id);
-                        if (taraBtn) {
-                            taraBtn.disabled = (item.durum === "ISLENIYOR");
-                        }
-                    }
-
-                    // Müsabaka adı güncelle
-                    const adEl = document.getElementById("yaris-ad-" + item.id);
-                    if (adEl && item.musabaka_adi && adEl.innerText.includes("bekleniyor")) {
-                        adEl.innerText = item.musabaka_adi;
-                    }
-
-                    // Liste sayıları
-                    const listeCell = document.getElementById("yaris-liste-" + item.id);
-                    if (listeCell) {
-                        let h = '<div><span class="badge bg-primary-subtle text-primary border"><i class="bi bi-card-list me-1"></i>Start: ' + item.islenen_start_listesi + '/' + item.toplam_start_listesi + '</span></div>';
-                        if (item.toplam_sonuc_listesi) {
-                            h += '<div class="mt-1"><span class="badge bg-success-subtle text-success border"><i class="bi bi-check2-circle me-1"></i>Sonuç: ' + item.islenen_sonuc_listesi + '/' + item.toplam_sonuc_listesi + '</span></div>';
-                        }
-                        listeCell.innerHTML = h;
-                    }
-
-                    // Sporcu sayısı
-                    const sporcuCell = document.getElementById("yaris-sporcu-" + item.id);
-                    if (sporcuCell) {
-                        sporcuCell.innerHTML = '<span class="badge bg-info text-dark fw-bold px-2 py-1">' + item.eklenen_kayit_sayisi + ' sporcu</span>';
+                data.yarislar.forEach(y => {
+                    const row = document.getElementById("yaris-row-" + y.id);
+                    if (row) {
+                        row.setAttribute("data-durum", y.durum);
                     }
                 });
-
-                // Eğer işlem bittiyse ve yeni veri geldiyse sayfayı temiz yenile
-                if (anyChanged && getRunningCount() === 0) {
+                if (getRunningCount() === 0 && pollInterval) {
                     clearInterval(pollInterval);
-                    setTimeout(() => window.location.reload(), 1500);
+                    location.reload();
                 }
             })
-            .catch(err => console.debug("Canlı durum sorgulama hatası:", err));
+            .catch(err => console.debug("Status poll err:", err));
     }
 
-    // Eğer işlemde olan kayıt varsa 4 saniyede bir sorgula
     if (getRunningCount() > 0) {
-        pollInterval = setInterval(checkLiveStatus, 4000);
+        pollInterval = setInterval(checkLiveStatus, 5000);
     }
 });
 </script>
-<style>
-.spin {
-    animation: spin-animation 1.5s infinite linear;
-    display: inline-block;
-}
-@keyframes spin-animation {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(359deg); }
-}
-</style>
 {% endblock %}
-

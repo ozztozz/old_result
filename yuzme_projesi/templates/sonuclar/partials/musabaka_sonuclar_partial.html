@@ -1,0 +1,423 @@
+{% load humanize %}
+<div class="swim-card mb-6">
+    <div class="swim-card-header flex-col items-stretch gap-3">
+        <!-- Seçili Yarış Başlığı -->
+        {% if secili_yaris_detay %}
+        <div class="p-3 sm:p-4 rounded-xl swim-panel-primary flex justify-between items-center gap-2">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="swim-badge swim-badge-primary text-xs font-bold font-mono">Yarış #{{ secili_yaris_detay.no }}</span>
+                    <strong class="swim-text-main text-sm sm:text-base truncate">{{ secili_yaris_detay.mesafe }}m {{ secili_yaris_detay.stil }}</strong>
+                </div>
+                <div class="text-xs swim-text-muted mt-1 flex items-center gap-1.5 flex-wrap">
+                    {% if secili_yaris_detay.cinsiyet %}<span>{{ secili_yaris_detay.cinsiyet }}</span>{% endif %}
+                    <span>&bull;</span>
+                    <span class="swim-badge {% if secili_yaris_detay.durum_kodu == 'tamamlandi' %}swim-badge-success{% else %}swim-badge-warning{% endif %}">
+                        {{ secili_yaris_detay.durum_etiketi }}
+                    </span>
+                    <span>&bull;</span>
+                    <span>{{ secili_yaris_detay.tamamlanan }}/{{ secili_yaris_detay.toplam }} sonuç</span>
+                </div>
+            </div>
+            <button type="button" 
+                    onclick="SwimTabs.show('#program')" 
+                    class="swim-btn-secondary swim-btn-sm swim-btn-pill shrink-0">
+                <i class="bi bi-grid"></i> <span class="hidden sm:inline">Programa Dön</span>
+            </button>
+        </div>
+        {% endif %}
+
+        <!-- Başlık ve Durum Filtre Butonları -->
+        <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+                <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-1.5">
+                    <i class="bi bi-trophy swim-text-warning"></i>
+                    {% if secili_yaris_no %}Yarış #{{ secili_yaris_no }} Sıralaması{% else %}Tüm Yarış Sonuçları{% endif %} ({{ total_races }})
+                </h2>
+            </div>
+            
+            <!-- Durum Filtresi (Hap Butonlar - HTMX Anlık Geçiş) -->
+            <div class="flex items-center gap-1 swim-segmented-group p-1 rounded-xl">
+                <a href="?yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+                   hx-target="#sonuclarContent" 
+                   hx-push-url="true"
+                   class="px-2.5 py-1 rounded-lg text-xs font-semibold transition {% if not secili_durum %}bg-white swim-text-primary shadow-2xs{% else %}swim-text-muted hover:swim-text-main{% endif %}">
+                    Tümü ({{ completed_count|add:pending_count }})
+                </a>
+                <a href="?durum=sonuc&yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?durum=sonuc&yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+                   hx-target="#sonuclarContent" 
+                   hx-push-url="true"
+                   class="px-2.5 py-1 rounded-lg text-xs font-semibold transition {% if secili_durum == 'sonuc' %}bg-white swim-text-success shadow-2xs{% else %}swim-text-muted hover:swim-text-main{% endif %}">
+                    Sonuç ({{ completed_count }})
+                </a>
+                <a href="?durum=bekliyor&yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?durum=bekliyor&yaris_no={{ secili_yaris_no }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+                   hx-target="#sonuclarContent" 
+                   hx-push-url="true"
+                   class="px-2.5 py-1 rounded-lg text-xs font-semibold transition {% if secili_durum == 'bekliyor' %}bg-white swim-text-warning shadow-2xs{% else %}swim-text-muted hover:swim-text-main{% endif %}">
+                    Bekleyen ({{ pending_count }})
+                </a>
+            </div>
+        </div>
+
+        <!-- Kulüp ve Sporcu Seçim Filtreleri (HTMX Formu) -->
+        <form method="get" 
+              action="{% url 'sonuclar:musabaka_detay' event.id %}"
+              hx-get="{% url 'sonuclar:musabaka_detay' event.id %}" 
+              hx-target="#sonuclarContent" 
+              hx-push-url="true"
+              id="musabakaFilterForm" 
+              class="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-2 swim-border-t">
+            {% if secili_yaris_no %}
+            <input type="hidden" name="yaris_no" value="{{ secili_yaris_no }}">
+            {% endif %}
+            {% if secili_durum %}
+            <input type="hidden" name="durum" value="{{ secili_durum }}">
+            {% endif %}
+
+            <div class="sm:col-span-5">
+                <label for="kulupSelect" class="swim-label">
+                    <i class="bi bi-shield-shaded swim-text-primary me-1"></i>Takım / Kulüp ({{ katilan_kulupler|length }})
+                </label>
+                <select name="kulup" id="kulupSelect" class="swim-select py-1.5 text-xs" onchange="this.form.requestSubmit()">
+                    <option value="">Tüm Takımlar ({{ katilan_kulupler|length }})</option>
+                    {% for k in katilan_kulupler %}
+                    <option value="{{ k.kulup_id }}" {% if secili_kulup == k.kulup_id %}selected{% endif %}>
+                        {{ k.kulup__kulup_adi }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="sm:col-span-5">
+                <label for="sporcuSelect" class="swim-label">
+                    <i class="bi bi-person-badge swim-text-success me-1"></i>Sporcu ({{ katilan_sporcular|length }})
+                </label>
+                <select name="sporcu" id="sporcuSelect" class="swim-select py-1.5 text-xs" onchange="this.form.requestSubmit()">
+                    <option value="">Tüm Sporcular ({{ katilan_sporcular|length }})</option>
+                    {% for s in katilan_sporcular %}
+                    <option value="{{ s.sporcu_id }}" data-kulup-id="{{ s.kulup_id|default:'' }}" {% if secili_sporcu == s.sporcu_id %}selected{% endif %}>
+                        {{ s.sporcu__sporcu_adi }}{% if s.kulup__kulup_adi %} - {{ s.kulup__kulup_adi }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="sm:col-span-2 flex items-end gap-1">
+                <button type="submit" class="swim-btn-primary swim-btn-sm w-full">
+                    <i class="bi bi-funnel-fill"></i> Filtrele
+                </button>
+                {% if secili_kulup or secili_sporcu or secili_yaris_no or secili_durum %}
+                <a href="?" 
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}" 
+                   hx-target="#sonuclarContent" 
+                   hx-push-url="true"
+                   class="swim-btn-secondary swim-btn-sm" 
+                   title="Temizle">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Yarış No Hızlı Geçiş Rozetleri (HTMX ile Yenileme) -->
+        {% if yaris_programi %}
+        <div class="flex flex-wrap items-center gap-1 pt-2 swim-border-t">
+            <span class="text-xs font-semibold swim-text-muted mr-1">Yarış:</span>
+            <a href="?durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+               hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+               hx-target="#sonuclarContent" 
+               hx-push-url="true"
+               class="swim-badge {% if not secili_yaris_no %}swim-badge-dark{% else %}swim-badge-neutral{% endif %} hover:opacity-80 transition cursor-pointer">
+                Tümü
+            </a>
+            {% for y in yaris_programi %}
+            <a href="?yaris_no={{ y.no }}&durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+               hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?yaris_no={{ y.no }}&durum={{ secili_durum }}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}" 
+               hx-target="#sonuclarContent" 
+               hx-push-url="true"
+               class="swim-badge {% if secili_yaris_no == y.no %}swim-badge-primary shadow-xs{% elif y.durum_kodu == 'tamamlandi' %}swim-badge-success{% else %}swim-badge-neutral{% endif %} hover:opacity-80 transition cursor-pointer font-mono">
+                Yarış {{ y.no }}{% if y.durum_kodu == 'tamamlandi' %} ✓{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ============================================== -->
+    <!-- YAŞ GRUPLARI ACCORDION YAPISI                  -->
+    <!-- ============================================== -->
+    {% regroup page_obj by yas_grup_adi as yas_gruplari %}
+
+    <div class="p-3 sm:p-4 ">
+        {% if yas_gruplari|length > 1 %}
+        <div class="flex justify-between items-center mb-3 px-1">
+            <span class="text-xs font-semibold swim-text-muted flex items-center gap-1.5">
+                <i class="bi bi-layers swim-text-primary"></i> Yaş Kategorileri ({{ yas_gruplari|length }})
+            </span>
+            <button class="swim-btn-secondary swim-btn-sm py-1 px-2.5 text-xs rounded-lg" type="button" id="btnToggleAllAccordions">
+                <i class="bi bi-arrows-expand me-1"></i>Tümünü Aç / Kapat
+            </button>
+        </div>
+        {% endif %}
+
+        <div class="swim-accordion" id="yasGruplariAccordion">
+            {% for grup in yas_gruplari %}
+            <div class="swim-accordion-item">
+                <h3 class="swim-accordion-header" id="heading_grup_{{ forloop.counter }}" data-swim-target="#collapse_grup_{{ forloop.counter }}">
+                    <div class="flex items-center justify-between w-full pr-2">
+                        <span class="swim-badge swim-badge-primary text-xs sm:text-sm font-bold">
+                            {{ grup.grouper }}
+                        </span>
+                        <span class="swim-badge swim-badge-neutral text-xs">
+                            {{ grup.list|length }} Sporcu
+                        </span>
+                    </div>
+                </h3>
+                <div id="collapse_grup_{{ forloop.counter }}" class="swim-accordion-body {% if not forloop.first and yas_gruplari|length > 1 %}hidden{% endif %}">
+                    
+                    <!-- MOBİL GÖRÜNÜM: SIFIR KAYDIRMA KART LİSTESİ -->
+                    <div class="md:hidden divide-y swim-divide">
+                        {% for r in grup.list %}
+                        <div class="swim-mobile-card {% if r.is_dq %} opacity-80{% endif %}">
+                            <div class="flex justify-between items-start gap-2 mb-1.5">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <!-- Sıra rozeti -->
+                                    {% if r.is_dq %}
+                                        <span class="swim-badge swim-badge-danger font-bold shrink-0">DQ</span>
+                                    {% elif r.sira and r.sira != '-' %}
+                                        {% if r.sira == '1' %}
+                                            <span class="swim-badge swim-rank-1 shrink-0">1</span>
+                                        {% elif r.sira == '2' %}
+                                            <span class="swim-badge swim-rank-2 shrink-0">2</span>
+                                        {% elif r.sira == '3' %}
+                                            <span class="swim-badge swim-rank-3 shrink-0">3</span>
+                                        {% else %}
+                                            <span class="swim-badge swim-badge-neutral shrink-0">{{ r.sira }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="swim-badge swim-badge-neutral shrink-0">-</span>
+                                    {% endif %}
+                                    
+                                    <!-- Sporcu Adı & Doğum Yılı -->
+                                    <div class="min-w-0">
+                                        <a href="javascript:void(0);" 
+                                           hx-get="{% url 'sonuclar:musabaka_sporcu_modal' event.id r.sporcu.id %}" 
+                                           hx-target="#sporcuModalContent" 
+                                           hx-swap="innerHTML"
+                                           data-swim-modal="#sporcuMusabakaModal"
+                                           class="font-bold swim-text-main truncate block hover:swim-text-primary transition text-sm">
+                                            {{ r.sporcu.sporcu_adi }}
+                                        </a>
+                                        <div class="text-xs swim-text-muted flex items-center gap-1.5 flex-wrap mt-0.5">
+                                            {% if r.yas_gosterim %}
+                                                <span class="swim-badge swim-badge-primary text-[0.65rem] px-1 py-0">{{ r.yas_gosterim }}{% if r.yas_gosterim|length <= 2 %} Yaş{% endif %}</span>
+                                            {% endif %}
+                                            {% if r.sporcu.dogum_yili %}
+                                                <span class="text-[0.7rem]">D.{{ r.sporcu.dogum_yili }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Derece (Büyük & Belirgin) -->
+                                <div class="text-right shrink-0">
+                                    {% if r.is_dq %}
+                                        <span class="swim-badge swim-badge-danger">
+                                            {% if 'sw' in r.derece|lower or 'sw' in r.sira|lower %}
+                                                {{ r.derece|default:r.sira }}
+                                            {% else %}
+                                                Diskalifiye
+                                            {% endif %}
+                                        </span>
+                                    {% elif r.derece == 'Bekleniyor' %}
+                                        <span class="swim-badge swim-badge-warning">Bekleniyor</span>
+                                    {% else %}
+                                        <span class="font-bold swim-text-primary font-mono text-sm sm:text-base">{{ r.derece }}</span>
+                                    {% endif %}
+                                    {% if r.giris_derecesi %}
+                                        <div class="swim-text-subtle text-[0.68rem] font-mono mt-0.5">G: {{ r.giris_derecesi }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Alt Bilgi Satırı: Kulüp, Branş, Seri/Kulvar, Puan, Baraj -->
+                            <div class="flex justify-between items-center text-xs swim-text-muted mt-2 pt-1.5 swim-border-t">
+                                <div class="truncate mr-2 max-w-[60%]">
+                                    {% if r.kulup %}
+                                        <i class="bi bi-shield swim-text-subtle me-1"></i>{{ r.kulup.kulup_adi }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    {% if r.mesafe and r.stil and not secili_yaris_no %}
+                                        <span class="swim-badge swim-badge-neutral">{{ r.mesafe }}m {{ r.stil }}</span>
+                                    {% endif %}
+                                    {% if r.seri or r.kulvar %}
+                                        <span class="swim-badge swim-badge-neutral text-[0.68rem]">{% if r.seri %}S:{{ r.seri }}{% endif %}{% if r.kulvar %} K:{{ r.kulvar }}{% endif %}</span>
+                                    {% endif %}
+                                    {% if r.puan and r.puan != '-' %}
+                                        <span class="swim-badge swim-badge-neutral">{{ r.puan }} P</span>
+                                    {% endif %}
+                                    {% if r.baraj %}
+                                        <span class="swim-badge swim-badge-success">{{ r.baraj }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- MASAÜSTÜ GÖRÜNÜM: STANDART TABLO -->
+                    <div class="hidden md:block">
+                        <table class="swim-table">
+                            <thead class="swim-thead">
+                                <tr>
+                                    <th class="swim-th w-16">No</th>
+                                    <th class="swim-th">Branş</th>
+                                    <th class="swim-th">Sporcu Adı</th>
+                                    <th class="swim-th">Yaş</th>
+                                    <th class="swim-th">Kulüp</th>
+                                    <th class="swim-th text-center w-16">Sıra</th>
+                                    <th class="swim-th text-right w-28">Derece</th>
+                                    <th class="swim-th text-center w-16">Puan</th>
+                                    <th class="swim-th text-right w-20">Baraj</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in grup.list %}
+                                <tr class="swim-tr {% if r.is_dq %}opacity-80{% endif %}">
+                                    <td class="swim-td text-xs swim-text-muted font-mono">
+                                        {% if r.yaris_no %}<span class="swim-badge swim-badge-neutral">#{{ r.yaris_no }}</span>{% else %}-{% endif %}
+                                    </td>
+                                    <td class="swim-td font-semibold swim-text-main whitespace-nowrap">
+                                        <span class="swim-badge swim-badge-neutral mr-1">{{ r.mesafe }}m</span>
+                                        {{ r.stil }}
+                                        {% if r.seri or r.kulvar %}
+                                            <div class="text-[0.7rem] swim-text-subtle font-normal">
+                                                {{ r.seri|default:"" }}{% if r.kulvar %} <span class="swim-badge swim-badge-info text-[0.65rem] px-1 py-0">K: {{ r.kulvar }}</span>{% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="swim-td">
+                                        <a href="javascript:void(0);" 
+                                           hx-get="{% url 'sonuclar:musabaka_sporcu_modal' event.id r.sporcu.id %}" 
+                                           hx-target="#sporcuModalContent" 
+                                           hx-swap="innerHTML"
+                                           data-swim-modal="#sporcuMusabakaModal"
+                                           class="font-bold swim-text-main hover:swim-text-primary transition">
+                                            {{ r.sporcu.sporcu_adi }}
+                                        </a>
+                                        <span class="text-xs swim-text-subtle block mt-0.5">
+                                            {% if r.sporcu.dogum_yili %}D.Yılı: {{ r.sporcu.dogum_yili }}{% elif r.hesaplanan_yas %}{{ r.hesaplanan_yas }} Yaşında{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="swim-td">
+                                        {% if r.yas_gosterim %}
+                                            <span class="swim-badge swim-badge-primary">{{ r.yas_gosterim }}{% if r.yas_gosterim|length <= 2 %} Yaş{% endif %}</span>
+                                        {% else %}
+                                            <span class="swim-text-subtle">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="swim-td text-xs swim-text-muted max-w-[200px] truncate">
+                                        {% if r.kulup %}
+                                            <a href="{% url 'sonuclar:kulup_detay' r.kulup.id %}" class="hover:swim-text-primary transition truncate block">
+                                                {{ r.kulup.kulup_adi }}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="swim-td text-center font-semibold">
+                                        {% if r.is_dq %}
+                                            <span class="swim-badge swim-badge-danger">DQ</span>
+                                        {% elif r.sira == '1' %}
+                                            <span class="swim-badge swim-rank-1">1</span>
+                                        {% elif r.sira == '2' %}
+                                            <span class="swim-badge swim-rank-2">2</span>
+                                        {% elif r.sira == '3' %}
+                                            <span class="swim-badge swim-rank-3">3</span>
+                                        {% else %}
+                                            <span class="swim-text-muted">{{ r.sira|default:"-" }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="swim-td text-right font-bold font-mono">
+                                        {% if r.is_dq %}
+                                            <span class="swim-badge swim-badge-danger">
+                                                {% if 'sw' in r.derece|lower or 'sw' in r.sira|lower %}
+                                                    {{ r.derece|default:r.sira }}
+                                                {% else %}
+                                                    Diskalifiye
+                                                {% endif %}
+                                            </span>
+                                        {% elif r.derece == 'Bekleniyor' %}
+                                            <span class="swim-badge swim-badge-warning">Bekleniyor</span>
+                                        {% else %}
+                                            <span class="swim-text-primary">{{ r.derece }}</span>
+                                        {% endif %}
+                                        {% if r.giris_derecesi %}
+                                            <div class="text-[0.7rem] swim-text-subtle font-normal">G: {{ r.giris_derecesi }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="swim-td text-center font-semibold text-xs">{{ r.puan|default:"-" }}</td>
+                                    <td class="swim-td text-right">
+                                        {% if r.baraj %}
+                                            <span class="swim-badge swim-badge-success">{{ r.baraj }}</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+            {% empty %}
+            <div class="swim-empty-state">
+                Bu müsabakaya ait kayıtlı yarış sonucu bulunamadı.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sayfalama (HTMX ile Anlık Sayfa Geçişi) -->
+    {% if page_obj.has_other_pages %}
+    <div class="swim-card-footer">
+        <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        <div class="flex items-center gap-1">
+            {% if page_obj.has_previous %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page=1{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?page=1{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-target="#sonuclarContent"
+                   hx-push-url="true">&laquo;</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.previous_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?page={{ page_obj.previous_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-target="#sonuclarContent"
+                   hx-push-url="true">Önceki</a>
+            {% endif %}
+            <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.next_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?page={{ page_obj.next_page_number }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-target="#sonuclarContent"
+                   hx-push-url="true">Sonraki</a>
+                <a class="swim-btn-secondary swim-btn-sm" 
+                   href="?page={{ page_obj.paginator.num_pages }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-get="{% url 'sonuclar:musabaka_detay' event.id %}?page={{ page_obj.paginator.num_pages }}{% if secili_yaris_no %}&yaris_no={{ secili_yaris_no }}{% endif %}{% if secili_durum %}&durum={{ secili_durum }}{% endif %}{% if secili_kulup %}&kulup={{ secili_kulup }}{% endif %}{% if secili_sporcu %}&sporcu={{ secili_sporcu }}{% endif %}"
+                   hx-target="#sonuclarContent"
+                   hx-push-url="true">&raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+

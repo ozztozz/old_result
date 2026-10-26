@@ -4,117 +4,51 @@
 {% block title %}Müsabakalar ({{ total_count|intcomma }}) - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
     <div>
-        <h2 class="fw-bold mb-1"><i class="bi bi-calendar-event text-primary me-2"></i> Müsabakalar (Events)</h2>
-        <p class="text-muted mb-0">Arşivde kayıtlı <strong>{{ total_count|intcomma }}</strong> resmî yüzme müsabakası.</p>
+        <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
+            <i class="bi bi-calendar-event swim-text-primary"></i> Müsabakalar (Events)
+        </h1>
+        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">Arşivde kayıtlı <strong class="swim-text-main">{{ total_count|intcomma }}</strong> resmî yüzme müsabakası.</p>
     </div>
 </div>
 
-<!-- Arama ve Filtreleme -->
-<div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-    <form method="get" class="row g-3">
-        <div class="col-md-5">
-            <label class="form-label small fw-semibold text-muted">Müsabaka Adı</label>
-            <input type="text" name="q" class="form-control" placeholder="Örn: Baraj Geçme, Bölge, Şampiyona..." value="{{ q }}">
+<!-- Arama ve Filtreleme (HTMX ile Anlık Filtreleme) -->
+<div class="swim-card p-4 sm:p-5 mb-4">
+    <form method="get" 
+          action="{% url 'sonuclar:musabaka_listesi' %}"
+          hx-get="{% url 'sonuclar:musabaka_listesi' %}" 
+          hx-target="#musabakaTableContainer" 
+          hx-push-url="true"
+          hx-trigger="input changed delay:350ms from:input, change from:select"
+          class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+        <div class="sm:col-span-5">
+            <label class="swim-label">Müsabaka Adı</label>
+            <input type="text" name="q" class="swim-input text-xs" placeholder="Örn: Baraj Geçme, Bölge, Şampiyona..." value="{{ q }}">
         </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted">Şehir</label>
-            <select name="sehir" class="form-select">
+        <div class="sm:col-span-3">
+            <label class="swim-label">Şehir</label>
+            <select name="sehir" class="swim-select text-xs">
                 <option value="">Tümü</option>
                 {% for s in sehirler %}
                     <option value="{{ s }}" {% if sehir == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small fw-semibold text-muted">Yıl</label>
-            <input type="number" name="yil" class="form-control" placeholder="Örn: 2026" value="{{ yil }}">
+        <div class="sm:col-span-2">
+            <label class="swim-label">Yıl</label>
+            <input type="number" name="yil" class="swim-input text-xs" placeholder="Örn: 2026" value="{{ yil }}">
         </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100 fw-bold">
+        <div class="sm:col-span-2">
+            <button type="submit" class="swim-btn-primary w-full text-xs">
                 <i class="bi bi-search"></i> Filtrele
             </button>
         </div>
     </form>
 </div>
 
-<!-- Müsabakalar Tablosu -->
-<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">Tarih</th>
-                    <th>Müsabaka Adı</th>
-                    <th>Şehir</th>
-                    <th class="text-center">Yarış Sonucu</th>
-                    <th class="text-center">Katılan Sporcu</th>
-                    <th class="text-end pe-4">Detay</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ev in page_obj %}
-                <tr>
-                    <td class="ps-4 text-nowrap fw-semibold text-muted small">
-                        {{ ev.yaris_tarihi_baslangic|default:ev.yaris_tarihi_ham|default:"-" }}
-                    </td>
-                    <td>
-                        <a href="{% url 'sonuclar:musabaka_detay' ev.id %}" class="fw-bold text-decoration-none text-dark">
-                            {{ ev.musabaka_adi }}
-                        </a>
-                        {% if ev.kaynak_turu %}
-                            <span class="badge bg-light text-secondary border ms-1">{{ ev.kaynak_turu }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <i class="bi bi-geo-alt text-danger me-1"></i>{{ ev.sehir|default:"-" }}
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1">
-                            {{ ev.toplam_yaris_sayisi|intcomma }} sonuç
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-success-subtle text-success fw-bold px-2 py-1">
-                            {{ ev.toplam_sporcu_sayisi|intcomma }} sporcu
-                        </span>
-                    </td>
-                    <td class="text-end pe-4">
-                        <a href="{% url 'sonuclar:musabaka_detay' ev.id %}" class="btn btn-sm btn-outline-primary">
-                            Sonuçlar <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center py-5 text-muted">
-                        <i class="bi bi-calendar-x fs-1 text-secondary d-block mb-3"></i>
-                        Kriterlere uygun müsabaka bulunamadı.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Sayfalama -->
-    {% if page_obj.has_other_pages %}
-    <div class="card-footer bg-white py-3 border-top d-flex justify-content-between align-items-center">
-        <span class="small text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-        <ul class="pagination pagination-sm mb-0">
-            {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page=1&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}">&laquo; İlk</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}">Önceki</a></li>
-            {% endif %}
-            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
-            {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}">Sonraki</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&sehir={{ sehir }}&yil={{ yil }}">Son &raquo;</a></li>
-            {% endif %}
-        </ul>
-    </div>
-    {% endif %}
+<!-- Müsabakalar Tablosu (HTMX Kapsayıcısı) -->
+<div id="musabakaTableContainer">
+    {% include 'sonuclar/partials/musabaka_table_partial.html' %}
 </div>
 {% endblock %}
-

@@ -13,6 +13,7 @@ urlpatterns = [
     path('sonuclar/', views.yaris_sonuclari_ara, name='yaris_sonuclari_ara'),
     path('musabakalar/', views.musabaka_listesi, name='musabaka_listesi'),
     path('musabakalar/<int:pk>/', views.musabaka_detay, name='musabaka_detay'),
+    path('musabakalar/<int:event_id>/sporcu/<int:sporcu_id>/modal/', views.musabaka_sporcu_modal, name='musabaka_sporcu_modal'),
     path('sporcu-eslestirme/', views.sporcu_eslestir_sayfasi, name='sporcu_eslestir_sayfasi'),
     path('api/sporcu-ara/', views.api_sporcu_ara, name='api_sporcu_ara'),
     path('api/sporcu-eslestir/', views.api_sporcu_eslestir, name='api_sporcu_eslestir'),
