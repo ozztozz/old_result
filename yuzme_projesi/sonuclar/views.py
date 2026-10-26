@@ -488,7 +488,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                 puan_val = int(puan_val)
             except Exception:
                 puan_val = None
-        baraj_val = item.get('baraj')
+        baraj_val = str(item.get('baraj') or payload.get('baraj_derecesi') or '').strip()
 
         # 1. DOĞRUDAN GEMINI'DEN GELEN ID İLE HIZLI GÜNCELLEME (O(1))
         race_id = item.get('id')
@@ -548,7 +548,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                 puan_val = int(puan_val)
             except Exception:
                 puan_val = None
-        baraj_val = str(item.get('baraj') or '').strip()
+        baraj_val = str(item.get('baraj') or payload.get('baraj_derecesi') or '').strip()
 
         # 1. Takım / Kulüp Yönetimi (Önbellekten O(1))
         kulup = club_cache.get(kulup_adi.lower())
@@ -739,6 +739,8 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.kulvar = kulvar_val
                         if giris_derecesi_val:
                             existing_race.giris_derecesi = str(giris_derecesi_val)
+                        if baraj_val and not existing_race.baraj:
+                            existing_race.baraj = baraj_val
                         if dosya_obj:
                             existing_race.canli_dosya = dosya_obj
                         races_to_update.append(existing_race)
@@ -1190,6 +1192,7 @@ def canli_yaris_listesi(request):
     """Canlı yarışların listelendiği ve yeni linkin eklendiği panel."""
     if request.method == "POST":
         canli_url = request.POST.get("canli_url", "").strip()
+        reglaman_linki = request.POST.get("reglaman_linki", "").strip()
         musabaka_adi = request.POST.get("musabaka_adi", "").strip()
         if canli_url:
             sehir_val = None
@@ -1227,6 +1230,7 @@ def canli_yaris_listesi(request):
             yaris = CanliYaris.objects.create(
                 event=event_obj,
                 canli_url=canli_url,
+                reglaman_linki=reglaman_linki or None,
                 musabaka_adi=musabaka_adi or None,
                 sehir=sehir_val,
                 tarih=tarih_val,
@@ -1354,6 +1358,10 @@ def api_canli_durum_guncelle(request):
     if durum in ["BEKLIYOR", "ISLENIYOR", "TAMAMLANDI", "HATA"]:
         yaris.durum = durum
 
+    if data.get("reglaman_linki"):
+        yaris.reglaman_linki = data["reglaman_linki"]
+    if data.get("barajlar"):
+        yaris.barajlar = data["barajlar"]
     if data.get("musabaka_adi"):
         yaris.musabaka_adi = data["musabaka_adi"]
     if data.get("sehir"):
@@ -1416,6 +1424,8 @@ def api_canli_bekleyen_yarislar(request):
             "id": y.id,
             "event_id": y.event_id,
             "canli_url": y.canli_url,
+            "reglaman_linki": y.reglaman_linki or "",
+            "barajlar": y.barajlar or {},
             "musabaka_adi": y.musabaka_adi or "",
             "sehir": y.gosterilen_sehir,
             "tarih": y.gosterilen_tarih,
@@ -1977,8 +1987,10 @@ def api_canli_dosya_kontrol(request):
     return JsonResponse({
         "durum": "basarili",
         "islenmis_mi": is_done,
+        "islendi_mi": is_done,
         "degisti_mi": degisti_mi,
         "etag": dosya.etag,
+        "content_hash": dosya.content_hash,
         "last_modified": dosya.last_modified,
         "kayit_sayisi": dosya.kayit_sayisi
     })

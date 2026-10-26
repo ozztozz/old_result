@@ -50,6 +50,13 @@
                         <label class="swim-label">Müsabaka Adı (İsteğe Bağlı)</label>
                         <input type="text" name="musabaka_adi" class="swim-input text-xs" placeholder="Boş bırakılırsa sayfadan otomatik çekilir">
                     </div>
+                    <div class="sm:col-span-12">
+                        <label class="swim-label">Reglaman Linki (PDF - İsteğe Bağlı)</label>
+                        <input type="url" name="reglaman_linki" class="swim-input text-xs" placeholder="https://dosya.tyf.gov.tr/public/upload/...pdf">
+                        <p class="text-[0.7rem] swim-text-subtle mt-1">
+                            Varsa yarış reglaman PDF linki. Katılım barajları Gemini tarafından otomatik ayrıştırılıp yarışa kaydedilir.
+                        </p>
+                    </div>
                     <div class="sm:col-span-12 flex justify-end gap-2 pt-2">
                         <button type="button" class="swim-btn-secondary swim-btn-sm" data-swim-target="#yeniYarisFormu" data-bs-toggle="collapse">Vazgeç</button>
                         <button type="submit" class="swim-btn-success swim-btn-sm">
@@ -97,9 +104,21 @@
                             <span class="swim-text-subtle font-mono">{{ yaris.gosterilen_tarih }}</span>
                         </td>
                         <td class="swim-td text-xs">
-                            <a href="{{ yaris.canli_url }}" target="_blank" class="swim-btn-outline swim-btn-sm text-[0.68rem] py-1 px-2">
-                                <i class="bi bi-box-arrow-up-right"></i> TYF
-                            </a>
+                            <div class="flex flex-col gap-1 items-start">
+                                <a href="{{ yaris.canli_url }}" target="_blank" class="swim-btn-outline swim-btn-sm text-[0.68rem] py-1 px-2" title="TYF Canlı Sayfası">
+                                    <i class="bi bi-box-arrow-up-right"></i> TYF
+                                </a>
+                                {% if yaris.reglaman_linki %}
+                                    <a href="{{ yaris.reglaman_linki }}" target="_blank" class="swim-btn-outline swim-btn-sm text-[0.68rem] py-0.5 px-1.5 swim-text-primary" title="Müsabaka Reglamanı PDF">
+                                        <i class="bi bi-file-earmark-pdf"></i> Reglaman
+                                    </a>
+                                {% endif %}
+                                {% if yaris.barajlar and yaris.barajlar.barajlar %}
+                                    <span class="swim-badge swim-badge-success text-[0.65rem]" title="{{ yaris.barajlar.baraj_adi|default:'Barajlar Tanımlı' }}">
+                                        <i class="bi bi-award"></i> {{ yaris.barajlar.barajlar|length }} Baraj
+                                    </span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="swim-td" id="yaris-durum-{{ yaris.id }}">
                             {% if yaris.durum == 'BEKLIYOR' %}

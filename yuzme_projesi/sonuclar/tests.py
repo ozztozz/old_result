@@ -129,6 +129,8 @@ class SporcuApiTests(TestCase):
                 sehir TEXT,
                 tarih TEXT,
                 canli_url TEXT NOT NULL,
+                reglaman_linki TEXT,
+                barajlar TEXT,
                 durum TEXT DEFAULT 'BEKLIYOR',
                 toplam_start_listesi INTEGER DEFAULT 0,
                 islenen_start_listesi INTEGER DEFAULT 0,
@@ -619,7 +621,7 @@ class SporcuApiTests(TestCase):
         self.assertEqual(yaris_kaydi.canli_dosya.dosya_adi, "ResultList_1.pdf")
 
         # Yedek/yeni sporcunun da eklendiğini doğrula
-        yeni_sonuc = YarisSonucu.objects.filter(event=event, yaris_no="1", sporcu__sporcu_adi="Yeni Yüzücü").first()
+        yeni_sonuc = YarisSonucu.objects.filter(event=event, yaris_no="1", sporcu__sporcu_adi__iexact="Yeni Yüzücü").first()
         self.assertIsNotNone(yeni_sonuc)
         self.assertEqual(yeni_sonuc.derece, "28.90")
         self.assertEqual(yeni_sonuc.sira, "2")
@@ -653,6 +655,8 @@ class CanliYarisTests(TestCase):
                 sehir TEXT,
                 tarih TEXT,
                 canli_url TEXT NOT NULL,
+                reglaman_linki TEXT,
+                barajlar TEXT,
                 durum TEXT DEFAULT 'BEKLIYOR',
                 toplam_start_listesi INTEGER DEFAULT 0,
                 islenen_start_listesi INTEGER DEFAULT 0,

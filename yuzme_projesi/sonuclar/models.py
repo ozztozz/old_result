@@ -333,6 +333,8 @@ class CanliYaris(models.Model):
     sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir")
     tarih = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tarih")
     canli_url = models.URLField(max_length=500, verbose_name="TYF Canlı Yarış Linki")
+    reglaman_linki = models.URLField(max_length=500, blank=True, null=True, verbose_name="Reglaman Linki")
+    barajlar = models.JSONField(default=dict, blank=True, null=True, verbose_name="Barajlar (JSON)")
     durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='BEKLIYOR', verbose_name="Durum")
     toplam_start_listesi = models.IntegerField(default=0, verbose_name="Toplam Start Listesi")
     islenen_start_listesi = models.IntegerField(default=0, verbose_name="İşlenen Start Listesi")

@@ -375,7 +375,169 @@ def detect_pdf_type(pdf_url: str, pdf_bytes: bytes = b"") -> str:
     return "start_listesi"
 
 
-def parse_meet_pdf(pdf_bytes: bytes, client: genai.Client, pdf_url: str = "", model: str = DEFAULT_MODEL, startlist_swimmers: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+def parse_reglaman_pdf(reglaman_url: str, client: genai.Client, model: str = DEFAULT_MODEL) -> Dict[str, Any]:
+    """
+    Müsabaka reglaman PDF dosyasını indirir ve Gemini ile katılım baraj süreleri tablosunu ayrıştırır.
+    Her zaman baraj olmayabileceğinden baraj bulunamazsa veya hata olursa boş veriyle döner (opsiyonel).
+    """
+    if not reglaman_url:
+        return {"barajlar_var_mi": False, "barajlar": []}
+
+    print(f"[*] Reglaman PDF ayrıştırılıyor: {reglaman_url}")
+    try:
+        pdf_bytes = download_bytes(reglaman_url)
+    except Exception as e:
+        print(f"  [!] Reglaman PDF indirilemedi ({reglaman_url}): {e}")
+        return {"barajlar_var_mi": False, "barajlar": []}
+
+    prompt = """Bu bir Türkiye Yüzme Federasyonu (TYF) yarış reglamanı PDF dosyasıdır.
+PDF içerisindeki katılım baraj süreleri (baraj dereceleri) tablosunu bul ve ayrıştır.
+Her bir baraj satırını şu formatta JSON olarak listele:
+{
+  "barajlar_var_mi": true veya false,
+  "baraj_adi": "11-12 Yaş Bölge/Final Barajları..." gibi başlık veya null,
+  "barajlar": [
+    {
+      "cinsiyet": "KADIN" veya "ERKEK",
+      "yas": 11 (veya "11", "11-12", "11 YAŞ (2015)" gibi yaş/yaş grubu),
+      "mesafe": 50 (metre, tam sayı: 50, 100, 200, 400, 800, 1500),
+      "stil": "SERBEST" veya "SIRTÜSTÜ" veya "KURBAĞALAMA" veya "KELEBEK" veya "KARIŞIK",
+      "baraj_derecesi": "00:34.50" (veya "34.50", "01:12.99" - varsa virgülü noktaya çevir),
+      "seviye": "KATILIM" veya "A1" veya "A2" veya "B1" veya null
+    }
+  ]
+}
+
+Eğer belgede herhangi bir baraj tablosu veya baraj süresi yoksa "barajlar_var_mi": false ve "barajlar": [] döndür.
+SADECE geçerli bir JSON nesnesi döndür."""
+
+    try:
+        part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+        res = generate_content_with_fallback(
+            primary_client=client,
+            model=model,
+            contents=[part, prompt],
+            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
+        )
+        raw = (res.text or "").strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict) and parsed.get("barajlar_var_mi") and parsed.get("barajlar"):
+            for b in parsed["barajlar"]:
+                if "baraj_derecesi" in b and isinstance(b["baraj_derecesi"], str):
+                    b["baraj_derecesi"] = b["baraj_derecesi"].replace(",", ".")
+            print(f"  [+] Reglamandan {len(parsed['barajlar'])} adet baraj derecesi başarıyla çıkarıldı.")
+            return parsed
+    except Exception as e:
+        print(f"  [!] Reglaman baraj ayrıştırma hatası: {e}")
+
+    return {"barajlar_var_mi": False, "barajlar": []}
+
+
+def normalize_swimming_style(stil: str) -> str:
+    s = (stil or "").lower().strip()
+    if "serbest" in s or "free" in s:
+        return "SERBEST"
+    if "sırt" in s or "sirt" in s or "back" in s:
+        return "SIRTÜSTÜ"
+    if "kurbağ" in s or "kurbag" in s or "breast" in s:
+        return "KURBAĞALAMA"
+    if "kelebek" in s or "fly" in s:
+        return "KELEBEK"
+    if "karışık" in s or "karisik" in s or "medley" in s:
+        return "KARIŞIK"
+    return (stil or "").upper().strip()
+
+
+def normalize_gender(cinsiyet: str) -> str:
+    c = (cinsiyet or "").lower().strip()
+    if "erkek" in c or c.startswith("e") or "boy" in c or "men" in c or "male" in c:
+        return "ERKEK"
+    if "kadın" in c or "kadin" in c or "kız" in c or "kiz" in c or c.startswith("k") or "girl" in c or "women" in c or "female" in c:
+        return "KADIN"
+    return (cinsiyet or "").upper().strip()
+
+
+def get_athlete_age(dogum_yili: Any, date_str: Optional[str] = None) -> Optional[int]:
+    if not dogum_yili:
+        return None
+    try:
+        y_int = int(str(dogum_yili).strip())
+        if y_int < 100:
+            y_int += 2000 if y_int <= 35 else 1900
+        ref_year = None
+        if date_str:
+            m = re.search(r"\b(20\d\d)\b", str(date_str))
+            if m:
+                ref_year = int(m.group(1))
+        if not ref_year:
+            ref_year = datetime.now().year
+        return max(0, ref_year - y_int)
+    except Exception:
+        return None
+
+
+def find_matching_baraj(barajlar: List[Dict[str, Any]], cinsiyet: str, mesafe: Any, stil: str, yas_grubu: Optional[str] = None) -> Optional[str]:
+    """Verilen yarış özelliklerine uyan baraj derecesini bulur."""
+    if not barajlar:
+        return None
+    c_norm = normalize_gender(cinsiyet)
+    s_norm = normalize_swimming_style(stil)
+
+    try:
+        m_val = int(re.search(r'\d+', str(mesafe)).group(0)) if mesafe else None
+    except (ValueError, TypeError, AttributeError):
+        m_val = None
+
+    target_age_digits = set(re.findall(r'\b\d+\b', str(yas_grubu or '')))
+
+    # 1. Aşama: Yaş, cinsiyet, mesafe ve stil tam eşleşmesi
+    for b in barajlar:
+        b_c = normalize_gender(b.get("cinsiyet") or "")
+        b_s = normalize_swimming_style(b.get("stil") or "")
+        try:
+            b_m = int(re.search(r'\d+', str(b.get("mesafe"))).group(0)) if b.get("mesafe") else None
+        except Exception:
+            b_m = None
+        b_y_digits = set(re.findall(r'\b\d+\b', str(b.get("yas") or '')))
+
+        c_match = (not c_norm or not b_c or c_norm == b_c)
+        s_match = (not s_norm or not b_s or s_norm == b_s)
+        m_match = (m_val is None or b_m is None or m_val == b_m)
+        y_match = bool(target_age_digits and b_y_digits and (target_age_digits & b_y_digits))
+
+        if c_match and s_match and m_match and y_match:
+            return b.get("baraj_derecesi")
+
+    # 2. Aşama: Cinsiyet, mesafe ve stil eşleşmesi (genel)
+    for b in barajlar:
+        b_c = normalize_gender(b.get("cinsiyet") or "")
+        b_s = normalize_swimming_style(b.get("stil") or "")
+        try:
+            b_m = int(re.search(r'\d+', str(b.get("mesafe"))).group(0)) if b.get("mesafe") else None
+        except Exception:
+            b_m = None
+
+        c_match = (not c_norm or not b_c or c_norm == b_c)
+        s_match = (not s_norm or not b_s or s_norm == b_s)
+        m_match = (m_val is None or b_m is None or m_val == b_m)
+
+        if c_match and s_match and m_match:
+            return b.get("baraj_derecesi")
+
+    return None
+
+
+def parse_meet_pdf(
+    pdf_bytes: bytes,
+    client: genai.Client,
+    pdf_url: str = "",
+    model: str = DEFAULT_MODEL,
+    startlist_swimmers: Optional[List[Dict[str, Any]]] = None,
+    barajlar_data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """PDF sayfalarını Gemini Flash Lite ile paralel olarak yapılandırılmış JSON verisine dönüştürür."""
     doc_type = detect_pdf_type(pdf_url, pdf_bytes)
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -550,6 +712,35 @@ SADECE JSON nesnesi (object) döndür."""
         if isinstance(new_swimmers, list):
             header_data.setdefault("yeni_sporcular", []).extend(new_swimmers)
 
+    # Baraj derecelerini eşleştir ve ekle
+    if barajlar_data and barajlar_data.get("barajlar"):
+        b_list = barajlar_data["barajlar"]
+        event_baraj = find_matching_baraj(
+            b_list,
+            cinsiyet=header_data.get("cinsiyet"),
+            mesafe=header_data.get("mesafe"),
+            stil=header_data.get("stil"),
+            yas_grubu=header_data.get("yas_grubu")
+        )
+        if event_baraj:
+            header_data["baraj_derecesi"] = event_baraj
+
+        all_records = header_data.get("kayitlar", []) + header_data.get("yeni_sporcular", [])
+        for rec in all_records:
+            if not rec.get("baraj"):
+                ath_age = get_athlete_age(rec.get("dogum_yili"), header_data.get("tarih"))
+                swimmer_baraj = find_matching_baraj(
+                    b_list,
+                    cinsiyet=header_data.get("cinsiyet"),
+                    mesafe=header_data.get("mesafe"),
+                    stil=header_data.get("stil"),
+                    yas_grubu=str(ath_age) if ath_age else header_data.get("yas_grubu")
+                )
+                if swimmer_baraj:
+                    rec["baraj"] = swimmer_baraj
+                elif event_baraj:
+                    rec["baraj"] = event_baraj
+
     return header_data
 
 
@@ -596,18 +787,24 @@ def process_single_meet(
     5. Tüm dosyalar bittiğinde durumu 'TAMAMLANDI' yapar.
     """
     event_id = meet.get("id")
-    event_url = meet.get("canli_url") or meet.get("event_url")
+    event_url = meet.get("canli_url") or meet.get("yaris_url") or meet.get("event_url")
+    reglaman_linki = meet.get("reglaman_linki") or ""
+    barajlar_data = meet.get("barajlar") or {}
 
     if not event_url:
         return {"durum": "HATA", "mesaj": "Geçersiz yarış URL'si."}
 
     print(f"\n=======================================================")
     print(f"[*] Canlı Yarış İnceleniyor: ID #{event_id} - {event_url}")
+    if reglaman_linki:
+        print(f"[*] Reglaman Linki: {reglaman_linki}")
     print(f"=======================================================")
 
     stats = {
         "event_id": event_id,
         "event_url": event_url,
+        "reglaman_linki": reglaman_linki,
+        "barajlar": barajlar_data,
         "durum": "ISLENIYOR",
         "musabaka_adi": meet.get("musabaka_adi", ""),
         "sehir": meet.get("sehir", ""),
@@ -625,6 +822,18 @@ def process_single_meet(
     }
 
     try:
+        # Reglaman PDF ve Katılım Barajları Kontrolü (Opsiyonel)
+        if reglaman_linki and (not barajlar_data or not barajlar_data.get("barajlar")):
+            print(f"[*] Canlı yarış reglaman linki mevcut, baraj süreleri ayrıştırılıyor: {reglaman_linki}")
+            barajlar_data = parse_reglaman_pdf(reglaman_linki, client, model=model)
+            if barajlar_data and barajlar_data.get("barajlar"):
+                stats["barajlar"] = barajlar_data
+                if event_id:
+                    update_meet_status(base_url, {
+                        "event_id": event_id,
+                        "reglaman_linki": reglaman_linki,
+                        "barajlar": barajlar_data
+                    }, api_key=api_key)
         # 1. Sayfayı tara, başlık ve PDF linklerini çek
         meet_title, city, date_str, start_date, end_date, all_pdf_urls = fetch_meet_pdf_urls(event_url, mode="all")
         if meet_title:
@@ -732,7 +941,7 @@ def process_single_meet(
 
                 if doc_type == "start_listesi":
                     print(f"  [>] {filename} ayrıştırılıyor (Start Listesi - Gemini Flash Lite)...")
-                    parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model)
+                    parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model, barajlar_data=barajlar_data)
                     parsed["tur"] = "start_listesi"
                     if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
                         parsed["musabaka_adi"] = stats["musabaka_adi"]
@@ -777,7 +986,7 @@ def process_single_meet(
                             print(f"  [*] Yarış #{yaris_no} için {len(startlist_swimmers)} startlist sporcusu eşleştirme için yüklendi.")
 
                     print(f"  [>] {filename} ayrıştırılıyor (Sonuç Listesi - Gemini Flash Lite)...")
-                    parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model, startlist_swimmers=startlist_swimmers)
+                    parsed = parse_meet_pdf(pdf_bytes, client, pdf_url=pdf_url, model=model, startlist_swimmers=startlist_swimmers, barajlar_data=barajlar_data)
                     parsed["tur"] = "sonuc_listesi"
                     if not parsed.get("musabaka_adi") and stats["musabaka_adi"]:
                         parsed["musabaka_adi"] = stats["musabaka_adi"]
@@ -899,13 +1108,17 @@ def tyf_startlist_handler(request):
     # Tekil URL mi gönderildi yoksa rutin tarama mı?
     event_url = req_json.get("event_url") or request.args.get("event_url")
     event_id = req_json.get("event_id") or request.args.get("event_id")
+    reglaman_linki = req_json.get("reglaman_linki") or request.args.get("reglaman_linki") or ""
+    barajlar = req_json.get("barajlar") or {}
 
     if event_url:
         # Tekil test/manuel çalıştırma modu
         meet = {
             "id": event_id,
             "canli_url": event_url,
-            "musabaka_adi": req_json.get("musabaka_adi", "")
+            "musabaka_adi": req_json.get("musabaka_adi", ""),
+            "reglaman_linki": reglaman_linki,
+            "barajlar": barajlar
         }
         stats = process_single_meet(meet, base_url, client, model=model, limit=limit, batch_size=batch_size, api_key=api_key)
         return (json.dumps(stats, ensure_ascii=False), 200, {"Content-Type": "application/json; charset=utf-8"})
@@ -945,6 +1158,7 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int, default=None, help="Her yarış için taranacak azami PDF sayısı")
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Tek seferde işlenecek azami PDF sayısı (Varsayılan: 5)")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Gemini Model Adı")
+    parser.add_argument("--reglaman", default=None, help="Yarış reglaman PDF linki (baraj sürelerini ayrıştırmak için opsiyonel)")
     args = parser.parse_args()
 
     gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY_2")
@@ -956,7 +1170,7 @@ if __name__ == "__main__":
     target_base = args.base_url.rstrip("/")
 
     if args.url:
-        meet = {"id": args.id, "canli_url": args.url}
+        meet = {"id": args.id, "canli_url": args.url, "reglaman_linki": args.reglaman}
         rep = process_single_meet(meet, target_base, client, model=args.model, limit=args.limit, batch_size=args.batch_size)
         print(json.dumps(rep, indent=2, ensure_ascii=False))
     else:
