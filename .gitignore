@@ -24,6 +24,7 @@ yuzme_projesi/staticfiles/
 
 # Node & Dependencies
 node_modules/
+database/
 yuzme_projesi/node_modules/
 package-lock.json
 yuzme_projesi/package-lock.json
