@@ -25,6 +25,7 @@ Görevleri:
 import os
 import re
 import logging
+import json
 from datetime import datetime, timezone, timedelta, date
 from typing import List, Dict, Any, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
@@ -49,7 +50,7 @@ if not logger.handlers:
 
 TYF_CANLI_SONUC_URL = "https://www.tyf.gov.tr/canli-sonuc/"
 DEFAULT_API_BASE_URL = os.environ.get("DJANGO_API_BASE_URL", "https://ozztozz.pythonanywhere.com").rstrip("/")
-DEFAULT_PROBE_COUNT = 100
+DEFAULT_PROBE_COUNT = 10
 FALLBACK_START_RACE_ID = 1005787
 
 ALL_81_CITIES = [
