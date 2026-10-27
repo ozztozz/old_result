@@ -3,7 +3,7 @@ import json
 import difflib
 import re
 import threading
-from collections import defaultdict
+from collections import defaultdict, Counter
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
@@ -232,25 +232,131 @@ def sporcu_detay(request, pk):
             if yil_c.isdigit():
                 aktif_yillar.add(int(yil_c))
 
+    style_color_map = {
+        'serbest': {'accent': 'emerald', 'bg': 'bg-emerald-500/10', 'border': 'border-emerald-500/30', 'text': 'text-emerald-600 dark:text-emerald-400', 'bar': 'bg-emerald-500', 'icon': 'bi-lightning-charge-fill'},
+        'sırtüstü': {'accent': 'sky', 'bg': 'bg-sky-500/10', 'border': 'border-sky-500/30', 'text': 'text-sky-600 dark:text-sky-400', 'bar': 'bg-sky-500', 'icon': 'bi-water'},
+        'sirtustu': {'accent': 'sky', 'bg': 'bg-sky-500/10', 'border': 'border-sky-500/30', 'text': 'text-sky-600 dark:text-sky-400', 'bar': 'bg-sky-500', 'icon': 'bi-water'},
+        'kurbağalama': {'accent': 'rose', 'bg': 'bg-rose-500/10', 'border': 'border-rose-500/30', 'text': 'text-rose-600 dark:text-rose-400', 'bar': 'bg-rose-500', 'icon': 'bi-shield-check'},
+        'kurbagalama': {'accent': 'rose', 'bg': 'bg-rose-500/10', 'border': 'border-rose-500/30', 'text': 'text-rose-600 dark:text-rose-400', 'bar': 'bg-rose-500', 'icon': 'bi-shield-check'},
+        'kelebek': {'accent': 'amber', 'bg': 'bg-amber-500/10', 'border': 'border-amber-500/30', 'text': 'text-amber-600 dark:text-amber-400', 'bar': 'bg-amber-500', 'icon': 'bi-fire'},
+        'karışık': {'accent': 'indigo', 'bg': 'bg-indigo-500/10', 'border': 'border-indigo-500/30', 'text': 'text-indigo-600 dark:text-indigo-400', 'bar': 'bg-indigo-500', 'icon': 'bi-stars'},
+        'karisik': {'accent': 'indigo', 'bg': 'bg-indigo-500/10', 'border': 'border-indigo-500/30', 'text': 'text-indigo-600 dark:text-indigo-400', 'bar': 'bg-indigo-500', 'icon': 'bi-stars'},
+    }
+
     stil_list = []
     for stil_adi, st in stil_stats.items():
         st_ort = round(st['fina_total'] / st['fina_count'], 1) if st['fina_count'] > 0 else 0
-        stil_list.append({
+        st_key = (stil_adi or '').strip().lower()
+        st_meta = style_color_map.get(st_key, {'accent': 'slate', 'bg': 'bg-slate-500/10', 'border': 'border-slate-500/30', 'text': 'text-slate-600 dark:text-slate-400', 'bar': 'bg-slate-500', 'icon': 'bi-activity'})
+        item = {
             'stil': stil_adi,
             'count': st['count'],
             'yuzde': round((st['count'] / toplam_yaris) * 100, 1) if toplam_yaris > 0 else 0,
             'ort_puan': st_ort,
             'best_fina': st['best_fina'],
             'best_race': st['best_race']
-        })
+        }
+        item.update(st_meta)
+        stil_list.append(item)
+
     stil_list.sort(key=lambda x: x['count'], reverse=True)
 
     en_cok_yuzulen_stil = stil_list[0]['stil'] if stil_list else '-'
-    guclu_stiller = [s for s in stil_list if s['count'] >= 3 and s['ort_puan'] > 0]
-    en_guclu_stil = max(guclu_stiller, key=lambda s: s['ort_puan'])['stil'] if guclu_stiller else en_cok_yuzulen_stil
+
+    # YAŞ VE CİNSİYET DİKKATE ALINARAK UZMANLIK BELİRLEME
+    # TYF ve uluslararası yaş grupları elit/hedef FINA referans skalası
+    AGE_BENCHMARKS = {
+        'ERKEK': {10: 280, 11: 340, 12: 420, 13: 490, 14: 550, 15: 600, 16: 640, 17: 670, 18: 700, 19: 720},
+        'KADIN': {10: 300, 11: 360, 12: 440, 13: 500, 14: 540, 15: 580, 16: 620, 17: 650, 18: 680, 19: 700}
+    }
+    gender_key = (sporcu.cinsiyet or 'ERKEK').upper()
+    gender_benchmarks = AGE_BENCHMARKS.get(gender_key, AGE_BENCHMARKS['ERKEK'])
+
+    # Sporcunun yarıştığı yaşlar ve son 2 aktif yaş dönemi (güncel uzmanlık dönemi)
+    yaristigi_yaslar = sorted(set(r.hesaplanan_yas for r in tum_yarislar if r.hesaplanan_yas))
+    guncel_yas_donemi = set(yaristigi_yaslar[-2:]) if len(yaristigi_yaslar) >= 2 else (set(yaristigi_yaslar) if yaristigi_yaslar else set())
+
+    # Her stil için yaş & cinsiyet ağırlıklı skorlama
+    stil_skorlari = {}
+    for st_item in stil_list:
+        stil_adi = st_item['stil']
+        st_races = [r for r in tum_yarislar if (r.stil or '').strip() == stil_adi]
+        if not st_races:
+            continue
+
+        # 1. Güncel / Olgunluk Dönemi Ortalaması (Küçük yaşlardaki çocukluk puanlarının günceli yanıltmaması için)
+        recent_races = [r for r in st_races if r.hesaplanan_yas in guncel_yas_donemi] if guncel_yas_donemi else st_races
+        recent_pts = [r.puan for r in recent_races if r.puan and r.puan > 0]
+        recent_ort = (sum(recent_pts) / len(recent_pts)) if recent_pts else st_item['ort_puan']
+
+        # 2. Yaş ve Cinsiyete Göre Nispi Verimlilik (O yaştaki FINA / Yaş Grubu Hedefi)
+        verim_list = []
+        for r in st_races:
+            if r.puan and r.puan > 0:
+                target_bench = gender_benchmarks.get(r.hesaplanan_yas, 500) if r.hesaplanan_yas else 500
+                verim_list.append((r.puan / target_bench) * 100)
+        yas_cinsiyet_verim = (sum(verim_list) / len(verim_list)) if verim_list else 100.0
+
+        # 3. Kendi Yaş/Cinsiyet Grubunda Kürsü & Baraj Başarısı
+        medals = sum(1 for r in st_races if str(r.sira).strip() in ('1', '2', '3'))
+        barajlar = sum(1 for r in st_races if r.baraj and str(r.baraj).upper() not in ('HAYIR', 'GEÇMEDİ', 'GECMEDI', 'YOK', '-'))
+        medal_rate = (medals / len(st_races)) * 100
+        baraj_rate = (barajlar / len(st_races)) * 100
+
+        # Birleşik Uzmanlık Skoru:
+        # %40 Güncel Yaş Dönemi FINA'sı
+        # %30 Yaş & Cinsiyet Hedefine Göre Nispi Verimlilik
+        # %20 Yaş Grubundaki Kürsü & Baraj Oranı
+        # %10 Yarış Deneyimi Hacmi
+        score = (
+            (recent_ort * 0.40) +
+            (yas_cinsiyet_verim * 3.0) +
+            ((medal_rate * 0.6 + baraj_rate * 0.4) * 1.5) +
+            (min(len(st_races), 50) * 1.0)
+        )
+        stil_skorlari[stil_adi] = score
+
+    if stil_skorlari:
+        valid_stiller = [st for st in stil_skorlari if len([r for r in tum_yarislar if (r.stil or '').strip() == st]) >= 2]
+        if valid_stiller:
+            en_guclu_stil = max(valid_stiller, key=lambda s: stil_skorlari[s])
+        else:
+            en_guclu_stil = max(stil_skorlari, key=lambda s: stil_skorlari[s])
+    else:
+        en_guclu_stil = en_cok_yuzulen_stil
     aktif_yil_sayisi = (max(aktif_yillar) - min(aktif_yillar) + 1) if len(aktif_yillar) >= 2 else (1 if aktif_yillar else 0)
 
+    # Sporcu Baş Harfleri (Avatar / Monogram)
+    names = (sporcu.sporcu_adi or '').strip().split()
+    initials = (names[0][0] + (names[-1][0] if len(names) > 1 else '')).upper() if names else 'S'
+    guncel_yas = (timezone.now().year - sporcu.dogum_yili) if sporcu.dogum_yili else None
+
+    # Kişiselleştirilmiş Atletizm & Performans Notu (Scout Summary)
+    stil_counter = Counter(r.stil for r in tum_yarislar if r.stil)
+    top_stiller = [st for st, _ in stil_counter.most_common(2)]
+    top_stiller_str = " ve ".join(top_stiller) if top_stiller else "çeşitli"
+
+    not_parts = []
+    if top_stiller:
+        not_parts.append(f"Ağırlıklı olarak {top_stiller_str} branşlarında yarışan {sporcu.sporcu_adi}, toplam {toplam_yaris} resmi yarışta havuza girdi.")
+    else:
+        not_parts.append(f"Kariyerinde toplam {toplam_yaris} resmi yarışta mücadele eden {sporcu.sporcu_adi},")
+
+    if toplam_kursu > 0:
+        not_parts.append(f"{toplam_kursu} kez kürsüye çıkarak (%{kursu_orani} podyum) istikrarlı bir madalya başarısı yakaladı.")
+    
+    if baraj_sayisi > 0:
+        not_parts.append(f"Kariyerinde {baraj_sayisi} yarışta baraj derecesini geçmeyi başardı.")
+
+    if best_race and best_race.puan:
+        not_parts.append(f"Zirve performansını {best_race.mesafe}m {best_race.stil} branşında {best_race.derece} ({best_race.puan} FINA) ile kaydetti.")
+
+    sporcu_notu = " ".join(not_parts) if not_parts else "Kayıtlı yarış verileri üzerinden gelişim grafiği takip edilmektedir."
+
     degerlendirme = {
+        'initials': initials,
+        'guncel_yas': guncel_yas,
+        'sporcu_notu': sporcu_notu,
         'toplam_yaris': toplam_yaris,
         'toplam_puan': toplam_puan,
         'ort_puan': ort_puan,

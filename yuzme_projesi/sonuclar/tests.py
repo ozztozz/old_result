@@ -319,7 +319,8 @@ class SporcuApiTests(TestCase):
         self.assertGreater(deg['toplam_puan'], 0)
         self.assertIn('best_race', deg)
         self.assertIn('stil_list', deg)
-        self.assertContains(response, "Sporcu Değerlendirme & Başarı Karnesi")
+        self.assertContains(response, "Performans Notu:")
+        self.assertContains(response, "Kürsü & Madalya Vitrini")
         self.assertContains(response, "Fark / Gelişim")
 
     def test_api_sporcu_sonuclari_post_json(self):

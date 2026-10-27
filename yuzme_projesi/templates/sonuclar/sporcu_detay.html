@@ -5,250 +5,98 @@
 
 {% block content %}
 <!-- Sporcu Profil Başlığı -->
-<div class="swim-card p-4 sm:p-6 mb-4">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-            <div class="flex items-center gap-2 mb-2">
-                <span class="swim-badge {% if sporcu.cinsiyet == 'ERKEK' %}swim-badge-primary{% elif sporcu.cinsiyet == 'KADIN' %}swim-badge-danger{% else %}swim-badge-neutral{% endif %}">
-                    {% if sporcu.cinsiyet == 'ERKEK' %}<i class="bi bi-gender-male"></i> Erkek
-                    {% elif sporcu.cinsiyet == 'KADIN' %}<i class="bi bi-gender-female"></i> Kadın
-                    {% else %}Sporcu{% endif %}
-                </span>
-                {% if sporcu.dogum_yili %}
-                    <span class="swim-badge swim-badge-neutral">
-                        <i class="bi bi-calendar-event"></i> Doğum Yılı: {{ sporcu.dogum_yili }}
+<div class="swim-card p-4 sm:p-6 mb-4 sm:mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <!-- Sol: Monogram Avatar, İsim, Rozetler & Kulüp -->
+        <div class="flex items-center gap-3.5 sm:gap-4 min-w-0">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center font-extrabold text-xl font-mono shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border swim-border shadow-xs">
+                {{ degerlendirme.initials }}
+            </div>
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                    <span class="swim-badge {% if sporcu.cinsiyet == 'ERKEK' %}swim-badge-primary{% elif sporcu.cinsiyet == 'KADIN' %}swim-badge-danger{% else %}swim-badge-neutral{% endif %}">
+                        {% if sporcu.cinsiyet == 'ERKEK' %}<i class="bi bi-gender-male"></i> Erkek
+                        {% elif sporcu.cinsiyet == 'KADIN' %}<i class="bi bi-gender-female"></i> Kadın
+                        {% else %}Sporcu{% endif %}
                     </span>
-                {% elif sporcu.yas_dogum_yili %}
-                    <span class="swim-badge swim-badge-neutral">
-                        D.Yılı / Yaş: {{ sporcu.yas_dogum_yili }}
-                    </span>
-                {% endif %}
-            </div>
-            <h1 class="text-xl sm:text-3xl font-extrabold swim-text-main tracking-tight">{{ sporcu.sporcu_adi }}</h1>
-            <p class="text-xs sm:text-sm swim-text-muted mt-1 flex items-center gap-1.5">
-                <i class="bi bi-shield swim-text-primary"></i>
-                Birincil Kulüp: 
-                {% if sporcu.birincil_kulup %}
-                    <a href="{% url 'sonuclar:kulup_detay' sporcu.birincil_kulup.id %}" class="font-semibold swim-text-main hover:swim-text-primary transition">
-                        {{ sporcu.birincil_kulup.kulup_adi }}
-                    </a>
-                {% else %}
-                    <span class="swim-text-subtle">Kulüpsüz / Belirtilmemiş</span>
-                {% endif %}
-            </p>
-        </div>
-        <div class="shrink-0">
-            <div class="swim-stat-box p-3 min-w-[120px] ">
-                <div class="swim-stat-val text-2xl sm:text-3xl swim-text-primary font-mono">{{ sporcu.toplam_yaris_sayisi }}</div>
-                <div class="swim-stat-lbl text-[0.68rem]">Toplam Yarış</div>
-                <div class="text-[0.68rem] swim-text-subtle mt-0.5 font-mono">{{ sporcu.ilk_yaris_tarihi|slice:":4" }} - {{ sporcu.son_yaris_tarihi|slice:":4" }}</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Sporcu Değerlendirme & Başarı Karnesi (Athlete Evaluation & KPIs) -->
-<div class="swim-card p-4 sm:p-5 mb-4 sm:mb-6">
-    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 sm:mb-4 swim-border-b">
-        <div>
-            <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
-                <i class="bi bi-award-fill text-amber-500"></i> Sporcu Değerlendirme & Başarı Karnesi
-            </h2>
-            <p class="text-xs swim-text-muted mt-0.5">Kariyer FINA puanları, podyum/madalya oranları ve yarış zaman gelişimi değerlendirmesi</p>
-        </div>
-        <div class="flex items-center gap-1.5 text-xs font-mono">
-            <span class="swim-badge swim-badge-neutral">
-                <i class="bi bi-calendar3 mr-1"></i>{{ degerlendirme.toplam_musabaka }} Müsabaka &bull; {{ degerlendirme.toplam_yaris }} Yarış
-            </span>
-        </div>
-    </div>
-
-    <!-- 4 KPI Değerlendirme Kartı -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
-        <!-- 1. Kariyer Zirvesi & FINA Skoru -->
-        <div class="swim-stat-box p-3 sm:p-4">
-            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
-                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Kariyer Zirvesi</span>
-                <i class="bi bi-stars text-amber-500 text-sm"></i>
-            </div>
-            <div class="swim-stat-val text-lg sm:text-2xl font-mono swim-text-primary">
-                {% if degerlendirme.best_race %}
-                    {{ degerlendirme.best_race.puan }} <span class="text-xs font-normal swim-text-muted">FINA</span>
-                {% else %}
-                    -
-                {% endif %}
-            </div>
-            <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5 truncate" title="{% if degerlendirme.best_race %}{{ degerlendirme.best_race.mesafe }}m {{ degerlendirme.best_race.stil }} &bull; {{ degerlendirme.best_race.derece }}{% endif %}">
-                {% if degerlendirme.best_race %}
-                    {{ degerlendirme.best_race.mesafe }}m {{ degerlendirme.best_race.stil }} ({{ degerlendirme.best_race.derece }})
-                {% else %}
-                    Puanlı yarış bulunamadı
-                {% endif %}
-            </div>
-            <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
-                <span>Ortalama FINA:</span>
-                <strong class="font-mono swim-text-main">{{ degerlendirme.ort_puan|default:"-" }} P</strong>
-            </div>
-        </div>
-
-        <!-- 2. Kürsü & Madalya Başarısı -->
-        <div class="swim-stat-box p-3 sm:p-4">
-            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
-                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Kürsü & Madalya</span>
-                <i class="bi bi-trophy-fill text-amber-500 text-sm"></i>
-            </div>
-            <div class="swim-stat-val text-base sm:text-xl font-mono text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
-                <span>🥇{{ degerlendirme.altin_sayisi }}</span>
-                <span class="swim-text-muted">🥈{{ degerlendirme.gumus_sayisi }}</span>
-                <span class="text-amber-700">🥉{{ degerlendirme.bronz_sayisi }}</span>
-            </div>
-            <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5">
-                Toplam <strong>{{ degerlendirme.toplam_kursu }}</strong> Kürsü (<span class="font-semibold swim-text-primary font-mono">%{{ degerlendirme.kursu_orani }}</span>)
-            </div>
-            <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
-                <span>Geçilen Baraj:</span>
-                <strong class="font-mono {% if degerlendirme.baraj_sayisi > 0 %}swim-text-success{% else %}swim-text-subtle{% endif %}">
-                    {% if degerlendirme.baraj_sayisi > 0 %}{{ degerlendirme.baraj_sayisi }} Baraj{% else %}-{% endif %}
-                </strong>
-            </div>
-        </div>
-
-        <!-- 3. Zaman Gelişimi & PB Oranı -->
-        <div class="swim-stat-box p-3 sm:p-4">
-            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
-                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Zaman Gelişimi</span>
-                <i class="bi bi-speedometer2 text-emerald-500 text-sm"></i>
-            </div>
-            {% if degerlendirme.has_giris_analizi %}
-                <div class="swim-stat-val text-lg sm:text-2xl font-mono text-emerald-600 dark:text-emerald-400">
-                    %{{ degerlendirme.gelisim_orani }} <span class="text-xs font-normal swim-text-muted">PB Oranı</span>
-                </div>
-                <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5">
-                    <span class="swim-text-success font-medium">{{ degerlendirme.gelistiren_count }}</span> düşürdü &bull; <span class="swim-text-danger font-medium">{{ degerlendirme.gerileyen_count }}</span> geriledi
-                </div>
-                <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
-                    <span>Ortalama Fark:</span>
-                    <strong class="font-mono {% if degerlendirme.ort_fark < 0 %}swim-text-success{% else %}swim-text-danger{% endif %}">
-                        {% if degerlendirme.ort_fark > 0 %}+{% endif %}{{ degerlendirme.ort_fark }}s
-                    </strong>
-                </div>
-            {% else %}
-                <div class="swim-stat-val text-lg sm:text-2xl font-mono swim-text-primary">
-                    {{ pbs|length }} <span class="text-xs font-normal swim-text-muted">Kayıtlı Branş</span>
-                </div>
-                <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5">
-                    Tüm branşlardaki PB'ler aşağıda
-                </div>
-                <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
-                    <span>En Güçlü Disiplin:</span>
-                    <strong class="swim-text-main font-semibold">{{ degerlendirme.en_guclu_stil }}</strong>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- 4. Branş & Kariyer Uzmanlığı -->
-        <div class="swim-stat-box p-3 sm:p-4">
-            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
-                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Uzmanlık & Disiplin</span>
-                <i class="bi bi-compass text-sky-500 text-sm"></i>
-            </div>
-            <div class="swim-stat-val text-base sm:text-xl font-bold swim-text-main truncate" title="{{ degerlendirme.en_guclu_stil }}">
-                {{ degerlendirme.en_guclu_stil }}
-            </div>
-            <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5 truncate">
-                En Çok Yüzülen: <strong>{{ degerlendirme.en_cok_yuzulen_stil }}</strong>
-            </div>
-            <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
-                <span>Kariyer Süresi:</span>
-                <strong class="font-mono swim-text-main">
-                    {% if degerlendirme.aktif_yil_sayisi > 0 %}{{ degerlendirme.aktif_yil_sayisi }} Yıl{% else %}-{% endif %}
-                </strong>
-            </div>
-        </div>
-    </div>
-
-    <!-- Branş & Stil Dağılım Kartları (Discipline Distribution) -->
-    {% if degerlendirme.stil_list %}
-    <div class="pt-3 border-t swim-border-t">
-        <div class="text-[0.72rem] font-semibold swim-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span><i class="bi bi-pie-chart-fill mr-1 swim-text-primary"></i> Branş & Stil Dağılımı ve Başarı Analizi</span>
-            <span class="text-[0.65rem] font-normal lowercase swim-text-subtle">Hızlı filtreleme için branşa tıklayın</span>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            {% for st in degerlendirme.stil_list %}
-            <div class="p-2 sm:p-2.5 rounded-xl border swim-border bg-slate-500/5 hover:bg-slate-500/10 transition cursor-pointer"
-                 onclick="var sel = document.getElementById('filterKategoriSelect'); if(sel){ sel.value='{{ st.stil }}'; onFilterChange(); }">
-                <div class="flex items-center justify-between text-xs mb-1">
-                    <span class="font-bold swim-text-main">{{ st.stil }}</span>
-                    <span class="swim-badge swim-badge-neutral text-[0.62rem] font-mono">%{{ st.yuzde }}</span>
-                </div>
-                <div class="flex items-center justify-between text-[0.68rem] font-mono swim-text-muted">
-                    <span>{{ st.count }} Yarış</span>
-                    {% if st.ort_puan > 0 %}
-                        <span class="font-semibold swim-text-primary">{{ st.ort_puan }} P</span>
-                    {% else %}
-                        <span>-</span>
+                    {% if sporcu.dogum_yili %}
+                        <span class="swim-badge swim-badge-neutral">
+                            <i class="bi bi-calendar-event me-1"></i>{{ sporcu.dogum_yili }} {% if degerlendirme.guncel_yas %}({{ degerlendirme.guncel_yas }} Yaş){% endif %}
+                        </span>
+                    {% elif sporcu.yas_dogum_yili %}
+                        <span class="swim-badge swim-badge-neutral">{{ sporcu.yas_dogum_yili }}</span>
+                    {% endif %}
+                    {% if degerlendirme.en_guclu_stil %}
+                        <span class="swim-badge swim-badge-info">
+                            <i class="bi bi-water me-1"></i>{{ degerlendirme.en_guclu_stil }} Uzmanı
+                        </span>
                     {% endif %}
                 </div>
-                {% if st.best_fina > 0 %}
-                <div class="text-[0.62rem] swim-text-subtle mt-1 pt-1 border-t swim-border-t truncate" title="En İyi: {{ st.best_fina }} FINA">
-                    En İyi: <strong class="swim-text-main font-mono">{{ st.best_fina }} P</strong>
-                </div>
-                {% endif %}
+                <h1 class="swim-title-lg">{{ sporcu.sporcu_adi }}</h1>
+                <p class="text-xs sm:text-sm swim-text-muted mt-1 flex items-center gap-1.5">
+                    <i class="bi bi-shield-shaded swim-text-primary"></i>
+                    {% if sporcu.birincil_kulup %}
+                        <a href="{% url 'sonuclar:kulup_detay' sporcu.birincil_kulup.id %}" class="font-semibold swim-text-main hover:swim-text-primary transition">
+                            {{ sporcu.birincil_kulup.kulup_adi }}
+                        </a>
+                    {% else %}
+                        <span class="swim-text-subtle">Kulüpsüz / Ferdi</span>
+                    {% endif %}
+                </p>
             </div>
-            {% endfor %}
         </div>
+
+        <!-- Sağ: Doğal İstatistik Kutuları (SwimUI swim-stat-box) -->
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
+            <!-- Madalya & Kürsü Vitrini -->
+            <div class="swim-stat-box p-3 min-w-[115px] flex-1 sm:flex-initial" title="Kürsü & Madalya Vitrini">
+                <div class="swim-stat-val text-xl sm:text-2xl font-mono text-amber-500 flex items-center justify-center gap-1">
+                    <span title="Altın">🥇{{ degerlendirme.altin_sayisi }}</span>
+                    <span class="swim-text-muted text-base" title="Gümüş">🥈{{ degerlendirme.gumus_sayisi }}</span>
+                    <span class="text-amber-700 text-base" title="Bronz">🥉{{ degerlendirme.bronz_sayisi }}</span>
+                </div>
+                <div class="swim-stat-lbl text-[0.65rem]">
+                    <span class="hidden sm:inline">Kürsü & Madalya: </span>{{ degerlendirme.toplam_kursu }} Kürsü {% if degerlendirme.baraj_sayisi > 0 %}&bull; {{ degerlendirme.baraj_sayisi }} Baraj{% endif %}
+                </div>
+            </div>
+
+            <!-- Zirve FINA -->
+            <div class="swim-stat-box p-3 min-w-[110px] flex-1 sm:flex-initial">
+                <div class="swim-stat-val text-xl sm:text-2xl font-mono swim-text-primary">
+                    {% if degerlendirme.best_race %}{{ degerlendirme.best_race.puan }}{% else %}-{% endif %}
+                </div>
+                <div class="swim-stat-lbl text-[0.65rem]">Zirve FINA {% if degerlendirme.best_race %}({{ degerlendirme.best_race.mesafe }}m {{ degerlendirme.best_race.stil|slice:":3" }}){% endif %}</div>
+            </div>
+
+            <!-- Toplam Yarış -->
+            <div class="swim-stat-box p-3 min-w-[100px] flex-1 sm:flex-initial">
+                <div class="swim-stat-val text-xl sm:text-2xl font-mono swim-text-main">
+                    {{ sporcu.toplam_yaris_sayisi }}
+                </div>
+                <div class="swim-stat-lbl text-[0.65rem]">{{ degerlendirme.toplam_musabaka }} Müsabaka</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performans Notu -->
+    {% if degerlendirme.sporcu_notu %}
+    <div class="mt-4 pt-3.5 border-t swim-border-t flex items-start gap-2.5 text-xs sm:text-[0.82rem] leading-relaxed swim-text-muted">
+        <i class="bi bi-info-circle-fill swim-text-primary text-sm shrink-0 mt-0.5"></i>
+        <span><strong class="swim-text-main">Performans Notu:</strong> {{ degerlendirme.sporcu_notu }}</span>
     </div>
     {% endif %}
 </div>
 
-
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
-    <!-- Kulüp Transfer ve Temsil Tarihçesi -->
-    <div class="lg:col-span-6">
-        <div class="swim-card h-full p-4 sm:p-6">
-            <h2 class="text-sm sm:text-base font-bold swim-text-main mb-4 flex items-center gap-2">
-                <i class="bi bi-clock-history swim-text-primary"></i> Kulüp Transfer ve Temsil Tarihçesi
-            </h2>
-            <div class="swim-timeline">
-                {% for t in tarihce %}
-                <div class="relative">
-                    <div class="swim-timeline-dot {% if t.aktif_kulup_mu %}swim-timeline-dot-active{% endif %}"></div>
-                    <div class="flex justify-between items-start gap-2">
-                        <div>
-                            <div class="font-bold swim-text-main text-sm">
-                                <a href="{% url 'sonuclar:kulup_detay' t.kulup.id %}" class="hover:swim-text-primary transition">
-                                    {{ t.kulup.kulup_adi }}
-                                </a>
-                            </div>
-                            <div class="text-xs swim-text-subtle mt-0.5 flex items-center gap-1 font-mono">
-                                <i class="bi bi-calendar3"></i>
-                                {{ t.ilk_yaris_tarihi|default:"Bilinmiyor" }} &rarr; {{ t.son_yaris_tarihi|default:"Bilinmiyor" }}
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            {% if t.aktif_kulup_mu %}
-                                <span class="swim-badge swim-badge-success text-[0.68rem]">AKTİF KULÜP</span>
-                            {% elif t.kulup.okul_mu %}
-                                <span class="swim-badge swim-badge-info text-[0.68rem]">OKUL TAKIMI</span>
-                            {% endif %}
-                            <div class="text-xs swim-text-primary font-semibold font-mono mt-0.5">{{ t.toplam_yaris_sayisi }} Yarış</div>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <p class="text-xs swim-text-subtle">Kayıtlı kulüp tarihçesi bulunamadı.</p>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Kişisel En İyi Dereceler (PB) -->
-    <div class="lg:col-span-6">
+<!-- =====================================================================
+     ORTA BÖLÜM: 2 DENGELİ KOLON (KİŞİSEL EN İYİLER + BRANŞ & KULÜP)
+====================================================================== -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-4 sm:mb-6">
+    <!-- Sol Kolon: Kişisel En İyi Dereceler (PB) (lg:col-span-7) -->
+    <div class="lg:col-span-7">
         <div class="swim-card h-full flex flex-col justify-between">
             <div class="swim-card-header">
                 <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
-                    <i class="bi bi-trophy swim-text-warning"></i> Kişisel En İyi Dereceler (PB)
+                    <i class="bi bi-trophy-fill text-amber-500"></i> Kişisel En İyi Dereceler (PB)
                 </h2>
                 <span class="text-xs swim-text-subtle"><i class="bi bi-hand-index-thumb mr-1"></i>Branşa tıklayın</span>
             </div>
@@ -289,6 +137,76 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Kolon: Branş Dağılımı ve Kulüp Temsil Tarihçesi (lg:col-span-5) -->
+    <div class="lg:col-span-5 flex flex-col gap-4 sm:gap-6">
+        <!-- 1. Branş Dağılımı -->
+        {% if degerlendirme.stil_list %}
+        <div class="swim-card p-4 sm:p-5">
+            <h3 class="text-sm font-bold swim-text-main mb-3 flex items-center justify-between">
+                <span class="flex items-center gap-2"><i class="bi bi-pie-chart-fill swim-text-primary"></i> Branş Dağılımı</span>
+                <span class="text-xs font-normal swim-text-subtle">Filtrelemek için tıklayın</span>
+            </h3>
+            <div class="space-y-2">
+                {% for st in degerlendirme.stil_list %}
+                <div class="p-2 sm:p-2.5 rounded-xl border swim-border hover:bg-slate-500/5 transition cursor-pointer"
+                     onclick="var sel = document.getElementById('filterKategoriSelect'); if(sel){ sel.value='{{ st.stil }}'; onFilterChange(); }"
+                     title="{{ st.stil }} yarışlarını filtrele">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="font-bold swim-text-main flex items-center gap-1.5">
+                            <i class="bi bi-water swim-text-primary text-xs"></i> {{ st.stil }}
+                        </span>
+                        <span class="font-mono text-xs font-bold swim-text-main">
+                            {% if st.ort_puan > 0 %}{{ st.ort_puan }} P{% else %}-{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-[0.68rem] swim-text-muted font-mono">
+                        <span>{{ st.count }} Yarış</span>
+                        <span>%{{ st.yuzde }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 2. Kulüp Transfer ve Temsil Tarihçesi -->
+        <div class="swim-card p-4 sm:p-5 flex-1">
+            <h3 class="text-sm font-bold swim-text-main mb-3 flex items-center gap-2">
+                <i class="bi bi-clock-history swim-text-primary"></i> Kulüp Temsil Tarihçesi
+            </h3>
+            <div class="swim-timeline">
+                {% for t in tarihce %}
+                <div class="relative">
+                    <div class="swim-timeline-dot {% if t.aktif_kulup_mu %}swim-timeline-dot-active{% endif %}"></div>
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <div class="font-bold swim-text-main text-sm">
+                                <a href="{% url 'sonuclar:kulup_detay' t.kulup.id %}" class="hover:swim-text-primary transition">
+                                    {{ t.kulup.kulup_adi }}
+                                </a>
+                            </div>
+                            <div class="text-xs swim-text-subtle mt-0.5 flex items-center gap-1 font-mono">
+                                <i class="bi bi-calendar3"></i>
+                                {{ t.ilk_yaris_tarihi|default:"Bilinmiyor" }} &rarr; {{ t.son_yaris_tarihi|default:"Bilinmiyor" }}
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            {% if t.aktif_kulup_mu %}
+                                <span class="swim-badge swim-badge-success text-[0.65rem]">AKTİF</span>
+                            {% elif t.kulup.okul_mu %}
+                                <span class="swim-badge swim-badge-info text-[0.65rem]">OKUL</span>
+                            {% endif %}
+                            <div class="text-xs swim-text-primary font-semibold font-mono mt-0.5">{{ t.toplam_yaris_sayisi }} Yarış</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-xs swim-text-subtle">Kayıtlı kulüp tarihçesi bulunamadı.</p>
+                {% endfor %}
             </div>
         </div>
     </div>
