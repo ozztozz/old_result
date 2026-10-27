@@ -33,5 +33,7 @@ urlpatterns = [
     path('api/canli-startlist-sporculari/', views.api_canli_startlist_sporculari, name='api_canli_startlist_sporculari'),
     path('api/canli-dosya-kontrol/', views.api_canli_dosya_kontrol, name='api_canli_dosya_kontrol'),
     path('api/canli-bekleyen-yarislar/', views.api_canli_bekleyen_yarislar, name='api_canli_bekleyen_yarislar'),
+    path('api/canli-bekleyen-yaris/', views.api_canli_bekleyen_yarislar, name='api_canli_bekleyen_yaris'),
+    path('api/canli-yaris-ekle/', views.api_canli_yaris_ekle, name='api_canli_yaris_ekle'),
 ]
 

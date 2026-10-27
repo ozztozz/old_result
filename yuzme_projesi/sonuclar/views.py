@@ -1420,6 +1420,70 @@ def api_canli_durum_guncelle(request):
     return JsonResponse({"durum": "basarili", "mesaj": f"Yarış #{yaris.id} durumu güncellendi: {yaris.durum}"})
 
 
+@csrf_exempt
+def api_canli_yaris_ekle(request):
+    """
+    Harici bot/scraper tarafından TYF sayfalarında tespit edilen yeni canlı yarışları sisteme ekler.
+    Mükerrer eklemeyi engeller (canli_url bazında get_or_create).
+    """
+    if request.method != "POST":
+        return JsonResponse({"durum": "hata", "mesaj": "Sadece POST metodu desteklenir."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception as e:
+        return JsonResponse({"durum": "hata", "mesaj": f"Geçersiz JSON: {e}"}, status=400)
+
+    canli_url = (data.get("canli_url") or data.get("yaris_url") or "").strip()
+    if not canli_url:
+        return JsonResponse({"durum": "hata", "mesaj": "canli_url parametresi zorunludur."}, status=400)
+
+    musabaka_adi = (data.get("musabaka_adi") or data.get("yaris_adi") or "").strip()
+    sehir = (data.get("sehir") or "").strip()
+    tarih = (data.get("tarih") or "").strip()
+    reglaman_linki = (data.get("reglaman_linki") or "").strip()
+
+    yaris, created = CanliYaris.objects.get_or_create(
+        canli_url=canli_url,
+        defaults={
+            "musabaka_adi": musabaka_adi,
+            "sehir": sehir,
+            "tarih": tarih,
+            "reglaman_linki": reglaman_linki if reglaman_linki else None,
+            "durum": "BEKLIYOR"
+        }
+    )
+
+    updated = False
+    if musabaka_adi and not yaris.musabaka_adi:
+        yaris.musabaka_adi = musabaka_adi
+        updated = True
+    if sehir and not yaris.sehir:
+        yaris.sehir = sehir
+        updated = True
+    if tarih and not yaris.tarih:
+        yaris.tarih = tarih
+        updated = True
+    if reglaman_linki and not yaris.reglaman_linki:
+        yaris.reglaman_linki = reglaman_linki
+        updated = True
+    if updated:
+        yaris.save()
+
+    return JsonResponse({
+        "durum": "basarili",
+        "yeni_kayit": created,
+        "yaris": {
+            "id": yaris.id,
+            "canli_url": yaris.canli_url,
+            "musabaka_adi": yaris.musabaka_adi,
+            "sehir": yaris.sehir,
+            "tarih": yaris.tarih,
+            "durum": yaris.durum
+        }
+    }, status=201 if created else 200)
+
+
 def api_canli_yarislar_durum(request):
     """
     Arayüzün durumları canlı yenilemesi için JSON liste döner.
@@ -1456,6 +1520,8 @@ def api_canli_bekleyen_yarislar(request):
             "musabaka_adi": y.musabaka_adi or "",
             "sehir": y.gosterilen_sehir,
             "tarih": y.gosterilen_tarih,
+            "baslangic_tarihi": y.event.yaris_tarihi_baslangic if y.event else None,
+            "bitis_tarihi": y.event.yaris_tarihi_bitis if y.event else None,
             "durum": y.durum,
             "toplam_start_listesi": y.toplam_start_listesi,
             "islenen_start_listesi": y.islenen_start_listesi,
@@ -1465,9 +1531,20 @@ def api_canli_bekleyen_yarislar(request):
             "son_islem_tarihi": y.son_islem_tarihi.isoformat() if y.son_islem_tarihi else None
         })
 
+    # Sistemde kayıtlı tüm canlı yarışlar arasındaki en son yarış numarası
+    en_son_yaris_no = None
+    all_urls = CanliYaris.objects.values_list('canli_url', flat=True)
+    for u in all_urls:
+        m = re.search(r'cs-(\d+)', u or '')
+        if m:
+            val = int(m.group(1))
+            if en_son_yaris_no is None or val > en_son_yaris_no:
+                en_son_yaris_no = val
+
     return JsonResponse({
         "durum": "basarili",
         "toplam": len(yarislar_data),
+        "en_son_yaris_no": en_son_yaris_no,
         "yarislar": yarislar_data
     })
 

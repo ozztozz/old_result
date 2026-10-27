@@ -750,3 +750,46 @@ class CanliYarisTests(TestCase):
         res_del = self.client.post(reverse('sonuclar:canli_yaris_sil', args=[yaris.id]), follow=True)
         self.assertEqual(res_del.status_code, 200)
         self.assertFalse(CanliYaris.objects.filter(id=yaris.id).exists())
+
+    def test_api_canli_yaris_ekle_ve_bekleyen_kontrol(self):
+        """TYF tarayıcısı ile gelen yarışların API üzerinden eklenmesi ve bekleyen yarış kontrolü."""
+        test_url = "https://canli.tyf.gov.tr/ankara/cs-261026/"
+        payload = {
+            "canli_url": test_url,
+            "musabaka_adi": "Ankara TYF Il Temsilciligi Canli Yaris",
+            "sehir": "Ankara",
+            "tarih": "26-28 KASIM 2026"
+        }
+        # 1. API üzerinden yarış ekle
+        res = self.client.post(
+            reverse('sonuclar:api_canli_yaris_ekle'),
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        self.assertEqual(res.status_code, 201)
+        data = res.json()
+        self.assertEqual(data.get("durum"), "basarili")
+        self.assertTrue(data.get("yeni_kayit"))
+
+        # Tekrar aynı URL eklenirse yeni_kayit False olmalı
+        res_dup = self.client.post(
+            reverse('sonuclar:api_canli_yaris_ekle'),
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        self.assertEqual(res_dup.status_code, 200)
+        self.assertFalse(res_dup.json().get("yeni_kayit"))
+
+        # 2. Bekleyen yarışları tekil endpoint (/api/canli-bekleyen-yaris/) üzerinden sorgula
+        res_bekleyen = self.client.get(reverse('sonuclar:api_canli_bekleyen_yaris'))
+        self.assertEqual(res_bekleyen.status_code, 200)
+        bekleyen_data = res_bekleyen.json()
+        self.assertIn("yarislar", bekleyen_data)
+        urls = [y["canli_url"] for y in bekleyen_data["yarislar"]]
+        self.assertIn(test_url, urls)
+
+        # 3. Scheduler değerlendirme testi
+        from google_cloud_runner.tyf_live_scraper import evaluate_meets_schedule
+        should_run, reasons = evaluate_meets_schedule(bekleyen_data["yarislar"])
+        self.assertTrue(should_run)
+        self.assertTrue(any("Start listeleri" in r for r in reasons))
