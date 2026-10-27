@@ -262,7 +262,7 @@
                                     {% if r.puan and r.puan != '-' %}
                                         <span class="swim-badge swim-badge-neutral">{{ r.puan }} P</span>
                                     {% endif %}
-                                    {% if r.baraj %}
+                                    {% if r.baraj and r.baraj != '-' and r.baraj|upper != 'HAYIR' and r.baraj|upper != 'GEÇMEDİ' and r.baraj|upper != 'GECMEDI' and r.baraj|upper != 'YOK' %}
                                         <span class="swim-badge swim-badge-success">{{ r.baraj }}</span>
                                     {% endif %}
                                 </div>
@@ -364,7 +364,7 @@
                                     </td>
                                     <td class="swim-td text-center font-semibold text-xs">{{ r.puan|default:"-" }}</td>
                                     <td class="swim-td text-right">
-                                        {% if r.baraj %}
+                                        {% if r.baraj and r.baraj != '-' and r.baraj|upper != 'HAYIR' and r.baraj|upper != 'GEÇMEDİ' and r.baraj|upper != 'GECMEDI' and r.baraj|upper != 'YOK' %}
                                             <span class="swim-badge swim-badge-success">{{ r.baraj }}</span>
                                         {% else %}
                                             -

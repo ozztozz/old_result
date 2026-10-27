@@ -47,6 +47,162 @@
     </div>
 </div>
 
+<!-- Sporcu Değerlendirme & Başarı Karnesi (Athlete Evaluation & KPIs) -->
+<div class="swim-card p-4 sm:p-5 mb-4 sm:mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 sm:mb-4 swim-border-b">
+        <div>
+            <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+                <i class="bi bi-award-fill text-amber-500"></i> Sporcu Değerlendirme & Başarı Karnesi
+            </h2>
+            <p class="text-xs swim-text-muted mt-0.5">Kariyer FINA puanları, podyum/madalya oranları ve yarış zaman gelişimi değerlendirmesi</p>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs font-mono">
+            <span class="swim-badge swim-badge-neutral">
+                <i class="bi bi-calendar3 mr-1"></i>{{ degerlendirme.toplam_musabaka }} Müsabaka &bull; {{ degerlendirme.toplam_yaris }} Yarış
+            </span>
+        </div>
+    </div>
+
+    <!-- 4 KPI Değerlendirme Kartı -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4">
+        <!-- 1. Kariyer Zirvesi & FINA Skoru -->
+        <div class="swim-stat-box p-3 sm:p-4">
+            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
+                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Kariyer Zirvesi</span>
+                <i class="bi bi-stars text-amber-500 text-sm"></i>
+            </div>
+            <div class="swim-stat-val text-lg sm:text-2xl font-mono swim-text-primary">
+                {% if degerlendirme.best_race %}
+                    {{ degerlendirme.best_race.puan }} <span class="text-xs font-normal swim-text-muted">FINA</span>
+                {% else %}
+                    -
+                {% endif %}
+            </div>
+            <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5 truncate" title="{% if degerlendirme.best_race %}{{ degerlendirme.best_race.mesafe }}m {{ degerlendirme.best_race.stil }} &bull; {{ degerlendirme.best_race.derece }}{% endif %}">
+                {% if degerlendirme.best_race %}
+                    {{ degerlendirme.best_race.mesafe }}m {{ degerlendirme.best_race.stil }} ({{ degerlendirme.best_race.derece }})
+                {% else %}
+                    Puanlı yarış bulunamadı
+                {% endif %}
+            </div>
+            <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
+                <span>Ortalama FINA:</span>
+                <strong class="font-mono swim-text-main">{{ degerlendirme.ort_puan|default:"-" }} P</strong>
+            </div>
+        </div>
+
+        <!-- 2. Kürsü & Madalya Başarısı -->
+        <div class="swim-stat-box p-3 sm:p-4">
+            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
+                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Kürsü & Madalya</span>
+                <i class="bi bi-trophy-fill text-amber-500 text-sm"></i>
+            </div>
+            <div class="swim-stat-val text-base sm:text-xl font-mono text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                <span>🥇{{ degerlendirme.altin_sayisi }}</span>
+                <span class="swim-text-muted">🥈{{ degerlendirme.gumus_sayisi }}</span>
+                <span class="text-amber-700">🥉{{ degerlendirme.bronz_sayisi }}</span>
+            </div>
+            <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5">
+                Toplam <strong>{{ degerlendirme.toplam_kursu }}</strong> Kürsü (<span class="font-semibold swim-text-primary font-mono">%{{ degerlendirme.kursu_orani }}</span>)
+            </div>
+            <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
+                <span>Geçilen Baraj:</span>
+                <strong class="font-mono {% if degerlendirme.baraj_sayisi > 0 %}swim-text-success{% else %}swim-text-subtle{% endif %}">
+                    {% if degerlendirme.baraj_sayisi > 0 %}{{ degerlendirme.baraj_sayisi }} Baraj{% else %}-{% endif %}
+                </strong>
+            </div>
+        </div>
+
+        <!-- 3. Zaman Gelişimi & PB Oranı -->
+        <div class="swim-stat-box p-3 sm:p-4">
+            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
+                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Zaman Gelişimi</span>
+                <i class="bi bi-speedometer2 text-emerald-500 text-sm"></i>
+            </div>
+            {% if degerlendirme.has_giris_analizi %}
+                <div class="swim-stat-val text-lg sm:text-2xl font-mono text-emerald-600 dark:text-emerald-400">
+                    %{{ degerlendirme.gelisim_orani }} <span class="text-xs font-normal swim-text-muted">PB Oranı</span>
+                </div>
+                <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5">
+                    <span class="swim-text-success font-medium">{{ degerlendirme.gelistiren_count }}</span> düşürdü &bull; <span class="swim-text-danger font-medium">{{ degerlendirme.gerileyen_count }}</span> geriledi
+                </div>
+                <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
+                    <span>Ortalama Fark:</span>
+                    <strong class="font-mono {% if degerlendirme.ort_fark < 0 %}swim-text-success{% else %}swim-text-danger{% endif %}">
+                        {% if degerlendirme.ort_fark > 0 %}+{% endif %}{{ degerlendirme.ort_fark }}s
+                    </strong>
+                </div>
+            {% else %}
+                <div class="swim-stat-val text-lg sm:text-2xl font-mono swim-text-primary">
+                    {{ pbs|length }} <span class="text-xs font-normal swim-text-muted">Kayıtlı Branş</span>
+                </div>
+                <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5">
+                    Tüm branşlardaki PB'ler aşağıda
+                </div>
+                <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
+                    <span>En Güçlü Disiplin:</span>
+                    <strong class="swim-text-main font-semibold">{{ degerlendirme.en_guclu_stil }}</strong>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 4. Branş & Kariyer Uzmanlığı -->
+        <div class="swim-stat-box p-3 sm:p-4">
+            <div class="flex items-center justify-between text-xs swim-text-muted mb-1">
+                <span class="swim-stat-lbl text-[0.68rem] sm:text-xs">Uzmanlık & Disiplin</span>
+                <i class="bi bi-compass text-sky-500 text-sm"></i>
+            </div>
+            <div class="swim-stat-val text-base sm:text-xl font-bold swim-text-main truncate" title="{{ degerlendirme.en_guclu_stil }}">
+                {{ degerlendirme.en_guclu_stil }}
+            </div>
+            <div class="text-[0.68rem] sm:text-xs swim-text-subtle mt-0.5 truncate">
+                En Çok Yüzülen: <strong>{{ degerlendirme.en_cok_yuzulen_stil }}</strong>
+            </div>
+            <div class="mt-1.5 pt-1.5 swim-border-t text-[0.65rem] swim-text-muted flex justify-between">
+                <span>Kariyer Süresi:</span>
+                <strong class="font-mono swim-text-main">
+                    {% if degerlendirme.aktif_yil_sayisi > 0 %}{{ degerlendirme.aktif_yil_sayisi }} Yıl{% else %}-{% endif %}
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Branş & Stil Dağılım Kartları (Discipline Distribution) -->
+    {% if degerlendirme.stil_list %}
+    <div class="pt-3 border-t swim-border-t">
+        <div class="text-[0.72rem] font-semibold swim-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span><i class="bi bi-pie-chart-fill mr-1 swim-text-primary"></i> Branş & Stil Dağılımı ve Başarı Analizi</span>
+            <span class="text-[0.65rem] font-normal lowercase swim-text-subtle">Hızlı filtreleme için branşa tıklayın</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {% for st in degerlendirme.stil_list %}
+            <div class="p-2 sm:p-2.5 rounded-xl border swim-border bg-slate-500/5 hover:bg-slate-500/10 transition cursor-pointer"
+                 onclick="var sel = document.getElementById('filterKategoriSelect'); if(sel){ sel.value='{{ st.stil }}'; onFilterChange(); }">
+                <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="font-bold swim-text-main">{{ st.stil }}</span>
+                    <span class="swim-badge swim-badge-neutral text-[0.62rem] font-mono">%{{ st.yuzde }}</span>
+                </div>
+                <div class="flex items-center justify-between text-[0.68rem] font-mono swim-text-muted">
+                    <span>{{ st.count }} Yarış</span>
+                    {% if st.ort_puan > 0 %}
+                        <span class="font-semibold swim-text-primary">{{ st.ort_puan }} P</span>
+                    {% else %}
+                        <span>-</span>
+                    {% endif %}
+                </div>
+                {% if st.best_fina > 0 %}
+                <div class="text-[0.62rem] swim-text-subtle mt-1 pt-1 border-t swim-border-t truncate" title="En İyi: {{ st.best_fina }} FINA">
+                    En İyi: <strong class="swim-text-main font-mono">{{ st.best_fina }} P</strong>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
     <!-- Kulüp Transfer ve Temsil Tarihçesi -->
     <div class="lg:col-span-6">
@@ -243,6 +399,7 @@
                     <tr>
                         <th class="swim-th w-28">Tarih</th>
                         <th class="swim-th w-32">Derece</th>
+                        <th class="swim-th text-center w-28">Fark / Gelişim</th>
                         <th class="swim-th w-24">Puan</th>
                         <th class="swim-th text-center w-16">Sıra</th>
                         <th class="swim-th text-center w-28">Seri / Kulvar</th>
@@ -652,7 +809,7 @@
         }
 
         if (sonuclar.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="swim-td text-center py-8 swim-text-subtle"><i class="bi bi-inbox mr-1"></i>Bu branşta kayıtlı yarış sonucu bulunamadı.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="swim-td text-center py-8 swim-text-subtle"><i class="bi bi-inbox mr-1"></i>Bu branşta kayıtlı yarış sonucu bulunamadı.</td></tr>';
             return;
         }
 
@@ -670,9 +827,38 @@
                 ? '<span class="swim-badge swim-badge-warning text-[0.65rem] ml-1.5"><i class="bi bi-trophy-fill mr-0.5"></i>PB</span>' 
                 : '';
 
-            var barajHtml = (r.baraj === 'EVET' || r.baraj === 'BARAJ')
-                ? '<span class="swim-badge swim-badge-success text-[0.65rem]">EVET</span>'
+            var isPositiveBaraj = r.baraj && r.baraj !== '-' && !/^(hayır|hayir|geçmedi|gecmedi|yok)$/i.test(r.baraj.trim());
+            var barajHtml = isPositiveBaraj
+                ? '<span class="swim-badge swim-badge-success text-[0.65rem]">' + r.baraj + '</span>'
                 : '<span class="swim-text-subtle text-xs">-</span>';
+
+            // Fark / Gelişim Hesabı (Seed vs Finish)
+            var farkHtml = '<span class="swim-text-subtle text-xs">-</span>';
+            if (r.giris_derecesi && rSec && rSec > 0) {
+                var gRaw = String(r.giris_derecesi).trim();
+                if (gRaw && !/^(nt|nt\.|derece yok|-)$/i.test(gRaw)) {
+                    var gSec = null;
+                    var parts = gRaw.replace(',', '.').split(':');
+                    if (parts.length === 2) {
+                        var m = parseFloat(parts[0]);
+                        var s = parseFloat(parts[1]);
+                        if (!isNaN(m) && !isNaN(s)) gSec = (m * 60) + s;
+                    } else if (parts.length === 1) {
+                        var s = parseFloat(parts[0]);
+                        if (!isNaN(s)) gSec = s;
+                    }
+                    if (gSec && gSec > 0) {
+                        var diff = Math.round((rSec - gSec) * 100) / 100;
+                        if (diff < 0) {
+                            farkHtml = '<span class="swim-badge swim-badge-success text-[0.62rem] font-bold" title="Giriş: ' + gRaw + '"><i class="bi bi-caret-down-fill mr-0.5"></i>' + Math.abs(diff).toFixed(2) + 's</span>';
+                        } else if (diff > 0) {
+                            farkHtml = '<span class="swim-badge swim-badge-danger text-[0.62rem]" title="Giriş: ' + gRaw + '"><i class="bi bi-caret-up-fill mr-0.5"></i>+' + diff.toFixed(2) + 's</span>';
+                        } else {
+                            farkHtml = '<span class="swim-badge swim-badge-neutral text-[0.62rem]" title="Giriş: ' + gRaw + '">=</span>';
+                        }
+                    }
+                }
+            }
 
             var puanHtml = r.puan 
                 ? '<span class="font-semibold swim-text-primary font-mono text-xs">' + r.puan + ' P</span>'
@@ -692,6 +878,7 @@
                 '<td class="swim-td font-bold font-mono swim-text-primary whitespace-nowrap">' +
                     r.derece + pbBadgeHtml +
                 '</td>' +
+                '<td class="swim-td text-center whitespace-nowrap font-mono">' + farkHtml + '</td>' +
                 '<td class="swim-td whitespace-nowrap">' + puanHtml + '</td>' +
                 '<td class="swim-td text-center font-semibold whitespace-nowrap text-xs">#' + (r.sira || '-') + '</td>' +
                 '<td class="swim-td text-center text-xs swim-text-subtle whitespace-nowrap">' + seriKulvar + '</td>' +

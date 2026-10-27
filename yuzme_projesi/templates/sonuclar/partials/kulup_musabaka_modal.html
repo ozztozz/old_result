@@ -1,0 +1,451 @@
+{% load humanize %}
+
+<!-- Modal Header (Sabit Başlık) -->
+<div class="swim-modal-header flex items-center justify-between p-3.5 sm:p-5 border-b swim-border-b bg-slate-50 dark:bg-slate-800/70 rounded-t-2xl shrink-0">
+    <div class="min-w-0 pr-2">
+        <div class="flex items-center gap-1.5 mb-1">
+            <span class="swim-badge swim-badge-primary text-[0.68rem] sm:text-xs">
+                <i class="bi bi-shield-fill mr-1"></i>Takım Analizi
+            </span>
+            <span class="swim-badge swim-badge-neutral text-[0.65rem] sm:text-xs">
+                World Aquatics FINA
+            </span>
+        </div>
+        <h3 class="swim-title text-base sm:text-xl font-bold flex items-center gap-2 truncate" id="kulupAnalizModalLabel">
+            <span class="truncate">{{ kulup.kulup_adi }}</span>
+        </h3>
+        <div class="swim-text-muted mt-0.5 text-[0.7rem] sm:text-xs truncate flex items-center gap-1.5">
+            <span class="font-medium swim-text-main truncate"><i class="bi bi-calendar-event mr-1 text-sky-500"></i>{{ event.musabaka_adi }}</span>
+            {% if event.sehir %}<span>&bull; {{ event.sehir }}</span>{% endif %}
+        </div>
+    </div>
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <a href="{% url 'sonuclar:kulup_detay' kulup.id %}" 
+           class="swim-btn-outline-primary swim-btn-sm swim-btn-pill hidden sm:inline-flex text-xs" 
+           title="Kulüp Genel Sayfasına Git">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Kulüp Profili
+        </a>
+        <button type="button" class="swim-modal-close" data-swim-dismiss aria-label="Kapat">
+            <i class="bi bi-x-lg text-sm sm:text-base"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Modal Body (Kaydırılabilir İçerik Alanı - Mobilde Tam Sığar) -->
+<div class="swim-modal-body p-3 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
+    
+    <!-- 1. Takım KPI Özet Çubuğu (Mobilde 2x2, Masaüstünde 4'lü) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <!-- Toplam FINA -->
+        <div class="p-2.5 sm:p-3 rounded-xl border bg-sky-500/10 border-sky-500/25 flex flex-col justify-between">
+            <div class="text-[0.68rem] font-semibold swim-text-muted flex items-center justify-between">
+                <span>Toplam FINA</span>
+                <i class="bi bi-trophy-fill text-amber-500 text-xs sm:text-sm"></i>
+            </div>
+            <div class="text-base sm:text-xl font-mono font-bold text-sky-600 dark:text-sky-400 mt-0.5">
+                {{ toplam_puan|intcomma }}
+            </div>
+            <div class="text-[0.62rem] sm:text-[0.65rem] swim-text-muted">Kazanılan toplam puan</div>
+        </div>
+
+        <!-- Ortalama FINA -->
+        <div class="p-2.5 sm:p-3 rounded-xl border bg-emerald-500/10 border-emerald-500/25 flex flex-col justify-between">
+            <div class="text-[0.68rem] font-semibold swim-text-muted flex items-center justify-between">
+                <span>Ortalama FINA</span>
+                <i class="bi bi-speedometer2 text-emerald-500 text-xs sm:text-sm"></i>
+            </div>
+            <div class="text-base sm:text-xl font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {{ ort_puan }}
+            </div>
+            <div class="text-[0.62rem] sm:text-[0.65rem] swim-text-muted">Derece başına kalite</div>
+        </div>
+
+        <!-- Kadro & Katılım -->
+        <div class="p-2.5 sm:p-3 rounded-xl border bg-slate-500/10 border-slate-500/20 flex flex-col justify-between">
+            <div class="text-[0.68rem] font-semibold swim-text-muted flex items-center justify-between">
+                <span>Takım Kadrosu</span>
+                <i class="bi bi-people-fill text-sky-500 text-xs sm:text-sm"></i>
+            </div>
+            <div class="text-base sm:text-xl font-mono font-bold swim-text-main mt-0.5">
+                {{ toplam_sporcu }} <span class="text-xs font-normal swim-text-muted">Sporcu</span>
+            </div>
+            <div class="text-[0.62rem] sm:text-[0.65rem] swim-text-muted">{{ toplam_yaris }} yarışta start</div>
+        </div>
+
+        <!-- Madalya & Kürsü -->
+        <div class="p-2.5 sm:p-3 rounded-xl border bg-amber-500/10 border-amber-500/25 flex flex-col justify-between">
+            <div class="text-[0.68rem] font-semibold swim-text-muted flex items-center justify-between">
+                <span>Kürsü / Madalya</span>
+                <i class="bi bi-award-fill text-amber-500 text-xs sm:text-sm"></i>
+            </div>
+            <div class="text-sm sm:text-base font-mono font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                <span>🥇{{ altin_sayisi }}</span>
+                <span class="swim-text-muted">🥈{{ gumus_sayisi }}</span>
+                <span class="text-amber-700">🥉{{ bronz_sayisi }}</span>
+            </div>
+            <div class="text-[0.62rem] sm:text-[0.65rem] swim-text-muted">
+                {% if baraj_sayisi > 0 %}{{ baraj_sayisi }} baraj geçildi{% else %}İlk 3 derece{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Zaman Gelişimi & MVP Vurgusu -->
+    {% if has_gelisim or mvp_athlete %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        {% if has_gelisim %}
+        <div class="p-2.5 sm:p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="text-xs font-bold swim-text-main">Zaman Gelişimi</div>
+                    <div class="text-[0.68rem] swim-text-muted truncate">
+                        <strong>{{ gelistiren_count }}</strong> yarışta PB yapıldı
+                    </div>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="swim-badge swim-badge-success text-[0.68rem] sm:text-xs font-bold">%{{ gelisim_orani }} PB</span>
+                <div class="text-[0.62rem] font-mono swim-text-muted mt-0.5">Ort. {{ ort_fark }}s</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if mvp_athlete %}
+        <div class="p-2.5 sm:p-3 rounded-xl border bg-amber-500/5 border-amber-500/20 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                    🥇
+                </div>
+                <div class="min-w-0">
+                    <div class="text-xs font-bold swim-text-main">Takım Zirvesi (MVP)</div>
+                    <div class="text-[0.68rem] text-sky-600 dark:text-sky-400 font-semibold truncate">
+                        {{ mvp_athlete.sporcu.sporcu_adi }}
+                    </div>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="swim-badge swim-badge-primary font-mono text-[0.68rem] sm:text-xs font-bold">{{ mvp_athlete.max_puan }} P</span>
+                <div class="text-[0.62rem] swim-text-muted mt-0.5 truncate max-w-[120px]">{{ mvp_athlete.best_race }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 3. Sekmeler (Tabs): Sporcular vs Yarışlar -->
+    <div class="swim-tabs-pills">
+        <button type="button" class="swim-tab-pill swim-tab-pill-active text-xs sm:text-sm py-1.5 px-3" onclick="switchModalTab(this, 'modalTabSporcular')">
+            <i class="bi bi-people-fill mr-1 text-sky-500"></i>Sporcular ({{ athletes_list|length }})
+        </button>
+        <button type="button" class="swim-tab-pill text-xs sm:text-sm py-1.5 px-3" onclick="switchModalTab(this, 'modalTabYarislar')">
+            <i class="bi bi-list-check mr-1 text-emerald-500"></i>Yarışlar ({{ sonuclar|length }})
+        </button>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- Sekme 1: Sporcular Listesi (Masaüstü Tablo + Mobil Kart)  -->
+    <!-- ======================================================== -->
+    <div id="modalTabSporcular" class="modal-tab-content">
+        <!-- Masaüstü & Tablet Tablo -->
+        <div class="hidden sm:block swim-table-wrapper border swim-border rounded-xl overflow-hidden">
+            <table class="swim-table">
+                <thead class="swim-thead">
+                    <tr>
+                        <th class="swim-th w-10 text-center">#</th>
+                        <th class="swim-th">Sporcu</th>
+                        <th class="swim-th text-center w-16">Yarış</th>
+                        <th class="swim-th">En İyi Branş</th>
+                        <th class="swim-th text-right w-20">Zirve</th>
+                        <th class="swim-th text-right w-24">Toplam</th>
+                        <th class="swim-th text-center w-20">PB</th>
+                        <th class="swim-th text-center w-20">Kürsü</th>
+                    </tr>
+                </thead>
+                <tbody class="swim-tbody">
+                    {% for a in athletes_list %}
+                    <tr class="swim-tr hover:bg-slate-500/5">
+                        <td class="swim-td text-center text-xs font-bold swim-text-muted">
+                            {{ forloop.counter }}
+                        </td>
+                        <td class="swim-td">
+                            <button type="button"
+                                    hx-get="{% url 'sonuclar:musabaka_sporcu_modal' event.id a.sporcu.id %}"
+                                    hx-target="#sporcuModalContent"
+                                    data-swim-modal="#sporcuMusabakaModal"
+                                    class="font-semibold swim-text-main hover:swim-text-primary transition truncate block text-left max-w-[180px] cursor-pointer text-xs sm:text-sm"
+                                    title="Sporcunun Bu Müsabakadaki Yarışlarını Aç">
+                                {{ a.sporcu.sporcu_adi }}
+                            </button>
+                            {% if a.sporcu.dogum_yili %}
+                                <span class="text-[0.65rem] swim-text-subtle font-mono">{{ a.sporcu.dogum_yili }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-center text-xs font-mono">
+                            <span class="swim-badge swim-badge-neutral">{{ a.yaris_sayisi }}</span>
+                        </td>
+                        <td class="swim-td text-xs swim-text-muted truncate max-w-[150px]" title="{{ a.best_race }}">
+                            {{ a.best_race|default:'-' }}
+                        </td>
+                        <td class="swim-td text-right font-mono font-bold text-xs text-sky-600 dark:text-sky-400">
+                            {{ a.max_puan|default:'-' }}
+                        </td>
+                        <td class="swim-td text-right font-mono font-bold text-xs swim-text-main">
+                            {{ a.toplam_puan|intcomma }}
+                        </td>
+                        <td class="swim-td text-center text-xs">
+                            {% if a.gelistiren > 0 %}
+                                <span class="swim-badge swim-badge-success text-[0.65rem] font-bold">{{ a.gelistiren }} PB</span>
+                            {% else %}
+                                <span class="swim-text-subtle text-xs">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-center text-xs font-mono">
+                            {% if a.altin > 0 or a.gumus > 0 or a.bronz > 0 %}
+                                {% if a.altin > 0 %}<span class="text-amber-500 font-bold">🥇{{ a.altin }}</span>{% endif %}
+                                {% if a.gumus > 0 %}<span class="swim-text-muted font-bold">🥈{{ a.gumus }}</span>{% endif %}
+                                {% if a.bronz > 0 %}<span class="text-amber-700 font-bold">🥉{{ a.bronz }}</span>{% endif %}
+                            {% else %}
+                                <span class="swim-text-subtle">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobil Uyumlu Liste Kartları (Sıfır Yatay Kaydırma, Modala %100 Sığar) -->
+        <div class="sm:hidden border swim-border rounded-xl divide-y swim-divide overflow-hidden bg-slate-50/50 dark:bg-slate-800/20">
+            {% for a in athletes_list %}
+            <div class="p-3 hover:bg-slate-500/5 transition">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-[0.65rem] font-bold flex items-center justify-center shrink-0 swim-text-muted">
+                            {{ forloop.counter }}
+                        </span>
+                        <button type="button"
+                                hx-get="{% url 'sonuclar:musabaka_sporcu_modal' event.id a.sporcu.id %}"
+                                hx-target="#sporcuModalContent"
+                                data-swim-modal="#sporcuMusabakaModal"
+                                class="font-bold swim-text-main hover:swim-text-primary transition truncate text-xs text-left cursor-pointer"
+                                title="Sporcu Detayı">
+                            {{ a.sporcu.sporcu_adi }}
+                        </button>
+                        {% if a.sporcu.dogum_yili %}
+                            <span class="text-[0.65rem] swim-text-subtle shrink-0">({{ a.sporcu.dogum_yili }})</span>
+                        {% endif %}
+                    </div>
+                    <div class="font-mono font-bold text-xs text-sky-600 dark:text-sky-400 shrink-0">
+                        {{ a.toplam_puan|intcomma }} <span class="text-[0.6rem] font-normal swim-text-muted">Puan</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-[0.7rem] swim-text-muted mt-1.5">
+                    <span class="truncate pr-2">
+                        En İyi: <strong class="swim-text-main">{{ a.best_race|default:'-' }}</strong>
+                    </span>
+                    <span class="font-mono text-sky-600 dark:text-sky-400 font-bold shrink-0">
+                        Zirve: {{ a.max_puan|default:'-' }}
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between text-[0.68rem] swim-text-subtle mt-1.5 pt-1.5 border-t swim-border-t">
+                    <span>{{ a.yaris_sayisi }} yarışta yüzdü</span>
+                    <div class="flex items-center gap-1.5">
+                        {% if a.gelistiren > 0 %}
+                            <span class="swim-badge swim-badge-success text-[0.62rem] font-bold">{{ a.gelistiren }} PB</span>
+                        {% endif %}
+                        {% if a.altin > 0 %}<span class="text-amber-500 font-bold">🥇{{ a.altin }}</span>{% endif %}
+                        {% if a.gumus > 0 %}<span class="swim-text-muted font-bold">🥈{{ a.gumus }}</span>{% endif %}
+                        {% if a.bronz > 0 %}<span class="text-amber-700 font-bold">🥉{{ a.bronz }}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center swim-text-muted text-xs">Sporcu kaydı bulunamadı.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- Sekme 2: Yarış Dereceleri (Masaüstü Tablo + Mobil Kart)  -->
+    <!-- ======================================================== -->
+    <div id="modalTabYarislar" class="modal-tab-content hidden">
+        <!-- Masaüstü & Tablet Tablo -->
+        <div class="hidden sm:block swim-table-wrapper border swim-border rounded-xl overflow-hidden">
+            <table class="swim-table">
+                <thead class="swim-thead">
+                    <tr>
+                        <th class="swim-th w-12 text-center">Yarış</th>
+                        <th class="swim-th">Branş</th>
+                        <th class="swim-th">Sporcu</th>
+                        <th class="swim-th text-center w-20">Giriş</th>
+                        <th class="swim-th text-right w-20">Derece</th>
+                        <th class="swim-th text-center w-24">Fark</th>
+                        <th class="swim-th text-center w-16">FINA</th>
+                        <th class="swim-th text-center w-14">Sıra</th>
+                        <th class="swim-th text-center w-16">Baraj</th>
+                    </tr>
+                </thead>
+                <tbody class="swim-tbody">
+                    {% for r in sonuclar %}
+                    <tr class="swim-tr hover:bg-slate-500/5">
+                        <td class="swim-td text-center">
+                            <span class="swim-badge swim-badge-primary font-mono text-[0.68rem]">#{{ r.yaris_no }}</span>
+                        </td>
+                        <td class="swim-td text-xs font-semibold swim-text-main">
+                            <span class="swim-badge swim-badge-neutral text-[0.62rem] mr-1">{{ r.mesafe }}m</span>
+                            {{ r.stil }}
+                        </td>
+                        <td class="swim-td">
+                            <button type="button"
+                                    hx-get="{% url 'sonuclar:musabaka_sporcu_modal' event.id r.sporcu.id %}"
+                                    hx-target="#sporcuModalContent"
+                                    data-swim-modal="#sporcuMusabakaModal"
+                                    class="font-medium swim-text-main hover:swim-text-primary transition truncate block max-w-[150px] text-xs text-left cursor-pointer"
+                                    title="Sporcunun Yarışlarını Gör">
+                                {{ r.sporcu.sporcu_adi }}
+                            </button>
+                        </td>
+                        <td class="swim-td text-center text-xs font-mono swim-text-subtle">
+                            {{ r.giris_derecesi|default:'-' }}
+                        </td>
+                        <td class="swim-td text-right font-mono font-bold text-xs swim-text-main">
+                            {{ r.derece }}
+                        </td>
+                        <!-- Fark / Gelişim -->
+                        <td class="swim-td text-center">
+                            {% if r.fark_durum == 'gelisti' %}
+                                <span class="swim-badge swim-badge-success font-mono text-[0.65rem] font-bold">
+                                    <i class="bi bi-caret-down-fill mr-0.5"></i>{{ r.fark_saniye }}s
+                                </span>
+                            {% elif r.fark_durum == 'geriledi' %}
+                                <span class="swim-badge swim-badge-danger font-mono text-[0.65rem]">
+                                    <i class="bi bi-caret-up-fill mr-0.5"></i>+{{ r.fark_saniye }}s
+                                </span>
+                            {% elif r.fark_durum == 'ayni' %}
+                                <span class="swim-badge swim-badge-neutral font-mono text-[0.65rem]">0.00s</span>
+                            {% elif r.fark_durum == 'nt' %}
+                                <span class="swim-badge swim-badge-neutral text-[0.62rem]">NT</span>
+                            {% else %}
+                                <span class="swim-text-subtle text-xs">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-center font-mono font-bold text-xs text-sky-600 dark:text-sky-400">
+                            {{ r.puan|default:'-' }}
+                        </td>
+                        <td class="swim-td text-center text-xs font-semibold">
+                            {% if r.sira == '1' %}<span class="text-amber-500 font-bold">🥇1</span>
+                            {% elif r.sira == '2' %}<span class="swim-text-muted font-bold">🥈2</span>
+                            {% elif r.sira == '3' %}<span class="text-amber-700 font-bold">🥉3</span>
+                            {% else %}<span class="swim-text-subtle">{{ r.sira|default:'-' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-center">
+                            {% if r.baraj and r.baraj != '-' and r.baraj|upper != 'HAYIR' and r.baraj|upper != 'GEÇMEDİ' and r.baraj|upper != 'GECMEDI' and r.baraj|upper != 'YOK' %}
+                                <span class="swim-badge swim-badge-success text-[0.62rem]">{{ r.baraj }}</span>
+                            {% else %}
+                                <span class="swim-text-subtle text-xs">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobil Uyumlu Yarış Kartları (Modala %100 Sığar, Sıfır Taşma) -->
+        <div class="sm:hidden border swim-border rounded-xl divide-y swim-divide overflow-hidden bg-slate-50/50 dark:bg-slate-800/20">
+            {% for r in sonuclar %}
+            <div class="p-3 hover:bg-slate-500/5 transition">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="swim-badge swim-badge-primary font-mono text-[0.65rem] shrink-0">#{{ r.yaris_no }}</span>
+                        <strong class="swim-text-main text-xs truncate">{{ r.mesafe }}m {{ r.stil }}</strong>
+                    </div>
+                    <div class="font-mono font-bold text-sm swim-text-main shrink-0">
+                        {{ r.derece }}
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs mt-1">
+                    <button type="button"
+                            hx-get="{% url 'sonuclar:musabaka_sporcu_modal' event.id r.sporcu.id %}"
+                            hx-target="#sporcuModalContent"
+                            data-swim-modal="#sporcuMusabakaModal"
+                            class="font-medium text-sky-600 dark:text-sky-400 hover:underline truncate text-left cursor-pointer"
+                            title="Sporcunun Yarışları">
+                        {{ r.sporcu.sporcu_adi }}
+                    </button>
+                    <div class="flex items-center gap-1 shrink-0 font-mono text-[0.68rem]">
+                        {% if r.puan %}
+                            <span class="swim-badge swim-badge-primary text-[0.62rem] font-bold">{{ r.puan }} P</span>
+                        {% endif %}
+                        {% if r.sira == '1' %}<span class="text-amber-500 font-bold">🥇1</span>
+                        {% elif r.sira == '2' %}<span class="swim-text-muted font-bold">🥈2</span>
+                        {% elif r.sira == '3' %}<span class="text-amber-700 font-bold">🥉3</span>
+                        {% elif r.sira and r.sira != '-' %}<span class="swim-badge swim-badge-neutral text-[0.62rem]">{{ r.sira }}.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-[0.68rem] swim-text-subtle mt-1.5 pt-1.5 border-t swim-border-t">
+                    <span class="font-mono">
+                        {% if r.giris_derecesi %}Giriş: {{ r.giris_derecesi }}{% else %}Giriş: -{% endif %}
+                    </span>
+                    <div class="flex items-center gap-1">
+                        {% if r.fark_durum == 'gelisti' %}
+                            <span class="swim-badge swim-badge-success text-[0.62rem] font-bold"><i class="bi bi-caret-down-fill mr-0.5"></i>{{ r.fark_saniye }}s</span>
+                        {% elif r.fark_durum == 'geriledi' %}
+                            <span class="swim-badge swim-badge-danger text-[0.62rem]"><i class="bi bi-caret-up-fill mr-0.5"></i>+{{ r.fark_saniye }}s</span>
+                        {% elif r.fark_durum == 'nt' %}
+                            <span class="swim-badge swim-badge-neutral text-[0.6rem]">NT</span>
+                        {% endif %}
+                        {% if r.baraj and r.baraj != '-' and r.baraj|upper != 'HAYIR' and r.baraj|upper != 'GEÇMEDİ' and r.baraj|upper != 'GECMEDI' and r.baraj|upper != 'YOK' %}
+                            <span class="swim-badge swim-badge-success text-[0.62rem]">{{ r.baraj }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-6 text-center swim-text-muted text-xs">Yarış sonucu bulunamadı.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Footer (Sabit Altbilgi) -->
+<div class="swim-modal-footer flex items-center justify-between p-3 sm:p-4 border-t swim-border-t bg-slate-50 dark:bg-slate-800/70 rounded-b-2xl shrink-0">
+    <div class="text-[0.68rem] sm:text-xs swim-text-muted truncate pr-2">
+        Toplam <strong class="swim-text-main">{{ toplam_yaris }}</strong> yarış &bull; <strong class="swim-text-main">{{ toplam_sporcu }}</strong> sporcu
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+        <a href="{% url 'sonuclar:kulup_detay' kulup.id %}" class="swim-btn-primary swim-btn-sm swim-btn-pill text-xs">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Kulüp Profili
+        </a>
+        <button type="button" class="swim-btn-secondary swim-btn-sm swim-btn-pill text-xs" data-swim-dismiss>
+            Kapat
+        </button>
+    </div>
+</div>
+
+<script>
+function switchModalTab(btn, tabId) {
+    const parent = btn.closest('.swim-tabs-pills');
+    if (parent) {
+        parent.querySelectorAll('.swim-tab-pill').forEach(b => b.classList.remove('swim-tab-pill-active'));
+    }
+    btn.classList.add('swim-tab-pill-active');
+
+    const modalBody = btn.closest('.swim-modal-body');
+    if (modalBody) {
+        modalBody.querySelectorAll('.modal-tab-content').forEach(c => c.classList.add('hidden'));
+        const target = modalBody.querySelector('#' + tabId);
+        if (target) {
+            target.classList.remove('hidden');
+        }
+    }
+}
+</script>

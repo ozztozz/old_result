@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ event.musabaka_adi }} - FINA Puan & Yarış Analizi{% endblock %}
+
+{% block content %}
+<!-- 1. Kulüp Müsabaka Analizi Modal Dialog (HTMX ile Dinamik Yüklenir) -->
+<div id="kulupAnalizModal" class="swim-modal hidden" tabindex="-1" role="dialog" aria-labelledby="kulupAnalizModalLabel" aria-modal="true">
+    <div class="swim-modal-box max-w-4xl" id="kulupModalContent">
+        <div class="p-10 text-center swim-text-muted">
+            <div class="swim-spinner mb-3"></div>
+            <div class="text-sm font-semibold">Takım analizi yükleniyor...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Sporcu Müsabaka Yarışları Modal Dialog (Sonuçlar modalının üstünde açılır) -->
+<div id="sporcuMusabakaModal" class="swim-modal swim-modal-sub hidden" tabindex="-1" role="dialog" aria-labelledby="sporcuMusabakaModalLabel" aria-modal="true">
+    <div class="swim-modal-box" id="sporcuModalContent">
+        <div class="p-10 text-center swim-text-muted">
+            <div class="swim-spinner mb-3"></div>
+            <div class="text-sm font-semibold">Sporcu yarışları yükleniyor...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Başlık & Müsabaka Bilgi Kartı -->
+<div class="swim-card p-4 sm:p-6 mb-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="swim-badge swim-badge-primary">
+                    <i class="bi bi-graph-up-arrow me-1"></i> FINA Puan Analizi
+                </span>
+                <span class="swim-badge swim-badge-neutral text-xs">
+                    World Aquatics
+                </span>
+            </div>
+            <h1 class="swim-title">{{ event.musabaka_adi }}</h1>
+            <div class="flex flex-wrap items-center gap-3 swim-text-muted mt-1.5 text-xs sm:text-sm">
+                {% if event.sehir %}
+                    <span class="flex items-center gap-1"><i class="bi bi-geo-alt-fill swim-text-danger"></i>{{ event.sehir }}</span>
+                {% endif %}
+                {% if event.yaris_tarihi_baslangic %}
+                    <span class="flex items-center gap-1"><i class="bi bi-calendar3 swim-text-primary"></i>{{ event.yaris_tarihi_baslangic }}{% if event.yaris_tarihi_bitis %} - {{ event.yaris_tarihi_bitis }}{% endif %}</span>
+                {% elif event.yaris_tarihi_ham %}
+                    <span class="flex items-center gap-1"><i class="bi bi-calendar3 swim-text-primary"></i>{{ event.yaris_tarihi_ham }}</span>
+                {% endif %}
+                <span class="flex items-center gap-1"><i class="bi bi-flag-fill text-amber-500"></i>{{ yaris_programi|length }} Yarış</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+            <!-- Müsabaka Detayına Dönüş -->
+            <a href="{% url 'sonuclar:musabaka_detay' event.id %}" 
+               class="swim-btn-outline-primary swim-btn-sm swim-btn-pill" 
+               title="Yarış Programı & Canlı Takip">
+                <i class="bi bi-calendar-event me-1"></i> <span class="hidden sm:inline">Yarış Programı</span>
+            </a>
+            <a href="{% url 'sonuclar:musabaka_listesi' %}" 
+               class="swim-btn-secondary swim-btn-sm swim-btn-pill" 
+               title="Müsabakalar Listesi">
+                <i class="bi bi-arrow-left"></i> <span class="hidden sm:inline">Müsabakalar</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtre Kontrol Çubuğu (Yarış Seçimi & Cinsiyet) -->
+    <div class="mt-4 pt-4 swim-border-t">
+        <form id="analizFilterForm" 
+              hx-get="{% url 'sonuclar:musabaka_analiz' event.id %}" 
+              hx-target="#analizContent" 
+              hx-push-url="true"
+              hx-indicator="#analizIndicator"
+              class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            
+            <!-- Yarış Seçimi -->
+            <div class="flex-1">
+                <label for="yarisSelect" class="block text-xs font-semibold swim-text-muted mb-1">
+                    <i class="bi bi-funnel mr-1"></i> Yarış Bazlı İncele:
+                </label>
+                <select id="yarisSelect" 
+                        name="yaris_no" 
+                        class="swim-select w-full text-xs sm:text-sm py-2"
+                        hx-trigger="change">
+                    <option value="">🏆 Tüm Müsabaka (Genel Özet)</option>
+                    {% for y in yaris_programi %}
+                        <option value="{{ y.yaris_no }}" {% if secili_yaris_no == y.yaris_no %}selected{% endif %}>
+                            Yarış #{{ y.yaris_no }}: {{ y.mesafe }}m {{ y.stil }} ({{ y.cinsiyet }}{% if y.yas_grubu %}, {{ y.yas_grubu }}{% endif %}) - {{ y.toplam }} sporcu
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Cinsiyet Filtresi -->
+            <div class="sm:w-48">
+                <label for="cinsiyetSelect" class="block text-xs font-semibold swim-text-muted mb-1">
+                    <i class="bi bi-gender-ambiguous mr-1"></i> Cinsiyet:
+                </label>
+                <select id="cinsiyetSelect" 
+                        name="cinsiyet" 
+                        class="swim-select w-full text-xs sm:text-sm py-2"
+                        hx-trigger="change">
+                    <option value="" {% if not cinsiyet_filtre %}selected{% endif %}>Tümü (Erkek & Kadın)</option>
+                    <option value="E" {% if cinsiyet_filtre == 'E' %}selected{% endif %}>Sadece Erkekler</option>
+                    <option value="K" {% if cinsiyet_filtre == 'K' %}selected{% endif %}>Sadece Kadınlar</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- HTMX Yükleniyor Göstergesi -->
+<div id="analizIndicator" class="htmx-indicator my-4 text-center swim-text-muted">
+    <div class="swim-spinner mb-1"></div>
+    <div class="text-xs font-medium">Analiz hesaplanıyor...</div>
+</div>
+
+<!-- ======================================================== -->
+<!-- ANALİZ İÇERİĞİ (HTMX ile Yenilenir)                      -->
+<!-- ======================================================== -->
+<div id="analizContent">
+    {% include 'sonuclar/partials/musabaka_analiz_content.html' %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const kulupModalEl = document.getElementById('kulupAnalizModal');
+    if (kulupModalEl) {
+        kulupModalEl.addEventListener('hidden.bs.modal', function () {
+            const content = document.getElementById('kulupModalContent');
+            if (content) {
+                content.innerHTML = `
+                    <div class="p-10 text-center swim-text-muted">
+                        <div class="swim-spinner mb-3"></div>
+                        <div class="text-sm font-semibold">Takım analizi yükleniyor...</div>
+                    </div>`;
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}
+

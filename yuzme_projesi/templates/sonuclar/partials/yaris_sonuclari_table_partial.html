@@ -60,7 +60,7 @@
                         {{ r.musabaka_adi|default:"-" }}
                     </td>
                     <td class="swim-td text-center">
-                        {% if r.baraj %}
+                        {% if r.baraj and r.baraj != '-' and r.baraj|upper != 'HAYIR' and r.baraj|upper != 'GEÇMEDİ' and r.baraj|upper != 'GECMEDI' and r.baraj|upper != 'YOK' %}
                             <span class="swim-badge swim-badge-success text-[0.68rem]">{{ r.baraj }}</span>
                         {% else %}
                             -

@@ -312,6 +312,15 @@ class SporcuApiTests(TestCase):
         self.assertEqual(response.context['total_races'], 2)
         self.assertEqual(response.context['secilen_kategori'], 'Serbest')
         self.assertEqual(response.context['secilen_mesafe'], 50)
+        # Değerlendirme metrikleri kontrolü
+        self.assertIn('degerlendirme', response.context)
+        deg = response.context['degerlendirme']
+        self.assertEqual(deg['toplam_yaris'], 3)
+        self.assertGreater(deg['toplam_puan'], 0)
+        self.assertIn('best_race', deg)
+        self.assertIn('stil_list', deg)
+        self.assertContains(response, "Sporcu Değerlendirme & Başarı Karnesi")
+        self.assertContains(response, "Fark / Gelişim")
 
     def test_api_sporcu_sonuclari_post_json(self):
         url = reverse('sonuclar:api_sporcu_sonuclari_query')
@@ -793,3 +802,217 @@ class CanliYarisTests(TestCase):
         should_run, reasons = evaluate_meets_schedule(bekleyen_data["yarislar"])
         self.assertTrue(should_run)
         self.assertTrue(any("Start listeleri" in r for r in reasons))
+
+
+class MusabakaAnalizTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with connection.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musabaka_adi TEXT NOT NULL,
+                sehir TEXT,
+                yaris_tarihi_ham TEXT,
+                yaris_tarihi_baslangic TEXT,
+                yaris_tarihi_bitis TEXT,
+                kaynak_turu TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS kulupler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kulup_adi TEXT NOT NULL UNIQUE,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                okul_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcular (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_adi TEXT NOT NULL,
+                dogum_yili INTEGER,
+                yas_dogum_yili TEXT,
+                cinsiyet TEXT,
+                birincil_kulup_id INTEGER REFERENCES kulupler(id),
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS yaris_sonuclari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_dosya_id INTEGER,
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER REFERENCES kulupler(id),
+                sporcu_kulup_tarihce_id INTEGER,
+                kaynak_turu TEXT,
+                dosya_adi TEXT,
+                sayfa_no INTEGER,
+                satir_no INTEGER,
+                yaris_no TEXT,
+                cinsiyet TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                yas_grubu TEXT,
+                sporcu_yas TEXT,
+                hesaplanan_yas INTEGER,
+                sira TEXT,
+                derece TEXT,
+                derece_saniye REAL,
+                puan INTEGER,
+                baraj TEXT,
+                beraberlik_mi TEXT,
+                zaman_kontrolu TEXT,
+                uyari_notu TEXT,
+                ham_satir TEXT,
+                kulvar INTEGER,
+                seri TEXT,
+                giris_derecesi TEXT
+            );
+            """)
+
+    def setUp(self):
+        self.client = Client()
+        self.event = Event.objects.create(
+            musabaka_adi="Test Analiz Müsabakası",
+            sehir="İstanbul",
+            yaris_tarihi_baslangic="2026-05-10"
+        )
+        self.kulup1 = Kulup.objects.create(kulup_adi="Fenerbahçe")
+        self.kulup2 = Kulup.objects.create(kulup_adi="Galatasaray")
+        self.sporcu1 = Sporcu.objects.create(sporcu_adi="Ahmet Yılmaz", dogum_yili=2010, cinsiyet="Erkek", birincil_kulup=self.kulup1)
+        self.sporcu2 = Sporcu.objects.create(sporcu_adi="Ayşe Demir", dogum_yili=2011, cinsiyet="Kadın", birincil_kulup=self.kulup2)
+
+        # Yarış sonuçları
+        YarisSonucu.objects.create(
+            event=self.event,
+            sporcu=self.sporcu1,
+            kulup=self.kulup1,
+            yaris_no="1",
+            mesafe=50,
+            stil="Serbest",
+            cinsiyet="Erkek",
+            giris_derecesi="26.00",
+            derece="25.50",
+            derece_saniye=25.50,
+            sira="1",
+            puan=600,
+            baraj="EVET"
+        )
+        YarisSonucu.objects.create(
+            event=self.event,
+            sporcu=self.sporcu2,
+            kulup=self.kulup2,
+            yaris_no="2",
+            mesafe=100,
+            stil="Sırtüstü",
+            cinsiyet="Kadın",
+            giris_derecesi="1:04.00",
+            derece="1:05.20",
+            derece_saniye=65.20,
+            sira="1",
+            puan=550,
+            baraj="EVET"
+        )
+
+    def test_musabaka_analiz_genel(self):
+        """Müsabaka analiz sayfasının genel özet ile 200 dönmesi ve metriklerin doğrulanması."""
+        url = reverse('sonuclar:musabaka_analiz', args=[self.event.id])
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Test Analiz Müsabakası")
+        self.assertEqual(res.context['toplam_puan'], 1150)
+        self.assertEqual(res.context['toplam_derece'], 2)
+        self.assertEqual(res.context['toplam_sporcu'], 2)
+        self.assertEqual(res.context['toplam_kulup'], 2)
+        self.assertEqual(len(res.context['club_rankings']), 2)
+        # 1. kulüp Fenerbahçe olmalı (600 puan)
+        self.assertEqual(res.context['club_rankings'][0]['kulup__kulup_adi'], "Fenerbahçe")
+        # Giriş vs Çıkış Analizi
+        self.assertTrue(res.context['has_giris_analizi'])
+        self.assertEqual(res.context['toplam_karsilastirilan'], 2)
+        self.assertEqual(res.context['gelistiren_count'], 1)
+        self.assertEqual(res.context['gerileyen_count'], 1)
+        self.assertEqual(res.context['gelisim_orani'], 50.0)
+        self.assertEqual(len(res.context['en_cok_gelistirenler']), 1)
+        self.assertEqual(res.context['en_cok_gelistirenler'][0]['fark'], -0.5)
+
+    def test_musabaka_analiz_yaris_filtresi(self):
+        """Tekil yarış filtresinin (yaris_no=1) doğru çalışması ve kürsünün gelmesi."""
+        url = reverse('sonuclar:musabaka_analiz', args=[self.event.id])
+        res = self.client.get(url, {'yaris_no': '1'})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['secili_yaris_no'], '1')
+        self.assertEqual(res.context['toplam_puan'], 600)
+        self.assertEqual(len(res.context['yaris_podium']), 1)
+        self.assertEqual(res.context['yaris_podium'][0].sporcu.sporcu_adi, "Ahmet Yılmaz")
+
+    def test_musabaka_analiz_htmx_partial(self):
+        """HTMX isteğinde sadece partial içeriğin dönmesi."""
+        url = reverse('sonuclar:musabaka_analiz', args=[self.event.id])
+        res = self.client.get(url, HTTP_HX_REQUEST='true')
+        self.assertEqual(res.status_code, 200)
+        self.assertTemplateUsed(res, 'sonuclar/partials/musabaka_analiz_content.html')
+
+    def test_musabaka_kulup_modal(self):
+        """Takıma tıklandığında kulüp müsabaka analiz modalının başarıyla dönmesi."""
+        url = reverse('sonuclar:musabaka_kulup_modal', args=[self.event.id, self.kulup1.id])
+        res = self.client.get(url, HTTP_HX_REQUEST='true')
+        self.assertEqual(res.status_code, 200)
+        self.assertTemplateUsed(res, 'sonuclar/partials/kulup_musabaka_modal.html')
+        self.assertEqual(res.context['kulup'].kulup_adi, "Fenerbahçe")
+        self.assertEqual(res.context['toplam_yaris'], 1)
+        self.assertEqual(res.context['toplam_puan'], 600)
+        self.assertEqual(len(res.context['athletes_list']), 1)
+        self.assertEqual(res.context['athletes_list'][0]['sporcu'].sporcu_adi, "Ahmet Yılmaz")
+
+    def test_musabaka_sporcu_modal_ve_baraj_hayir_gosterilmez(self):
+        """Baraj değeri HAYIR olan yarışlarda HAYIR yazılmaması, boş / tire bırakılması kontrolü."""
+        # baraj='HAYIR' olan yeni bir yarış sonucu ekleyelim
+        YarisSonucu.objects.create(
+            event=self.event,
+            sporcu=self.sporcu1,
+            kulup=self.kulup1,
+            yaris_no="3",
+            mesafe=200,
+            stil="Serbest",
+            cinsiyet="Erkek",
+            derece="2:10.00",
+            derece_saniye=130.0,
+            sira="4",
+            puan=450,
+            baraj="HAYIR"
+        )
+        # Sporcu modalı
+        url = reverse('sonuclar:musabaka_sporcu_modal', args=[self.event.id, self.sporcu1.id])
+        res = self.client.get(url, HTTP_HX_REQUEST='true')
+        self.assertEqual(res.status_code, 200)
+        content = res.content.decode('utf-8')
+        self.assertNotIn('>HAYIR<', content)
+        self.assertNotIn('>Hayır<', content)
+
+        # Kulüp modalı
+        kulup_url = reverse('sonuclar:musabaka_kulup_modal', args=[self.event.id, self.kulup1.id])
+        res_kulup = self.client.get(kulup_url, HTTP_HX_REQUEST='true')
+        content_kulup = res_kulup.content.decode('utf-8')
+        self.assertNotIn('>HAYIR<', content_kulup)
+        self.assertNotIn('>Hayır<', content_kulup)
+
+        # Tekil yarış analiz tablosu
+        analiz_url = reverse('sonuclar:musabaka_analiz', args=[self.event.id])
+        res_analiz = self.client.get(analiz_url, {'yaris_no': '3'}, HTTP_HX_REQUEST='true')
+        content_analiz = res_analiz.content.decode('utf-8')
+        self.assertNotIn('>HAYIR<', content_analiz)
+        self.assertNotIn('>Hayır<', content_analiz)
+
