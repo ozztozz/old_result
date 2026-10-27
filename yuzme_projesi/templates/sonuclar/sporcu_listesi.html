@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Sporcular Listesi ({{ total_count|intcomma }}) - Yüzme Sonuçları{% endblock %}
+{% block title %}Sporcular Listesi - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
@@ -9,7 +9,13 @@
         <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
             <i class="bi bi-people swim-text-primary"></i> Lisanslı Yüzücüler
         </h1>
-        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> sporcu profili listeleniyor.</p>
+        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">
+            {% if has_query %}
+                Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> sporcu listeleniyor.
+            {% else %}
+                Sporcu profillerini görüntülemek için lütfen arama yapınız.
+            {% endif %}
+        </p>
     </div>
 </div>
 
@@ -53,7 +59,7 @@
             </select>
         </div>
         <div class="sm:col-span-1">
-            <button type="submit" class="swim-btn-primary w-full text-xs"><i class="bi bi-filter"></i></button>
+            <button type="submit" class="swim-btn-primary w-full text-xs"><i class="bi bi-search"></i></button>
         </div>
     </form>
 </div>

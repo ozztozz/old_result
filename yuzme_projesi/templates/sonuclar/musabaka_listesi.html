@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Müsabakalar ({{ total_count|intcomma }}) - Yüzme Sonuçları{% endblock %}
+{% block title %}Müsabakalar - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
@@ -9,7 +9,13 @@
         <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
             <i class="bi bi-calendar-event swim-text-primary"></i> Müsabakalar (Events)
         </h1>
-        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">Arşivde kayıtlı <strong class="swim-text-main">{{ total_count|intcomma }}</strong> resmî yüzme müsabakası.</p>
+        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">
+            {% if has_query %}
+                Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> müsabaka bulundu.
+            {% else %}
+                Müsabaka sonuçlarını görüntülemek için lütfen arama yapınız.
+            {% endif %}
+        </p>
     </div>
 </div>
 

@@ -172,11 +172,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 4. Canlı HTMX Otomatik Yenileme (Auto-Refresh)
+    // 4. Canlı HTMX Otomatik Yenileme (Auto-Refresh - 60 sn & Sekme Duyarlı)
     const refreshSwitch = document.getElementById("autoRefreshSwitch");
     const refreshLabel = document.getElementById("autoRefreshLabel");
     let htmxPollTimer = null;
-    let countdown = 30;
+    let countdown = 60;
 
     if (refreshSwitch && refreshLabel) {
         const savedState = localStorage.getItem("musabaka_auto_refresh");
@@ -197,13 +197,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         function startHtmxPoll() {
-            countdown = 30;
+            countdown = 60;
             refreshLabel.textContent = "Canlı: " + countdown + "s (HTMX)";
             clearInterval(htmxPollTimer);
             htmxPollTimer = setInterval(function () {
+                // Kullanıcı başka bir sekmedeyse CPU ve ağ tasarrufu için sayacı duraklat
+                if (document.hidden) {
+                    return;
+                }
                 countdown--;
                 if (countdown <= 0) {
-                    countdown = 30;
+                    countdown = 60;
                     // Sayfayı yeniden yüklemek yerine sadece HTMX ile hedef içeriği tetikle
                     const programTarget = document.getElementById("programContent");
                     if (programTarget) {

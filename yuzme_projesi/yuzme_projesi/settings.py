@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django.middleware.gzip.GZipMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -76,6 +77,18 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": DATABASE_DIR / "yuzme_veritabani.db",
+        "OPTIONS": {
+            "timeout": 20,
+        },
+    }
+}
+
+# PythonAnywhere In-Memory Cache (CPU & Disk Tasarrufu)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "swim-unique-cache",
+        "TIMEOUT": 600,  # 10 dakika varsayılan önbellek süresi
     }
 }
 

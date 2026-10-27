@@ -1,57 +1,60 @@
 {% load humanize %}
+{% if not has_query %}
+<div class="swim-card p-12 text-center my-4">
+    <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <i class="bi bi-people text-2xl"></i>
+    </div>
+    <h3 class="text-base font-semibold swim-text-main mb-1">Sporcu Araması Yapın</h3>
+    <p class="text-xs swim-text-muted max-w-md mx-auto">
+        Sporcuların profillerini, kulüp geçmişlerini ve derecelerini görüntülemek için lütfen yukarıdaki arama kutusuna sporcu adı veya kulüp yazınız.
+    </p>
+</div>
+{% else %}
 <div class="swim-card mb-6">
     <div class="swim-table-wrapper border-0 rounded-none">
         <table class="swim-table">
             <thead class="swim-thead">
                 <tr>
-                    <th class="swim-th w-20">#ID</th>
                     <th class="swim-th">Sporcu Adı Soyadı</th>
-                    <th class="swim-th text-center w-28">Doğum Yılı</th>
-                    <th class="swim-th w-28">Cinsiyet</th>
+                    <th class="swim-th text-center w-24">Doğum Yılı</th>
+                    <th class="swim-th w-24">Cinsiyet</th>
                     <th class="swim-th">Birincil Kulüp</th>
-                    <th class="swim-th text-center w-36">Kariyer Tarihi</th>
                     <th class="swim-th text-right w-28">Toplam Yarış</th>
-                    <th class="swim-th text-center w-20">İncele</th>
+                    <th class="swim-th text-center w-16">Detay</th>
                 </tr>
             </thead>
             <tbody>
                 {% for sp in page_obj %}
                 <tr class="swim-tr">
-                    <td class="swim-td text-xs swim-text-subtle font-mono">#{{ sp.id }}</td>
                     <td class="swim-td font-semibold">
                         <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="swim-text-main hover:swim-text-primary transition block">
                             {{ sp.sporcu_adi }}
                         </a>
                     </td>
                     <td class="swim-td text-center text-xs swim-text-muted font-mono">
-                        <span class="swim-badge swim-badge-neutral">{{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}</span>
+                        {{ sp.dogum_yili|default:sp.yas_dogum_yili|default:"-" }}
                     </td>
                     <td class="swim-td text-xs">
                         {% if sp.cinsiyet == 'ERKEK' %}
-                            <span class="swim-badge swim-badge-primary"><i class="bi bi-gender-male"></i> Erkek</span>
+                            <span class="swim-badge swim-badge-primary text-[0.7rem]"><i class="bi bi-gender-male"></i> Erkek</span>
                         {% elif sp.cinsiyet == 'KADIN' %}
-                            <span class="swim-badge swim-badge-danger"><i class="bi bi-gender-female"></i> Kadın</span>
+                            <span class="swim-badge swim-badge-danger text-[0.7rem]"><i class="bi bi-gender-female"></i> Kadın</span>
                         {% else %}
                             <span class="swim-text-subtle">-</span>
                         {% endif %}
                     </td>
-                    <td class="swim-td text-xs swim-text-muted truncate max-w-[180px]">
+                    <td class="swim-td text-xs swim-text-muted truncate max-w-[220px]">
                         {% if sp.birincil_kulup %}
                             <a href="{% url 'sonuclar:kulup_detay' sp.birincil_kulup.id %}" class="hover:swim-text-primary transition truncate block">
-                                <i class="bi bi-shield swim-text-subtle mr-1"></i>{{ sp.birincil_kulup.kulup_adi }}
+                                {{ sp.birincil_kulup.kulup_adi }}
                             </a>
                         {% else %}
-                            <span class="swim-text-subtle">Kulüpsüz / Belirtilmemiş</span>
+                            <span class="swim-text-subtle">-</span>
                         {% endif %}
                     </td>
-                    <td class="swim-td text-center text-xs swim-text-muted font-mono">
-                        {% if sp.ilk_yaris_tarihi %}
-                            {{ sp.ilk_yaris_tarihi|slice:":4" }} - {{ sp.son_yaris_tarihi|slice:":4" }}
-                        {% else %}
-                            -
-                        {% endif %}
+                    <td class="swim-td text-right font-bold font-mono text-xs swim-text-primary">
+                        {{ sp.toplam_yaris_sayisi|default:0 }}
                     </td>
-                    <td class="swim-td text-right font-bold font-mono swim-text-primary">{{ sp.toplam_yaris_sayisi }}</td>
                     <td class="swim-td text-center">
                         <a href="{% url 'sonuclar:sporcu_detay' sp.id %}" class="swim-btn-secondary swim-btn-sm p-1.5" title="Profili Görüntüle">
                             <i class="bi bi-chevron-right"></i>
@@ -60,7 +63,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="swim-td text-center py-10 swim-text-muted">
+                    <td colspan="6" class="swim-td text-center py-10 swim-text-muted">
                         <i class="bi bi-search text-3xl swim-text-subtle block mb-2"></i>
                         Aradığınız kriterlere uygun sporcu bulunamadı.
                     </td>
@@ -104,4 +107,4 @@
     </div>
     {% endif %}
 </div>
-
+{% endif %}

@@ -73,8 +73,8 @@
                         <div class="text-right shrink-0">
                             {% if t.aktif_kulup_mu %}
                                 <span class="swim-badge swim-badge-success text-[0.68rem]">AKTİF KULÜP</span>
-                            {% else %}
-                                <span class="swim-badge swim-badge-neutral text-[0.68rem]">{{ t.donem_sirasi }}. DÖNEM</span>
+                            {% elif t.kulup.okul_mu %}
+                                <span class="swim-badge swim-badge-info text-[0.68rem]">OKUL TAKIMI</span>
                             {% endif %}
                             <div class="text-xs swim-text-primary font-semibold font-mono mt-0.5">{{ t.toplam_yaris_sayisi }} Yarış</div>
                         </div>
@@ -117,7 +117,7 @@
                                 <div class="flex items-center gap-1.5">
                                     <span class="swim-badge swim-badge-primary">{{ pb.mesafe }}m</span>
                                     <span class="branch-text swim-text-main">{{ pb.stil }}</span>
-                                    <span class="swim-badge swim-badge-neutral text-[0.65rem] ml-auto">📈 Grafik</span>
+                                    <span class="swim-badge swim-badge-neutral text-[0.65rem] ml-auto pb-status-badge">📈 Grafik</span>
                                 </div>
                             </td>
                             <td class="swim-td text-center font-bold swim-text-primary font-mono text-sm">{{ pb.derece }}</td>
@@ -197,8 +197,8 @@
         <div class="sm:col-span-3">
             <label class="swim-label">Sıralama</label>
             <select id="filterSiralaSelect" class="swim-select text-xs" onchange="onFilterChange()">
-                <option value="tarih_asc" selected>Tarih (Kronolojik Gelişim)</option>
-                <option value="tarih_desc">Tarih (Yeniden Eskiye)</option>
+                <option value="tarih_desc" selected>Tarih (Yeniden Eskiye)</option>
+                <option value="tarih_asc">Tarih (Eskiden Yeniye)</option>
                 <option value="derece">Derece (En Hızlı Önce)</option>
             </select>
         </div>
@@ -271,18 +271,18 @@
     window.selectBranch = function(stil, mesafe, etkinlik, rowEl, isUserClick) {
         document.querySelectorAll('.pb-branch-row').forEach(function(r) {
             r.classList.remove('swim-row-active');
-            var icon = r.querySelector('.swim-badge.swim-badge-primary, .swim-badge:last-child');
+            var icon = r.querySelector('.pb-status-badge');
             if (icon) {
-                icon.className = "swim-badge swim-badge-neutral text-[0.65rem] ml-auto";
+                icon.className = "swim-badge swim-badge-neutral text-[0.65rem] ml-auto pb-status-badge";
                 icon.textContent = "📈 Grafik";
             }
         });
 
         if (rowEl) {
             rowEl.classList.add('swim-row-active');
-            var activeBadge = rowEl.querySelector('.swim-badge:last-child');
+            var activeBadge = rowEl.querySelector('.pb-status-badge');
             if (activeBadge) {
-                activeBadge.className = "swim-badge swim-badge-primary text-[0.65rem] ml-auto";
+                activeBadge.className = "swim-badge swim-badge-primary text-[0.65rem] ml-auto pb-status-badge";
                 activeBadge.textContent = "✓ Seçili";
             }
             if (isUserClick) {
@@ -329,7 +329,7 @@
 
     function fetchAndRenderBranch(stil, mesafe, etkinlik) {
         var siralaSel = document.getElementById('filterSiralaSelect');
-        var sirala = siralaSel ? siralaSel.value : 'tarih_asc';
+        var sirala = siralaSel ? siralaSel.value : 'tarih_desc';
 
         var titleEl = document.getElementById('branchSectionTitle');
         var subEl = document.getElementById('branchSectionSubtitle');

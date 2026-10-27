@@ -132,6 +132,8 @@ def register_sqlite_tr_functions(sender=None, connection=None, **kwargs):
             cur.execute("PRAGMA journal_mode=WAL;")
             cur.execute("PRAGMA synchronous=NORMAL;")
             cur.execute("PRAGMA cache_size=-64000;")
+            cur.execute("PRAGMA temp_store=MEMORY;")
+            cur.execute("PRAGMA mmap_size=268435456;")
         except Exception:
             pass
 

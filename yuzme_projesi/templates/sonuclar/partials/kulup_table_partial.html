@@ -1,36 +1,41 @@
 {% load humanize %}
+{% if not has_query %}
+<div class="swim-card p-12 text-center my-4">
+    <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <i class="bi bi-shield text-2xl"></i>
+    </div>
+    <h3 class="text-base font-semibold swim-text-main mb-1">Kulüp Araması Yapın</h3>
+    <p class="text-xs swim-text-muted max-w-md mx-auto">
+        Kulüp veya okul takımlarını incelemek için lütfen yukarıdaki alana kulüp adı yazınız.
+    </p>
+</div>
+{% else %}
 <div class="swim-card mb-6">
     <div class="swim-table-wrapper border-0 rounded-none">
         <table class="swim-table">
             <thead class="swim-thead">
                 <tr>
-                    <th class="swim-th w-20">#ID</th>
-                    <th class="swim-th">Kulüp Adı</th>
+                    <th class="swim-th">Kulüp / Takım Adı</th>
                     <th class="swim-th text-center w-36">Sporcu Sayısı</th>
-                    <th class="swim-th text-center w-40">Faaliyet Yılları</th>
                     <th class="swim-th text-right w-36">Toplam Yarış</th>
-                    <th class="swim-th text-center w-28">İncele</th>
+                    <th class="swim-th text-center w-24">İncele</th>
                 </tr>
             </thead>
             <tbody>
                 {% for kl in page_obj %}
                 <tr class="swim-tr">
-                    <td class="swim-td text-xs swim-text-subtle font-mono">#{{ kl.id }}</td>
                     <td class="swim-td font-semibold">
                         <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="swim-text-main hover:swim-text-primary transition flex items-center gap-2">
                             <i class="bi bi-shield-shaded swim-text-primary"></i>{{ kl.kulup_adi }}
                         </a>
                     </td>
-                    <td class="swim-td text-center">
+                    <td class="swim-td text-center text-xs">
                         <span class="swim-badge swim-badge-info">
-                            {{ kl.toplam_sporcu_sayisi|intcomma }} sporcu
+                            {{ kl.toplam_sporcu_sayisi|default:0|intcomma }} sporcu
                         </span>
                     </td>
-                    <td class="swim-td text-center text-xs swim-text-muted font-mono">
-                        {{ kl.ilk_yaris_tarihi|slice:":4"|default:"-" }} - {{ kl.son_yaris_tarihi|slice:":4"|default:"-" }}
-                    </td>
-                    <td class="swim-td text-right font-bold font-mono swim-text-success">
-                        {{ kl.toplam_yaris_sayisi|intcomma }}
+                    <td class="swim-td text-right font-bold font-mono text-xs swim-text-success">
+                        {{ kl.toplam_yaris_sayisi|default:0|intcomma }}
                     </td>
                     <td class="swim-td text-center">
                         <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="swim-btn-outline-primary swim-btn-sm swim-btn-pill">
@@ -40,8 +45,9 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="swim-td text-center py-10 swim-text-muted">
-                        Kayıtlı kulüp bulunamadı.
+                    <td colspan="4" class="swim-td text-center py-10 swim-text-muted">
+                        <i class="bi bi-search text-3xl swim-text-subtle block mb-2"></i>
+                        Aradığınız kulüp bulunamadı.
                     </td>
                 </tr>
                 {% endfor %}
@@ -83,4 +89,4 @@
     </div>
     {% endif %}
 </div>
-
+{% endif %}

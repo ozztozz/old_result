@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Yarış Sonuçları Arama & Filtreleme ({{ total_count|intcomma }}) - Yüzme Sonuçları{% endblock %}
+{% block title %}Yarış Sonuçları Arama & Filtreleme - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
@@ -9,7 +9,13 @@
         <h1 class="text-xl sm:text-2xl font-bold swim-text-main tracking-tight flex items-center gap-2">
             <i class="bi bi-trophy swim-text-primary"></i> Bireysel Yarış Sonuçları
         </h1>
-        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> sonuç kriterlerinize uyuyor.</p>
+        <p class="text-xs sm:text-sm swim-text-muted mt-0.5">
+            {% if has_filter %}
+                Toplam <strong class="swim-text-main">{{ total_count|intcomma }}</strong> sonuç bulundu.
+            {% else %}
+                Sonuçları görüntülemek için arama veya filtre kriteri giriniz.
+            {% endif %}
+        </p>
     </div>
 </div>
 

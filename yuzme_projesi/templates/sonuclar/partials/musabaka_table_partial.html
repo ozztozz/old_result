@@ -1,15 +1,26 @@
 {% load humanize %}
+{% if not has_query %}
+<div class="swim-card p-12 text-center my-4">
+    <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <i class="bi bi-calendar-event text-2xl"></i>
+    </div>
+    <h3 class="text-base font-semibold swim-text-main mb-1">Müsabaka Araması Yapın</h3>
+    <p class="text-xs swim-text-muted max-w-md mx-auto">
+        Müsabakaları listelemek ve detaylarını görüntülemek için lütfen yukarıdaki alandan müsabaka adı, şehir veya yıl seçiniz.
+    </p>
+</div>
+{% else %}
 <div class="swim-card mb-6">
     <div class="swim-table-wrapper border-0 rounded-none">
         <table class="swim-table">
             <thead class="swim-thead">
                 <tr>
-                    <th class="swim-th w-32">Tarih</th>
+                    <th class="swim-th w-28">Tarih</th>
                     <th class="swim-th">Müsabaka Adı</th>
-                    <th class="swim-th w-32">Şehir</th>
-                    <th class="swim-th text-center w-32">Yarış Sonucu</th>
-                    <th class="swim-th text-center w-32">Katılan Sporcu</th>
-                    <th class="swim-th text-right w-28">Detay</th>
+                    <th class="swim-th w-28">Şehir</th>
+                    <th class="swim-th text-center w-28">Yarış Sonucu</th>
+                    <th class="swim-th text-center w-28">Katılan Sporcu</th>
+                    <th class="swim-th text-right w-24">Detay</th>
                 </tr>
             </thead>
             <tbody>
@@ -19,24 +30,21 @@
                         {{ ev.yaris_tarihi_baslangic|default:ev.yaris_tarihi_ham|default:"-" }}
                     </td>
                     <td class="swim-td font-semibold">
-                        <a href="{% url 'sonuclar:musabaka_detay' ev.id %}" class="swim-text-main hover:swim-text-primary transition block">
+                        <a href="{% url 'sonuclar:musabaka_detay' ev.id %}" class="swim-text-main hover:swim-text-primary transition block truncate max-w-[420px]" title="{{ ev.musabaka_adi }}">
                             {{ ev.musabaka_adi }}
                         </a>
-                        {% if ev.kaynak_turu %}
-                            <span class="swim-badge swim-badge-neutral text-[0.68rem] mt-1">{{ ev.kaynak_turu }}</span>
-                        {% endif %}
                     </td>
-                    <td class="swim-td text-xs swim-text-muted">
+                    <td class="swim-td text-xs swim-text-muted whitespace-nowrap">
                         <i class="bi bi-geo-alt swim-text-danger mr-1"></i>{{ ev.sehir|default:"-" }}
                     </td>
-                    <td class="swim-td text-center">
-                        <span class="swim-badge swim-badge-primary">
-                            {{ ev.toplam_yaris_sayisi|intcomma }} sonuç
+                    <td class="swim-td text-center text-xs">
+                        <span class="swim-badge swim-badge-primary text-[0.7rem]">
+                            {{ ev.toplam_yaris_sayisi|default:0|intcomma }} sonuç
                         </span>
                     </td>
-                    <td class="swim-td text-center">
-                        <span class="swim-badge swim-badge-success">
-                            {{ ev.toplam_sporcu_sayisi|intcomma }} sporcu
+                    <td class="swim-td text-center text-xs">
+                        <span class="swim-badge swim-badge-success text-[0.7rem]">
+                            {{ ev.toplam_sporcu_sayisi|default:0|intcomma }} sporcu
                         </span>
                     </td>
                     <td class="swim-td text-right">
@@ -91,4 +99,4 @@
     </div>
     {% endif %}
 </div>
-
+{% endif %}
