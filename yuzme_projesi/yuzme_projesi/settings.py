@@ -29,6 +29,8 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = [
     "https://*.sslip.io",
+    "https://*.duckdns.org",
+    "https://yuzme.duckdns.org",
     "http://130.61.177.72",
     "https://130.61.177.72",
 ]
