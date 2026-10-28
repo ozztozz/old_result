@@ -27,6 +27,11 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-$vh4iepyft^#^0
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.sslip.io",
+    "http://130.61.177.72",
+    "https://130.61.177.72",
+]
 
 # Application definition
 INSTALLED_APPS = [
