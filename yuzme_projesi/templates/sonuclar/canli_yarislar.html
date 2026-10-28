@@ -151,6 +151,9 @@
                                         <i class="bi bi-play-fill"></i> Tara
                                     </button>
                                 </form>
+                                <button type="button" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" onclick="openLogModal({{ yaris.id }})" title="Canlı İlerleme ve Sunucu Logu">
+                                    <i class="bi bi-terminal"></i>
+                                </button>
                                 {% if yaris.event %}
                                 <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" title="Müsabaka Sonuçları Sayfasına Git">
                                     <i class="bi bi-table"></i>
@@ -191,11 +194,145 @@
             </div>
         </div>
     </div>
+    <!-- Canlı Log ve İlerleme Modalı -->
+    <div id="liveLogModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm">
+        <div class="swim-card w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-gray-700 overflow-hidden">
+            <!-- Modal Başlık -->
+            <div class="p-4 border-b border-gray-700/60 flex justify-between items-center bg-gray-800/80">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-terminal-fill text-primary"></i>
+                    <h3 class="font-bold text-sm sm:text-base swim-text-main" id="modalMeetTitle">Yarış İlerleme Detayı</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2.5" onclick="refreshCurrentModal()" title="Yenile">
+                        <i class="bi bi-arrow-clockwise"></i> Yenile
+                    </button>
+                    <button type="button" class="text-gray-400 hover:text-white text-lg px-2" onclick="closeLogModal()">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Gövdesi -->
+            <div class="p-4 overflow-y-auto flex-1 space-y-4">
+                <!-- Durum İpuçları -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div class="p-2.5 rounded bg-gray-800/50 border border-gray-700/50">
+                        <div class="swim-text-subtle text-[0.7rem]">Durum</div>
+                        <div class="font-bold font-mono" id="modalStatus">-</div>
+                    </div>
+                    <div class="p-2.5 rounded bg-gray-800/50 border border-gray-700/50">
+                        <div class="swim-text-subtle text-[0.7rem]">Kayıtlı Sporcu</div>
+                        <div class="font-bold font-mono" id="modalTotalAthletes">-</div>
+                    </div>
+                    <div class="p-2.5 rounded bg-gray-800/50 border border-gray-700/50">
+                        <div class="swim-text-subtle text-[0.7rem]">Start Listeleri</div>
+                        <div class="font-bold font-mono" id="modalStarts">-</div>
+                    </div>
+                    <div class="p-2.5 rounded bg-gray-800/50 border border-gray-700/50">
+                        <div class="swim-text-subtle text-[0.7rem]">Sonuç Listeleri</div>
+                        <div class="font-bold font-mono" id="modalResults">-</div>
+                    </div>
+                </div>
+
+                <!-- Taranan Dosyalar -->
+                <div>
+                    <h4 class="text-xs font-bold swim-text-main mb-2 flex items-center gap-1.5">
+                        <i class="bi bi-files text-primary"></i> İşlenen PDF Dosyaları
+                    </h4>
+                    <div class="max-h-48 overflow-y-auto border border-gray-700/60 rounded text-xs">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-800 text-[0.7rem] uppercase swim-text-muted sticky top-0">
+                                <tr>
+                                    <th class="p-2">Dosya</th>
+                                    <th class="p-2">Tür</th>
+                                    <th class="p-2">Durum</th>
+                                    <th class="p-2 text-right">Kayıt</th>
+                                    <th class="p-2 text-right">İşlem Tarihi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalFilesTbody" class="divide-y divide-gray-800 font-mono">
+                                <tr>
+                                    <td colspan="5" class="p-3 text-center swim-text-muted">Dosya listesi yükleniyor...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sunucu Canlı Log Konsolu -->
+                <div>
+                    <h4 class="text-xs font-bold swim-text-main mb-2 flex items-center gap-1.5">
+                        <i class="bi bi-journal-code text-primary"></i> Sunucu Canlı Tarama Logu (Son 40 Satır)
+                    </h4>
+                    <pre id="modalLogOutput" class="bg-gray-950 text-green-400 p-3 rounded font-mono text-[0.72rem] leading-tight overflow-x-auto max-h-56 border border-gray-800 selection:bg-green-800 selection:text-white">Log yükleniyor...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+let currentModalMeetId = null;
+
+function openLogModal(id) {
+    currentModalMeetId = id;
+    document.getElementById("liveLogModal").classList.remove("hidden");
+    refreshCurrentModal();
+}
+
+function closeLogModal() {
+    document.getElementById("liveLogModal").classList.add("hidden");
+    currentModalMeetId = null;
+}
+
+function refreshCurrentModal() {
+    if (!currentModalMeetId) return;
+    const url = "/api/canli/" + currentModalMeetId + "/detay/";
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("modalMeetTitle").textContent = data.musabaka_adi || ("Yarış #" + data.id);
+            document.getElementById("modalStatus").textContent = data.durum || "-";
+            document.getElementById("modalTotalAthletes").textContent = (data.eklenen_kayit_sayisi || 0) + " sporcu";
+            document.getElementById("modalStarts").textContent = (data.islenen_start_listesi || 0) + " / " + (data.toplam_start_listesi || 0);
+            document.getElementById("modalResults").textContent = (data.islenen_sonuc_listesi || 0) + " / " + (data.toplam_sonuc_listesi || 0);
+
+            // Dosya tablosu
+            const tbody = document.getElementById("modalFilesTbody");
+            if (!data.dosyalar || data.dosyalar.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-3 text-center swim-text-muted">Henüz işlenmiş dosya kaydı yok.</td></tr>';
+            } else {
+                tbody.innerHTML = data.dosyalar.map(d => {
+                    const badgeClass = d.durum === 'ISLENDI' ? 'text-green-400' : (d.durum === 'HATA' ? 'text-red-400' : 'text-yellow-400');
+                    return `
+                        <tr class="hover:bg-gray-800/40">
+                            <td class="p-2 font-semibold swim-text-main">${d.dosya_adi}</td>
+                            <td class="p-2 text-[0.68rem] swim-text-subtle">${d.dosya_turu}</td>
+                            <td class="p-2 font-bold ${badgeClass}">${d.durum}</td>
+                            <td class="p-2 text-right">${d.kayit_sayisi}</td>
+                            <td class="p-2 text-right text-[0.68rem] swim-text-subtle">${d.son_islem_tarihi}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Log konsolu
+            const logBox = document.getElementById("modalLogOutput");
+            if (data.loglar && data.loglar.length > 0) {
+                logBox.textContent = data.loglar.join("\n");
+                logBox.scrollTop = logBox.scrollHeight;
+            } else {
+                logBox.textContent = "Henüz log kaydı bulunmuyor.";
+            }
+        })
+        .catch(err => {
+            console.error("Modal veri alma hatası:", err);
+        });
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     function getRunningCount() {
         return document.querySelectorAll("tr[data-durum='ISLENIYOR'], tr[data-durum='BEKLIYOR']").length;

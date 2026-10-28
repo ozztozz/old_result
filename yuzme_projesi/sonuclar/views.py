@@ -969,6 +969,54 @@ def api_canli_yarislar_durum(request):
     return JsonResponse({"yarislar": list(yarislar)})
 
 
+def api_canli_yaris_detay(request, pk):
+    """
+    Belirli bir canlı yarışın taranan dosyalarını ve son sunucu loglarını döner.
+    Web modalında ilerleme ve log takibi için kullanılır.
+    """
+    from pathlib import Path
+    yaris = get_object_or_404(CanliYaris, pk=pk)
+    q_filter = Q(canli_yaris=yaris)
+    if yaris.event_id:
+        q_filter |= Q(event_id=yaris.event_id)
+
+    dosyalar_qs = CanliYarisDosya.objects.filter(q_filter).order_by("-son_islem_tarihi", "dosya_adi")[:100]
+    dosyalar = []
+    for d in dosyalar_qs:
+        dosyalar.append({
+            "dosya_adi": d.dosya_adi,
+            "dosya_turu": d.dosya_turu,
+            "durum": d.durum,
+            "kayit_sayisi": d.kayit_sayisi,
+            "hata_mesaji": d.hata_mesaji or "",
+            "son_islem_tarihi": d.son_islem_tarihi.strftime("%d.%m.%Y %H:%M") if d.son_islem_tarihi else "-",
+        })
+
+    log_lines = []
+    log_path = Path("/home/ubuntu/app/live_runner.log")
+    if log_path.exists():
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                all_lines = f.readlines()
+                log_lines = [l.strip() for l in all_lines[-40:] if l.strip()]
+        except Exception:
+            pass
+
+    return JsonResponse({
+        "id": yaris.id,
+        "musabaka_adi": yaris.musabaka_adi or yaris.canli_url,
+        "durum": yaris.durum,
+        "eklenen_kayit_sayisi": yaris.eklenen_kayit_sayisi,
+        "islenen_start_listesi": yaris.islenen_start_listesi,
+        "toplam_start_listesi": yaris.toplam_start_listesi,
+        "islenen_sonuc_listesi": yaris.islenen_sonuc_listesi,
+        "toplam_sonuc_listesi": yaris.toplam_sonuc_listesi,
+        "hata_mesaji": yaris.hata_mesaji or "",
+        "dosyalar": dosyalar,
+        "loglar": log_lines,
+    })
+
+
 def musabaka_listesi(request):
     """Müsabakalar (Events) listesi ve arama sayfası (İsteğe bağlı arama - On-demand)."""
     q = request.GET.get('q', '').strip()

@@ -1,0 +1,11 @@
+/home/ubuntu/app/live_runner.log
+/home/ubuntu/backups/backup.log {
+    su ubuntu ubuntu
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
