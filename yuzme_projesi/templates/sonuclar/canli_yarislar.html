@@ -147,8 +147,7 @@
                             <div class="flex items-center justify-end gap-1.5">
                                 <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}" class="inline">
                                     {% csrf_token %}
-                                    <input type="hidden" name="mod" value="start_listesi">
-                                    <button type="submit" class="swim-btn-primary swim-btn-sm text-xs py-1 px-2.5" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %} title="Start Listelerini Tara">
+                                    <button type="submit" class="swim-btn-primary swim-btn-sm text-xs py-1 px-2.5" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %} title="Canlı Yarışı Tara / Güncelle">
                                         <i class="bi bi-play-fill"></i> Tara
                                     </button>
                                 </form>

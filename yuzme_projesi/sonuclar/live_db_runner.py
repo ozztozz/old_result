@@ -21,8 +21,18 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from sonuclar.models import CanliYaris, CanliYarisDosya, Event, YarisSonucu
-from sonuclar.views import _process_single_race_payload
+from sonuclar.models import (
+    CanliYaris,
+    CanliYarisDosya,
+    Event,
+    YarisSonucu,
+    Kulup,
+    Sporcu,
+    SporcuKulupTarihce,
+    is_school_team,
+)
+from sonuclar.athlete_matcher import match_athlete
+from sonuclar.turkish_names import standardize_turkish_athlete_name, tr_fold
 
 from google import genai
 from google_cloud_runner.main import (
@@ -225,6 +235,528 @@ def update_meet_status_db(yaris: CanliYaris, data: Dict[str, Any]) -> None:
 
     yaris.son_islem_tarihi = timezone.now()
     yaris.save()
+
+
+def is_school_meet(meet_name: str) -> bool:
+    """Yarış/müsabaka adının Okul Sporları müsabakası olup olmadığını belirler."""
+    if not meet_name:
+        return False
+    ml = meet_name.lower()
+    return bool(re.search(r'(?:okul\s*spor|okulspor|okullar|meb)', ml))
+
+
+def _time_to_seconds(time_str):
+    if not time_str:
+        return None
+    s = str(time_str).strip()
+    try:
+        if ':' in s:
+            parts = s.split(':')
+            if len(parts) == 2:
+                return round(float(parts[0]) * 60 + float(parts[1]), 2)
+            elif len(parts) == 3:
+                return round(float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2]), 2)
+        return round(float(s), 2)
+    except Exception:
+        return None
+
+
+def _process_single_race_payload(payload: dict) -> dict:
+    """Tek bir yarışın (start listesi veya sonuç listesi) kayıtlarını doğrudan veritabanına aktarır."""
+    tur = payload.get('tur', 'sonuc_listesi')
+    musabaka_adi = (payload.get('musabaka_adi') or '').strip()
+    sehir = (payload.get('sehir') or '').strip()
+    yaris_tarihi = (payload.get('yaris_tarihi') or payload.get('tarih') or '').strip()
+    yaris_tarihi_baslangic = (payload.get('yaris_tarihi_baslangic') or yaris_tarihi).strip()
+    yaris_no = str(payload.get('yaris_no') or '').strip()
+    cinsiyet = (payload.get('cinsiyet') or '').strip()
+    mesafe = payload.get('mesafe')
+    if mesafe:
+        try:
+            mesafe = int(mesafe)
+        except Exception:
+            pass
+    stil = (payload.get('stil') or '').strip()
+    yas_grubu = (payload.get('yas_grubu') or '').strip()
+    dosya_adi = (payload.get('dosya_adi') or '').strip()
+    kayitlar = payload.get('kayitlar', [])
+    is_okul_musabakasi = bool(payload.get('okul_musabakasi')) or is_school_meet(musabaka_adi)
+
+    stats = {
+        'eklenen_sonuc': 0,
+        'guncellenen_sonuc': 0,
+        'mukerrer_atlanilan': 0,
+        'eslesen_sporcu': 0,
+        'yeni_sporcu': 0,
+        'yeni_kulup': 0
+    }
+
+    canli_yaris_id = payload.get('canli_yaris_id')
+    canli_yaris_obj = None
+    if canli_yaris_id and str(canli_yaris_id).isdigit():
+        canli_yaris_obj = CanliYaris.objects.filter(id=int(canli_yaris_id)).first()
+
+    event = None
+    if canli_yaris_obj and canli_yaris_obj.event:
+        event = canli_yaris_obj.event
+    elif musabaka_adi:
+        event, _ = Event.objects.get_or_create(
+            musabaka_adi=musabaka_adi,
+            yaris_tarihi_baslangic=yaris_tarihi_baslangic or '',
+            defaults={
+                'sehir': sehir,
+                'yaris_tarihi_ham': yaris_tarihi,
+                'yaris_tarihi_bitis': payload.get('yaris_tarihi_bitis') or '',
+                'kaynak_turu': "CANLI_SONUC" if tur == 'sonuc_listesi' else "CANLI_START_LISTESI"
+            }
+        )
+        if canli_yaris_obj and not canli_yaris_obj.event:
+            canli_yaris_obj.event = event
+            canli_yaris_obj.save(update_fields=['event'])
+
+    if canli_yaris_obj:
+        dirty_canli = []
+        if sehir and not canli_yaris_obj.sehir:
+            canli_yaris_obj.sehir = sehir
+            dirty_canli.append('sehir')
+        if (yaris_tarihi or yaris_tarihi_baslangic) and not canli_yaris_obj.tarih:
+            canli_yaris_obj.tarih = yaris_tarihi_baslangic or yaris_tarihi
+            dirty_canli.append('tarih')
+        if musabaka_adi and not canli_yaris_obj.musabaka_adi:
+            canli_yaris_obj.musabaka_adi = musabaka_adi
+            dirty_canli.append('musabaka_adi')
+        if dirty_canli:
+            canli_yaris_obj.save(update_fields=dirty_canli)
+
+    if event:
+        dirty_event = []
+        if sehir and not event.sehir:
+            event.sehir = sehir
+            dirty_event.append('sehir')
+        if yaris_tarihi_baslangic and not event.yaris_tarihi_baslangic:
+            event.yaris_tarihi_baslangic = yaris_tarihi_baslangic
+            event.yaris_tarihi_ham = yaris_tarihi
+            dirty_event.extend(['yaris_tarihi_baslangic', 'yaris_tarihi_ham'])
+        if dirty_event:
+            event.save(update_fields=dirty_event)
+
+    dosya_obj = None
+    if dosya_adi and event:
+        dosya_turu = "SONUC_LISTESI" if tur == 'sonuc_listesi' else "START_LISTESI"
+        dosya_obj, _ = CanliYarisDosya.objects.get_or_create(
+            event=event,
+            dosya_adi=dosya_adi,
+            defaults={
+                'canli_yaris': canli_yaris_obj,
+                'dosya_url': payload.get('dosya_url') or payload.get('pdf_url'),
+                'dosya_turu': dosya_turu,
+                'yaris_no': yaris_no,
+                'mesafe': mesafe,
+                'stil': stil,
+                'cinsiyet': cinsiyet,
+                'yas_grubu': yas_grubu,
+                'etag': payload.get('etag'),
+                'last_modified': payload.get('last_modified'),
+                'content_hash': payload.get('content_hash'),
+                'dosya_boyutu': payload.get('dosya_boyutu'),
+                'durum': 'ISLENDI',
+                'son_kontrol_tarihi': timezone.now(),
+                'son_islem_tarihi': timezone.now()
+            }
+        )
+        if not _:
+            if payload.get('etag'): dosya_obj.etag = payload.get('etag')
+            if payload.get('last_modified'): dosya_obj.last_modified = payload.get('last_modified')
+            if payload.get('content_hash'): dosya_obj.content_hash = payload.get('content_hash')
+            if payload.get('dosya_boyutu'): dosya_obj.dosya_boyutu = payload.get('dosya_boyutu')
+            dosya_obj.durum = 'ISLENDI'
+            dosya_obj.son_islem_tarihi = timezone.now()
+            dosya_obj.son_kontrol_tarihi = timezone.now()
+            dosya_obj.save()
+
+    existing_races_map = {}
+    if musabaka_adi and mesafe and stil:
+        q_init = YarisSonucu.objects.filter(mesafe=mesafe, stil=stil)
+        if event:
+            q_init = q_init.filter(event=event)
+        else:
+            q_init = q_init.filter(event__musabaka_adi=musabaka_adi)
+        if yaris_no:
+            q_init = q_init.filter(yaris_no=yaris_no)
+        for r in q_init.select_related('sporcu', 'kulup'):
+            existing_races_map[r.sporcu_id] = r
+
+    tum_kayitlar = list(kayitlar)
+    for y_item in payload.get('yeni_sporcular', []):
+        tum_kayitlar.append(y_item)
+
+    if not tum_kayitlar:
+        raise ValueError(f"{dosya_adi or 'Dosya'} içinde geçerli sporcu/kulvar kaydı bulunamadı (0 kayıt).")
+
+    unique_clubs = set()
+    unique_names = set()
+    for it in tum_kayitlar:
+        c_name = (it.get('kulup') or it.get('club') or it.get('kulup_adi') or 'Ferdi').strip()
+        if c_name:
+            unique_clubs.add(c_name)
+        s_name = (it.get('sporcu') or it.get('name') or it.get('sporcu_adi') or '').strip()
+        if s_name:
+            unique_names.add(s_name)
+            s_std = standardize_turkish_athlete_name(s_name)
+            if s_std:
+                unique_names.add(s_std)
+
+    club_cache = {}
+    for k in Kulup.objects.filter(kulup_adi__in=unique_clubs):
+        club_cache[k.kulup_adi.lower()] = k
+
+    for c_name in unique_clubs:
+        c_low = c_name.lower()
+        if c_low not in club_cache:
+            k_obj, k_created = Kulup.objects.get_or_create(kulup_adi=c_name)
+            if k_created:
+                stats['yeni_kulup'] += 1
+                if c_low != 'ferdi':
+                    if is_okul_musabakasi or is_school_meet(musabaka_adi) or is_school_team(c_name):
+                        k_obj.okul_mu = 1
+                        k_obj.save(update_fields=['okul_mu'])
+            club_cache[c_low] = k_obj
+
+    sporcu_exact_cache = {}
+    for sp in Sporcu.objects.filter(sporcu_adi__in=unique_names).select_related('birincil_kulup'):
+        sporcu_exact_cache.setdefault(tr_fold(sp.sporcu_adi), []).append(sp)
+
+    races_to_create = []
+    races_to_update = []
+    sporcular_to_update = set()
+    kulupler_to_update = set()
+    tarihceler_to_save = set()
+
+    for item in tum_kayitlar:
+        derece_val = item.get('derece') or item.get('time')
+        sira_val = str(item.get('sira') or item.get('rank') or '').strip()
+        puan_val = item.get('puan') or item.get('points')
+        if puan_val:
+            try:
+                puan_val = int(puan_val)
+            except Exception:
+                puan_val = None
+        baraj_val = str(item.get('baraj') or payload.get('baraj_derecesi') or '').strip()
+
+        race_id = item.get('id')
+        if race_id:
+            try:
+                target_race = YarisSonucu.objects.select_related('sporcu').get(id=race_id)
+                derece_sn = _time_to_seconds(derece_val)
+                target_race.derece = derece_val or target_race.derece
+                target_race.derece_saniye = derece_sn
+                target_race.sira = sira_val
+                target_race.puan = puan_val
+                if baraj_val:
+                    target_race.baraj = baraj_val
+                target_race.kaynak_turu = "CANLI_SONUC"
+                if dosya_adi:
+                    target_race.dosya_adi = dosya_adi
+                if dosya_obj:
+                    target_race.canli_dosya = dosya_obj
+                races_to_update.append(target_race)
+                stats['guncellenen_sonuc'] += 1
+                continue
+            except YarisSonucu.DoesNotExist:
+                pass
+
+        raw_sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
+        sporcu_adi = standardize_turkish_athlete_name(raw_sporcu_adi) or raw_sporcu_adi
+        kulup_adi = (item.get('kulup') or item.get('club') or item.get('kulup_adi') or 'Ferdi').strip()
+        yb = item.get('dogum_yili') or item.get('yb') or item.get('yas') or item.get('birth_year')
+
+        dogum_yili = None
+        if yb:
+            try:
+                yb_int = int(str(yb).strip())
+                if yb_int < 100:
+                    dogum_yili = 2000 + yb_int if yb_int <= 35 else 1900 + yb_int
+                else:
+                    dogum_yili = yb_int
+            except Exception:
+                pass
+
+        if not sporcu_adi:
+            continue
+
+        seri_val = item.get('seri') or item.get('heat')
+        kulvar_val = item.get('kulvar') or item.get('lane')
+        if kulvar_val is not None:
+            try:
+                kulvar_val = int(kulvar_val)
+            except Exception:
+                kulvar_val = None
+
+        giris_derecesi_val = item.get('giris_derecesi') or item.get('seed_time')
+        derece_sn = _time_to_seconds(derece_val)
+
+        kulup = club_cache.get(kulup_adi.lower())
+        if not kulup:
+            kulup, _ = Kulup.objects.get_or_create(kulup_adi=kulup_adi)
+            club_cache[kulup_adi.lower()] = kulup
+
+        sporcu = None
+        cands = sporcu_exact_cache.get(tr_fold(sporcu_adi))
+        if cands:
+            for cand in cands:
+                if dogum_yili and cand.dogum_yili == dogum_yili:
+                    if not cinsiyet or not cand.cinsiyet or cand.cinsiyet.upper().startswith(cinsiyet[0].upper()):
+                        sporcu = cand
+                        stats['eslesen_sporcu'] += 1
+                        break
+            if not sporcu and kulup_adi:
+                norm_target_club = kulup_adi.lower().strip()
+                for cand in cands:
+                    if not cinsiyet or not cand.cinsiyet or cand.cinsiyet.upper().startswith(cinsiyet[0].upper()):
+                        if not dogum_yili or not cand.dogum_yili or abs(cand.dogum_yili - dogum_yili) <= 1:
+                            cand_clubs = [cand.birincil_kulup.kulup_adi.lower()] if cand.birincil_kulup else []
+                            cand_clubs.extend([h.kulup.kulup_adi.lower() for h in cand.kulup_tarihcesi.all()])
+                            if any(norm_target_club in c or c in norm_target_club for c in cand_clubs):
+                                sporcu = cand
+                                stats['eslesen_sporcu'] += 1
+                                break
+            if not sporcu and len(cands) == 1 and not dogum_yili:
+                sporcu = cands[0]
+                stats['eslesen_sporcu'] += 1
+
+        if not sporcu:
+            match_res = match_athlete(
+                name=sporcu_adi,
+                birth_year_or_date=dogum_yili,
+                club=kulup_adi,
+                gender=cinsiyet
+            )
+            if match_res.get('durum') == 'basarili':
+                found_id = match_res.get('bulunan_id')
+                if not found_id and match_res.get('muhtemel_eslesmeler'):
+                    top_cand = match_res['muhtemel_eslesmeler'][0]
+                    cand_score = top_cand.get('benzerlik_orani', 0)
+                    cand_gender = (top_cand.get('cinsiyet') or '').upper()
+                    in_gender = (cinsiyet or '').upper()
+                    gender_ok = not in_gender or not cand_gender or in_gender.startswith(cand_gender[0]) or cand_gender.startswith(in_gender[0])
+
+                    if gender_ok:
+                        if cand_score >= 95.0:
+                            found_id = top_cand.get('id')
+                        elif cand_score >= 90.0 and kulup_adi:
+                            cand_club = (top_cand.get('kulup') or '').lower()
+                            if kulup_adi.lower() in cand_club or cand_club in kulup_adi.lower():
+                                found_id = top_cand.get('id')
+
+                if found_id:
+                    try:
+                        sporcu = Sporcu.objects.get(id=found_id)
+                        stats['eslesen_sporcu'] += 1
+                        sporcu_exact_cache.setdefault(tr_fold(sporcu_adi), []).append(sporcu)
+                    except Sporcu.DoesNotExist:
+                        sporcu = None
+
+        if not sporcu:
+            sporcu = Sporcu.objects.create(
+                sporcu_adi=sporcu_adi,
+                dogum_yili=dogum_yili,
+                yas_dogum_yili=str(dogum_yili) if dogum_yili else "",
+                cinsiyet=cinsiyet or item.get('cinsiyet') or "",
+                birincil_kulup=kulup if kulup.okul_mu == 0 else None,
+                toplam_yaris_sayisi=0
+            )
+            sporcu_exact_cache.setdefault(tr_fold(sporcu_adi), []).append(sporcu)
+            stats['yeni_sporcu'] += 1
+        else:
+            sp_updates = []
+            if dogum_yili and not sporcu.dogum_yili:
+                sporcu.dogum_yili = dogum_yili
+                sporcu.yas_dogum_yili = str(dogum_yili)
+                sp_updates.extend(['dogum_yili', 'yas_dogum_yili'])
+            if (cinsiyet or item.get('cinsiyet')) and not sporcu.cinsiyet:
+                sporcu.cinsiyet = cinsiyet or item.get('cinsiyet')
+                sp_updates.append('cinsiyet')
+            if kulup.okul_mu == 0 and (sporcu.birincil_kulup is None or sporcu.birincil_kulup.okul_mu == 1):
+                sporcu.birincil_kulup = kulup
+                sp_updates.append('birincil_kulup')
+            if sp_updates:
+                sporcu.save(update_fields=sp_updates)
+
+        tarihce, _ = SporcuKulupTarihce.objects.get_or_create(
+            sporcu=sporcu,
+            kulup=kulup,
+            defaults={'donem_sirasi': sporcu.kulup_tarihcesi.count() + 1}
+        )
+        if yaris_tarihi_baslangic:
+            if not tarihce.ilk_yaris_tarihi or yaris_tarihi_baslangic < tarihce.ilk_yaris_tarihi:
+                tarihce.ilk_yaris_tarihi = yaris_tarihi_baslangic
+            if not tarihce.son_yaris_tarihi or yaris_tarihi_baslangic > tarihce.son_yaris_tarihi:
+                tarihce.son_yaris_tarihi = yaris_tarihi_baslangic
+
+        if kulup.okul_mu == 0:
+            SporcuKulupTarihce.objects.filter(sporcu=sporcu).exclude(id=tarihce.id).update(aktif_kulup_mu=0)
+            tarihce.aktif_kulup_mu = 1
+        else:
+            has_real_club = sporcu.kulup_tarihcesi.filter(kulup__okul_mu=0).exists()
+            tarihce.aktif_kulup_mu = 0 if has_real_club else 1
+        tarihce.save()
+
+        existing_race = existing_races_map.get(sporcu.id)
+        if not existing_race:
+            cand_qs = YarisSonucu.objects.filter(sporcu=sporcu, mesafe=mesafe, stil=stil)
+            if event:
+                cand_meet = cand_qs.filter(event=event)
+            elif musabaka_adi:
+                cand_meet = cand_qs.filter(event__musabaka_adi=musabaka_adi)
+            else:
+                cand_meet = None
+
+            if cand_meet:
+                if yaris_no:
+                    cand_y_no = cand_meet.filter(yaris_no=yaris_no)
+                    if cand_y_no.exists():
+                        existing_race = cand_y_no.first()
+                if not existing_race and not yaris_no and cand_meet.exists():
+                    existing_race = cand_meet.first()
+
+            if not existing_race and not event and yaris_tarihi_baslangic:
+                cand_date = cand_qs.filter(event__yaris_tarihi_baslangic=yaris_tarihi_baslangic)
+                if yaris_no:
+                    cand_d_no = cand_date.filter(yaris_no=yaris_no)
+                    if cand_d_no.exists():
+                        existing_race = cand_d_no.first()
+                if not existing_race and not yaris_no and cand_date.exists():
+                    existing_race = cand_date.first()
+
+            if existing_race:
+                existing_races_map[sporcu.id] = existing_race
+
+        if existing_race:
+            if tur == 'sonuc_listesi':
+                if existing_race.derece == "Bekleniyor":
+                    existing_race.sira = sira_val
+                    existing_race.derece = derece_val
+                    existing_race.derece_saniye = derece_sn
+                    existing_race.puan = puan_val
+                    existing_race.kaynak_turu = "CANLI_SONUC"
+                    if baraj_val:
+                        existing_race.baraj = baraj_val
+                    if seri_val:
+                        existing_race.seri = str(seri_val)
+                    if kulvar_val is not None:
+                        existing_race.kulvar = kulvar_val
+                    if giris_derecesi_val:
+                        existing_race.giris_derecesi = str(giris_derecesi_val)
+                    if kulup:
+                        existing_race.kulup = kulup
+                    if dosya_obj:
+                        existing_race.canli_dosya = dosya_obj
+                    if dosya_adi:
+                        existing_race.dosya_adi = dosya_adi
+                    races_to_update.append(existing_race)
+                    stats['guncellenen_sonuc'] += 1
+                else:
+                    is_identical = (
+                        (existing_race.derece or '') == (derece_val or '') and
+                        (existing_race.sira or '') == (sira_val or '') and
+                        (existing_race.puan or None) == puan_val
+                    )
+                    if is_identical:
+                        stats['mukerrer_atlanilan'] += 1
+                    else:
+                        existing_race.derece = derece_val
+                        existing_race.derece_saniye = derece_sn
+                        existing_race.sira = sira_val
+                        existing_race.puan = puan_val
+                        if baraj_val:
+                            existing_race.baraj = baraj_val
+                        if dosya_obj:
+                            existing_race.canli_dosya = dosya_obj
+                        if dosya_adi:
+                            existing_race.dosya_adi = dosya_adi
+                        races_to_update.append(existing_race)
+                        stats['guncellenen_sonuc'] += 1
+            else:
+                if existing_race.derece != "Bekleniyor":
+                    stats['mukerrer_atlanilan'] += 1
+                else:
+                    if (existing_race.seri or '') == str(seri_val or '') and existing_race.kulvar == kulvar_val:
+                        stats['mukerrer_atlanilan'] += 1
+                    else:
+                        if seri_val:
+                            existing_race.seri = str(seri_val)
+                        if kulvar_val is not None:
+                            existing_race.kulvar = kulvar_val
+                        if giris_derecesi_val:
+                            existing_race.giris_derecesi = str(giris_derecesi_val)
+                        if baraj_val and not existing_race.baraj:
+                            existing_race.baraj = baraj_val
+                        if dosya_obj:
+                            existing_race.canli_dosya = dosya_obj
+                        races_to_update.append(existing_race)
+                        stats['guncellenen_sonuc'] += 1
+        else:
+            yeni_derece = derece_val if tur == 'sonuc_listesi' else "Bekleniyor"
+            yeni_yaris = YarisSonucu(
+                event=event,
+                sporcu=sporcu,
+                kulup=kulup,
+                sporcu_kulup_tarihce=tarihce,
+                canli_dosya=dosya_obj,
+                kaynak_turu="CANLI_SONUC" if tur == 'sonuc_listesi' else "CANLI_START_LISTESI",
+                dosya_adi=dosya_adi,
+                yaris_no=yaris_no,
+                cinsiyet=cinsiyet or sporcu.cinsiyet,
+                mesafe=mesafe,
+                stil=stil,
+                yas_grubu=item.get('yas_grubu') or yas_grubu,
+                sira=sira_val if tur == 'sonuc_listesi' else "",
+                seri=str(seri_val) if seri_val else None,
+                kulvar=kulvar_val,
+                giris_derecesi=str(giris_derecesi_val) if giris_derecesi_val else None,
+                derece=yeni_derece,
+                derece_saniye=derece_sn if tur == 'sonuc_listesi' else None,
+                puan=puan_val if tur == 'sonuc_listesi' else None,
+                baraj=baraj_val
+            )
+            races_to_create.append(yeni_yaris)
+            existing_races_map[sporcu.id] = yeni_yaris
+            stats['eklenen_sonuc'] += 1
+
+            sporcu.toplam_yaris_sayisi = (sporcu.toplam_yaris_sayisi or 0) + 1
+            if yaris_tarihi_baslangic:
+                if not sporcu.ilk_yaris_tarihi or yaris_tarihi_baslangic < sporcu.ilk_yaris_tarihi:
+                    sporcu.ilk_yaris_tarihi = yaris_tarihi_baslangic
+                if not sporcu.son_yaris_tarihi or yaris_tarihi_baslangic > sporcu.son_yaris_tarihi:
+                    sporcu.son_yaris_tarihi = yaris_tarihi_baslangic
+            sporcular_to_update.add(sporcu)
+
+            tarihce.toplam_yaris_sayisi = (tarihce.toplam_yaris_sayisi or 0) + 1
+            tarihceler_to_save.add(tarihce)
+
+            kulup.toplam_yaris_sayisi = (kulup.toplam_yaris_sayisi or 0) + 1
+            kulupler_to_update.add(kulup)
+
+    if races_to_create:
+        YarisSonucu.objects.bulk_create(races_to_create, batch_size=500)
+    if races_to_update:
+        YarisSonucu.objects.bulk_update(
+            races_to_update,
+            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu'],
+            batch_size=500
+        )
+    if sporcular_to_update:
+        Sporcu.objects.bulk_update(list(sporcular_to_update), ['toplam_yaris_sayisi', 'ilk_yaris_tarihi', 'son_yaris_tarihi'], batch_size=500)
+    if kulupler_to_update:
+        Kulup.objects.bulk_update(list(kulupler_to_update), ['toplam_yaris_sayisi'], batch_size=500)
+    for t in tarihceler_to_save:
+        t.save()
+
+    if dosya_obj:
+        dosya_obj.kayit_sayisi = len(tum_kayitlar)
+        dosya_obj.save(update_fields=['kayit_sayisi'])
+
+    return stats
 
 
 def process_single_meet_db(

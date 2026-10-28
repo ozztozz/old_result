@@ -24,18 +24,8 @@ urlpatterns = [
     path('api/sporcular/<int:sporcu_id>/<str:kategori>/<int:mesafe>/', views.api_sporcu_sonuclari, name='api_sporcu_kategori_mesafe_sonuclari_short'),
     path('api/sporcular/<int:sporcu_id>/', views.api_sporcu_sonuclari, name='api_sporcu_detay_api'),
     path('api/sporcu-sonuclari/', views.api_sporcu_sonuclari, name='api_sporcu_sonuclari_query'),
-    path('api/canli-aktar/', views.api_canli_aktar, name='api_canli_aktar'),
-    path('api/yaris-aktar/', views.api_canli_aktar, name='api_yaris_aktar'),
-    path('api/yaris-kaydet/', views.api_canli_aktar, name='api_yaris_kaydet'),
     path('canli/', views.canli_yaris_listesi, name='canli_yaris_listesi'),
     path('canli/<int:pk>/tara/', views.canli_yaris_tara, name='canli_yaris_tara'),
     path('canli/<int:pk>/sil/', views.canli_yaris_sil, name='canli_yaris_sil'),
-    path('api/canli-durum-guncelle/', views.api_canli_durum_guncelle, name='api_canli_durum_guncelle'),
     path('api/canli-yarislar-durum/', views.api_canli_yarislar_durum, name='api_canli_yarislar_durum'),
-    path('api/canli-startlist-sporculari/', views.api_canli_startlist_sporculari, name='api_canli_startlist_sporculari'),
-    path('api/canli-dosya-kontrol/', views.api_canli_dosya_kontrol, name='api_canli_dosya_kontrol'),
-    path('api/canli-bekleyen-yarislar/', views.api_canli_bekleyen_yarislar, name='api_canli_bekleyen_yarislar'),
-    path('api/canli-bekleyen-yaris/', views.api_canli_bekleyen_yarislar, name='api_canli_bekleyen_yaris'),
-    path('api/canli-yaris-ekle/', views.api_canli_yaris_ekle, name='api_canli_yaris_ekle'),
 ]
-
