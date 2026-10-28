@@ -185,9 +185,9 @@
         <div class="flex items-start gap-3">
             <i class="bi bi-info-circle-fill swim-text-primary text-2xl shrink-0 mt-0.5"></i>
             <div>
-                <h3 class="text-sm font-bold swim-text-main mb-1">PythonAnywhere ve Bulut Altyapısı Entegrasyonu</h3>
+                <h3 class="text-sm font-bold swim-text-main mb-1">Oracle Cloud Doğrudan Veritabanı Entegrasyonu</h3>
                 <p class="text-xs swim-text-muted leading-relaxed">
-                    PythonAnywhere harici sitelerden doğrudan PDF indirmeye izin vermediği durumlar için, tarama işlemi <strong>Google Cloud Function</strong> veya <strong>GitHub Actions</strong> üzerinden asenkron tetiklenir. Google altyapısında Gemini Flash Lite ile taranan start listeleri bu Django paneline otomatik iletilir.
+                    Canlı yarış PDF listeleri (Start ve Sonuç listeleri) hiçbir bekleme veya harici API katmanı olmadan doğrudan sunucu üzerinde <strong>Gemini Flash Lite</strong> ile ayrıştırılıp anlık olarak SQLite (WAL) veritabanına kaydedilir.
                 </p>
             </div>
         </div>
@@ -199,7 +199,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     function getRunningCount() {
-        return document.querySelectorAll("tr[data-durum='ISLENIYOR']").length;
+        return document.querySelectorAll("tr[data-durum='ISLENIYOR'], tr[data-durum='BEKLIYOR']").length;
     }
 
     let pollInterval = null;
