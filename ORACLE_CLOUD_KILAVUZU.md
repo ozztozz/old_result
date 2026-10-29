@@ -192,3 +192,4 @@ Nginx yapılandırmasını değiştirdiğinizde servisi yeniden başlatmadan ön
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
