@@ -582,7 +582,6 @@ def parse_meet_pdf(
         is_first = (p_idx == 0)
 
         if doc_type == "sonuc_listesi":
-            swimmers_context = ""
             if startlist_swimmers:
                 candidates = []
                 for s in startlist_swimmers:
@@ -594,31 +593,28 @@ def parse_meet_pdf(
                         "seri": s.get("seri"),
                         "kulvar": s.get("kulvar")
                     })
-                swimmers_context = f"\nBU YARIŞTA YÜZEN START LİSTESİNDEKİ SPORCULAR (Eşleştirmede bu id değerlerini kullan):\n{json.dumps(candidates, ensure_ascii=False)}\n"
+                cands_json = json.dumps(candidates, ensure_ascii=False)
+                swimmers_context = f"\nBU YARIŞTA YÜZEN START LİSTESİNDEKİ SPORCULAR:\n{cands_json}\n"
 
-            prompt = f"""Bu bir TYF Splash Meet Manager SONUÇ LİSTESİ PDF sayfasıdır.
+                prompt = f"""Bu bir TYF Splash Meet Manager SONUÇ LİSTESİ PDF sayfasıdır.
 Sayfa {p_num}/{total_pages}.
-{'1. Başlıktan müsabaka_adı, şehir, tarih (YYYY-MM-DD), yarış_no, cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yaş_grubu çıkar.' if is_first else ''}
 {swimmers_context}
-2. Sayfadaki tüm sporcu sonuçlarını eksiksiz çıkar. Listedeki sporcularla eşleştirip "id" değerini ata.
+Sayfadaki tüm sporcu sonuçlarını eksiksiz çıkar ve yukarıdaki start listesi ile eşleştir.
+Eşleşen sporcular için SADECE satır "id", "sira", "derece", "puan" ve "baraj" değerlerini döndür.
+(Eşleşen sporcular için isim, kulüp, doğum yılı ve başlık bilgilerini ÇIKARMA, veritabanı satır id'si yeterlidir).
+Start listesinde yer almayan yeni/yedek bir sporcu yüzmüşse onu "yeni_sporcular" listesine ekle.
+
+ÖNEMLİ KURALLAR:
+1. DİSKALİFİYE (disk. / DQ): Diskalifiye olan sporcular için ara zaman veya süre derecesi ASLA VERME (Örn: satırda '28.68 32.46' gibi ara zamanlar yazsa bile dereceye koyma). "sira" değerine "DQ" yaz, "derece" alanına ise altındaki diskalifiye kuralını ve nedenini yaz (Örn: "SW 10.2.1 - Yüzmesi gereken mesafeyi tamamlamadığından (Zaman: 12:23), 100 mt terk"). Diskalifiyelerde "puan" ve "baraj" null olmalıdır.
+2. TERK / KATILMADI (DNF / DNS): Yarışı terk edenler için "sira": "DNF", "derece": "DNF"; yarışa başlamayanlar için "sira": "DNS", "derece": "DNS" yaz ("puan" ve "baraj" null).
+
 Format:
 {{
-  "musabaka_adi": string veya null,
-  "sehir": string veya null,
-  "tarih": string veya null,
-  "yaris_no": integer veya null,
-  "cinsiyet": string veya null,
-  "mesafe": integer veya null,
-  "stil": string veya null,
-  "yas_grubu": string veya null,
   "kayitlar": [
     {{
-      "id": integer veya null (start listesinde eşleşen sporcunun id değeri),
-      "sporcu": string,
-      "dogum_yili": string,
-      "kulup": string,
-      "sira": integer veya string,
-      "derece": string,
+      "id": integer (start listesindeki eşleşen id),
+      "sira": integer veya string (1, 2, "DQ", "DNS" vb.),
+      "derece": string ("2:41.39", "Disk." vb.),
       "puan": integer veya null,
       "baraj": string veya null
     }}
@@ -635,7 +631,38 @@ Format:
     }}
   ]
 }}
-* Start listesinde olmayan yedek/yeni bir sporcu yüzmüşse onu "yeni_sporcular" listesine ekle.
+SADECE JSON nesnesi (object) döndür."""
+            else:
+                prompt = f"""Bu bir TYF Splash Meet Manager SONUÇ LİSTESİ PDF sayfasıdır.
+Sayfa {p_num}/{total_pages}.
+{'1. Başlıktan müsabaka_adı, şehir, tarih (YYYY-MM-DD), yarış_no, cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yaş_grubu çıkar.' if is_first else ''}
+2. Sayfadaki tüm sporcu sonuçlarını eksiksiz çıkar.
+
+ÖNEMLİ KURALLAR:
+1. DİSKALİFİYE (disk. / DQ): Diskalifiye olan sporcular için ara zaman veya süre derecesi ASLA VERME (Örn: satırda '28.68 32.46' gibi ara zamanlar yazsa bile dereceye koyma). "sira" değerine "DQ" yaz, "derece" alanına ise altındaki diskalifiye kuralını ve nedenini yaz (Örn: "SW 10.2.1 - Yüzmesi gereken mesafeyi tamamlamadığından (Zaman: 12:23), 100 mt terk"). Diskalifiyelerde "puan" ve "baraj" null olmalıdır.
+2. TERK / KATILMADI (DNF / DNS): Yarışı terk edenler için "sira": "DNF", "derece": "DNF"; yarışa başlamayanlar için "sira": "DNS", "derece": "DNS" yaz ("puan" ve "baraj" null).
+Format:
+{{
+  "musabaka_adi": string veya null,
+  "sehir": string veya null,
+  "tarih": string veya null,
+  "yaris_no": integer veya null,
+  "cinsiyet": string veya null,
+  "mesafe": integer veya null,
+  "stil": string veya null,
+  "yas_grubu": string veya null,
+  "kayitlar": [
+    {{
+      "sporcu": string,
+      "dogum_yili": string,
+      "kulup": string,
+      "sira": integer veya string,
+      "derece": string,
+      "puan": integer veya null,
+      "baraj": string veya null
+    }}
+  ]
+}}
 SADECE JSON nesnesi (object) döndür."""
         else:
             prompt = f"""Bu bir TYF Splash Meet Manager START LİSTESİ PDF sayfasıdır.
@@ -693,7 +720,7 @@ SADECE JSON nesnesi (object) döndür."""
                                 header_obj[hk] = elem[hk]
                         if "kayitlar" in elem and isinstance(elem["kayitlar"], list):
                             merged_records.extend(elem["kayitlar"])
-                        elif "sporcu" in elem or "derece" in elem or "kulvar" in elem:
+                        elif "sporcu" in elem or "derece" in elem or "kulvar" in elem or "id" in elem:
                             merged_records.append(elem)
                         if "yeni_sporcular" in elem and isinstance(elem["yeni_sporcular"], list):
                             merged_new.extend(elem["yeni_sporcular"])
@@ -943,13 +970,8 @@ def process_single_meet(
             update_meet_status(base_url, stats, api_key=api_key)
             return stats
 
-        # 5. Batch dilimleme (Varsayılan: Sınırsız / Tüm dosyalar)
-        if limit and isinstance(limit, int) and limit > 0:
-            current_batch = pending_queue[:limit]
-        elif batch_size and int(batch_size) > 0:
-            current_batch = pending_queue[:int(batch_size)]
-        else:
-            current_batch = pending_queue
+        # 5. Dosya kısıtı kaldırıldı (Tüm bekleyen dosyalar tek seferde sınırsız işlenir)
+        current_batch = pending_queue
 
         remaining_after_batch = len(pending_queue) - len(current_batch)
         print(f"[*] İşlem planı: {len(pending_queue)} bekleyen dosya içinden {len(current_batch)} dosya işlenecek. Kalan dosya: {remaining_after_batch}")

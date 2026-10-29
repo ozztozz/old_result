@@ -1230,6 +1230,7 @@ def musabaka_detay(request, pk):
     completed_count = event_toplam_tamamlanan
     pending_count = event_toplam_bekleyen
     total_count = event_toplam_yaris
+    start_listesi_modu = False
 
     # 4. Sonuçlar Tablosu (Sadece Modal açıldığında veya yarış no seçildiğinde on-demand çalışır)
     if is_modal_request:
@@ -1337,14 +1338,59 @@ def musabaka_detay(request, pk):
                 When(Q(sira__icontains='disk') | Q(sira__icontains='dq') | Q(sira__startswith='SW'), then=Value(9999)),
                 default=Cast('sira', IntegerField()),
                 output_field=IntegerField()
+            ),
+            seri_int=Case(
+                When(seri__isnull=True, then=Value(9999)),
+                When(seri='', then=Value(9999)),
+                default=Cast('seri', IntegerField()),
+                output_field=IntegerField()
+            ),
+            kulvar_int=Case(
+                When(kulvar__isnull=True, then=Value(99)),
+                default=F('kulvar'),
+                output_field=IntegerField()
             )
-        ).order_by('yaris_no_int', 'yas_int', 'derece_kategori', 'saniyesi', 'sira_int', 'seri', 'kulvar')
+        )
+
+        is_completed = False
+        if secili_durum == 'sonuc':
+            is_completed = True
+        elif secili_durum == 'bekliyor':
+            is_completed = False
+        elif secili_yaris_detay and secili_yaris_detay.get('durum_kodu') == 'tamamlandi':
+            is_completed = True
+
+        def _seri_no(val):
+            # 'Seri 3 of 10' / '3 of 10' / '3' -> 3
+            m = re.search(r'\d+', str(val or ''))
+            return int(m.group()) if m else 9999
+
+        start_listesi_modu = bool(secili_yaris_no) and not is_completed
+
+        if is_completed:
+            sonuclar_qs = sonuclar_qs.order_by('yaris_no_int', 'yas_int', 'derece_kategori', 'saniyesi', 'sira_int', 'kulvar_int')
+        elif start_listesi_modu:
+            # Seri metin olarak tutuluyor ('Seri 1 of 5'); sayısal sıralama Python tarafında yapılır
+            sonuclar_qs = sorted(
+                sonuclar_qs,
+                key=lambda r: (r.yaris_no_int or 0, _seri_no(r.seri), r.kulvar if r.kulvar is not None else 99)
+            )
+            for r in sonuclar_qs:
+                r.yas_grup_adi = 'Start Listesi (Seri / Kulvar)'
+        else:
+            sonuclar_qs = sonuclar_qs.order_by('yaris_no_int', 'derece_kategori', 'saniyesi', 'sira_int', 'kulvar_int')
 
         per_page = 250 if secili_yaris_no else 50
         paginator = Paginator(sonuclar_qs, per_page)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
         total_count = paginator.count
+
+        # Görüntüleme için sade seri numarası ('Seri 1 of 5' -> '1')
+        page_obj.object_list = list(page_obj.object_list)
+        for r in page_obj.object_list:
+            n = _seri_no(r.seri)
+            r.seri_no = n if n != 9999 else ''
 
     context = {
         'event': event,
@@ -1360,6 +1406,7 @@ def musabaka_detay(request, pk):
         'toplam_canli_yaris': toplam_canli_yaris,
         'toplam_bekleyen_yaris': toplam_bekleyen_yaris,
         'secili_yaris_detay': secili_yaris_detay,
+        'start_listesi_modu': start_listesi_modu,
         'canli_yaris': canli_yaris,
         'katilan_kulupler': katilan_kulupler,
         'katilan_sporcular': [],
@@ -1906,6 +1953,7 @@ def musabaka_analiz(request, pk):
         'yaris_programi': yaris_programi,
         'secili_yaris_no': secili_yaris_no,
         'secili_yaris_detay': secili_yaris_detay,
+        'start_listesi_modu': start_listesi_modu,
         'cinsiyet_filtre': cinsiyet_filtre,
         'toplam_puan': toplam_puan,
         'ort_puan': ort_puan,

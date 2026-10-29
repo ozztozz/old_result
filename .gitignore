@@ -2,9 +2,21 @@
 my_env/
 venv/
 env/
+env
+.env
+*.env
+env.*
+.env.*
 __pycache__/
 *.py[cod]
 *$py.class
+
+# SSH Keys & Credentials
+*.key
+*.pem
+id_rsa*
+ssh-key*
+*.pub
 
 # Large Database, CSV & Archive Files
 output/
@@ -12,15 +24,15 @@ output/
 *.sqlite3
 *.csv
 *.pdf
+*.zip
+*.tar.gz
 src/iller_pdf/
 
 # Temporary / Scratch
-scratch/test_tyf/
+scratch/
 staticfiles/
 yuzme_projesi/staticfiles/
 .gemini/
-.env
-*.env
 
 # Node & Dependencies
 node_modules/

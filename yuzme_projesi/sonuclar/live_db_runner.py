@@ -396,6 +396,8 @@ def _process_single_race_payload(payload: dict) -> dict:
     unique_clubs = set()
     unique_names = set()
     for it in tum_kayitlar:
+        if it.get('id'):
+            continue
         c_name = (it.get('kulup') or it.get('club') or it.get('kulup_adi') or 'Ferdi').strip()
         if c_name:
             unique_clubs.add(c_name)
@@ -432,6 +434,12 @@ def _process_single_race_payload(payload: dict) -> dict:
     kulupler_to_update = set()
     tarihceler_to_save = set()
 
+    existing_race_ids = [it['id'] for it in tum_kayitlar if it.get('id')]
+    target_races_map = {}
+    if existing_race_ids:
+        for r in YarisSonucu.objects.filter(id__in=existing_race_ids).select_related('sporcu'):
+            target_races_map[r.id] = r
+
     for item in tum_kayitlar:
         derece_val = item.get('derece') or item.get('time')
         sira_val = str(item.get('sira') or item.get('rank') or '').strip()
@@ -445,9 +453,24 @@ def _process_single_race_payload(payload: dict) -> dict:
 
         race_id = item.get('id')
         if race_id:
-            try:
-                target_race = YarisSonucu.objects.select_related('sporcu').get(id=race_id)
-                derece_sn = _time_to_seconds(derece_val)
+            target_race = target_races_map.get(race_id)
+            if target_race:
+                is_dq_item = bool(
+                    'disk' in str(sira_val).lower() or
+                    'dq' in str(sira_val).lower() or
+                    (derece_val and 'sw' in str(derece_val).lower())
+                )
+                if is_dq_item:
+                    derece_sn = None
+                    puan_val = None
+                    baraj_val = ""
+                    if not sira_val or sira_val == '-':
+                        sira_val = "DQ"
+                    if derece_val:
+                        target_race.uyari_notu = derece_val
+                else:
+                    derece_sn = _time_to_seconds(derece_val)
+
                 target_race.derece = derece_val or target_race.derece
                 target_race.derece_saniye = derece_sn
                 target_race.sira = sira_val
@@ -462,8 +485,6 @@ def _process_single_race_payload(payload: dict) -> dict:
                 races_to_update.append(target_race)
                 stats['guncellenen_sonuc'] += 1
                 continue
-            except YarisSonucu.DoesNotExist:
-                pass
 
         raw_sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
         sporcu_adi = standardize_turkish_athlete_name(raw_sporcu_adi) or raw_sporcu_adi
@@ -742,7 +763,7 @@ def _process_single_race_payload(payload: dict) -> dict:
     if races_to_update:
         YarisSonucu.objects.bulk_update(
             races_to_update,
-            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu'],
+            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu', 'uyari_notu'],
             batch_size=500
         )
     if sporcular_to_update:
@@ -917,12 +938,8 @@ def process_single_meet_db(
             print(f"[*] Yeni indirilecek dosya yok. Güncel Durum: {yaris.durum} (Start: {stats['islenen_start_listesi']}/{stats['toplam_start_listesi']}, Sonuç: {stats['islenen_sonuc_listesi']}/{stats['toplam_sonuc_listesi']})")
             return stats
 
-        if limit and limit > 0:
-            current_batch = pending_queue[:limit]
-        elif batch_size and batch_size > 0:
-            current_batch = pending_queue[:batch_size]
-        else:
-            current_batch = pending_queue
+        # Dosya kısıtı kaldırıldı (Tüm bekleyen dosyalar tek seferde işlenir)
+        current_batch = pending_queue
 
         remaining_after_batch = len(pending_queue) - len(current_batch)
         if remaining_after_batch > 0:
