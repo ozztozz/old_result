@@ -129,3 +129,4 @@ def api_response(data: Any, status: int = 200, request=None, cache_seconds: int 
 def api_error(code: str, message: str, status: int = 400) -> HttpResponse:
     """Standart hata nesnesi döndürür."""
     return api_response({'error': {'code': code, 'message': message}}, status=status)
+

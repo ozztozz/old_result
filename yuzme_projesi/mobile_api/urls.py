@@ -25,3 +25,4 @@ urlpatterns = [
     path('live/', views_live.get_live_meets, name='live_meets'),
     path('live/<int:live_id>/feed/', views_live.get_live_feed, name='live_feed'),
 ]
+

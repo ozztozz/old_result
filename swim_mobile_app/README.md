@@ -49,3 +49,4 @@ flutter run
 - `lib/data/models/`: Tip güvenli DTO modelleri (`Meet`, `Athlete`, `RaceResult`, `LiveMeet`).
 - `lib/data/repositories/`: API isteklerini ve veri akışını yöneten `SwimRepository`.
 - `lib/features/`: Kullanıcı ekranları (`home`, `meets`, `athletes`, `live`, `favorites`).
+

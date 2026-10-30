@@ -137,3 +137,4 @@ def get_live_feed(request, live_id: int):
         'events': events_prog,
         'data': feed_data,
     }, request=request, cache_seconds=10)
+

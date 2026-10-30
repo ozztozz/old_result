@@ -287,3 +287,4 @@ def get_athletes_summary(request):
         })
 
     return api_response({'data': summary_data}, request=request, cache_seconds=30)
+

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/swim_theme.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/athlete.dart';
+import '../../shared/widgets/swim_status_badge.dart';
 
 /// 3. Ekran: Sporcu Profili, 25m/50m PB Tablosu ve Kariyer Karnesi
 class AthleteProfileScreen extends StatefulWidget {
@@ -74,6 +75,8 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.swimColors;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.athleteName),
@@ -81,7 +84,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
           IconButton(
             icon: Icon(
               _isFavorite ? Icons.star : Icons.star_border,
-              color: _isFavorite ? Colors.amber : null,
+              color: _isFavorite ? colors.medalGold : null,
             ),
             onPressed: _toggleFavorite,
             tooltip: 'Favoriye Ekle',
@@ -132,7 +135,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: AppTheme.primaryBlue,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
                 initials,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
@@ -150,19 +153,23 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
                   const SizedBox(height: 4),
                   Text(
                     a.clubName ?? 'Ferdi Sporcu',
-                    style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.w600, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                   if (a.school != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       a.school!,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12),
                     ),
                   ],
                   const SizedBox(height: 4),
                   Text(
                     '${a.birthYear ?? "-"} Doğumlu · ${a.age != null ? "${a.age} Yaşında" : ""}',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12),
                   ),
                 ],
               ),
@@ -174,36 +181,37 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
   }
 
   Widget _buildStatsRow(AthleteStats stats) {
+    final colors = context.swimColors;
     return Row(
       children: [
-        _buildStatBox('Toplam Yarış', '${stats.totalRaces}', Colors.blue),
+        _buildStatBox('Toplam Yarış', '${stats.totalRaces}', Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        _buildStatBox('Podyum / Kürsü', '${stats.podiumCount} (%${stats.podiumRate})', Colors.amber),
+        _buildStatBox('Podyum / Kürsü', '${stats.podiumCount} (%${stats.podiumRate})', colors.medalGold),
         const SizedBox(width: 8),
-        _buildStatBox('Geçilen Baraj', '${stats.standardsPassed}', Colors.green),
+        _buildStatBox('Geçilen Baraj', '${stats.standardsPassed}', colors.success),
       ],
     );
   }
 
-  Widget _buildStatBox(String label, String value, MaterialColor color) {
+  Widget _buildStatBox(String label, String value, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.shade50,
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.shade200),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
         ),
         child: Column(
           children: [
             Text(
               value,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color.shade900),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(fontSize: 10, color: color.shade700),
+              style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodySmall!.color),
               textAlign: TextAlign.center,
             ),
           ],
@@ -216,19 +224,19 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.slate ?? Colors.grey.shade100,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.insights, size: 20, color: Colors.blue.shade700),
+          Icon(Icons.insights, size: 20, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               note,
-              style: TextStyle(fontSize: 12, height: 1.4, color: Colors.grey.shade800),
+              style: TextStyle(fontSize: 12, height: 1.4, color: Theme.of(context).textTheme.bodyMedium!.color),
             ),
           ),
         ],
@@ -248,7 +256,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             SizedBox(
-              width: 160,
+              width: 170,
               height: 32,
               child: TabBar(
                 controller: _tabController,
@@ -263,7 +271,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 260,
+          height: 280,
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -281,7 +289,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
       return Center(
         child: Text(
           '$courseName için kayıtlı PB derecesi bulunmuyor.',
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12),
         ),
       );
     }
@@ -291,50 +299,59 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
       itemCount: pbs.length,
       itemBuilder: (context, index) {
         final pb = pbs[index];
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        return Card(
           margin: const EdgeInsets.only(bottom: 6),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${pb.distance}m ${pb.strokeLabel}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            '${pb.distance}m ${pb.strokeLabel}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(width: 8),
+                          const SwimStatusBadge.pb(),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${pb.date} · ${pb.meetName}',
+                        style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${pb.date} · ${pb.meetName}',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    SwimTimeFormatter.formatCs(pb.timeCs),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppTheme.primaryBlue,
-                      fontFeatures: [FontFeature.tabularFigures()],
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        SwimTimeFormatter.formatCs(pb.timeCs),
+                        style: SwimTheme.timeDisplaySmall.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
                     ),
-                  ),
-                  if (pb.points != null)
-                    Text(
-                      '${pb.points} Puan',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 10),
-                    ),
-                ],
-              ),
-            ],
+                    if (pb.points != null)
+                      Text(
+                        '${pb.points} Puan',
+                        style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 10),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -372,7 +389,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
                             const SizedBox(height: 2),
                             Text(
                               '${r.distance}m ${r.strokeLabel} · ${r.date}',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                              style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12),
                             ),
                           ],
                         ),
@@ -380,19 +397,19 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen> with Single
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            SwimTimeFormatter.formatCs(r.timeCs),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: AppTheme.primaryBlue,
-                              fontFeatures: [FontFeature.tabularFigures()],
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              SwimTimeFormatter.formatCs(r.timeCs),
+                              style: SwimTheme.timeDisplaySmall.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
                           ),
                           if (r.rank.isNotEmpty)
                             Text(
                               '#${r.rank} Sıra',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                              style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 11),
                             ),
                         ],
                       ),

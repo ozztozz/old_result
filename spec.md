@@ -1,6 +1,6 @@
-# TYF Yüzme Mobil Uygulaması: Ürün ve Teknik Şartnamesi (v5)
+# TYF Yüzme Mobil Uygulaması: Ürün ve Teknik Şartnamesi (v6)
 
-Bu doküman, Flutter tabanlı iOS ve Android uygulaması ile bu uygulamayı besleyen bağımsız mobil REST API'sini (`/api/v1/`) kapsayan kesinleşmiş teknik şartnamedir.
+Bu doküman, Flutter tabanlı iOS ve Android uygulaması ile bu uygulamayı besleyen bağımsız mobil REST API'sini (`/api/v1/`) ve resmi tasarım sistemi olan **SwimDesign** kurallarını kapsayan kesinleşmiş teknik şartnamedir.
 
 ---
 
@@ -54,10 +54,10 @@ TYF kaynakları (PDF / canlı portal)
 | **Durum Yönetimi** | `flutter_bloc` (Cubit) | Öngörülebilir, test edilebilir tek yönlü veri akışı |
 | **Ağ Katmanı** | `dio` + cache interceptor | Keep-Alive, ETag desteği, jitter'lı yeniden deneme |
 | **Modeller** | `freezed` + `json_serializable` | Tip güvenli ve değişmez (immutable) DTO modelleri |
-| **Yerel Depolama** | `drift` (SQLite) + `shared_preferences` | **Kesin Seçim:** Yüzme verisi ilişkisel olduğundan (Müsabaka -> Yarış -> Sonuç -> Sporcu -> Kulüp) ve katılımcı listesini 0 ms gecikmeyle filtrelemek için Drift kullanılır. |
+| **Yerel Depolama** | `drift` (SQLite) + `shared_preferences` | Yüzme verisi ilişkisel olduğundan ve katılımcı listesini 0 ms gecikmeyle filtrelemek için Drift kullanılır. |
 | **Navigasyon** | `go_router` | Alt menü, deep link, universal link desteği |
 | **Grafik** | `fl_chart` | Derece gelişim ve dağılım grafikleri |
-| **Tasarım Dili** | Material 3 (SwimDesign) | Açık & Koyu tema, Shimmer skeleton loading, Pull-to-refresh |
+| **Tasarım Sistemi** | SwimDesign (Material 3) | Açık & Koyu tema, Shimmer skeleton loading, Pull-to-refresh |
 
 ---
 
@@ -97,8 +97,6 @@ Uygulamada 4 sekmeli alt menü bulunur: **Ana Sayfa, Müsabakalar, Canlı, Favor
 - Veliler ve antrenörler için tek tıkla sporcu/kulüp yıldızlama.
 - Her favori için son derece, sıradaki yarış ve PB özeti.
 - Çevrimdışıyken Drift yerel veritabanından anında açılır.
-
-*(Not: Müsabaka Analizi ve Kulüp Detay ekranları MVP sonrası Faz 4'e dahil edilmiştir).*
 
 ---
 
@@ -145,15 +143,66 @@ API'den süreler **centisaniye cinsinden tam sayı** döner (`time_cs: 2845`). M
 
 ---
 
-## 5. Uygulama Geliştirme Yol Haritası
+## 5. Tasarım Sistemi: SwimDesign
+
+Yön: **derin okyanus mavisi, tek bir turkuaz vurgu ve serin gri-beyaz yüzeyler.** Gradyan, gölge ve süs yoktur; ağırlık süre rakamlarındadır.
+
+### 5.1 Tasarım Prensipleri
+1. **Veri ön planda:** Süreler ve sıralamalar en büyük ve en yüksek kontrastlı öğedir.
+2. **Az ve anlamlı renk:** Renk süs değil, durum bildirir.
+3. **Renk tek başına anlam taşımaz:** Her duruma ikon ve etiket eşlik eder (WCAG AA).
+4. **Sade yüzeyler:** Gölge yerine (`elevation: 0`) 1 dp ince kenarlık ve yüzey tonu farkı kullanılır.
+
+### 5.2 Renk Paleti ve Token Tablosu
+
+| Token | Açık tema | Koyu tema | Anlam / Kullanım |
+| :-- | :-- | :-- | :-- |
+| `background` | `#F6F9FB` | `#0B141C` | Ekran ana arka planı |
+| `surface` | `#FFFFFF` | `#121E28` | Kart ve panel yüzeyi |
+| `textPrimary` | `#0B1B2B` | `#E6EEF4` | Ana başlık ve yüksek kontrastlı metin |
+| `textSecondary` | `#5B6B7A` | `#9BB0C0` | İkincil metin, kulüp ve detaylar |
+| `outline` | `#DCE5EC` | `#24323E` | 1 dp ince kart ve chip kenarlıkları |
+| `primary` | `#0A5C99` | `#5FB3F0` | Okyanus mavisi (Ana marka ve süre rengi) |
+| `accent` | `#1AA6B7` | `#4DD0E1` | Turkuaz (Yalnızca küçük detaylar ve 25m etiketi) |
+| `success` | `#1B7F4B` | `#5CCB8A` | Sonuçlandı ve baraj geçildi durumu |
+| `pending` | `#B26A00` | `#F2B84B` | Bekleniyor durumu |
+| `pendingBg` | `#FFF4DD` | `#2A2210` | Bekleniyor durum rozet zemin tonu |
+| `danger` | `#B3261E` | `#FF8A80` | DQ, DNS, DNF ve canlı yarış etiketi |
+| `pb` | `#00838F` | `#4DD0E1` | **Yeni Kişisel En İyi (PB)** rozeti (Yıldız ikonu ile) |
+| `medalGold` | `#C9A227` | `#C9A227` | 1. sıra kürsü ve madalya rengi |
+| `medalSilver` | `#9AA5B1` | `#9AA5B1` | 2. sıra kürsü ve madalya rengi |
+| `medalBronze` | `#B0713A` | `#B0713A` | 3. sıra kürsü ve madalya rengi |
+
+### 5.3 Durum Rozetleri (SwimStatusBadge)
+- **Sonuçlandı:** `success` ikon ve etiket, hafif tonlu zemin: `✓ Sonuçlandı`
+- **Bekleniyor:** `pending` ikon, `pendingBg` zemin: `⏱ Bekleniyor`
+- **DQ / DNS / DNF:** `danger` ikon ve etiket: `✕ DQ`
+- **Yeni PB:** `pb` rengi ve yıldız ikonu: `★ Yeni PB` (Asla yeşil ile karıştırılmaz)
+- **Baraj geçildi:** `success` ikon: `✓ Baraj A1`
+- **Geçici (canlı):** Nötr kenarlıklı rozet: `Geçici (Canlı)`
+
+### 5.4 Tipografi ve Taşma Koruması
+- **Yazı tipi:** `Inter` (Yerel `assets/fonts/Inter/` olarak gömülür, çevrimdışı FOUT engellenir).
+- **İmza Süre Stili (`timeDisplay`):** `22 sp`, `w700`, `FontFeature.tabularFigures()`.
+- **Erişilebilirlik Taşma Koruması:** Dinamik sistem font ölçeği %130-%150'ye çıkarıldığında sürenin karttan taşmasını önlemek için süre hücresinde `FittedBox(fit: BoxFit.scaleDown)` zorunludur.
+
+### 5.5 Flutter `ThemeExtension` Mimarisi
+Durum renkleri `ThemeExtension<SwimColors>` içinde tanımlanır; widget'lar `context.swimColors.pb` şeklinde tip güvenli ve tema geçişlerinde yumuşak `lerp` animasyonuyla çalışır.
+
+### 5.6 Bileşen Galerisi (Component Gallery)
+Uygulamada tüm rozetlerin, kartların, madalya renklerinin ve font ölçek test slider'ının tek ekranda incelenebildiği gizli bir bileşen galerisi (`ComponentGalleryScreen`) yer alır.
+
+---
+
+## 6. Uygulama Geliştirme Yol Haritası
 
 ```
-[Adım 1: Django mobile_api]  ──►  [Adım 2: Flutter İskeleti]  ──►  [Adım 3: Ekranlar & Drift]
-- /api/v1/ rotaları              - flutter create swim_mobile_app  - Müsabaka & Bağımlı Filtre
-- Serializers (time_cs, PB)      - Dio, Drift, Cubit, GoRouter     - Sporcu Profili & 25m/50m PB
-- X-App-Key & ETag               - Tema & Süre Biçimlendirici      - Canlı Yarış & Favoriler
+[Adım 1: Django mobile_api]  ──►  [Adım 2: Flutter İskeleti & SwimDesign]  ──►  [Adım 3: Ekranlar & Drift]
+- /api/v1/ rotaları              - flutter create swim_mobile_app               - Müsabaka & Bağımlı Filtre
+- Serializers (time_cs, PB)      - SwimColors (ThemeExtension) & SwimTheme      - Sporcu Profili & 25m/50m PB
+- X-App-Key & ETag               - SwimResultCard & SwimStatusBadge             - Canlı Yarış & Favoriler
 ```
 
-- **Adım 1:** Django içinde bağımsız `mobile_api` uygulamasını kurup `/api/v1/` endpoint'lerini devreye almak ve test etmek.
-- **Adım 2:** Bağımsız `swim_mobile_app` Flutter projesini oluşturup çekirdek mimariyi (Drift, Dio, Cubit, Theme) hazırlamak.
-- **Adım 3:** Kullanıcı ekranlarını (Müsabaka, Sporcu, Canlı, Favoriler) sırayla bağlamak.
+- **Adım 1:** Django içinde bağımsız `mobile_api` uygulamasını kurup `/api/v1/` endpoint'lerini devreye almak ve test etmek. *(TAMAMLANDI)*
+- **Adım 2:** Bağımsız `swim_mobile_app` Flutter projesini oluşturup SwimDesign sistemini (`SwimColors`, `SwimTheme`, `SwimResultCard`, `SwimStatusBadge`, `ComponentGalleryScreen`) hazırlamak. *(TAMAMLANDI)*
+- **Adım 3:** Kullanıcı ekranlarını (Müsabaka, Sporcu, Canlı, Favoriler) bu tasarım sistemine tam entegre etmek. *(TAMAMLANDI)*

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/swim_theme.dart';
 import 'core/network/api_client.dart';
 import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
@@ -26,8 +26,8 @@ class SwimApp extends StatelessWidget {
     return MaterialApp(
       title: 'TYF Yüzme Sonuçları',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: SwimTheme.light(),
+      darkTheme: SwimTheme.dark(),
       themeMode: ThemeMode.system,
       home: MainNavigationContainer(repository: repository),
     );
@@ -45,7 +45,6 @@ class MainNavigationContainer extends StatefulWidget {
 
 class _MainNavigationContainerState extends State<MainNavigationContainer> {
   int _currentIndex = 0;
-
   late final List<Widget> _screens;
 
   @override
@@ -67,23 +66,25 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
+        elevation: 0,
+        backgroundColor: Theme.of(context).cardTheme.color,
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Ana Sayfa',
           ),
           NavigationDestination(
-            icon: Icon(Icons.sensors_outlined),
-            selectedIcon: Icon(Icons.sensors, color: Colors.red),
+            icon: const Icon(Icons.sensors_outlined),
+            selectedIcon: Icon(Icons.sensors, color: context.swimColors.danger),
             label: 'Canlı Takip',
           ),
           NavigationDestination(
-            icon: Icon(Icons.star_outline),
-            selectedIcon: Icon(Icons.star, color: Colors.amber),
+            icon: const Icon(Icons.star_outline),
+            selectedIcon: Icon(Icons.star, color: context.swimColors.medalGold),
             label: 'Favorilerim',
           ),
         ],

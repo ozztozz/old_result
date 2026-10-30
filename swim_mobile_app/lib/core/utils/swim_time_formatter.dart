@@ -41,3 +41,4 @@ class SwimTimeFormatter {
     return '$sign$s.${cs.toString().padLeft(2, '0')}s';
   }
 }
+
