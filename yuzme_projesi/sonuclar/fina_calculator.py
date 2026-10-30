@@ -189,3 +189,4 @@ def calculate_fina_points(
     ratio = base_time / float(derece_saniye)
     points = int(math.floor(1000.0 * (ratio ** 3)))
     return max(points, 0)
+

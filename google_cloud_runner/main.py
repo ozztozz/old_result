@@ -473,6 +473,9 @@ def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[f
     if not norm_masked or not norm_cand:
         return None
 
+    if norm_masked == norm_cand:
+        return 100.0
+
     masked_tokens = norm_masked.split()
     candidate_tokens = norm_cand.split()
 
@@ -481,11 +484,15 @@ def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[f
         scores = []
         all_matched = True
         for masked_token, candidate_token in zip(masked_tokens, candidate_tokens):
+            if masked_token == candidate_token:
+                scores.append(1.0)
+                continue
             matched, visible_ratio = _masked_token_match(masked_token, candidate_token)
             if not matched:
                 all_matched = False
                 break
-            scores.append(visible_ratio)
+            token_score = 0.75 + min(visible_ratio * 0.25, 0.25)
+            scores.append(token_score)
         if all_matched:
             return round(sum(scores) / len(scores) * 100, 1)
 
@@ -600,40 +607,89 @@ def reconcile_result_ids(
     records: List[Dict[str, Any]],
     startlist_swimmers: Optional[List[Dict[str, Any]]],
 ) -> List[Dict[str, Any]]:
-    """Sonuç satırlarını önce seri+kulvar ile deterministik olarak start kaydına bağlar."""
+    """
+    Sonuç satırlarını önce seri+kulvar ile deterministik olarak start kaydına bağlar.
+    Seri/kulvar yoksa (DQ / diskalifiye satırları gibi) start listesindeki maskeli isimlerle eşleştirir.
+    """
     if not startlist_swimmers:
         return records
+
     by_lane: Dict[Tuple[str, int], List[Dict[str, Any]]] = {}
     by_id = {str(s.get("id")): s for s in startlist_swimmers if s.get("id") is not None}
+
     for swimmer in startlist_swimmers:
         key = _lane_key(swimmer.get("seri"), swimmer.get("kulvar"))
         if key:
             by_lane.setdefault(key, []).append(swimmer)
 
     reconciled = []
+    matched_start_ids = set()
+
     for record in records:
         item = dict(record)
         key = _lane_key(item.get("seri"), item.get("kulvar"))
         lane_candidates = by_lane.get(key, []) if key else []
+
+        # 1. Aşama: Seri + Kulvar tam eşleşmesi
         if len(lane_candidates) == 1:
-            item["id"] = lane_candidates[0].get("id")
+            matched_id = lane_candidates[0].get("id")
+            item["id"] = matched_id
             item["eslesme_yontemi"] = "seri_kulvar"
             item["eslesme_durumu"] = "eslesti"
+            matched_start_ids.add(matched_id)
+
+        # 2. Aşama: Gemini'nin doğrudan döndürdüğü ID doğrulaması
         elif item.get("id") is not None and str(item["id"]) in by_id:
             candidate = by_id[str(item["id"])]
             name_score = masked_name_match_score(
-                item.get("sporcu") or "",
+                item.get("sporcu") or item.get("sporcu_maskeli") or "",
                 candidate.get("sporcu_maskeli") or candidate.get("sporcu") or candidate.get("sporcu_adi") or "",
             )
-            if name_score is not None:
+            if name_score is not None and name_score >= 70:
                 item["eslesme_yontemi"] = "isim_kontrolu"
                 item["eslesme_skoru"] = name_score
                 item["eslesme_durumu"] = "eslesti"
+                matched_start_ids.add(candidate.get("id"))
             else:
                 item["eslesme_aday_id"] = item.pop("id")
                 item["eslesme_durumu"] = "inceleme_bekliyor"
+
+        # 3. Aşama: Diskalifiye (DQ), DNF veya kulvarsız satırlarda Start Listesi maskeli isim eşleşmesi
         else:
-            item["eslesme_durumu"] = "inceleme_bekliyor"
+            raw_result_name = item.get("sporcu") or item.get("sporcu_maskeli") or ""
+            best_cand = None
+            best_score = 0.0
+
+            for cand in startlist_swimmers:
+                c_id = cand.get("id")
+                if c_id in matched_start_ids:
+                    continue
+
+                target_masked = cand.get("sporcu_maskeli") or cand.get("sporcu") or cand.get("sporcu_adi") or ""
+                if target_masked.startswith("Maskeli sporcu (") and target_masked.endswith(")"):
+                    target_masked = target_masked[16:-1].strip()
+                score = masked_name_match_score(raw_result_name, target_masked)
+                if score is not None and score > best_score:
+                    best_score = score
+                    best_cand = cand
+
+            if best_cand and best_score >= 70.0:
+                matched_id = best_cand.get("id")
+                item["id"] = matched_id
+                item["eslesme_yontemi"] = "startlist_maskeli_eslesme"
+                item["eslesme_skoru"] = best_score
+                item["eslesme_durumu"] = "eslesti"
+                matched_start_ids.add(matched_id)
+                # Kulüp veya seri/kulvar start listesinde varsa sonuç kaydına aktar
+                if not item.get("kulup") and best_cand.get("kulup_adi"):
+                    item["kulup"] = best_cand.get("kulup_adi")
+                if not item.get("seri") and best_cand.get("seri"):
+                    item["seri"] = best_cand.get("seri")
+                if item.get("kulvar") is None and best_cand.get("kulvar") is not None:
+                    item["kulvar"] = best_cand.get("kulvar")
+            else:
+                item["eslesme_durumu"] = "inceleme_bekliyor"
+
         reconciled.append(item)
     return reconciled
 
@@ -772,7 +828,7 @@ Sayfa {p_num}/{total_pages}.
 Sayfadaki tüm sporcu sonuçlarını eksiksiz çıkar ve yukarıdaki start listesi ile eşleştir.
 Eşleşen sporcular için SADECE satır "id", "sira", "derece", "puan" ve "baraj" değerlerini döndür.
 (Eşleşen sporcular için isim, kulüp, doğum yılı ve başlık bilgilerini ÇIKARMA, veritabanı satır id'si yeterlidir).
-Eşleştirmeyi isim tahminiyle değil, mümkünse seri ve kulvar ile yap.
+Eşleştirmeyi öncelikle seri ve kulvar ile yap. Seri/kulvar yazmayan satırlarda (diskalifiye DQ/disk., terk DNF vb.) veya sayfa sonundaki diskalifiye listelerinde sporcu adındaki maskeli harfleri (örn. 'Kaan K**t*') yukarıdaki start listesindeki 'sporcu_maskeli' ile karşılaştırarak doğru 'id'yi eşleştir; id'yi boş bırakma.
 Sonuç satırındaki seri, kulvar ve kaynakta görünen maskeli sporcu adını da koru.
 Start listesinde yer almayan yeni/yedek bir sporcu yüzmüşse onu "yeni_sporcular" listesine ekle.
 
