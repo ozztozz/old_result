@@ -1953,7 +1953,6 @@ def musabaka_analiz(request, pk):
         'yaris_programi': yaris_programi,
         'secili_yaris_no': secili_yaris_no,
         'secili_yaris_detay': secili_yaris_detay,
-        'start_listesi_modu': start_listesi_modu,
         'cinsiyet_filtre': cinsiyet_filtre,
         'toplam_puan': toplam_puan,
         'ort_puan': ort_puan,
