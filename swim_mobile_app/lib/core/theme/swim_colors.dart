@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// Minimalist İskandinav Pastel Renk Paleti (AppColors)
+class AppColors {
+  static const bg = Color(0xFFEEF2F0);
+  static const card = Color(0xFFF7F7F7);
+  static const mint = Color(0xFFCFE8C9);
+  static const lime = Color(0xFFE6F26B);
+  static const lavender = Color(0xFFDCD3F0);
+  static const teal = Color(0xFFCDE3DE);
+  static const ink = Color(0xFF1E1E1E);
+  static const muted = Color(0xFF9A9A9A);
+}
+
 /// TYF Yüzme Mobil Uygulaması Özel Renk Uzantısı (ThemeExtension)
 /// Widget'lar sabit renkler yerine Theme.of(context).extension<SwimColors>()! kullanır.
 @immutable

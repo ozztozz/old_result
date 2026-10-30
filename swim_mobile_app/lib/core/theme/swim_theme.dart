@@ -21,11 +21,11 @@ class SwimTheme {
   static ThemeData light() => _build(
         brightness: Brightness.light,
         primary: const Color(0xFF0A5C99),     // Derin Okyanus Mavisi
-        background: const Color(0xFFF6F9FB),  // Serin Açık Gri Zemin
-        surface: Colors.white,
-        text: const Color(0xFF0B1B2B),        // Yüksek Kontrastlı Lacivert Metin
-        textSecondary: const Color(0xFF5B6B7A),
-        outline: const Color(0xFFDCE5EC),     // 1 dp İnce Kenarlık
+        background: AppColors.bg,             // Serin Pastel Zemin (0xFFEEF2F0)
+        surface: AppColors.card,              // Yumuşak Kart Zemin (0xFFF7F7F7)
+        text: AppColors.ink,                  // Yüksek Kontrastlı Füme Metin (0xFF1E1E1E)
+        textSecondary: AppColors.muted,       // Muted Metin (0xFF9A9A9A)
+        outline: const Color(0xFFE2E7E4),     // İnce Kenarlık
         colors: const SwimColors(
           success: Color(0xFF1B7F4B),
           pending: Color(0xFFB26A00),
