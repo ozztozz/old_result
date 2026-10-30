@@ -52,16 +52,68 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
       ]);
 
       if (mounted) {
+        final list = results[2] as List<RaceResult>;
+        _sortResults(list);
         setState(() {
           _meetDetail = results[0] as MeetDetail;
           _participants = results[1] as MeetParticipants;
-          _results = results[2] as List<RaceResult>;
+          _results = list;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _sortResults(List<RaceResult> list) {
+    final bool hasFinishedResults = list.any((r) => r.timeCs != null && r.timeCs! > 0);
+
+    list.sort((a, b) {
+      final bool isDqA = a.resultStatus == 'DQ' ||
+          a.resultStatus == 'DNS' ||
+          a.resultStatus == 'DNF' ||
+          a.rank.toUpperCase().startsWith('DQ') ||
+          a.rank.toUpperCase().startsWith('DSQ');
+      final bool isDqB = b.resultStatus == 'DQ' ||
+          b.resultStatus == 'DNS' ||
+          b.resultStatus == 'DNF' ||
+          b.rank.toUpperCase().startsWith('DQ') ||
+          b.rank.toUpperCase().startsWith('DSQ');
+
+      // 1. Diskalifiyeler EN SONDA
+      if (isDqA && !isDqB) return 1;
+      if (!isDqA && isDqB) return -1;
+      if (isDqA && isDqB) {
+        final heatA = int.tryParse(a.heat) ?? 999;
+        final heatB = int.tryParse(b.heat) ?? 999;
+        if (heatA != heatB) return heatA.compareTo(heatB);
+        return (a.lane ?? 999).compareTo(b.lane ?? 999);
+      }
+
+      // 2. Sonuçlar varsa: Dereceye göre sırala (küçükten büyüğe)
+      if (hasFinishedResults) {
+        final bool hasTimeA = a.timeCs != null && a.timeCs! > 0;
+        final bool hasTimeB = b.timeCs != null && b.timeCs! > 0;
+
+        if (hasTimeA && !hasTimeB) return -1;
+        if (!hasTimeA && hasTimeB) return 1;
+
+        if (hasTimeA && hasTimeB) {
+          final cmp = a.timeCs!.compareTo(b.timeCs!);
+          if (cmp != 0) return cmp;
+          final rankA = int.tryParse(a.rank) ?? 999;
+          final rankB = int.tryParse(b.rank) ?? 999;
+          if (rankA != rankB) return rankA.compareTo(rankB);
+        }
+      }
+
+      // 3. Sonuç yoksa: Seri ve kulvara göre sırala
+      final heatA = int.tryParse(a.heat) ?? 999;
+      final heatB = int.tryParse(b.heat) ?? 999;
+      if (heatA != heatB) return heatA.compareTo(heatB);
+      return (a.lane ?? 999).compareTo(b.lane ?? 999);
+    });
   }
 
   Future<void> _filterResults() async {
@@ -76,6 +128,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
         page: 1,
       );
       if (mounted) {
+        _sortResults(res);
         setState(() {
           _results = res;
           _isLoadingResults = false;

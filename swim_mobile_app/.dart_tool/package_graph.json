@@ -91,6 +91,11 @@
       ]
     },
     {
+      "name": "vector_math",
+      "version": "2.4.0",
+      "dependencies": []
+    },
+    {
       "name": "test_api",
       "version": "0.7.12",
       "dependencies": [
@@ -115,6 +120,11 @@
     {
       "name": "path",
       "version": "1.9.1",
+      "dependencies": []
+    },
+    {
+      "name": "meta",
+      "version": "1.18.3",
       "dependencies": []
     },
     {
@@ -191,11 +201,6 @@
       ]
     },
     {
-      "name": "meta",
-      "version": "1.19.0",
-      "dependencies": []
-    },
-    {
       "name": "clock",
       "version": "1.1.3",
       "dependencies": []
@@ -261,11 +266,6 @@
       "dependencies": [
         "meta"
       ]
-    },
-    {
-      "name": "vector_math",
-      "version": "2.4.4",
-      "dependencies": []
     },
     {
       "name": "async",
@@ -361,6 +361,27 @@
       ]
     },
     {
+      "name": "path_provider_windows",
+      "version": "2.3.0",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "path",
+        "path_provider_platform_interface"
+      ]
+    },
+    {
+      "name": "path_provider_linux",
+      "version": "2.2.2",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "path",
+        "path_provider_platform_interface",
+        "xdg_directories"
+      ]
+    },
+    {
       "name": "package_config",
       "version": "2.2.0",
       "dependencies": [
@@ -381,24 +402,19 @@
       "dependencies": []
     },
     {
-      "name": "path_provider_windows",
-      "version": "2.3.0",
+      "name": "path_provider_platform_interface",
+      "version": "2.1.3",
       "dependencies": [
-        "ffi",
         "flutter",
-        "path",
-        "path_provider_platform_interface"
+        "platform",
+        "plugin_platform_interface"
       ]
     },
     {
-      "name": "path_provider_linux",
-      "version": "2.2.2",
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
       "dependencies": [
-        "ffi",
-        "flutter",
-        "path",
-        "path_provider_platform_interface",
-        "xdg_directories"
+        "meta"
       ]
     },
     {
@@ -451,22 +467,6 @@
       "dependencies": [
         "async",
         "stack_trace"
-      ]
-    },
-    {
-      "name": "path_provider_platform_interface",
-      "version": "2.1.3",
-      "dependencies": [
-        "flutter",
-        "platform",
-        "plugin_platform_interface"
-      ]
-    },
-    {
-      "name": "plugin_platform_interface",
-      "version": "2.1.8",
-      "dependencies": [
-        "meta"
       ]
     },
     {
@@ -532,6 +532,29 @@
       ]
     },
     {
+      "name": "path_provider_foundation",
+      "version": "2.6.0",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "objective_c",
+        "path_provider_platform_interface"
+      ]
+    },
+    {
+      "name": "ffi",
+      "version": "2.2.0",
+      "dependencies": []
+    },
+    {
+      "name": "shared_preferences_platform_interface",
+      "version": "2.4.2",
+      "dependencies": [
+        "flutter",
+        "plugin_platform_interface"
+      ]
+    },
+    {
       "name": "build_config",
       "version": "1.3.3",
       "dependencies": [
@@ -566,19 +589,61 @@
       ]
     },
     {
-      "name": "path_provider_foundation",
-      "version": "2.6.0",
+      "name": "objective_c",
+      "version": "9.5.0",
       "dependencies": [
+        "code_assets",
+        "collection",
         "ffi",
-        "flutter",
-        "objective_c",
-        "path_provider_platform_interface"
+        "hooks",
+        "logging",
+        "meta",
+        "pub_semver"
       ]
     },
     {
-      "name": "ffi",
-      "version": "2.2.0",
+      "name": "record_use",
+      "version": "0.6.0",
+      "dependencies": [
+        "collection",
+        "meta",
+        "pub_semver"
+      ]
+    },
+    {
+      "name": "crypto",
+      "version": "3.0.8",
       "dependencies": []
+    },
+    {
+      "name": "code_assets",
+      "version": "1.2.1",
+      "dependencies": [
+        "collection",
+        "hooks"
+      ]
+    },
+    {
+      "name": "hooks",
+      "version": "2.0.2",
+      "dependencies": [
+        "collection",
+        "crypto",
+        "logging",
+        "meta",
+        "pub_semver",
+        "record_use",
+        "yaml"
+      ]
+    },
+    {
+      "name": "shared_preferences_foundation",
+      "version": "2.5.7",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "shared_preferences_platform_interface"
+      ]
     },
     {
       "name": "shelf_web_socket",
@@ -686,11 +751,6 @@
       ]
     },
     {
-      "name": "crypto",
-      "version": "3.0.8",
-      "dependencies": []
-    },
-    {
       "name": "mime",
       "version": "2.1.0",
       "dependencies": []
@@ -739,49 +799,6 @@
       ]
     },
     {
-      "name": "objective_c",
-      "version": "9.6.2",
-      "dependencies": [
-        "code_assets",
-        "collection",
-        "ffi",
-        "hooks",
-        "logging",
-        "meta",
-        "pub_semver"
-      ]
-    },
-    {
-      "name": "hooks",
-      "version": "2.2.0",
-      "dependencies": [
-        "collection",
-        "crypto",
-        "logging",
-        "pub_semver",
-        "record_use",
-        "yaml"
-      ]
-    },
-    {
-      "name": "code_assets",
-      "version": "2.1.0",
-      "dependencies": [
-        "collection",
-        "hooks",
-        "logging"
-      ]
-    },
-    {
-      "name": "record_use",
-      "version": "1.1.1",
-      "dependencies": [
-        "collection",
-        "meta",
-        "pub_semver"
-      ]
-    },
-    {
       "name": "shared_preferences",
       "version": "2.5.6",
       "dependencies": [
@@ -819,14 +836,6 @@
       ]
     },
     {
-      "name": "shared_preferences_platform_interface",
-      "version": "2.4.2",
-      "dependencies": [
-        "flutter",
-        "plugin_platform_interface"
-      ]
-    },
-    {
       "name": "shared_preferences_web",
       "version": "2.4.3",
       "dependencies": [
@@ -834,17 +843,6 @@
         "flutter_web_plugins",
         "shared_preferences_platform_interface",
         "web"
-      ]
-    },
-    {
-      "name": "shared_preferences_foundation",
-      "version": "2.6.1",
-      "dependencies": [
-        "ffi",
-        "flutter",
-        "meta",
-        "objective_c",
-        "shared_preferences_platform_interface"
       ]
     },
     {

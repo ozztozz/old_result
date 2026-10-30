@@ -114,6 +114,16 @@ class SwimRepository {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Canlı yarış akışı (Typed LiveFeedResponse)
+  Future<LiveFeedResponse> getLiveFeedResponse(
+    int liveId, {
+    String? eventNo,
+    String? status,
+  }) async {
+    final map = await getLiveFeed(liveId, eventNo: eventNo, status: status);
+    return LiveFeedResponse.fromJson(map);
+  }
+
   /// Genel arama (Autocomplete)
   Future<Map<String, dynamic>> searchGlobal(String q) async {
     final res = await apiClient.get('/search/', queryParameters: {'q': q});

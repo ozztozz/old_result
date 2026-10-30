@@ -69,12 +69,19 @@ def get_meet_detail(request, meet_id: int):
     except Event.DoesNotExist:
         return api_error('not_found', 'Müsabaka bulunamadı', status=404)
 
-    # Yarış programı (Yarış no bazında gruplanmış liste)
+    # Yarış programı (Yarış no bazında gruplanmış liste ve sonuç durumu)
+    from django.db.models import Count, Q
     program_rows = (
         meet.yaris_sonuclari.exclude(yaris_no__isnull=True)
         .exclude(yaris_no='')
         .values('yaris_no', 'mesafe', 'stil', 'cinsiyet')
-        .distinct()
+        .annotate(
+            total=Count('id'),
+            finished_count=Count(
+                'id',
+                filter=(Q(derece_saniye__gt=0) | (~Q(derece='Bekleniyor') & ~Q(derece='') & Q(derece__isnull=False)))
+            )
+        )
     )
 
     prog_dict = {}
@@ -82,6 +89,9 @@ def get_meet_detail(request, meet_id: int):
         yno = str(r['yaris_no']).strip()
         if not yno:
             continue
+        fin_cnt = r.get('finished_count') or 0
+        is_pend = (fin_cnt == 0)
+
         if yno not in prog_dict:
             prog_dict[yno] = {
                 'event_no': yno,
@@ -89,6 +99,8 @@ def get_meet_detail(request, meet_id: int):
                 'stroke': map_stroke(r.get('stil')),
                 'stroke_label': (r.get('stil') or '').strip(),
                 'gender': (r.get('cinsiyet') or '').strip(),
+                'is_pending': is_pend,
+                'status': 'Bekliyor' if is_pend else 'Sonuçlandı',
             }
         else:
             if not prog_dict[yno]['distance'] and r.get('mesafe'):
@@ -96,6 +108,9 @@ def get_meet_detail(request, meet_id: int):
             if not prog_dict[yno]['stroke_label'] and r.get('stil'):
                 prog_dict[yno]['stroke'] = map_stroke(r.get('stil'))
                 prog_dict[yno]['stroke_label'] = (r.get('stil') or '').strip()
+            if fin_cnt > 0:
+                prog_dict[yno]['is_pending'] = False
+                prog_dict[yno]['status'] = 'Sonuçlandı'
 
     events_list = list(prog_dict.values())
     try:

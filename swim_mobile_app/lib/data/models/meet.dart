@@ -41,6 +41,8 @@ class MeetEvent {
   final String stroke;
   final String strokeLabel;
   final String gender;
+  final bool isPending;
+  final String status;
 
   MeetEvent({
     required this.eventNo,
@@ -48,6 +50,8 @@ class MeetEvent {
     required this.stroke,
     required this.strokeLabel,
     required this.gender,
+    this.isPending = true,
+    this.status = 'Bekliyor',
   });
 
   factory MeetEvent.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,8 @@ class MeetEvent {
       stroke: json['stroke'] as String? ?? '',
       strokeLabel: json['stroke_label'] as String? ?? '',
       gender: json['gender'] as String? ?? '',
+      isPending: json['is_pending'] as bool? ?? (json['status'] != 'Sonuçlandı'),
+      status: json['status'] as String? ?? 'Bekliyor',
     );
   }
 }
