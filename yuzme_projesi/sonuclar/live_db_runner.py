@@ -41,6 +41,7 @@ from google_cloud_runner.main import (
     download_file_with_meta,
     fetch_meet_pdf_urls,
     fetch_remote_headers_map,
+    resolve_masked_athlete,
     parse_meet_pdf,
     parse_reglaman_pdf,
 )
@@ -184,6 +185,7 @@ def fetch_startlist_swimmers_db(yaris: CanliYaris, yaris_no: str) -> List[Dict[s
             "kulvar": r.kulvar,
             "giris_derecesi": r.giris_derecesi,
             "mevcut_derece": r.derece,
+            "sporcu_maskeli": r.sporcu_maskeli,
         })
     return sporcular_list
 
@@ -427,6 +429,29 @@ def _process_single_race_payload(payload: dict) -> dict:
     sporcu_exact_cache = {}
     for sp in Sporcu.objects.filter(sporcu_adi__in=unique_names).select_related('birincil_kulup'):
         sporcu_exact_cache.setdefault(tr_fold(sp.sporcu_adi), []).append(sp)
+    masked_candidate_cache = {}
+
+    def get_masked_candidates(birth_year, gender):
+        cache_key = (birth_year, (gender or '').strip().upper()[:1])
+        if cache_key in masked_candidate_cache:
+            return masked_candidate_cache[cache_key]
+        candidate_qs = Sporcu.objects.all().select_related('birincil_kulup')
+        if birth_year:
+            candidate_qs = candidate_qs.filter(dogum_yili=birth_year)
+        candidates = []
+        for candidate in candidate_qs:
+            candidate_gender = (candidate.cinsiyet or '').strip().upper()
+            if gender and candidate_gender and not candidate_gender.startswith(str(gender).strip().upper()[:1]):
+                continue
+            candidates.append({
+                'id': candidate.id,
+                'sporcu': candidate.sporcu_adi,
+                'sporcu_adi': candidate.sporcu_adi,
+                'dogum_yili': candidate.dogum_yili,
+                'kulup': candidate.birincil_kulup.kulup_adi if candidate.birincil_kulup else '',
+            })
+        masked_candidate_cache[cache_key] = candidates
+        return candidates
 
     races_to_create = []
     races_to_update = []
@@ -487,6 +512,11 @@ def _process_single_race_payload(payload: dict) -> dict:
                 continue
 
         raw_sporcu_adi = (item.get('sporcu') or item.get('name') or item.get('sporcu_adi') or '').strip()
+        sporcu_maskeli = (
+            item.get('sporcu_maskeli')
+            or item.get('sporcu_kaynak')
+            or raw_sporcu_adi
+        ).strip()
         sporcu_adi = standardize_turkish_athlete_name(raw_sporcu_adi) or raw_sporcu_adi
         kulup_adi = (item.get('kulup') or item.get('club') or item.get('kulup_adi') or 'Ferdi').strip()
         yb = item.get('dogum_yili') or item.get('yb') or item.get('yas') or item.get('birth_year')
@@ -522,8 +552,22 @@ def _process_single_race_payload(payload: dict) -> dict:
             club_cache[kulup_adi.lower()] = kulup
 
         sporcu = None
+        masked_resolution = resolve_masked_athlete(
+            sporcu_maskeli,
+            get_masked_candidates(dogum_yili, cinsiyet),
+            birth_year=dogum_yili,
+            club=kulup_adi,
+        )
+        if masked_resolution.get('durum') == 'eslesti':
+            matched_id = masked_resolution.get('aday', {}).get('id')
+            if matched_id:
+                sporcu = Sporcu.objects.filter(id=matched_id).select_related('birincil_kulup').first()
+                if sporcu:
+                    stats['eslesen_sporcu'] += 1
+                    sporcu_exact_cache.setdefault(tr_fold(sporcu.sporcu_adi), []).append(sporcu)
+
         cands = sporcu_exact_cache.get(tr_fold(sporcu_adi))
-        if cands:
+        if cands and not sporcu:
             for cand in cands:
                 if dogum_yili and cand.dogum_yili == dogum_yili:
                     if not cinsiyet or not cand.cinsiyet or cand.cinsiyet.upper().startswith(cinsiyet[0].upper()):
@@ -545,7 +589,7 @@ def _process_single_race_payload(payload: dict) -> dict:
                 sporcu = cands[0]
                 stats['eslesen_sporcu'] += 1
 
-        if not sporcu:
+        if not sporcu and '*' not in sporcu_maskeli:
             match_res = match_athlete(
                 name=sporcu_adi,
                 birth_year_or_date=dogum_yili,
@@ -578,6 +622,11 @@ def _process_single_race_payload(payload: dict) -> dict:
                         sporcu = None
 
         if not sporcu:
+            if '*' in sporcu_maskeli:
+                # Maskeli ad, yanlış kişisel kayıtla birleştirilmez. Kaynak değer
+                # YarisSonucu.sporcu_maskeli alanında korunur ve sonraki sonuç
+                # aktarımında seri/kulvar üzerinden tekrar kullanılabilir.
+                sporcu_adi = f"Maskeli sporcu ({sporcu_maskeli})"
             sporcu = Sporcu.objects.create(
                 sporcu_adi=sporcu_adi,
                 dogum_yili=dogum_yili,
@@ -674,6 +723,8 @@ def _process_single_race_payload(payload: dict) -> dict:
                         existing_race.canli_dosya = dosya_obj
                     if dosya_adi:
                         existing_race.dosya_adi = dosya_adi
+                    if sporcu_maskeli and (tur == 'start_listesi' or not existing_race.sporcu_maskeli):
+                        existing_race.sporcu_maskeli = sporcu_maskeli
                     races_to_update.append(existing_race)
                     stats['guncellenen_sonuc'] += 1
                 else:
@@ -695,6 +746,8 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.canli_dosya = dosya_obj
                         if dosya_adi:
                             existing_race.dosya_adi = dosya_adi
+                        if sporcu_maskeli and (tur == 'start_listesi' or not existing_race.sporcu_maskeli):
+                            existing_race.sporcu_maskeli = sporcu_maskeli
                         races_to_update.append(existing_race)
                         stats['guncellenen_sonuc'] += 1
             else:
@@ -712,6 +765,8 @@ def _process_single_race_payload(payload: dict) -> dict:
                             existing_race.giris_derecesi = str(giris_derecesi_val)
                         if baraj_val and not existing_race.baraj:
                             existing_race.baraj = baraj_val
+                        if sporcu_maskeli and (tur == 'start_listesi' or not existing_race.sporcu_maskeli):
+                            existing_race.sporcu_maskeli = sporcu_maskeli
                         if dosya_obj:
                             existing_race.canli_dosya = dosya_obj
                         races_to_update.append(existing_race)
@@ -738,7 +793,8 @@ def _process_single_race_payload(payload: dict) -> dict:
                 derece=yeni_derece,
                 derece_saniye=derece_sn if tur == 'sonuc_listesi' else None,
                 puan=puan_val if tur == 'sonuc_listesi' else None,
-                baraj=baraj_val
+                baraj=baraj_val,
+                sporcu_maskeli=sporcu_maskeli,
             )
             races_to_create.append(yeni_yaris)
             existing_races_map[sporcu.id] = yeni_yaris
@@ -763,7 +819,7 @@ def _process_single_race_payload(payload: dict) -> dict:
     if races_to_update:
         YarisSonucu.objects.bulk_update(
             races_to_update,
-            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu', 'uyari_notu'],
+            ['derece', 'derece_saniye', 'sira', 'puan', 'baraj', 'seri', 'kulvar', 'giris_derecesi', 'kulup', 'canli_dosya', 'dosya_adi', 'kaynak_turu', 'uyari_notu', 'sporcu_maskeli'],
             batch_size=500
         )
     if sporcular_to_update:

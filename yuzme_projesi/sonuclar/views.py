@@ -178,7 +178,10 @@ def sporcu_detay(request, pk):
     # 3. Giriş Derecesi vs Çıkış Derecesi (Seed vs Finish Zaman Gelişimi)
     gelistiren_count = 0
     gerileyen_count = 0
+    ayni_count = 0
+    nt_count = 0
     toplam_fark = 0.0
+    toplam_yuzde = 0.0
     en_buyuk_gelisim = None
 
     for r in tum_yarislar:
@@ -1483,12 +1486,17 @@ def musabaka_sporcu_modal(request, event_id, sporcu_id):
     # Giriş vs Çıkış Derece Analizi
     gelistiren_count = 0
     gerileyen_count = 0
+    ayni_count = 0
+    nt_count = 0
     toplam_fark = 0.0
+    toplam_yuzde = 0.0
 
     for r in sonuclar_list:
         g_raw = (r.giris_derecesi or '').strip()
         if g_raw.upper() in ('NT', 'NT.', 'DERECE YOK', '-'):
             r.fark_durum = 'nt'
+            nt_count += 1
+            nt_count += 1
         elif g_raw and r.derece_saniye and r.derece_saniye > 0:
             g_sn = _time_to_seconds(g_raw)
             if g_sn and g_sn > 0:
@@ -1497,6 +1505,8 @@ def musabaka_sporcu_modal(request, event_id, sporcu_id):
                 r.fark_saniye = fark
                 r.fark_yuzde = yuzde
                 toplam_fark += fark
+                toplam_yuzde += yuzde
+                toplam_yuzde += yuzde
                 if fark < 0:
                     r.fark_durum = 'gelisti'
                     gelistiren_count += 1
@@ -1505,6 +1515,8 @@ def musabaka_sporcu_modal(request, event_id, sporcu_id):
                     gerileyen_count += 1
                 else:
                     r.fark_durum = 'ayni'
+                    ayni_count += 1
+                    ayni_count += 1
             else:
                 r.fark_durum = 'nt'
         else:
@@ -1576,7 +1588,10 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
     # 3. Giriş vs Çıkış (Seed vs Finish) Zaman Gelişimi
     gelistiren_count = 0
     gerileyen_count = 0
+    ayni_count = 0
+    nt_count = 0
     toplam_fark = 0.0
+    toplam_yuzde = 0.0
 
     for r in sonuclar_list:
         g_raw = (r.giris_derecesi or '').strip()
@@ -1590,6 +1605,7 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
                 r.fark_saniye = fark
                 r.fark_yuzde = yuzde
                 toplam_fark += fark
+                toplam_yuzde += yuzde
                 if fark < 0:
                     r.fark_durum = 'gelisti'
                     gelistiren_count += 1
@@ -1606,6 +1622,16 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
     karsilastirilan = gelistiren_count + gerileyen_count
     gelisim_orani = round((gelistiren_count / karsilastirilan) * 100, 1) if karsilastirilan > 0 else 0
     ort_fark = round(toplam_fark / karsilastirilan, 2) if karsilastirilan > 0 else 0
+    ort_gelisim_yuzdesi = round(toplam_yuzde / karsilastirilan, 2) if karsilastirilan > 0 else 0
+    gelisen_sonuclar = sorted(
+        [r for r in sonuclar_list if getattr(r, 'fark_durum', '') == 'gelisti'],
+        key=lambda r: r.fark_saniye,
+    )[:3]
+    gerileyen_sonuclar = sorted(
+        [r for r in sonuclar_list if getattr(r, 'fark_durum', '') == 'geriledi'],
+        key=lambda r: r.fark_saniye,
+        reverse=True,
+    )[:3]
 
     # 4. Sporcu Bazlı Performans Dağılımı (Kadro Başarısı)
     sporcu_dict = {}
@@ -1619,6 +1645,8 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
                 'max_puan': 0,
                 'best_race': '',
                 'gelistiren': 0,
+                'gerileyen': 0,
+                'ayni': 0,
                 'altin': 0,
                 'gumus': 0,
                 'bronz': 0,
@@ -1632,6 +1660,10 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
             entry['best_race'] = f"{r.mesafe}m {r.stil} ({r.derece})"
         if getattr(r, 'fark_durum', '') == 'gelisti':
             entry['gelistiren'] += 1
+        elif getattr(r, 'fark_durum', '') == 'geriledi':
+            entry['gerileyen'] += 1
+        elif getattr(r, 'fark_durum', '') == 'ayni':
+            entry['ayni'] += 1
         s_val = str(r.sira).strip()
         if s_val == '1':
             entry['altin'] += 1
@@ -1643,6 +1675,9 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
     athletes_list = sorted(sporcu_dict.values(), key=lambda x: (x['max_puan'], x['toplam_puan']), reverse=True)
     toplam_sporcu = len(athletes_list)
     mvp_athlete = athletes_list[0] if athletes_list else None
+    sporcu_basi_puan = round(toplam_puan / toplam_sporcu, 1) if toplam_sporcu else 0
+    puanli_sporcu_sayisi = sum(1 for athlete in athletes_list if athlete['toplam_puan'] > 0)
+    puanli_sporcu_orani = round((puanli_sporcu_sayisi / toplam_sporcu) * 100, 1) if toplam_sporcu else 0
 
     context = {
         'event': event,
@@ -1659,8 +1694,16 @@ def musabaka_kulup_modal(request, event_id, kulup_id):
         'baraj_sayisi': baraj_sayisi,
         'gelistiren_count': gelistiren_count,
         'gerileyen_count': gerileyen_count,
+        'ayni_count': ayni_count,
+        'nt_count': nt_count,
         'gelisim_orani': gelisim_orani,
         'ort_fark': ort_fark,
+        'ort_gelisim_yuzdesi': ort_gelisim_yuzdesi,
+        'karsilastirilan': karsilastirilan,
+        'gelisen_sonuclar': gelisen_sonuclar,
+        'gerileyen_sonuclar': gerileyen_sonuclar,
+        'sporcu_basi_puan': sporcu_basi_puan,
+        'puanli_sporcu_orani': puanli_sporcu_orani,
         'has_gelisim': (karsilastirilan > 0),
         'athletes_list': athletes_list,
         'mvp_athlete': mvp_athlete,
@@ -1794,6 +1837,34 @@ def musabaka_analiz(request, pk):
             c['sira'] = i
             c['ort_puan'] = round(c['ort_puan'], 1) if c['ort_puan'] else 0
             c['oran'] = round((c['toplam_puan'] / max_benchmark) * 100, 1)
+
+    # Müsabaka bazlı kulüp değerlendirmesi yarış filtresinden bağımsızdır.
+    # Giriş derecesi yoksa gelişim yerine tüm müsabakanın puan, katılım ve
+    # kürsü katkısı değerlendirilir.
+    event_puan_qs = event.yaris_sonuclari.filter(puan__gt=0)
+    if cinsiyet_filtre == 'E':
+        event_puan_qs = event_puan_qs.filter(cinsiyet__istartswith='E')
+    elif cinsiyet_filtre == 'K':
+        event_puan_qs = event_puan_qs.filter(cinsiyet__istartswith='K')
+
+    club_event_rankings = list(
+        event_puan_qs.exclude(kulup__isnull=True)
+        .values('kulup_id', 'kulup__kulup_adi')
+        .annotate(
+            sonuc_sayisi=Count('id'),
+            sporcu_sayisi=Count('sporcu_id', distinct=True),
+            toplam_puan=Sum('puan'),
+            ort_puan=Avg('puan'),
+            en_yuksek_puan=Max('puan'),
+            podium_sayisi=Count('id', filter=Q(sira__in=['1', '2', '3'])),
+            birincilik=Count('id', filter=Q(sira='1')),
+        )
+        .order_by('-ort_puan', '-podium_sayisi', '-toplam_puan')[:30]
+    )
+    for i, club in enumerate(club_event_rankings, 1):
+        club['sira'] = i
+        club['ort_puan'] = round(club['ort_puan'] or 0, 1)
+        club['en_yuksek_puan'] = club['en_yuksek_puan'] or 0
 
     # 6. Tekil Yarış Seçilmişse kürsü ve tam sonuçlar
     yaris_podium = []
@@ -2077,6 +2148,7 @@ def musabaka_analiz(request, pk):
         'toplam_kulup': toplam_kulup,
         'baraj_gecenler': baraj_gecenler,
         'club_rankings': club_rankings,
+        'club_event_rankings': club_event_rankings,
         'kulup_sirala': kulup_sirala,
         'min_sporcu': min_sporcu,
         'yaris_podium': yaris_podium,

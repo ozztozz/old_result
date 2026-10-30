@@ -280,6 +280,12 @@ class YarisSonucu(models.Model):
     zaman_kontrolu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Zaman Kontrolü")
     uyari_notu = models.TextField(blank=True, null=True, verbose_name="Uyarı Notu")
     ham_satir = models.TextField(blank=True, null=True, verbose_name="Ham Satır")
+    sporcu_maskeli = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="PDF Maskeli Sporcu Adı",
+    )
 
     class Meta:
         managed = False

@@ -1,29 +1,16 @@
-# Google Cloud Functions / Cloud Run - TYF Canlı Start & Sonuç Listesi Rutin Tarayıcısı
+# TYF Canlı Start ve Sonuç PDF Parser'ı
 
-Bu servis, Google Cloud altyapısında (Cloud Functions gen2 veya Cloud Run) çalışarak TYF canlı yüzme yarışlarının start ve sonuç listelerini otomatik olarak ayrıştırır ve Django veritabanına aktarır.
+Bu modül, TYF canlı yüzme yarışlarının start ve sonuç PDF'lerini Gemini ile ayrıştırır. Aktif tarama ve kalıcı kayıt akışı Django ORM üzerinden [`sonuclar.live_db_runner`](../yuzme_projesi/sonuclar/live_db_runner.py) tarafından yürütülür.
 
 ---
 
-## 🏗️ Mimari Mantığı (Pull Modeli / Rutin Tarama)
+## Mimari
 
-1. **Web Arayüzünden (PythonAnywhere) Cloud Run Tetiklenmez:**
-   - Kullanıcı web arayüzünden canlı yarış linkini ekler veya var olan yarış için "Tara" butonuna basar.
-   - Yarış durumu veritabanında `BEKLIYOR` olarak işaretlenir.
-   - Web uygulamasından hiçbir harici HTTP çağrısı yapılmaz; bu sayede PythonAnywhere'deki istek zaman aşımı (timeout: 15-30 sn) ve proxy kısıtlamaları tamamen bertaraf edilir.
-
-2. **Cloud Scheduler ile Periyodik Tarama (Pull):**
-   - Cloud Scheduler belirli aralıklarla (ör: her 5 veya 10 dakikada bir) bu servisi tetikler (`GET` veya `POST`).
-   - Servis Django API'sine (`https://ozztozz.pythonanywhere.com/api/canli-bekleyen-yarislar/`) sorgu atar.
-   - Kuyrukta bekleyen yarış yoksa **0.5 saniyede 200 OK dönerek kapanır** (Cloud Run maliyeti ~0 TL olur).
-
-3. **Akıllı Ayrıştırma & Mükerrerlik Koruması (ETag / SHA-256):**
-   - Bekleyen yarış bulunduğunda durumu `ISLENIYOR` yapılır.
-   - TYF canlı sonuç sayfasındaki tüm `StartList_*.pdf` ve `ResultList_*.pdf` bağlantıları taranır.
-   - Her PDF indirilip hash/etag bilgisi `/api/canli-dosya-kontrol/` adresine sorulur.
-   - Daha önce işlenmiş ve değişmemiş dosyalar **Gemini çağrısı yapılmadan atlanır** (%95 kota ve süre tasarrufu).
-   - Yeni/güncellenen start listeleri Gemini Flash Lite ile çözümlenip `/api/canli-aktar/` adresine iletilir.
-   - Yeni/güncellenen sonuç listelerinde, start listesindeki sporcuların veritabanı ID'leri Gemini promptuna enjekte edilerek $O(1)$ eşleştirme yapılır.
-   - İşlem bitince durum `TAMAMLANDI` olarak güncellenir.
+1. `canli_tara` Django management command'ı yarışları DB'den seçer.
+2. [`live_db_runner.py`](../yuzme_projesi/sonuclar/live_db_runner.py) PDF'leri indirir ve değişmeyen dosyaları DB metadata'sıyla atlar.
+3. Bu modül PDF sayfalarını ayrıştırır.
+4. Start listesindeki `sporcu_maskeli` değeri `YarisSonucu` kaydında saklanır.
+5. Result listesi adayları doğrudan DB'den okur; `seri + kulvar` ve maskeli ad üzerinden eşleştirilir.
 
 ---
 

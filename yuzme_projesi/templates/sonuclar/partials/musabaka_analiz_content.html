@@ -606,6 +606,67 @@
 </div>
 {% endif %}
 
+    <div class="mt-5 pt-4 swim-border-t">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+                <span class="swim-kicker">MÜSABAKA KULÜP ANALİZİ</span>
+                <h3 class="swim-title text-sm sm:text-base mt-1">Müsabaka genelinde kulüpler</h3>
+                <p class="text-xs swim-text-muted mt-1">
+                    Yarış seçimi bu tabloyu değiştirmez; tüm müsabakanın puan, katılım ve kürsü sonuçları birlikte değerlendirilir.
+                </p>
+            </div>
+            <span class="swim-badge swim-badge-neutral text-xs">{{ club_event_rankings|length }} kulüp</span>
+        </div>
+        {% if club_event_rankings %}
+        <div class="swim-table-wrapper">
+            <table class="swim-table">
+                <thead class="swim-thead">
+                    <tr>
+                        <th class="swim-th w-14 text-center">Sıra</th>
+                        <th class="swim-th">Kulüp</th>
+                        <th class="swim-th text-center">Sporcu</th>
+                        <th class="swim-th text-center">Sonuç</th>
+                        <th class="swim-th text-right">Ort. FINA</th>
+                        <th class="swim-th text-right">Kürsü</th>
+                        <th class="swim-th text-right">En yüksek</th>
+                    </tr>
+                </thead>
+                <tbody class="swim-tbody">
+                    {% for club in club_event_rankings %}
+                    <tr class="swim-tr">
+                        <td class="swim-td text-center font-mono text-xs swim-text-muted">{{ club.sira }}</td>
+                        <td class="swim-td">
+                            {% if club.kulup_id %}
+                            <button type="button"
+                                    hx-get="{% url 'sonuclar:musabaka_kulup_modal' event.id club.kulup_id %}"
+                                    hx-target="#kulupModalContent"
+                                    data-swim-modal="#kulupAnalizModal"
+                                    class="font-semibold swim-text-main hover:swim-text-primary transition truncate block text-left max-w-[260px] cursor-pointer">
+                                {{ club.kulup__kulup_adi }}
+                            </button>
+                            {% else %}
+                            <span class="font-semibold swim-text-main">{{ club.kulup__kulup_adi }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="swim-td text-center font-mono text-xs">{{ club.sporcu_sayisi }}</td>
+                        <td class="swim-td text-center font-mono text-xs">{{ club.sonuc_sayisi }}</td>
+                        <td class="swim-td text-right font-mono font-bold text-xs swim-text-primary">{{ club.ort_puan }}</td>
+                        <td class="swim-td text-right font-mono text-xs">{{ club.podium_sayisi }}</td>
+                        <td class="swim-td text-right font-mono text-xs">{{ club.en_yuksek_puan }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center swim-text-muted text-sm">Bu kapsamda puanlı kulüp sonucu bulunamadı.</div>
+        {% endif %}
+    </div>
+
+{% if False %}
+<!-- Legacy development detail retained for backward-compatible template references. -->
+{% endif %}
+
 {% if False %}
 <div class="swim-card p-4 sm:p-5 mb-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-2 swim-border-b">

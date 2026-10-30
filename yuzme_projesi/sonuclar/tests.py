@@ -118,7 +118,8 @@ class SporcuApiTests(TestCase):
                 ham_satir TEXT,
                 kulvar INTEGER,
                 seri TEXT,
-                giris_derecesi TEXT
+                giris_derecesi TEXT,
+                sporcu_maskeli TEXT
             );
             """)
             cur.execute("""
@@ -879,7 +880,8 @@ class MusabakaAnalizTests(TestCase):
                 ham_satir TEXT,
                 kulvar INTEGER,
                 seri TEXT,
-                giris_derecesi TEXT
+                giris_derecesi TEXT,
+                sporcu_maskeli TEXT
             );
             """)
 
@@ -1016,4 +1018,3 @@ class MusabakaAnalizTests(TestCase):
         content_analiz = res_analiz.content.decode('utf-8')
         self.assertNotIn('>HAYIR<', content_analiz)
         self.assertNotIn('>Hayır<', content_analiz)
-
