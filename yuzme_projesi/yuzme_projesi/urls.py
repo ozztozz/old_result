@@ -8,6 +8,7 @@ from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/v1/', include('mobile_api.urls')),
     path('', include('sonuclar.urls')),
 ]
 

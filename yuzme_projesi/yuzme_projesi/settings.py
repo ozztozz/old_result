@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "sonuclar",
+    "mobile_api",
 ]
 
 MIDDLEWARE = [
@@ -79,10 +80,16 @@ WSGI_APPLICATION = "yuzme_projesi.wsgi.application"
 
 # Database
 DATABASE_DIR = BASE_DIR.parent / "database"
+DB_FILE = DATABASE_DIR / "yuzme_veritabani.db"
+if not DB_FILE.exists() or DB_FILE.stat().st_size < 100000:
+    fallback_db = BASE_DIR / "yuzme_veritabani.db"
+    if fallback_db.exists() and fallback_db.stat().st_size > 100000:
+        DB_FILE = fallback_db
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": DATABASE_DIR / "yuzme_veritabani.db",
+        "NAME": DB_FILE,
         "OPTIONS": {
             "timeout": 60,
         },
