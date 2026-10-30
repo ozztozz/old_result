@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/theme/swim_colors.dart';
 import '../../core/theme/swim_theme.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/swim_design_components.dart';
 import '../../shared/widgets/swim_result_card.dart';
 import '../athletes/athlete_profile_screen.dart';
 
@@ -172,79 +174,86 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.swimColors;
     final isRunning = widget.live.status == 'ISLENIYOR';
+    final title = widget.event.genderLabel.isNotEmpty
+        ? '${widget.event.displayTitle} - ${widget.event.genderLabel}'
+        : widget.event.displayTitle;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.event.genderLabel.isNotEmpty
-                  ? '${widget.event.displayTitle} - ${widget.event.genderLabel}'
-                  : widget.event.displayTitle,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            if (widget.event.ageGroup != null && widget.event.ageGroup!.isNotEmpty)
-              Text(
-                widget.event.ageGroup!,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => _loadResults(silent: true),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            children: [
+              // 1. Üst Bar (RoundIconButton ile Geri, Otomatik Yenileme ve Manuel Yenileme)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  RoundIconButton(
+                    Icons.arrow_back,
+                    onTap: () => Navigator.maybePop(context),
+                  ),
+                  Row(
+                    children: [
+                      RoundIconButton(
+                        _isAutoRefresh ? Icons.sync : Icons.sync_disabled,
+                        color: _isAutoRefresh ? AppColors.lime : Colors.white,
+                        iconColor: AppColors.ink,
+                        onTap: () => _toggleAutoRefresh(!_isAutoRefresh),
+                      ),
+                      const SizedBox(width: 8),
+                      RoundIconButton(
+                        Icons.refresh,
+                        onTap: () => _loadResults(),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: _isAutoRefresh ? 'Otomatik Yenilemeyi Kapat' : 'Otomatik Yenilemeyi Aç',
-            icon: Icon(
-              _isAutoRefresh ? Icons.sync : Icons.sync_disabled,
-              color: _isAutoRefresh ? Colors.green : null,
-            ),
-            onPressed: () => _toggleAutoRefresh(!_isAutoRefresh),
-          ),
-          IconButton(
-            tooltip: 'Yenile',
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadResults(),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => _loadResults(silent: true),
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          children: [
-            // 1. Yarış Bilgi Başlığı (Numarasız)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+              const SizedBox(height: 16),
+
+              // 2. Yarış Bilgi Başlığı Kartı (24dp radius, dairesel branş ikonu, pastel haplar)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         _buildStrokeIcon(widget.event.stroke),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.event.displayTitle,
+                                title,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 16,
+                                  color: AppColors.ink,
+                                  letterSpacing: -0.3,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 widget.live.name,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  color: AppColors.muted,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -254,23 +263,22 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                         ),
                         if (isRunning)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.green.shade300),
+                              color: AppColors.mint,
+                              borderRadius: BorderRadius.circular(16),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CircleAvatar(radius: 4, backgroundColor: Colors.green),
-                                SizedBox(width: 4),
+                                CircleAvatar(radius: 3.5, backgroundColor: AppColors.ink),
+                                SizedBox(width: 5),
                                 Text(
                                   'CANLI',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.ink,
                                   ),
                                 ),
                               ],
@@ -278,227 +286,224 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
                         if (widget.event.gender != null && widget.event.gender!.isNotEmpty)
-                          _buildBadge(
+                          _buildPill(
                             widget.event.gender!,
-                            widget.event.gender!.toLowerCase().contains('kad')
-                                ? Colors.purple.shade50
-                                : Colors.blue.shade50,
-                            widget.event.gender!.toLowerCase().contains('kad')
-                                ? Colors.purple.shade900
-                                : Colors.blue.shade900,
+                            AppColors.lavender,
                           ),
                         if (widget.event.ageGroup != null && widget.event.ageGroup!.isNotEmpty)
-                          _buildBadge(
+                          _buildPill(
                             widget.event.ageGroup!,
-                            Colors.grey.shade100,
-                            Colors.grey.shade800,
+                            AppColors.teal,
                           ),
-                        _buildBadge(
+                        _buildPill(
                           '${_allResults.length} Sporcu',
-                          Colors.teal.shade50,
-                          Colors.teal.shade900,
+                          AppColors.mint,
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-            // 2. Arama ve Durum Filtreleri
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Yarışta sporcu veya kulüp ara...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                            _applyFilter();
-                          });
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                isDense: true,
-              ),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                  _applyFilter();
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-
-            Row(
-              children: [
-                _buildStatusChip('all', 'Tümü'),
-                const SizedBox(width: 6),
-                _buildStatusChip('finished', 'Sonuçlananlar'),
-                const SizedBox(width: 6),
-                _buildStatusChip('pending', 'Beklenenler'),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // 3. Sonuç Listesi
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_filteredResults.isEmpty)
-              _buildEmptyState()
-            else
-              ..._filteredResults.map((result) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Seri ve Kulvar Rozeti
-                    if (result.heat.isNotEmpty || (result.lane != null && result.lane! > 0))
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 4),
-                        child: Row(
-                          children: [
-                            if (result.heat.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                margin: const EdgeInsets.only(right: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: Text(
-                                  'Seri: ${result.heat}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade800,
-                                  ),
-                                ),
-                              ),
-                            if (result.lane != null && result.lane! > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.blue.shade200),
-                                ),
-                                child: Text(
-                                  'Kulvar ${result.lane}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade900,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    SwimResultCard(
-                      result: result,
-                      onTap: () {
-                        if (result.athleteId > 0) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AthleteProfileScreen(
-                                athleteId: result.athleteId,
-                                athleteName: result.athleteName,
-                                repository: widget.repository,
-                              ),
-                            ),
-                          );
-                        }
-                      },
+              // 3. Arama Çubuğu
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    const SizedBox(height: 6),
                   ],
-                );
-              }),
-          ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(fontSize: 14, color: AppColors.ink),
+                  decoration: InputDecoration(
+                    hintText: 'Sporcu veya kulüp ara...',
+                    hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.muted),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18, color: AppColors.muted),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                                _applyFilter();
+                              });
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val;
+                      _applyFilter();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 4. Durum Filtre Hapları (Pastel pill buttons)
+              Row(
+                children: [
+                  _buildStatusChip('all', 'Tümü'),
+                  const SizedBox(width: 8),
+                  _buildStatusChip('finished', 'Sonuçlananlar'),
+                  const SizedBox(width: 8),
+                  _buildStatusChip('pending', 'Beklenenler'),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // 5. Sonuç Listesi Başlığı
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  'Yarış Sıralaması (${_filteredResults.length})',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+
+              // 6. Sonuç Kartları
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_filteredResults.isEmpty)
+                _buildEmptyState()
+              else
+                ..._filteredResults.map((result) {
+                  return SwimResultCard(
+                    result: result,
+                    onTap: () {
+                      if (result.athleteId > 0) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AthleteProfileScreen(
+                              athleteId: result.athleteId,
+                              athleteName: result.athleteName,
+                              repository: widget.repository,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  );
+                }),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildStrokeIcon(String stroke) {
-    IconData iconData = Icons.pool;
-    Color iconColor = Colors.blue;
+    IconData iconData = Icons.pool_rounded;
+    Color iconBg = AppColors.mint;
 
     switch (stroke.toUpperCase()) {
       case 'FREE':
-        iconData = Icons.waves;
-        iconColor = Colors.blue;
+        iconData = Icons.waves_rounded;
+        iconBg = AppColors.teal;
         break;
       case 'BACK':
-        iconData = Icons.water;
-        iconColor = Colors.indigo;
+        iconData = Icons.water_rounded;
+        iconBg = AppColors.lavender;
         break;
       case 'BREAST':
-        iconData = Icons.arrow_downward;
-        iconColor = Colors.teal;
+        iconData = Icons.arrow_downward_rounded;
+        iconBg = AppColors.mint;
         break;
       case 'FLY':
-        iconData = Icons.air;
-        iconColor = Colors.deepOrange;
+        iconData = Icons.air_rounded;
+        iconBg = AppColors.lime;
         break;
       case 'MEDLEY':
-        iconData = Icons.auto_awesome;
-        iconColor = Colors.purple;
+        iconData = Icons.auto_awesome_rounded;
+        iconBg = AppColors.lavender;
         break;
     }
 
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        color: iconBg,
+        shape: BoxShape.circle,
       ),
-      child: Icon(iconData, color: iconColor, size: 22),
+      child: Icon(iconData, color: AppColors.ink, size: 20),
     );
   }
 
-  Widget _buildBadge(String text, Color bg, Color textCol) {
+  Widget _buildPill(String text, Color bg) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textCol),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.ink,
+        ),
       ),
     );
   }
 
   Widget _buildStatusChip(String val, String label) {
     final isSelected = _selectedStatus == val;
-    return ChoiceChip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      selected: isSelected,
-      visualDensity: VisualDensity.compact,
-      onSelected: (_) {
+    return GestureDetector(
+      onTap: () {
         setState(() => _selectedStatus = val);
         _loadResults();
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.lime : AppColors.card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: AppColors.ink,
+          ),
+        ),
+      ),
     );
   }
 
@@ -508,16 +513,28 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.sports_score, size: 54, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: AppColors.card,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.sports_score_rounded, size: 28, color: AppColors.muted),
+            ),
+            const SizedBox(height: 14),
             const Text(
               'Bu yarış için henüz netice bulunmuyor.',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: AppColors.ink,
+              ),
             ),
             const SizedBox(height: 6),
-            Text(
+            const Text(
               'Yarış yüzüldükçe sonuçlar buraya anlık olarak gelecektir.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              style: TextStyle(color: AppColors.muted, fontSize: 13),
               textAlign: TextAlign.center,
             ),
           ],
@@ -526,4 +543,3 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     );
   }
 }
-

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/swim_colors.dart';
 import '../../core/theme/swim_theme.dart';
 
 enum SwimBadgeType {
@@ -11,7 +12,7 @@ enum SwimBadgeType {
 }
 
 /// Yüzme Durum Rozeti (SwimStatusBadge)
-/// Renk tek başına anlam taşımaz; her duruma ikon ve etiket eşlik eder (WCAG AA).
+/// Minimalist pastel tasarım sistemiyle uyumlu hap (pill) rozet.
 class SwimStatusBadge extends StatelessWidget {
   final SwimBadgeType type;
   final String? customLabel;
@@ -48,57 +49,50 @@ class SwimStatusBadge extends StatelessWidget {
 
     Color bg;
     Color fg;
-    Color border;
     IconData icon;
     String label;
 
     switch (type) {
       case SwimBadgeType.finished:
-        bg = colors.success.withValues(alpha: isDark ? 0.2 : 0.1);
-        fg = colors.success;
-        border = colors.success.withValues(alpha: 0.3);
-        icon = Icons.check_circle_outline;
+        bg = isDark ? colors.success.withValues(alpha: 0.2) : AppColors.mint;
+        fg = isDark ? colors.success : AppColors.ink;
+        icon = Icons.check_circle_rounded;
         label = customLabel ?? 'Sonuçlandı';
         break;
 
       case SwimBadgeType.waiting:
-        bg = colors.pendingBg;
-        fg = colors.pending;
-        border = colors.pending.withValues(alpha: 0.4);
-        icon = Icons.schedule;
+        bg = isDark ? colors.pendingBg : AppColors.lavender;
+        fg = isDark ? colors.pending : AppColors.ink;
+        icon = Icons.schedule_rounded;
         label = customLabel ?? 'Bekleniyor';
         break;
 
       case SwimBadgeType.disqualified:
-        bg = colors.danger.withValues(alpha: isDark ? 0.2 : 0.1);
-        fg = colors.danger;
-        border = colors.danger.withValues(alpha: 0.4);
-        icon = Icons.cancel_outlined;
+        bg = isDark ? colors.danger.withValues(alpha: 0.2) : const Color(0xFFFFEBEE);
+        fg = isDark ? colors.danger : const Color(0xFFD32F2F);
+        icon = Icons.cancel_rounded;
         label = customLabel ?? 'DQ';
         break;
 
       case SwimBadgeType.pb:
-        bg = colors.pb.withValues(alpha: isDark ? 0.25 : 0.1);
-        fg = colors.pb;
-        border = colors.pb.withValues(alpha: 0.5);
-        icon = Icons.star;
+        bg = isDark ? colors.pb.withValues(alpha: 0.25) : AppColors.lime;
+        fg = isDark ? colors.pb : AppColors.ink;
+        icon = Icons.star_rounded;
         label = customLabel ?? 'Yeni PB';
         break;
 
       case SwimBadgeType.standard:
-        bg = colors.success.withValues(alpha: isDark ? 0.2 : 0.1);
-        fg = colors.success;
-        border = colors.success.withValues(alpha: 0.3);
-        icon = Icons.verified_outlined;
+        bg = isDark ? colors.success.withValues(alpha: 0.2) : AppColors.teal;
+        fg = isDark ? colors.success : AppColors.ink;
+        icon = Icons.verified_rounded;
         label = customLabel != null ? 'Baraj $customLabel' : 'Baraj';
         break;
 
       case SwimBadgeType.provisional:
-        bg = Theme.of(context).cardTheme.color!;
-        fg = Theme.of(context).textTheme.bodySmall!.color!;
-        border = Theme.of(context).colorScheme.outline;
-        icon = Icons.info_outline;
-        label = customLabel ?? 'Geçici (Canlı)';
+        bg = isDark ? Theme.of(context).cardTheme.color! : Colors.white;
+        fg = isDark ? Theme.of(context).textTheme.bodySmall!.color! : AppColors.ink;
+        icon = Icons.info_outline_rounded;
+        label = customLabel ?? 'Geçici';
         break;
     }
 
@@ -106,8 +100,16 @@ class SwimStatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: border, width: 1),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -129,4 +131,5 @@ class SwimStatusBadge extends StatelessWidget {
     );
   }
 }
+
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/swim_colors.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
+import '../../shared/widgets/swim_design_components.dart';
 import '../../shared/widgets/swim_result_card.dart';
 import '../athletes/athlete_profile_screen.dart';
 
@@ -142,52 +144,101 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.meetTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // 1. Üst Filtre Paneli (Yarış No, Bağımlı Kulüp & Sporcu)
-                _buildFilterHeader(),
-
-                // 2. Yarış Sonuçları Listesi (SwimResultCard)
-                Expanded(
-                  child: _isLoadingResults
-                      ? const Center(child: CircularProgressIndicator())
-                      : _results.isEmpty
-                          ? const Center(
-                              child: Text('Kriterlere uygun sonuç bulunamadı.'),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              itemCount: _results.length,
-                              itemBuilder: (context, index) {
-                                final r = _results[index];
-                                return SwimResultCard(
-                                  result: r,
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => AthleteProfileScreen(
-                                          athleteId: r.athleteId,
-                                          athleteName: r.athleteName,
-                                          repository: widget.repository,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // 1. Üst Bar (RoundIconButton ile Geri Dön Butonu ve Başlık)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                    child: Row(
+                      children: [
+                        RoundIconButton(
+                          Icons.arrow_back,
+                          onTap: () => Navigator.maybePop(context),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            widget.meetTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.ink,
+                              letterSpacing: -0.3,
                             ),
-                ),
-              ],
-            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 2. Üst Filtre Paneli (Yarış No, Bağımlı Kulüp & Sporcu)
+                  _buildFilterHeader(),
+
+                  // 3. Yarış Sonuçları Listesi (SwimResultCard)
+                  Expanded(
+                    child: _isLoadingResults
+                        ? const Center(child: CircularProgressIndicator())
+                        : _results.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 52,
+                                      height: 52,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.card,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.search_off_rounded,
+                                        size: 24,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Kriterlere uygun sonuç bulunamadı.',
+                                      style: TextStyle(
+                                        color: AppColors.muted,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                                itemCount: _results.length,
+                                itemBuilder: (context, index) {
+                                  final r = _results[index];
+                                  return SwimResultCard(
+                                    result: r,
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => AthleteProfileScreen(
+                                            athleteId: r.athleteId,
+                                            athleteName: r.athleteName,
+                                            repository: widget.repository,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -195,46 +246,53 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
     final events = _meetDetail?.events ?? [];
     final clubs = _participants?.clubs ?? [];
 
-    // Seçili kulübe göre daraltılmış sporcu listesi (0 ms gecikme)
     final allAthletes = _participants?.athletes ?? [];
     final filteredAthletes = _selectedClubId == null
         ? allAthletes
         : allAthletes.where((a) => a.clubId == _selectedClubId).toList();
 
     return Container(
-      color: Theme.of(context).cardTheme.color,
-      padding: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Yatay Yarış No Seçici (Hap Butonlar)
+          // Yatay Yarış Seçici (Pastel Hap Butonlar)
           if (events.isNotEmpty)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  ChoiceChip(
-                    label: const Text('Tüm Yarışlar'),
-                    selected: _selectedEventNo == null,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _selectedEventNo = null);
-                        _filterResults();
-                      }
+                  _buildEventPill(
+                    label: 'Tüm Yarışlar',
+                    isSelected: _selectedEventNo == null,
+                    onTap: () {
+                      setState(() => _selectedEventNo = null);
+                      _filterResults();
                     },
                   ),
                   const SizedBox(width: 8),
                   ...events.map((ev) {
-                    final label = 'Yarış ${ev.eventNo}${ev.distance != null ? " · ${ev.distance}m ${ev.strokeLabel}" : ""}';
+                    final label = '${ev.distance != null ? "${ev.distance}m " : ""}${ev.strokeLabel}';
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(label),
-                        selected: _selectedEventNo == ev.eventNo,
-                        onSelected: (selected) {
+                      child: _buildEventPill(
+                        label: label,
+                        isSelected: _selectedEventNo == ev.eventNo,
+                        onTap: () {
                           setState(() {
-                            _selectedEventNo = selected ? ev.eventNo : null;
+                            _selectedEventNo = _selectedEventNo == ev.eventNo ? null : ev.eventNo;
                           });
                           _filterResults();
                         },
@@ -244,93 +302,140 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                 ],
               ),
             ),
+          const SizedBox(height: 10),
 
           // Bağımlı Kulüp ve Sporcu Seçici Dropdown'lar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: [
-                // Kulüp Seçimi
-                Expanded(
-                  child: DropdownButtonFormField<int?>(
-                    initialValue: _selectedClubId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      hintText: 'Tüm Takımlar',
-                      hintStyle: const TextStyle(fontSize: 12),
+          Row(
+            children: [
+              // Kulüp Seçimi
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _selectedClubId,
+                      isExpanded: true,
+                      hint: const Text('Tüm Takımlar', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Tüm Takımlar', style: TextStyle(fontSize: 12))),
+                        ...clubs.map((c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.name, style: const TextStyle(fontSize: 12, color: AppColors.ink), overflow: TextOverflow.ellipsis),
+                            )),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedClubId = val;
+                          if (_selectedAthleteId != null) {
+                            final match = filteredAthletes.any((a) => a.id == _selectedAthleteId);
+                            if (!match) _selectedAthleteId = null;
+                          }
+                        });
+                        _filterResults();
+                      },
                     ),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Tüm Takımlar', style: TextStyle(fontSize: 12))),
-                      ...clubs.map((c) => DropdownMenuItem(
-                            value: c.id,
-                            child: Text(c.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
-                          )),
-                    ],
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedClubId = val;
-                        if (_selectedAthleteId != null) {
-                          final match = filteredAthletes.any((a) => a.id == _selectedAthleteId);
-                          if (!match) _selectedAthleteId = null;
-                        }
-                      });
-                      _filterResults();
-                    },
                   ),
                 ),
-                const SizedBox(width: 8),
+              ),
+              const SizedBox(width: 8),
 
-                // Sporcu Seçimi
-                Expanded(
-                  child: DropdownButtonFormField<int?>(
-                    initialValue: _selectedAthleteId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      hintText: 'Tüm Sporcular',
-                      hintStyle: const TextStyle(fontSize: 12),
+              // Sporcu Seçimi
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _selectedAthleteId,
+                      isExpanded: true,
+                      hint: const Text('Tüm Sporcular', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Tüm Sporcular', style: TextStyle(fontSize: 12))),
+                        ...filteredAthletes.map((a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(
+                                '${a.name}${a.birthYear != null ? " (${a.birthYear})" : ""}',
+                                style: const TextStyle(fontSize: 12, color: AppColors.ink),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )),
+                      ],
+                      onChanged: (val) {
+                        setState(() => _selectedAthleteId = val);
+                        _filterResults();
+                      },
                     ),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Tüm Sporcular', style: TextStyle(fontSize: 12))),
-                      ...filteredAthletes.map((a) => DropdownMenuItem(
-                            value: a.id,
-                            child: Text(
-                              '${a.name}${a.birthYear != null ? " (${a.birthYear})" : ""}',
-                              style: const TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          )),
-                    ],
-                    onChanged: (val) {
-                      setState(() => _selectedAthleteId = val);
-                      _filterResults();
-                    },
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: 10),
 
-          // Durum Filtresi (SegmentedButton)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'all', label: Text('Tümü', style: TextStyle(fontSize: 12))),
-                ButtonSegment(value: 'finished', label: Text('Sonuçlanan', style: TextStyle(fontSize: 12))),
-                ButtonSegment(value: 'pending', label: Text('Bekleyen', style: TextStyle(fontSize: 12))),
-              ],
-              selected: {_selectedStatus},
-              onSelectionChanged: (set) {
-                setState(() => _selectedStatus = set.first);
-                _filterResults();
-              },
-            ),
+          // Durum Filtresi (Tümü, Sonuçlanan, Bekleyen)
+          Row(
+            children: [
+              _buildStatusPill('all', 'Tümü'),
+              const SizedBox(width: 8),
+              _buildStatusPill('finished', 'Sonuçlanan'),
+              const SizedBox(width: 8),
+              _buildStatusPill('pending', 'Bekleyen'),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEventPill({required String label, required bool isSelected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.lime : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: AppColors.ink,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String val, String label) {
+    final isSelected = _selectedStatus == val;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedStatus = val);
+        _filterResults();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.teal : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: AppColors.ink,
+          ),
+        ),
       ),
     );
   }

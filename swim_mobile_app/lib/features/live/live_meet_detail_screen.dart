@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/swim_colors.dart';
 import '../../core/theme/swim_theme.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/swim_design_components.dart';
 import '../meets/meet_detail_screen.dart';
 import 'live_race_results_screen.dart';
 
@@ -50,9 +52,8 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Canlı akış verisini çek (Backend her yarışın 'Sonuçlandı' veya 'Bekliyor' durumunu doğrudan döner)
+      // 1. Canlı akış verisini çek
       final feed = await widget.repository.getLiveFeedResponse(widget.live.id);
-
       List<LiveEventProgramItem> events = feed.events;
 
       // 2. Canlı akış listesi boşsa ancak meetId varsa müsabaka detayından çek
@@ -143,7 +144,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
       }).toList();
     }
 
-    // 1. Kural: Filtrelenmiş liste de resmi yarış sırasını korur
+    // Resmi yarış sırasını koru
     list.sort((a, b) {
       final int numA = int.tryParse(a.eventNo) ?? 9999;
       final int numB = int.tryParse(b.eventNo) ?? 9999;
@@ -154,7 +155,6 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
       _filteredEvents = list;
     });
 
-    // 3. Kural: Liste ilk bekliyor olanda odaklanmalı
     if (shouldScrollToPending) {
       _scrollToFirstPending();
     }
@@ -166,16 +166,10 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           final viewportHeight = _scrollController.position.viewportDimension;
-          // Üst bilgi kartı + arama + filtre alanının yüksekliği
           const double headerAreaHeight = 310.0;
-          // Her bir yarış kartının yaklaşık yüksekliği (kart + margin)
           const double cardHeight = 88.0;
 
-          // İlk sonucu olmayan yarışın dikey merkez koordinatı:
           final double itemCenter = headerAreaHeight + (firstPendingIndex * cardHeight) + (cardHeight / 2.0);
-
-          // Bu yarışın merkezini ekranın tam ortasına (viewportHeight / 2) getirecek scroll ofseti:
-          // Böylece yukarısında sonuçlanan yarışlar, ortasında bu yarış, altında ise sonraki yarışlar görünür.
           final double targetOffset = (itemCenter - (viewportHeight / 2.0))
               .clamp(0.0, _scrollController.position.maxScrollExtent);
 
@@ -204,7 +198,6 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.swimColors;
     final isRunning = widget.live.status == 'ISLENIYOR';
     final firstPendingEventNo = _filteredEvents.firstWhere(
       (e) => e.isPending,
@@ -212,441 +205,430 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
     ).eventNo;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.live.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Yenile',
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadEvents,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadEvents,
-        child: ListView(
-          controller: _scrollController,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          children: [
-            // 1. Müsabaka Genel Durum Kartı
-            _buildMeetHeaderCard(isRunning),
-            const SizedBox(height: 14),
-
-            // 2. Yarış Arama Çubuğu
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Yarış ara (örn: 50m Serbest, Sırtüstü, Kadınlar)...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          _searchQuery = '';
-                          _applyFilter();
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                isDense: true,
-              ),
-              onChanged: (val) {
-                _searchQuery = val;
-                _applyFilter();
-              },
-            ),
-            const SizedBox(height: 10),
-
-            // 3. Cinsiyet Filtre Butonları
-            Row(
-              children: [
-                _buildGenderChip('all', 'Tüm Yarışlar'),
-                const SizedBox(width: 8),
-                _buildGenderChip('erkek', 'Erkekler'),
-                const SizedBox(width: 8),
-                _buildGenderChip('kadin', 'Kadınlar'),
-                const Spacer(),
-                Text(
-                  '${_filteredEvents.length} yarış',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade600,
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadEvents,
+          child: ListView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            children: [
+              // 1. Üst Bar (RoundIconButton ile Geri ve Yenileme Butonları)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  RoundIconButton(
+                    Icons.arrow_back,
+                    onTap: () => Navigator.maybePop(context),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                  RoundIconButton(
+                    Icons.refresh,
+                    onTap: _loadEvents,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // 4. Yarışlar Listesi Başlığı
-            Row(
-              children: [
-                const Icon(Icons.pool, size: 18),
-                const SizedBox(width: 6),
-                const Text(
-                  'Yarış Programı',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              // 2. Müsabaka Genel Durum Kartı (24dp radius, yumuşak gölge)
+              _buildMeetHeaderCard(isRunning),
+              const SizedBox(height: 16),
+
+              // 3. Yarış Arama Çubuğu
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                if (firstPendingEventNo.isNotEmpty)
-                  GestureDetector(
-                    onTap: _scrollToFirstPending,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.amber.shade300),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.arrow_downward, size: 12, color: Colors.amber.shade900),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Sıradaki Yarışa Git',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade900,
-                            ),
-                          ),
-                        ],
-                      ),
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(fontSize: 14, color: AppColors.ink),
+                  decoration: InputDecoration(
+                    hintText: 'Yarış ara (örn: 50m Serbest, Sırtüstü)...',
+                    hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.muted),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18, color: AppColors.muted),
+                            onPressed: () {
+                              _searchController.clear();
+                              _searchQuery = '';
+                              _applyFilter();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                  onChanged: (val) {
+                    _searchQuery = val;
+                    _applyFilter();
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 4. Cinsiyet Filtre Butonları (Pastel hap butonlar)
+              Row(
+                children: [
+                  _buildGenderChip('all', 'Tüm Yarışlar'),
+                  const SizedBox(width: 8),
+                  _buildGenderChip('erkek', 'Erkekler'),
+                  const SizedBox(width: 8),
+                  _buildGenderChip('kadin', 'Kadınlar'),
+                  const Spacer(),
+                  Text(
+                    '${_filteredEvents.length} yarış',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.muted,
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // 5. Yarışlar Listesi / Yükleniyor / Boş Durum
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_filteredEvents.isEmpty)
-              _buildEmptyState()
-            else
-              ..._filteredEvents.map((ev) {
-                final isFirstPending = ev.isPending && ev.eventNo == firstPendingEventNo;
-                return _buildRaceCard(ev, isFirstPending: isFirstPending);
-              }),
-          ],
+              // 5. Yarış Programı Başlığı & "Sıradaki Yarışa Git" Hapı
+              Row(
+                children: [
+                  const Text(
+                    'Yarış Programı',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (firstPendingEventNo.isNotEmpty)
+                    GestureDetector(
+                      onTap: _scrollToFirstPending,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.lime,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_downward_rounded, size: 13, color: AppColors.ink),
+                            SizedBox(width: 4),
+                            Text(
+                              'Sıradaki Yarış',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // 6. Yarışlar Listesi
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_filteredEvents.isEmpty)
+                _buildEmptyState()
+              else
+                ..._filteredEvents.map((ev) {
+                  final isFirstPending = ev.isPending && ev.eventNo == firstPendingEventNo;
+                  return _buildRaceCard(ev, isFirstPending: isFirstPending);
+                }),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMeetHeaderCard(bool isRunning) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isRunning ? Colors.green.shade50 : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: isRunning ? Colors.green : Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isRunning ? 'CANLI TAKİP' : widget.live.status,
-                        style: TextStyle(
-                          color: isRunning ? Colors.green.shade900 : Colors.grey.shade700,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isRunning ? AppColors.mint : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const Spacer(),
-                if (widget.live.city.isNotEmpty)
-                  Text(
-                    widget.live.city,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.live.name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            if (widget.live.date.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  widget.live.date,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 3.5,
+                      backgroundColor: isRunning ? AppColors.ink : AppColors.muted,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isRunning ? 'CANLI TAKİP' : widget.live.status,
+                      style: TextStyle(
+                        color: isRunning ? AppColors.ink : AppColors.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            const SizedBox(height: 12),
+              const Spacer(),
+              if (widget.live.city.isNotEmpty)
+                Text(
+                  widget.live.city,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.live.name,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              color: AppColors.ink,
+              letterSpacing: -0.3,
+            ),
+          ),
+          if (widget.live.date.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                widget.live.date,
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            ),
+          const SizedBox(height: 14),
 
-            // Start & Sonuç Listesi İlerleme Çubukları
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Start: ${widget.live.startListProgress.processed} / ${widget.live.startListProgress.total}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(
+          // Start & Sonuç Listesi İlerleme Çubukları
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Start Listesi: ${widget.live.startListProgress.processed} / ${widget.live.startListProgress.total}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.ink),
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
                         value: widget.live.startListProgress.total > 0
                             ? widget.live.startListProgress.processed / widget.live.startListProgress.total
                             : 0,
-                        backgroundColor: Colors.blue.shade100,
-                        color: Theme.of(context).colorScheme.primary,
+                        backgroundColor: AppColors.bg,
+                        color: AppColors.teal,
+                        minHeight: 6,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sonuç: ${widget.live.resultListProgress.processed} / ${widget.live.resultListProgress.total}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sonuç Listesi: ${widget.live.resultListProgress.processed} / ${widget.live.resultListProgress.total}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.ink),
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
                         value: widget.live.resultListProgress.total > 0
                             ? widget.live.resultListProgress.processed / widget.live.resultListProgress.total
                             : 0,
-                        backgroundColor: Colors.green.shade100,
-                        color: Colors.green,
+                        backgroundColor: AppColors.bg,
+                        color: AppColors.mint,
+                        minHeight: 6,
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            if (widget.live.meetId != null) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.emoji_events_outlined, size: 18),
-                  label: const Text('Müsabakanın Tüm Resmi Sonuçları'),
-                  style: OutlinedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MeetDetailScreen(
-                          meetId: widget.live.meetId!,
-                          meetTitle: widget.live.name,
-                          repository: widget.repository,
-                        ),
-                      ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ],
+          ),
+
+          if (widget.live.meetId != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.emoji_events_rounded, size: 16, color: AppColors.ink),
+                label: const Text(
+                  'Tüm Resmi Sonuçları Görüntüle',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MeetDetailScreen(
+                        meetId: widget.live.meetId!,
+                        meetTitle: widget.live.name,
+                        repository: widget.repository,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildRaceCard(LiveEventProgramItem ev, {bool isFirstPending = false}) {
     final genderText = ev.genderLabel;
-    final isFemale = genderText.toLowerCase().contains('kad') ||
-        genderText.toLowerCase().contains('bayan');
-    final isMale = genderText.toLowerCase().contains('erkek');
-
-    // Başlıkta branş ve cinsiyet net olarak yer alır
     final fullTitle = genderText.isNotEmpty
         ? '${ev.displayTitle} - $genderText'
         : ev.displayTitle;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      elevation: isFirstPending ? 1.5 : 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isFirstPending
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline,
-          width: isFirstPending ? 1.8 : 1.0,
-        ),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: isFirstPending
+            ? Border.all(color: AppColors.ink, width: 1.5)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _openRaceResults(ev),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              // 1. Branş İkonu
-              _buildStrokeIcon(ev.stroke),
-              const SizedBox(width: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openRaceResults(ev),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                // 1. Branş Dairesel İkonu
+                _buildStrokeIcon(ev.stroke),
+                const SizedBox(width: 14),
 
-              // 2. Yarış Başlığı (Numarasız!) ve Cinsiyet Rozeti
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            fullTitle,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              letterSpacing: -0.2,
-                              color: isFirstPending
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
-                            ),
-                          ),
+                // 2. Yarış Başlığı (Numarasız) ve Rozetler
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullTitle,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                          color: AppColors.ink,
+                          letterSpacing: -0.2,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        // Cinsiyet Rozeti (2. Kural: Cinsiyet listede belirgin olmalı)
-                        if (genderText.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isFemale
-                                  ? Colors.purple.shade50
-                                  : isMale
-                                      ? Colors.blue.shade50
-                                      : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: isFemale
-                                    ? Colors.purple.shade200
-                                    : isMale
-                                        ? Colors.blue.shade200
-                                        : Colors.grey.shade300,
-                              ),
+                      ),
+                      const SizedBox(height: 5),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          if (genderText.isNotEmpty)
+                            _buildPill(
+                              genderText,
+                              genderText.toLowerCase().contains('kad')
+                                  ? AppColors.lavender
+                                  : AppColors.teal,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isFemale ? Icons.female : (isMale ? Icons.male : Icons.person),
-                                  size: 13,
-                                  color: isFemale
-                                      ? Colors.purple.shade800
-                                      : isMale
-                                          ? Colors.blue.shade800
-                                          : Colors.grey.shade800,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  genderText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isFemale
-                                        ? Colors.purple.shade900
-                                        : isMale
-                                            ? Colors.blue.shade900
-                                            : Colors.grey.shade800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // Durum Rozeti (Sonuçlandı vs Bekliyor)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: ev.isPending
-                                ? (isFirstPending ? Colors.amber.shade100 : Colors.amber.shade50)
-                                : Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: ev.isPending
-                                  ? (isFirstPending ? Colors.amber.shade700 : Colors.amber.shade300)
-                                  : Colors.green.shade300,
-                            ),
-                          ),
-                          child: Text(
-                            ev.isPending ? (isFirstPending ? '⚡ Sıradaki (Bekliyor)' : '⏱ Bekliyor') : '✓ Sonuçlandı',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: ev.isPending
-                                  ? Colors.amber.shade900
-                                  : Colors.green.shade900,
-                            ),
-                          ),
-                        ),
-
-                        if (ev.ageGroup != null && ev.ageGroup!.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Text(
-                              ev.ageGroup!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
+                          if (ev.ageGroup != null && ev.ageGroup!.isNotEmpty)
+                            _buildPill(ev.ageGroup!, Colors.white),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              // 3. Sağ Ok İkonu
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 13,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ],
+                const SizedBox(width: 8),
+
+                // 3. Durum Rozeti (Sonuçlandı vs Bekliyor)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: ev.isPending
+                        ? (isFirstPending ? AppColors.lime : Colors.white)
+                        : AppColors.mint,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    ev.isPending
+                        ? (isFirstPending ? '⚡ Sıradaki' : '⏱ Bekliyor')
+                        : '✓ Sonuçlandı',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: ev.isPending && !isFirstPending
+                          ? AppColors.muted
+                          : AppColors.ink,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.muted,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -654,53 +636,92 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
   }
 
   Widget _buildStrokeIcon(String stroke) {
-    IconData iconData = Icons.pool;
-    Color iconColor = Colors.blue;
+    IconData iconData = Icons.pool_rounded;
+    Color iconBg = AppColors.mint;
 
     switch (stroke.toUpperCase()) {
       case 'FREE':
-        iconData = Icons.waves;
-        iconColor = Colors.blue;
+        iconData = Icons.waves_rounded;
+        iconBg = AppColors.teal;
         break;
       case 'BACK':
-        iconData = Icons.water;
-        iconColor = Colors.indigo;
+        iconData = Icons.water_rounded;
+        iconBg = AppColors.lavender;
         break;
       case 'BREAST':
-        iconData = Icons.arrow_downward;
-        iconColor = Colors.teal;
+        iconData = Icons.arrow_downward_rounded;
+        iconBg = AppColors.mint;
         break;
       case 'FLY':
-        iconData = Icons.air;
-        iconColor = Colors.deepOrange;
+        iconData = Icons.air_rounded;
+        iconBg = AppColors.lime;
         break;
       case 'MEDLEY':
-        iconData = Icons.auto_awesome;
-        iconColor = Colors.purple;
+        iconData = Icons.auto_awesome_rounded;
+        iconBg = AppColors.lavender;
         break;
     }
 
     return Container(
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        color: iconBg,
+        shape: BoxShape.circle,
       ),
-      child: Icon(iconData, color: iconColor, size: 20),
+      child: Icon(iconData, color: AppColors.ink, size: 20),
+    );
+  }
+
+  Widget _buildPill(String text, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.ink,
+        ),
+      ),
     );
   }
 
   Widget _buildGenderChip(String val, String label) {
     final isSelected = _selectedGenderFilter == val;
-    return ChoiceChip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      selected: isSelected,
-      visualDensity: VisualDensity.compact,
-      onSelected: (_) {
+    return GestureDetector(
+      onTap: () {
         setState(() => _selectedGenderFilter = val);
         _applyFilter();
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.lime : AppColors.card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: AppColors.ink,
+          ),
+        ),
+      ),
     );
   }
 
@@ -710,16 +731,28 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.pool_outlined, size: 50, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: AppColors.card,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.pool_rounded, size: 28, color: AppColors.muted),
+            ),
+            const SizedBox(height: 14),
             const Text(
               'Aramanıza uygun bir yarış bulunamadı.',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: AppColors.ink,
+              ),
             ),
             const SizedBox(height: 4),
-            Text(
+            const Text(
               'Farklı bir arama terimi deneyebilir veya filtreyi temizleyebilirsiniz.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              style: TextStyle(color: AppColors.muted, fontSize: 13),
               textAlign: TextAlign.center,
             ),
           ],
