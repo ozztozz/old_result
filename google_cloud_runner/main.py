@@ -431,6 +431,36 @@ def _masked_token_match(masked: str, candidate: str) -> Tuple[bool, float]:
     return True, visible / max(len(pattern), 1)
 
 
+def normalize_club_name(club_name: Any) -> str:
+    """Kulüp isimlerini normalize eder ve 'S.K.', 'GSK' gibi kısaltmaları açar."""
+    if not club_name:
+        return ""
+    text = unicodedata.normalize("NFKC", str(club_name)).strip().upper()
+    mapping = str.maketrans({"İ": "I", "Ş": "S", "Ğ": "G", "Ü": "U", "Ö": "O", "Ç": "C"})
+    text = text.translate(mapping)
+    text = re.sub(r'\bS[\.\s]*K[\.\s]*\b', ' SPOR KULUBU ', text)
+    text = re.sub(r'\bG[\.\s]*S[\.\s]*K[\.\s]*\b', ' GENCLIK SPOR KULUBU ', text)
+    text = re.sub(r'[^A-Z0-9]+', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def clubs_match(c1: Optional[str], c2: Optional[str]) -> bool:
+    """İki kulüp adının aynı veya türevi olup olmadığını doğrular."""
+    n1 = normalize_club_name(c1)
+    n2 = normalize_club_name(c2)
+    if not n1 or not n2:
+        return False
+    if n1 == n2 or n1 in n2 or n2 in n1:
+        return True
+    ignore_words = {
+        'SPOR', 'KULUBU', 'DERNEGI', 'ILKOKULU', 'ORTAOKULU', 'KOLEJI',
+        'BELEDIYESI', 'BELEDIYE', 'GENCLIK', 'IL', 'MUDURLUGU', 'YUZME', 'IHTISAS'
+    }
+    w1 = set(n1.split()) - ignore_words
+    w2 = set(n2.split()) - ignore_words
+    return bool(w1 and w2 and (w1 & w2))
+
+
 def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[float]:
     """
     Maskeli adı tam ad yapısını koruyarak puanlar.
@@ -467,16 +497,21 @@ def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[f
     c_firsts = candidate_tokens[:-1] if len(candidate_tokens) > 1 else candidate_tokens
     c_surname = candidate_tokens[-1] if len(candidate_tokens) > 1 else ""
 
-    # Ön adlar uyuşuyor mu?
+    # Ön adlar birebir eşit olmalıdır (TYF isimleri maskelemez; Kaan != Ahmet Kaan)
     if m_firsts != c_firsts:
-        # Adayın ön adları arasında maskeli ön adların tamamı sırayla var mı?
-        it = iter(c_firsts)
-        if not all(tok in it for tok in m_firsts):
-            return None
+        return None
 
     # Soyadı kontrolü
     if not m_surname:
         return 70.0
+
+    clean_m = m_surname.strip()
+    # Maskeli soyad bir harfle başlıyorsa adayın soyadı da o harfle başlamalı
+    if clean_m and clean_m[0] != "*" and c_surname and clean_m[0] != c_surname[0]:
+        return None
+    # Maskeli soyad bir harfle bitiyorsa adayın soyadı da o harfle bitmeli
+    if clean_m and clean_m[-1] != "*" and c_surname and clean_m[-1] != c_surname[-1]:
+        return None
 
     vis_surname = re.sub(r"[^A-Z0-9]", "", m_surname)
     if not vis_surname:
@@ -509,7 +544,6 @@ def resolve_masked_athlete(
             target_year += 2000 if target_year <= 35 else 1900
     except (TypeError, ValueError):
         target_year = None
-    club_norm = normalize_masked_name(club)
     scored = []
     for candidate in candidates:
         score = masked_name_match_score(masked_name, candidate.get("sporcu") or candidate.get("sporcu_adi"))
@@ -530,10 +564,10 @@ def resolve_masked_athlete(
                 adjusted += 4
             else:
                 continue
-        candidate_club = normalize_masked_name(candidate.get("kulup") or candidate.get("kulup_adi"))
-        if club_norm and candidate_club:
-            if club_norm == candidate_club or club_norm in candidate_club or candidate_club in club_norm:
-                adjusted += 8
+        candidate_club = candidate.get("kulup") or candidate.get("kulup_adi")
+        if club and candidate_club:
+            if clubs_match(club, candidate_club):
+                adjusted += 15
         scored.append((min(adjusted, 100.0), candidate))
     scored.sort(key=lambda item: item[0], reverse=True)
     if not scored:
