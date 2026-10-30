@@ -1,5 +1,5 @@
 // PWA Service Worker for Türkiye Yüzme Sonuçları
-const CACHE_NAME = 'swim-portal-v1';
+const CACHE_NAME = 'swim-portal-v4';
 const STATIC_ASSETS = [
   '/',
   '/static/css/styles.css',
@@ -55,4 +55,3 @@ self.addEventListener('fetch', (event) => {
     fetch(event.request).catch(() => caches.match(event.request))
   );
 });
-

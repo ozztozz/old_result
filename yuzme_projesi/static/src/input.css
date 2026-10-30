@@ -643,6 +643,1550 @@ html[data-theme="kizil-gumus"] {
   .swim-container {
     @apply w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8;
   }
+
+  /* Editorial mobile layer: keeps the existing data UI, but follows the
+     reference app's quiet surfaces, navy accents and compact bottom navigation. */
+  @layer components {
+    .swim-app-shell {
+      --swim-editorial-ink: #101828;
+      --swim-editorial-cream: #f7f7f2;
+      --swim-editorial-line: #e6e7e2;
+      background: var(--swim-editorial-cream);
+    }
+
+    .swim-app-shell .swim-navbar {
+      background: rgba(247, 247, 242, 0.9);
+      border-bottom-color: var(--swim-editorial-line);
+      color: var(--swim-editorial-ink);
+    }
+
+    .swim-app-shell .swim-brand,
+    .swim-app-shell .swim-text-main {
+      color: var(--swim-editorial-ink);
+    }
+
+    .swim-app-shell .swim-brand-icon {
+      background: var(--swim-editorial-ink);
+      border-color: var(--swim-editorial-ink);
+      color: #fff;
+      border-radius: 999px;
+    }
+
+    .swim-app-shell .swim-card {
+      border-color: var(--swim-editorial-line);
+      border-radius: 1.5rem;
+      box-shadow: 0 10px 30px rgba(16, 24, 40, 0.045);
+    }
+
+    .swim-home-hero {
+      position: relative;
+      overflow: hidden;
+      background: var(--swim-editorial-ink);
+      border-color: var(--swim-editorial-ink);
+      color: #fff;
+    }
+
+    .swim-home-hero::after {
+      content: "";
+      position: absolute;
+      width: 18rem;
+      height: 18rem;
+      right: -7rem;
+      top: -8rem;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2rem rgba(255, 255, 255, 0.035), 0 0 0 5rem rgba(255, 255, 255, 0.025);
+      pointer-events: none;
+    }
+
+    .swim-home-hero > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .swim-home-hero .swim-text-main,
+    .swim-home-hero .swim-text-muted {
+      color: #fff;
+    }
+
+    .swim-home-hero .swim-text-muted {
+      opacity: 0.72;
+    }
+
+    .swim-home-kicker {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .swim-home-title {
+      max-width: 42rem;
+      letter-spacing: -0.045em;
+    }
+
+    .swim-home-hero .swim-btn-primary {
+      background: #fff;
+      border-color: #fff;
+      color: var(--swim-editorial-ink);
+    }
+
+    .swim-home-hero .swim-btn-primary:hover {
+      background: #ecece7;
+    }
+
+    .swim-home-hero .swim-btn-secondary {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #fff;
+    }
+
+    .swim-home-hero .swim-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .swim-home-search {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(12px);
+    }
+
+    .swim-home-search .swim-text-main,
+    .swim-home-search .swim-text-primary {
+      color: #fff;
+    }
+
+    .swim-home-search .swim-input {
+      background: rgba(255, 255, 255, 0.96);
+      border-color: transparent;
+    }
+
+    .swim-home-stats .swim-stat-box {
+      border-color: var(--swim-editorial-line);
+      border-radius: 1.25rem;
+      box-shadow: 0 8px 22px rgba(16, 24, 40, 0.035);
+    }
+
+    .swim-mobile-bottom-nav {
+      display: none;
+    }
+
+    @media (max-width: 639px) {
+      .swim-app-shell .swim-main {
+        padding-bottom: 5.75rem;
+      }
+
+      .swim-home-hero {
+        padding: 1.25rem;
+        border-radius: 1.35rem;
+      }
+
+      .swim-home-title {
+        font-size: 2rem;
+        line-height: 1.08;
+      }
+
+      .swim-home-copy {
+        font-size: 0.88rem;
+      }
+
+      .swim-mobile-bottom-nav {
+        position: fixed;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        left: 0.75rem;
+        right: 0.75rem;
+        bottom: calc(0.75rem + env(safe-area-inset-bottom));
+        z-index: 50;
+        padding: 0.45rem;
+        background: rgba(16, 24, 40, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.25rem;
+        box-shadow: 0 12px 30px rgba(16, 24, 40, 0.2);
+        backdrop-filter: blur(14px);
+      }
+
+      .swim-mobile-bottom-nav a {
+        display: flex;
+        min-height: 3.25rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.15rem;
+        border-radius: 0.9rem;
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 0.62rem;
+        font-weight: 600;
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+
+      .swim-mobile-bottom-nav a i {
+        font-size: 1.05rem;
+      }
+
+      .swim-mobile-bottom-nav a.is-active {
+        background: #fff;
+        color: var(--swim-editorial-ink);
+      }
+    }
+
+    /* Shared page grammar: bring list, detail and analysis views into the same
+       product language as the home insight cards. */
+    .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row,
+    .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row {
+      position: relative;
+      padding: 1.15rem 1.35rem;
+      overflow: hidden;
+      border: 1px solid #293d5d;
+      border-radius: 1.25rem;
+      background:
+        radial-gradient(circle at 100% 0, rgba(53, 185, 255, 0.18), transparent 28%),
+        linear-gradient(135deg, #17243a, #111d31);
+    }
+
+    .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row::after,
+    .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row::after {
+      content: "";
+      position: absolute;
+      width: 7rem;
+      height: 7rem;
+      right: -2.5rem;
+      top: -3.5rem;
+      border: 1px solid rgba(126, 201, 255, 0.2);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1rem rgba(126, 201, 255, 0.04);
+      pointer-events: none;
+    }
+
+    .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row > *,
+    .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row h1,
+    .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row h1 {
+      color: #f5f8ff !important;
+      letter-spacing: -0.045em;
+    }
+
+    .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row p,
+    .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row p {
+      color: #9eacc2 !important;
+    }
+
+    .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row + .swim-card,
+    .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row + .swim-card {
+      border-top-left-radius: 1rem;
+      border-top-right-radius: 1rem;
+    }
+
+    .swim-app-shell .swim-page-content > .swim-card > .swim-table-wrapper,
+    .swim-app-shell .swim-page-content > .grid .swim-card > .swim-table-wrapper {
+      background: #17243a !important;
+    }
+
+    .swim-app-shell .swim-page-content .swim-table {
+      color: #d7e3f5;
+    }
+
+    .swim-app-shell .swim-page-content .swim-th {
+      color: #71819a !important;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+    }
+
+    .swim-app-shell .swim-page-content .swim-td {
+      color: #d7e3f5;
+    }
+
+    .swim-app-shell .swim-page-content .swim-td a {
+      color: #f5f8ff;
+    }
+
+    .swim-app-shell .swim-page-content .swim-td a:hover {
+      color: #35b9ff;
+    }
+
+    .swim-app-shell .swim-page-content .swim-card-header h2 {
+      letter-spacing: -0.02em;
+    }
+
+    .swim-template-surface {
+      position: relative;
+    }
+
+    .swim-template-surface[data-screen="sporcu_listesi"] .swim-card:first-of-type,
+    .swim-template-surface[data-screen="kulup_listesi"] .swim-card:first-of-type,
+    .swim-template-surface[data-screen="musabaka_listesi"] .swim-card:first-of-type,
+    .swim-template-surface[data-screen="yaris_sonuclari_ara"] .swim-card:first-of-type {
+      border-top: 2px solid #35b9ff !important;
+    }
+
+    .swim-template-surface[data-screen="canli_yaris_listesi"] .swim-table-wrapper {
+      border-top: 2px solid #ff648e !important;
+    }
+
+    .swim-template-surface[data-screen="sporcu_eslestir_sayfasi"] > .mb-6 > .swim-card:first-child {
+      border-left: 3px solid #35b9ff !important;
+    }
+
+    .swim-template-surface[data-screen="musabaka_analiz"] .swim-card,
+    .swim-template-surface[data-screen="musabaka_detay"] .swim-card,
+    .swim-template-surface[data-screen="sporcu_detay"] .swim-card,
+    .swim-template-surface[data-screen="kulup_detay"] .swim-card {
+      border-radius: 1.35rem !important;
+    }
+
+    .swim-template-surface[data-screen="musabaka_analiz"] .swim-card-header,
+    .swim-template-surface[data-screen="musabaka_detay"] .swim-card-header,
+    .swim-template-surface[data-screen="sporcu_detay"] .swim-card-header,
+    .swim-template-surface[data-screen="kulup_detay"] .swim-card-header {
+      background:
+        linear-gradient(90deg, rgba(53, 185, 255, 0.1), transparent 55%),
+        #1b2b45 !important;
+    }
+
+    .swim-template-surface[data-screen="sporcu_eslestir_sayfasi"] .swim-card,
+    .swim-template-surface[data-screen="canli_yaris_listesi"] .swim-card {
+      box-shadow: 0 18px 42px rgba(2, 8, 20, 0.24) !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box {
+      background: #131f34 !important;
+      border: 1px solid #344a6d !important;
+      border-radius: 1.15rem !important;
+      box-shadow: 0 24px 70px rgba(2, 8, 20, 0.62) !important;
+      color: #f5f8ff;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-header,
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-footer {
+      background: #17243a !important;
+      border-color: #344a6d !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-header {
+      padding: 0.7rem 0.8rem !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-body {
+      background: #131f34 !important;
+      padding: 0.65rem !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-footer {
+      padding: 0.55rem 0.65rem !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-footer .swim-btn-primary {
+      background: linear-gradient(135deg, #35b9ff, #3974ff) !important;
+      border-color: transparent !important;
+      color: #fff !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-footer .swim-btn-secondary {
+      background: #243552 !important;
+      border-color: #344a6d !important;
+      color: #f5f8ff !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi {
+      min-height: 4.65rem;
+      border-radius: 0.72rem !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi-blue {
+      background: #123954 !important;
+      border-color: #196084 !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi-amber {
+      background: #2f2c2d !important;
+      border-color: #8a6531 !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi-teal {
+      background: #113b45 !important;
+      border-color: #1b707c !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi-slate {
+      background: #202d46 !important;
+      border-color: #344a6d !important;
+    }
+
+    .swim-app-shell .swim-modal-box {
+      background: #131f34 !important;
+      border-color: #344a6d !important;
+      color: #f5f8ff;
+      box-shadow: 0 24px 70px rgba(2, 8, 20, 0.62) !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-modal-header,
+    .swim-app-shell .swim-modal-box .swim-modal-footer {
+      background: #17243a !important;
+      border-color: #344a6d !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-modal-body {
+      background: #131f34 !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-title,
+    .swim-app-shell .swim-modal-box .swim-title-sm,
+    .swim-app-shell .swim-modal-box h3,
+    .swim-app-shell .swim-modal-box .swim-text-main {
+      color: #f5f8ff !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-filter-bar {
+      background: #101c30 !important;
+      border-color: #293d5d !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-table-wrapper,
+    .swim-app-shell .swim-modal-box .swim-accordion-item,
+    .swim-app-shell .swim-modal-box .swim-mobile-card {
+      background: #17243a !important;
+      border-color: #344a6d !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-accordion-header {
+      background: #17243a !important;
+      color: #f5f8ff !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-thead {
+      background: #1b2b45 !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-tr:hover {
+      background: #203657 !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-select,
+    .swim-app-shell .swim-modal-box .swim-input {
+      background: #121e32 !important;
+      border-color: #344a6d !important;
+      color: #f5f8ff !important;
+    }
+
+    /* Modal bilgi hiyerarşisi: cyan yalnızca etkileşim/ana değer, diğer metinler nötr. */
+    .swim-app-shell .swim-modal-box .text-sky-500,
+    .swim-app-shell .swim-modal-box .text-sky-600,
+    .swim-app-shell .swim-modal-box .text-sky-400,
+    .swim-app-shell .swim-modal-box .text-blue-600 {
+      color: #35b9ff !important;
+    }
+
+    .swim-app-shell .swim-modal-box .text-emerald-500,
+    .swim-app-shell .swim-modal-box .text-emerald-600,
+    .swim-app-shell .swim-modal-box .text-emerald-400,
+    .swim-app-shell .swim-modal-box .text-green-500 {
+      color: #9eacc2 !important;
+    }
+
+    .swim-app-shell .swim-modal-box .text-amber-500,
+    .swim-app-shell .swim-modal-box .text-amber-600,
+    .swim-app-shell .swim-modal-box .text-amber-400,
+    .swim-app-shell .swim-modal-box .text-amber-700,
+    .swim-app-shell .swim-modal-box .text-orange-500 {
+      color: #c3cfdf !important;
+    }
+
+    .swim-app-shell .swim-modal-box .text-red-500,
+    .swim-app-shell .swim-modal-box .text-rose-500,
+    .swim-app-shell .swim-modal-box .text-red-600 {
+      color: #c3cfdf !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-text-muted {
+      color: #aab9ce !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-text-subtle {
+      color: #8798b0 !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-link,
+    .swim-app-shell .swim-modal-box .swim-td,
+    .swim-app-shell .swim-modal-box .swim-mobile-card strong {
+      color: #e8eef8 !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-link:hover {
+      color: #35b9ff !important;
+    }
+
+    .swim-app-shell .swim-kicker {
+      color: #6f829d;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .swim-app-shell .swim-ranking-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      min-height: 3.1rem;
+      padding: 0.5rem 0.6rem;
+      border: 1px solid #293d5d;
+      border-radius: 0.8rem;
+      background: #17243a;
+    }
+
+    .swim-app-shell .swim-ranking-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.45rem;
+      height: 1.45rem;
+      border-radius: 999px;
+      background: #243552;
+      color: #aab9ce;
+      font: 700 0.7rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      flex-shrink: 0;
+    }
+
+    .swim-app-shell .swim-mini-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-height: 4.25rem;
+      padding: 0.65rem;
+      border: 1px solid #293d5d;
+      border-radius: 0.75rem;
+      background: #17243a;
+    }
+
+    .swim-app-shell .swim-mini-metric span {
+      color: #aab9ce;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .swim-app-shell .swim-mini-metric strong {
+      color: #e8eef8;
+      font: 700 1rem/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .swim-app-shell .swim-mini-metric small {
+      color: #8798b0;
+      font-size: 0.62rem;
+    }
+
+    .swim-app-shell .swim-insight-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.22rem;
+      min-height: 4.5rem;
+      padding: 0.7rem;
+      border: 1px solid #293d5d;
+      border-radius: 0.8rem;
+      background: #17243a;
+    }
+
+    .swim-app-shell .swim-insight-card:first-child {
+      border-top: 2px solid #35b9ff;
+    }
+
+    .swim-app-shell .swim-insight-label {
+      color: #aab9ce;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+
+    .swim-app-shell .swim-insight-card strong {
+      color: #e8eef8;
+      font: 700 1.1rem/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .swim-app-shell .swim-insight-card small {
+      color: #8798b0;
+      font-size: 0.62rem;
+    }
+
+    .swim-app-shell .swim-insight-meter {
+      height: 0.28rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #243552;
+    }
+
+    .swim-app-shell .swim-insight-meter span {
+      display: block;
+      height: 100%;
+      min-width: 0.3rem;
+      border-radius: inherit;
+      background: #35b9ff;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-modal-kpi,
+    .swim-app-shell .swim-modal-box .swim-modal-kpi-blue,
+    .swim-app-shell .swim-modal-box .swim-modal-kpi-amber,
+    .swim-app-shell .swim-modal-box .swim-modal-kpi-teal,
+    .swim-app-shell .swim-modal-box .swim-modal-kpi-slate {
+      background: #17243a !important;
+      border-color: #344a6d !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-modal-kpi:first-child {
+      border-top: 2px solid #35b9ff !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-badge-success,
+    .swim-app-shell .swim-modal-box .swim-badge-warning,
+    .swim-app-shell .swim-modal-box .swim-badge-danger {
+      background: #243552 !important;
+      border-color: #3b5274 !important;
+      color: #c3cfdf !important;
+    }
+
+    .swim-app-shell .swim-modal-box .swim-badge-primary {
+      background: #164d73 !important;
+      border-color: #35b9ff !important;
+      color: #e8f7ff !important;
+    }
+
+    .swim-app-shell .swim-modal-box .text-amber-500,
+    .swim-app-shell .swim-modal-box .text-emerald-500 {
+      filter: saturate(0.35);
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi .text-sky-600,
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi .text-sky-400 {
+      color: #35b9ff !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi .text-emerald-600,
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi .text-emerald-400 {
+      color: #64e6d3 !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi .text-amber-600,
+    .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi .text-amber-400 {
+      color: #ffb84d !important;
+    }
+
+    .swim-app-shell .swim-athlete-modal-box .swim-table-wrapper,
+    .swim-app-shell .swim-athlete-modal-box .swim-mobile-card {
+      background: #17243a !important;
+      border-color: #344a6d !important;
+    }
+
+    @media (max-width: 639px) {
+      .swim-app-shell .swim-athlete-modal-box {
+        max-height: 88vh !important;
+        border-radius: 0.95rem !important;
+      }
+
+      .swim-app-shell .swim-athlete-modal-box .swim-modal-header h3 {
+        font-size: 0.78rem !important;
+      }
+
+      .swim-app-shell .swim-athlete-modal-box .swim-modal-body > .grid {
+        gap: 0.35rem !important;
+      }
+
+      .swim-app-shell .swim-athlete-modal-box .swim-modal-kpi {
+        padding: 0.48rem !important;
+      }
+    }
+
+    .swim-app-shell .swim-page-content .swim-card-header h2 i {
+      color: #35b9ff !important;
+    }
+
+    .swim-app-shell .swim-page-content .swim-title,
+    .swim-app-shell .swim-page-content .swim-title-lg {
+      color: #f5f8ff !important;
+      letter-spacing: -0.045em;
+    }
+
+    .swim-app-shell .swim-page-content .swim-timeline {
+      border-color: #293d5d;
+    }
+
+    .swim-app-shell .swim-page-content .swim-timeline-dot {
+      background: #35b9ff;
+      border-color: #17243a;
+      box-shadow: 0 0 0 4px rgba(53, 185, 255, 0.18);
+    }
+
+    .swim-app-shell .swim-page-content .swim-code,
+    .swim-app-shell .swim-page-content pre {
+      background: #09111f !important;
+      border-color: #293d5d !important;
+      color: #d9f3ff !important;
+    }
+
+    @media (max-width: 639px) {
+      .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row,
+      .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row {
+        padding: 1rem;
+      }
+
+      .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row h1,
+      .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row h1 {
+        font-size: 1.25rem;
+      }
+    }
+
+    /*
+      Final visual direction: one palette for every route and every saved theme.
+      The old theme selector remains available for compatibility, but no longer
+      changes the product palette.
+    */
+    :root,
+    html[data-theme="sis-mavisi"],
+    html[data-theme="okyanus-gece"],
+    html[data-theme="klasik-lacivert"],
+    html[data-theme="zumrut"],
+    html[data-theme="pine-teal"],
+    html[data-theme="lavanta-sisi"],
+    html[data-theme="kizil-gumus"] {
+      --swim-page-bg: #f7f5f0;
+      --swim-page-text: #0b1220;
+      --swim-navbar-bg: rgba(247, 245, 240, 0.94);
+      --swim-navbar-border: #dedbd2;
+      --swim-navbar-text: #0b1220;
+      --swim-card-bg: #ffffff;
+      --swim-card-border: #e4e1d9;
+      --swim-card-header-bg: #fbfaf7;
+      --swim-card-footer-bg: #f1efe9;
+      --swim-primary: #ff6b5b;
+      --swim-primary-hover: #e95649;
+      --swim-primary-bg: #fff0ed;
+      --swim-primary-bg-hover: #ffe1dc;
+      --swim-primary-border: #ffc2b9;
+      --swim-primary-text: #b83e35;
+      --swim-secondary-bg: #eeece6;
+      --swim-secondary-hover-bg: #e3e0d8;
+      --swim-secondary-text: #30394a;
+      --swim-secondary-border: #dedbd2;
+      --swim-text-main: #0b1220;
+      --swim-text-muted: #687080;
+      --swim-text-subtle: #9299a4;
+      --swim-panel-bg: #f1efe9;
+      --swim-panel-border: #dedbd2;
+      --swim-panel-text: #30394a;
+      --swim-table-th-bg: #f1efe9;
+      --swim-table-th-text: #687080;
+      --swim-table-border: #e4e1d9;
+      --swim-table-tr-border: #eeece6;
+      --swim-table-tr-hover: #fff5f2;
+      --swim-input-bg: #ffffff;
+      --swim-input-border: #d3d0c8;
+      --swim-input-text: #0b1220;
+      --swim-input-placeholder: #9299a4;
+      --swim-input-focus-border: #ff6b5b;
+      --swim-modal-backdrop: rgba(11, 18, 32, 0.58);
+      --swim-modal-box-bg: #ffffff;
+      --swim-modal-box-border: #e4e1d9;
+      --swim-modal-header-bg: #fbfaf7;
+      --swim-footer-bg: #0b1220;
+      --swim-footer-border: #202b3e;
+      --swim-footer-text: #b8bfca;
+      --swim-success-bg: #e9f5ef;
+      --swim-success-border: #b8dfc7;
+      --swim-success-text: #21744b;
+      --swim-warning-bg: #fff3d8;
+      --swim-warning-border: #f3d28a;
+      --swim-warning-text: #9a6412;
+      --swim-danger-bg: #fff0ed;
+      --swim-danger-border: #ffc2b9;
+      --swim-danger-text: #b83e35;
+      --swim-dark-bg: #0b1220;
+      --swim-dark-border: #202b3e;
+      --swim-dark-text: #ffffff;
+      --swim-live-color: #ff6b5b;
+      --swim-ring: rgba(255, 107, 91, 0.25);
+    }
+
+    @layer components {
+      .swim-app-shell {
+        background: #f7f5f0 !important;
+        color: #0b1220 !important;
+      }
+
+      .swim-app-shell .swim-navbar {
+        background: rgba(247, 245, 240, 0.94) !important;
+        border-color: #dedbd2 !important;
+      }
+
+      .swim-app-shell .swim-brand-icon {
+        background: #0b1220 !important;
+        border-color: #0b1220 !important;
+        color: #ffffff !important;
+      }
+
+      .swim-app-shell .swim-brand-accent,
+      .swim-app-shell .swim-text-primary,
+      .swim-app-shell .swim-nav-link-active,
+      .swim-app-shell .swim-text-danger,
+      .swim-app-shell .swim-text-success,
+      .swim-app-shell .swim-text-warning {
+        color: #ff6b5b !important;
+      }
+
+      .swim-app-shell .swim-card,
+      .swim-app-shell .swim-stat-box {
+        background: #ffffff !important;
+        border-color: #e4e1d9 !important;
+        box-shadow: 0 12px 30px rgba(11, 18, 32, 0.06) !important;
+      }
+
+      .swim-app-shell .swim-card-header {
+        background: #fbfaf7 !important;
+        border-color: #e4e1d9 !important;
+      }
+
+      .swim-app-shell .swim-panel,
+      .swim-app-shell .swim-panel-primary,
+      .swim-app-shell .swim-filter-bar {
+        background: #f1efe9 !important;
+        border-color: #dedbd2 !important;
+      }
+
+      .swim-app-shell .swim-btn-primary {
+        background: #ff6b5b !important;
+        border-color: #ff6b5b !important;
+        color: #ffffff !important;
+      }
+
+      .swim-app-shell .swim-btn-primary:hover {
+        background: #e95649 !important;
+      }
+
+      .swim-app-shell .swim-btn-secondary,
+      .swim-app-shell .swim-btn-outline,
+      .swim-app-shell .swim-btn-outline-primary {
+        background: #eeece6 !important;
+        border-color: #dedbd2 !important;
+        color: #30394a !important;
+      }
+
+      .swim-app-shell .swim-btn-outline-primary {
+        color: #b83e35 !important;
+      }
+
+      .swim-app-shell .swim-input,
+      .swim-app-shell .swim-select,
+      .swim-app-shell .swim-nav-search,
+      .swim-app-shell .swim-nav-search-mobile {
+        background: #ffffff !important;
+        border-color: #d3d0c8 !important;
+        color: #0b1220 !important;
+      }
+
+      .swim-app-shell .swim-input:focus,
+      .swim-app-shell .swim-select:focus {
+        border-color: #ff6b5b !important;
+        box-shadow: 0 0 0 3px rgba(255, 107, 91, 0.18) !important;
+      }
+
+      .swim-app-shell .swim-table-wrapper {
+        background: #ffffff !important;
+        border-color: #e4e1d9 !important;
+      }
+
+      .swim-app-shell .swim-thead {
+        background: #f1efe9 !important;
+      }
+
+      .swim-app-shell .swim-tr {
+        border-color: #eeece6 !important;
+      }
+
+      .swim-app-shell .swim-tr:hover {
+        background: #fff5f2 !important;
+      }
+
+      .swim-app-shell .swim-badge-primary,
+      .swim-app-shell .swim-badge-info {
+        background: #fff0ed !important;
+        border-color: #ffc2b9 !important;
+        color: #b83e35 !important;
+      }
+
+      .swim-app-shell .swim-badge-neutral {
+        background: #eeece6 !important;
+        border-color: #dedbd2 !important;
+        color: #687080 !important;
+      }
+
+      .swim-app-shell .swim-modal-box {
+        background: #ffffff !important;
+        border-color: #e4e1d9 !important;
+      }
+
+      .swim-app-shell .swim-mobile-bottom-nav {
+        background: #0b1220 !important;
+        border-color: #202b3e !important;
+      }
+
+      .swim-app-shell .swim-mobile-bottom-nav a.is-active {
+        background: #ff6b5b !important;
+        color: #ffffff !important;
+      }
+
+      .swim-app-shell .swim-footer {
+        background: #0b1220 !important;
+        border-color: #202b3e !important;
+      }
+
+      /* Neutralize legacy Tailwind color utilities still present in detail views. */
+      .swim-app-shell .text-amber-500,
+      .swim-app-shell .text-amber-700,
+      .swim-app-shell .text-blue-600,
+      .swim-app-shell .text-sky-500,
+      .swim-app-shell .text-emerald-500,
+      .swim-app-shell .text-rose-500,
+      .swim-app-shell .text-red-500,
+      .swim-app-shell .text-green-500 {
+        color: #ff6b5b !important;
+      }
+
+      /* Deep blue mobile-app direction from the supplied reference image. */
+      :root,
+      html[data-theme] {
+        --swim-page-bg: #0c1424;
+        --swim-page-text: #f5f8ff;
+        --swim-navbar-bg: rgba(15, 25, 43, 0.96);
+        --swim-navbar-border: #263753;
+        --swim-card-bg: #17243a;
+        --swim-card-border: #293d5d;
+        --swim-card-header-bg: #1b2b45;
+        --swim-card-footer-bg: #111d31;
+        --swim-primary: #35b9ff;
+        --swim-primary-hover: #2299e7;
+        --swim-primary-bg: #173d68;
+        --swim-primary-bg-hover: #20558c;
+        --swim-primary-border: #2f9de0;
+        --swim-primary-text: #d9f3ff;
+        --swim-secondary-bg: #202f48;
+        --swim-secondary-hover-bg: #2c4061;
+        --swim-secondary-text: #d7e3f5;
+        --swim-secondary-border: #344a6d;
+        --swim-text-main: #f5f8ff;
+        --swim-text-muted: #9eacc2;
+        --swim-text-subtle: #71819a;
+        --swim-panel-bg: #131f34;
+        --swim-panel-border: #293d5d;
+        --swim-panel-text: #d7e3f5;
+        --swim-table-th-bg: #1b2b45;
+        --swim-table-th-text: #aab9ce;
+        --swim-table-border: #293d5d;
+        --swim-table-tr-border: #22334f;
+        --swim-table-tr-hover: #203657;
+        --swim-input-bg: #121e32;
+        --swim-input-border: #344a6d;
+        --swim-input-text: #f5f8ff;
+        --swim-input-placeholder: #71819a;
+        --swim-input-focus-border: #35b9ff;
+        --swim-modal-box-bg: #17243a;
+        --swim-modal-box-border: #344a6d;
+        --swim-modal-header-bg: #1b2b45;
+        --swim-footer-bg: #09111f;
+        --swim-footer-border: #263753;
+        --swim-footer-text: #91a1b9;
+        --swim-success-bg: #123d45;
+        --swim-success-border: #1f8d9c;
+        --swim-success-text: #7de8ee;
+        --swim-warning-bg: #453b24;
+        --swim-warning-border: #b58b37;
+        --swim-warning-text: #f8d77f;
+        --swim-danger-bg: #452b3b;
+        --swim-danger-border: #b65379;
+        --swim-danger-text: #ff9fbe;
+        --swim-dark-bg: #09111f;
+        --swim-dark-border: #263753;
+        --swim-dark-text: #f5f8ff;
+        --swim-live-color: #ff648e;
+      }
+
+      .swim-app-shell,
+      .swim-app-shell .swim-page-content {
+        background: #0c1424 !important;
+        color: #f5f8ff !important;
+      }
+
+      .swim-app-shell .swim-navbar {
+        background: rgba(15, 25, 43, 0.96) !important;
+        border-color: #263753 !important;
+      }
+
+      .swim-app-shell .swim-brand,
+      .swim-app-shell .swim-text-main,
+      .swim-app-shell .swim-card h1,
+      .swim-app-shell .swim-card h2,
+      .swim-app-shell .swim-card h3 {
+        color: #f5f8ff !important;
+      }
+
+      .swim-app-shell .swim-brand-icon {
+        background: linear-gradient(145deg, #35b9ff, #3974ff) !important;
+        border-color: transparent !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 18px rgba(53, 185, 255, 0.28);
+      }
+
+      .swim-app-shell .swim-brand-accent,
+      .swim-app-shell .swim-text-primary {
+        color: #35b9ff !important;
+      }
+
+      .swim-app-shell .swim-card,
+      .swim-app-shell .swim-stat-box {
+        background: #17243a !important;
+        border-color: #293d5d !important;
+        box-shadow: 0 16px 38px rgba(2, 8, 20, 0.22) !important;
+      }
+
+      .swim-app-shell .swim-card-header,
+      .swim-app-shell .swim-thead {
+        background: #1b2b45 !important;
+        border-color: #293d5d !important;
+      }
+
+      .swim-app-shell .swim-panel,
+      .swim-app-shell .swim-panel-primary,
+      .swim-app-shell .swim-filter-bar {
+        background: #131f34 !important;
+        border-color: #293d5d !important;
+        color: #d7e3f5 !important;
+      }
+
+      .swim-app-shell .swim-btn-primary {
+        background: linear-gradient(135deg, #35b9ff, #3974ff) !important;
+        border-color: transparent !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 18px rgba(53, 185, 255, 0.22);
+      }
+
+      .swim-app-shell .swim-btn-secondary,
+      .swim-app-shell .swim-btn-outline,
+      .swim-app-shell .swim-btn-outline-primary {
+        background: #202f48 !important;
+        border-color: #344a6d !important;
+        color: #d7e3f5 !important;
+      }
+
+      .swim-app-shell .swim-btn-outline-primary {
+        color: #35b9ff !important;
+      }
+
+      .swim-app-shell .swim-input,
+      .swim-app-shell .swim-select,
+      .swim-app-shell .swim-nav-search,
+      .swim-app-shell .swim-nav-search-mobile {
+        background: #121e32 !important;
+        border-color: #344a6d !important;
+        color: #f5f8ff !important;
+      }
+
+      .swim-app-shell .swim-input::placeholder,
+      .swim-app-shell .swim-nav-search::placeholder,
+      .swim-app-shell .swim-nav-search-mobile::placeholder {
+        color: #71819a !important;
+      }
+
+      .swim-app-shell .swim-input:focus,
+      .swim-app-shell .swim-select:focus {
+        border-color: #35b9ff !important;
+        box-shadow: 0 0 0 3px rgba(53, 185, 255, 0.2) !important;
+      }
+
+      .swim-app-shell .swim-table-wrapper {
+        background: #17243a !important;
+        border-color: #293d5d !important;
+      }
+
+      .swim-app-shell .swim-tr {
+        border-color: #22334f !important;
+      }
+
+      .swim-app-shell .swim-tr:hover {
+        background: #203657 !important;
+      }
+
+      .swim-app-shell .swim-text-muted {
+        color: #9eacc2 !important;
+      }
+
+      .swim-app-shell .swim-text-subtle {
+        color: #71819a !important;
+      }
+
+      .swim-app-shell .swim-badge-primary,
+      .swim-app-shell .swim-badge-info {
+        background: #173d68 !important;
+        border-color: #2f9de0 !important;
+        color: #d9f3ff !important;
+      }
+
+      .swim-app-shell .swim-badge-neutral {
+        background: #202f48 !important;
+        border-color: #344a6d !important;
+        color: #aab9ce !important;
+      }
+
+      .swim-app-shell .swim-modal-box {
+        background: #17243a !important;
+        border-color: #344a6d !important;
+      }
+
+      .swim-app-shell .swim-footer {
+        background: #09111f !important;
+        border-color: #263753 !important;
+      }
+
+      .swim-app-shell .swim-home-hero {
+        background: linear-gradient(145deg, #15243b 0%, #1e4071 58%, #2f9de0 145%) !important;
+        border-color: #293d5d !important;
+      }
+
+      .swim-app-shell .swim-home-search {
+        background: rgba(8, 17, 31, 0.38) !important;
+        border-color: rgba(126, 201, 255, 0.22) !important;
+      }
+
+      .swim-app-shell .swim-mobile-bottom-nav {
+        background: #101c30 !important;
+        border-color: #293d5d !important;
+      }
+
+      .swim-app-shell .swim-mobile-bottom-nav a.is-active {
+        background: linear-gradient(135deg, #35b9ff, #3974ff) !important;
+        color: #ffffff !important;
+      }
+
+      /* Data cards: each metric has its own visual grammar instead of a generic tile. */
+      .swim-app-shell .swim-insight-card {
+        position: relative;
+        min-height: 12.5rem;
+        overflow: hidden;
+        padding: 1.15rem !important;
+        text-align: left;
+        border-radius: 1.35rem !important;
+        background: linear-gradient(155deg, #17243a, #111d31) !important;
+      }
+
+      .swim-app-shell .swim-insight-card::after {
+        content: "";
+        position: absolute;
+        width: 9rem;
+        height: 9rem;
+        right: -3.5rem;
+        top: -3.5rem;
+        border: 1px solid rgba(126, 201, 255, 0.18);
+        border-radius: 50%;
+        box-shadow: 0 0 0 1.2rem rgba(126, 201, 255, 0.04), 0 0 0 2.4rem rgba(126, 201, 255, 0.025);
+        pointer-events: none;
+      }
+
+      .swim-insight-topline,
+      .swim-insight-foot,
+      .swim-insight-route,
+      .swim-insight-avatars {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+      }
+
+      .swim-insight-topline {
+        justify-content: space-between;
+        color: #71819a;
+        font-size: 0.61rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+      }
+
+      .swim-insight-topline i {
+        color: #35b9ff;
+        font-size: 1rem;
+      }
+
+      .swim-insight-number {
+        position: relative;
+        z-index: 1;
+        margin-top: 1.15rem;
+        color: #f5f8ff;
+        font-size: clamp(1.75rem, 3vw, 2.35rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 1;
+      }
+
+      .swim-insight-label {
+        position: relative;
+        z-index: 1;
+        margin-top: 0.45rem;
+        color: #aab9ce;
+        font-size: 0.77rem;
+        font-weight: 600;
+      }
+
+      .swim-insight-meter {
+        position: relative;
+        z-index: 1;
+        height: 0.28rem;
+        margin-top: 1.05rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #263753;
+      }
+
+      .swim-insight-meter span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #35b9ff, #3974ff);
+      }
+
+      .swim-insight-avatars {
+        margin-top: 1rem;
+      }
+
+      .swim-insight-avatars i {
+        display: grid;
+        width: 1.65rem;
+        height: 1.65rem;
+        margin-right: -0.35rem;
+        place-items: center;
+        border: 2px solid #17243a;
+        border-radius: 50%;
+        background: #2b79b9;
+        color: #e8f7ff;
+        font-size: 0.68rem;
+      }
+
+      .swim-insight-avatars i:nth-child(2) {
+        background: #6356b9;
+      }
+
+      .swim-insight-avatars i:nth-child(3) {
+        background: #287e75;
+      }
+
+      .swim-insight-avatars span {
+        margin-left: 0.65rem;
+        color: #71819a;
+        font-size: 0.68rem;
+      }
+
+      .swim-insight-network {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: end;
+        gap: 0.35rem;
+        height: 2rem;
+        margin-top: 0.65rem;
+      }
+
+      .swim-insight-network span {
+        display: block;
+        width: 0.65rem;
+        border-radius: 0.3rem 0.3rem 0 0;
+        background: linear-gradient(180deg, #35b9ff, #3974ff);
+      }
+
+      .swim-insight-network span:nth-child(1) { height: 38%; }
+      .swim-insight-network span:nth-child(2) { height: 70%; }
+      .swim-insight-network span:nth-child(3) { height: 52%; }
+      .swim-insight-network span:nth-child(4) { height: 92%; }
+      .swim-insight-network span:nth-child(5) { height: 64%; }
+
+      .swim-insight-route {
+        gap: 0.25rem;
+        margin-top: 0.95rem;
+        color: #35b9ff;
+        font-size: 0.65rem;
+        font-weight: 800;
+      }
+
+      .swim-insight-route span {
+        color: #aab9ce;
+        letter-spacing: 0.08em;
+      }
+
+      .swim-insight-route i {
+        color: #3974ff;
+        font-size: 0.65rem;
+      }
+
+      .swim-insight-foot {
+        position: absolute;
+        right: 1.15rem;
+        bottom: 1.05rem;
+        left: 1.15rem;
+        justify-content: space-between;
+        padding-top: 0.65rem;
+        border-top: 1px solid #263753;
+        color: #71819a;
+        font-size: 0.66rem;
+      }
+
+      .swim-insight-foot i {
+        margin-right: 0.3rem;
+        color: #35b9ff;
+      }
+
+      .swim-insight-foot b {
+        color: #7de8ee;
+        font-size: 0.57rem;
+        letter-spacing: 0.08em;
+      }
+
+      .swim-profile-stat {
+        position: relative;
+        overflow: hidden;
+        min-height: 6rem;
+        border-radius: 1rem !important;
+        background: #131f34 !important;
+      }
+
+      .swim-profile-stat::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        height: 0.18rem;
+        background: linear-gradient(90deg, #35b9ff, #3974ff);
+      }
+
+      .swim-profile-stat-medals::before {
+        background: linear-gradient(90deg, #f8d77f, #d89443);
+      }
+
+      .swim-profile-stat-races::before {
+        background: linear-gradient(90deg, #7de8ee, #35b9ff);
+      }
+
+      .swim-profile-stat-kicker {
+        margin-bottom: 0.35rem;
+        color: #71819a;
+        font-size: 0.56rem;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+      }
+
+      .swim-profile-stat .swim-stat-val {
+        position: relative;
+        z-index: 1;
+      }
+
+      @media (max-width: 639px) {
+        .swim-app-shell .swim-insight-card {
+          min-height: 11.5rem;
+          padding: 0.9rem !important;
+        }
+
+        .swim-insight-number {
+          margin-top: 0.9rem;
+          font-size: 1.7rem;
+        }
+
+        .swim-insight-foot {
+          right: 0.9rem;
+          bottom: 0.85rem;
+          left: 0.9rem;
+        }
+      }
+
+      .swim-app-shell .border-l-blue-600,
+      .swim-app-shell .border-l-sky-500,
+      .swim-app-shell .border-l-emerald-500,
+      .swim-app-shell .border-l-amber-500 {
+        border-left-color: #ff6b5b !important;
+      }
+
+      .swim-app-shell .bg-slate-100,
+      .swim-app-shell .bg-slate-800 {
+        background: #eeece6 !important;
+      }
+
+      .swim-app-shell .text-slate-800,
+      .swim-app-shell .text-slate-100 {
+        color: #0b1220 !important;
+      }
+    }
+
+    /* Global final pass: intentionally outside responsive blocks. */
+    :root {
+      --swim-page-bg: #f7f5f0;
+      --swim-page-text: #0b1220;
+      --swim-navbar-bg: rgba(247, 245, 240, 0.94);
+      --swim-navbar-border: #dedbd2;
+      --swim-card-bg: #ffffff;
+      --swim-card-border: #e4e1d9;
+      --swim-primary: #ff6b5b;
+      --swim-primary-bg: #fff0ed;
+      --swim-primary-bg-hover: #ffe1dc;
+      --swim-primary-border: #ffc2b9;
+      --swim-primary-text: #b83e35;
+      --swim-secondary-bg: #eeece6;
+      --swim-secondary-hover-bg: #e3e0d8;
+      --swim-secondary-text: #30394a;
+      --swim-secondary-border: #dedbd2;
+      --swim-text-main: #0b1220;
+      --swim-text-muted: #687080;
+      --swim-text-subtle: #9299a4;
+      --swim-panel-bg: #f1efe9;
+      --swim-panel-border: #dedbd2;
+      --swim-table-th-bg: #f1efe9;
+      --swim-table-border: #e4e1d9;
+      --swim-table-tr-border: #eeece6;
+      --swim-table-tr-hover: #fff5f2;
+      --swim-input-bg: #ffffff;
+      --swim-input-border: #d3d0c8;
+      --swim-input-text: #0b1220;
+      --swim-input-focus-border: #ff6b5b;
+      --swim-modal-box-bg: #ffffff;
+      --swim-modal-box-border: #e4e1d9;
+      --swim-footer-bg: #0b1220;
+      --swim-footer-border: #202b3e;
+      --swim-footer-text: #b8bfca;
+    }
+
+    html[data-theme] {
+      --swim-page-bg: #f7f5f0;
+      --swim-page-text: #0b1220;
+      --swim-navbar-bg: rgba(247, 245, 240, 0.94);
+      --swim-navbar-border: #dedbd2;
+      --swim-card-bg: #ffffff;
+      --swim-card-border: #e4e1d9;
+      --swim-primary: #ff6b5b;
+      --swim-primary-bg: #fff0ed;
+      --swim-primary-bg-hover: #ffe1dc;
+      --swim-primary-border: #ffc2b9;
+      --swim-primary-text: #b83e35;
+      --swim-secondary-bg: #eeece6;
+      --swim-secondary-hover-bg: #e3e0d8;
+      --swim-secondary-text: #30394a;
+      --swim-secondary-border: #dedbd2;
+      --swim-text-main: #0b1220;
+      --swim-text-muted: #687080;
+      --swim-text-subtle: #9299a4;
+      --swim-panel-bg: #f1efe9;
+      --swim-panel-border: #dedbd2;
+      --swim-table-th-bg: #f1efe9;
+      --swim-table-border: #e4e1d9;
+      --swim-table-tr-border: #eeece6;
+      --swim-table-tr-hover: #fff5f2;
+      --swim-input-bg: #ffffff;
+      --swim-input-border: #d3d0c8;
+      --swim-input-text: #0b1220;
+      --swim-input-focus-border: #ff6b5b;
+      --swim-modal-box-bg: #ffffff;
+      --swim-modal-box-border: #e4e1d9;
+      --swim-footer-bg: #0b1220;
+      --swim-footer-border: #202b3e;
+      --swim-footer-text: #b8bfca;
+    }
+
+    .swim-app-shell,
+    .swim-app-shell .swim-page-content {
+      background-color: #f7f5f0 !important;
+      color: #0b1220 !important;
+    }
+
+    .swim-app-shell .swim-card,
+    .swim-app-shell .swim-stat-box {
+      background-color: #ffffff !important;
+      border-color: #e4e1d9 !important;
+    }
+
+    .swim-app-shell .swim-card-header,
+    .swim-app-shell .swim-thead {
+      background-color: #fbfaf7 !important;
+      border-color: #e4e1d9 !important;
+    }
+
+    .swim-app-shell .swim-panel,
+    .swim-app-shell .swim-panel-primary,
+    .swim-app-shell .swim-filter-bar {
+      background-color: #f1efe9 !important;
+      border-color: #dedbd2 !important;
+    }
+
+    .swim-app-shell .swim-btn-primary {
+      background-color: #ff6b5b !important;
+      border-color: #ff6b5b !important;
+      color: #ffffff !important;
+    }
+
+    .swim-app-shell .swim-btn-secondary,
+    .swim-app-shell .swim-btn-outline,
+    .swim-app-shell .swim-btn-outline-primary {
+      background-color: #eeece6 !important;
+      border-color: #dedbd2 !important;
+      color: #30394a !important;
+    }
+
+    .swim-app-shell .swim-btn-outline-primary {
+      color: #b83e35 !important;
+    }
+
+    .swim-app-shell .swim-input,
+    .swim-app-shell .swim-select,
+    .swim-app-shell .swim-nav-search,
+    .swim-app-shell .swim-nav-search-mobile {
+      background-color: #ffffff !important;
+      border-color: #d3d0c8 !important;
+      color: #0b1220 !important;
+    }
+
+    .swim-app-shell .swim-table-wrapper {
+      background-color: #ffffff !important;
+      border-color: #e4e1d9 !important;
+    }
+
+    .swim-app-shell .swim-tr {
+      border-color: #eeece6 !important;
+    }
+
+    .swim-app-shell .swim-tr:hover {
+      background-color: #fff5f2 !important;
+    }
+
+    .swim-app-shell .swim-theme-btn,
+    .swim-app-shell .swim-theme-dropdown {
+      display: none !important;
+    }
+
+    .swim-app-shell .swim-card:not(.swim-panel) {
+      background-color: #ffffff !important;
+    }
+
+    .swim-app-shell .swim-text-primary,
+    .swim-app-shell .swim-text-danger,
+    .swim-app-shell .swim-text-success,
+    .swim-app-shell .swim-text-warning,
+    .swim-app-shell .swim-brand-accent {
+      color: #ff6b5b !important;
+    }
+
+    .swim-app-shell .text-amber-500,
+    .swim-app-shell .text-amber-700,
+    .swim-app-shell .text-blue-600,
+    .swim-app-shell .text-sky-500,
+    .swim-app-shell .text-emerald-500,
+    .swim-app-shell .text-rose-500,
+    .swim-app-shell .text-red-500,
+    .swim-app-shell .text-green-500 {
+      color: #ff6b5b !important;
+    }
+
+  }
   .swim-main {
     @apply flex-1 py-4 sm:py-6;
   }
@@ -1350,5 +2894,209 @@ html[data-theme="kizil-gumus"] {
   }
   html {
     scroll-behavior: auto;
+  }
+}
+
+@layer components {
+  .swim-app-shell .swim-home-hero {
+    background: #101828 !important;
+    border-color: #101828 !important;
+    color: #fff !important;
+  }
+
+  .swim-app-shell .swim-home-hero .swim-text-main,
+  .swim-app-shell .swim-home-hero .swim-text-muted {
+    color: #fff;
+  }
+
+  .swim-app-shell .swim-home-hero .swim-btn-primary {
+    background: #fff;
+    border-color: #fff;
+    color: #101828;
+  }
+
+  .swim-app-shell .swim-home-hero .swim-btn-secondary {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #fff;
+  }
+
+  .swim-app-shell .swim-home-search {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+
+  .swim-app-shell .swim-home-search .swim-text-main,
+  .swim-app-shell .swim-home-search .swim-text-primary {
+    color: #fff;
+  }
+
+  .swim-app-shell .swim-page-content > .flex.flex-col.sm\:flex-row,
+  .swim-app-shell .swim-page-content > .py-2 > .flex.flex-col.sm\:flex-row {
+    margin-bottom: 1.25rem;
+  }
+
+  .swim-app-shell .swim-page-content h1.swim-title,
+  .swim-app-shell .swim-page-content h1.swim-title-lg,
+  .swim-app-shell .swim-page-content > .flex h1 {
+    letter-spacing: -0.04em;
+  }
+
+  .swim-app-shell .swim-page-content > .flex h1,
+  .swim-app-shell .swim-page-content > .py-2 h1 {
+    font-weight: 800;
+  }
+
+  .swim-app-shell .swim-page-content .swim-card {
+    background: #fff;
+    border-color: #e6e7e2;
+    border-radius: 1.35rem;
+    box-shadow: 0 10px 28px rgba(16, 24, 40, 0.045);
+  }
+
+  .swim-app-shell .swim-page-content .swim-card-header {
+    background: #fbfbf8;
+    border-bottom-color: #e6e7e2;
+  }
+
+  .swim-app-shell .swim-page-content .swim-panel,
+  .swim-app-shell .swim-page-content .swim-panel-primary {
+    background: #f1f3ef;
+    border-color: #e0e3dc;
+    border-radius: 1rem;
+  }
+
+  .swim-app-shell .swim-page-content .swim-input,
+  .swim-app-shell .swim-page-content .swim-select {
+    min-height: 2.75rem;
+    background: #fff;
+    border-color: #d7dad3;
+    border-radius: 0.8rem;
+  }
+
+  .swim-app-shell .swim-page-content .swim-input:focus,
+  .swim-app-shell .swim-page-content .swim-select:focus {
+    border-color: #101828;
+    box-shadow: 0 0 0 3px rgba(16, 24, 40, 0.1);
+  }
+
+  .swim-app-shell .swim-page-content .swim-table-wrapper {
+    border-color: #e6e7e2;
+    border-radius: 1.25rem;
+    background: #fff;
+  }
+
+  .swim-app-shell .swim-page-content .swim-thead {
+    background: #f7f7f2;
+  }
+
+  .swim-app-shell .swim-page-content .swim-tr:hover {
+    background: #f7f7f2;
+  }
+
+  .swim-app-shell .swim-page-content .swim-stat-box {
+    background: #fff;
+    border-color: #e6e7e2;
+    border-radius: 1rem;
+  }
+
+  .swim-app-shell .swim-page-content .swim-modal-box {
+    border: 1px solid #e6e7e2;
+    border-radius: 1.35rem;
+    box-shadow: 0 20px 60px rgba(16, 24, 40, 0.2);
+  }
+
+  .swim-app-shell .swim-page-content code,
+  .swim-app-shell .swim-page-content pre {
+    border-radius: 0.8rem;
+  }
+
+  @media (max-width: 639px) {
+    .swim-app-shell .swim-page-content .swim-card {
+      border-radius: 1.15rem;
+    }
+
+    .swim-app-shell .swim-page-content .swim-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .swim-app-shell .swim-page-content h1 {
+      font-size: 1.35rem;
+      line-height: 1.15;
+    }
+
+    .swim-app-shell .swim-page-content .swim-title-lg {
+      font-size: 1.55rem;
+    }
+  }
+
+  /* Analiz ekranı: koyu kartlarda okunabilir metin hiyerarşisi */
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-ranking-row {
+    color: #e8eef8;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-ranking-row .swim-link,
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-ranking-row > div > span.font-semibold {
+    color: #e8eef8 !important;
+    font-size: 0.78rem;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-ranking-row .swim-text-subtle {
+    color: #aab9ce !important;
+    display: block;
+    font-size: 0.68rem;
+    line-height: 1.35;
+    margin-top: 0.18rem;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-ranking-row > strong {
+    color: #f5f8ff !important;
+    font-size: 0.78rem;
+    letter-spacing: -0.02em;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-ranking-index {
+    color: #c6d5e8;
+    background: #243552;
+    border: 1px solid #385275;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-title {
+    color: #f5f8ff !important;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-kicker {
+    color: #8ea4c3 !important;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-race-map .swim-race-title {
+    color: #e8eef8 !important;
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-race-map .swim-race-title:hover {
+    color: #35b9ff !important;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-race-map .swim-race-meta {
+    color: #aab9ce !important;
+    font-size: 0.68rem;
+    line-height: 1.35;
+    margin-top: 0.2rem;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-race-map .swim-race-stat {
+    color: #c6d5e8 !important;
+    font-size: 0.72rem;
+  }
+
+  .swim-app-shell .swim-template-surface[data-screen="musabaka_analiz"] .swim-race-map .swim-race-value {
+    color: #f5f8ff !important;
+    font-size: 0.74rem;
+    font-weight: 700;
   }
 }

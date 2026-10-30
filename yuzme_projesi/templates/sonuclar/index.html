@@ -5,16 +5,16 @@
 
 {% block content %}
 <!-- Hero Section -->
-<div class="swim-card p-6 sm:p-10 mb-6 ">
+<div class="swim-card swim-home-hero p-6 sm:p-10 mb-6 ">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
         <div class="lg:col-span-7">
-            <span class="swim-badge swim-badge-primary mb-3">
+            <span class="swim-badge swim-badge-primary swim-home-kicker mb-3">
                 <i class="bi bi-award me-1"></i> Resmî Sonuç Arşivi (Metin & OCR)
             </span>
-            <h1 class="text-2xl sm:text-4xl font-extrabold swim-text-main tracking-tight leading-tight mt-1">
+            <h1 class="text-2xl sm:text-4xl font-extrabold swim-text-main tracking-tight leading-tight mt-1 swim-home-title">
                 Türkiye Yüzme Sonuçları & Analiz Platformu
             </h1>
-            <p class="swim-text-muted text-sm sm:text-base leading-relaxed mt-3">
+            <p class="swim-text-muted text-sm sm:text-base leading-relaxed mt-3 swim-home-copy">
                 Federasyon arşivlerindeki <strong class="swim-text-main font-semibold">{{ toplam_yaris|intcomma }}</strong> yarış sonucunu, sporcuların kariyer gelişimini, en iyi derecelerini ve kulüp transfer tarihçelerini tek çatı altında keşfedin.
             </p>
             <div class="flex flex-wrap gap-2.5 mt-5">
@@ -28,7 +28,7 @@
         </div>
 
         <div class="lg:col-span-5">
-            <div class="swim-panel shadow-2xs">
+            <div class="swim-panel shadow-2xs swim-home-search">
                 <h2 class="text-sm font-bold swim-text-main mb-3 flex items-center gap-1.5">
                     <i class="bi bi-search swim-text-primary"></i> Hızlı Sporcu & Kulüp Arama
                 </h2>
@@ -50,26 +50,34 @@
 </div>
 
 <!-- İstatistik Kartları (Mobilde 2 sütun, masaüstünde 4 sütun) -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-    <div class="swim-stat-box border-l-4 border-l-blue-600">
-        <div class="swim-text-primary mb-1 text-2xl"><i class="bi bi-stopwatch"></i></div>
-        <div class="swim-stat-val">{{ toplam_yaris|intcomma }}</div>
-        <div class="swim-stat-lbl">Bireysel Yarış Sonucu</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 swim-home-stats">
+    <div class="swim-stat-box swim-insight-card swim-insight-card-results">
+        <div class="swim-insight-topline"><span>ARŞİV AKIŞI</span><i class="bi bi-activity"></i></div>
+        <div class="swim-insight-number">{{ toplam_yaris|intcomma }}</div>
+        <div class="swim-insight-label">Bireysel yarış sonucu</div>
+        <div class="swim-insight-meter"><span style="width: 86%"></span></div>
+        <div class="swim-insight-foot"><i class="bi bi-stopwatch"></i><span>Sonuç havuzu</span><b>AKTİF</b></div>
     </div>
-    <div class="swim-stat-box border-l-4 border-l-sky-500">
-        <div class="swim-text-primary mb-1 text-2xl"><i class="bi bi-people-fill"></i></div>
-        <div class="swim-stat-val">{{ toplam_sporcu|intcomma }}</div>
-        <div class="swim-stat-lbl">Tekil Lisanslı Sporcu</div>
+    <div class="swim-stat-box swim-insight-card swim-insight-card-athletes">
+        <div class="swim-insight-topline"><span>PEOPLE INDEX</span><i class="bi bi-people"></i></div>
+        <div class="swim-insight-number">{{ toplam_sporcu|intcomma }}</div>
+        <div class="swim-insight-label">Tekil lisanslı sporcu</div>
+        <div class="swim-insight-avatars"><i class="bi bi-person-fill"></i><i class="bi bi-person-fill"></i><i class="bi bi-person-fill"></i><span>+ kolektif</span></div>
+        <div class="swim-insight-foot"><i class="bi bi-person-check"></i><span>Kimlik eşleşmesi</span><b>NET</b></div>
     </div>
-    <div class="swim-stat-box border-l-4 border-l-emerald-500">
-        <div class="swim-text-success mb-1 text-2xl"><i class="bi bi-shield-shaded"></i></div>
-        <div class="swim-stat-val">{{ toplam_kulup|intcomma }}</div>
-        <div class="swim-stat-lbl">Kulüp & Okul Takımı</div>
+    <div class="swim-stat-box swim-insight-card swim-insight-card-clubs">
+        <div class="swim-insight-topline"><span>NETWORK MAP</span><i class="bi bi-diagram-3"></i></div>
+        <div class="swim-insight-number">{{ toplam_kulup|intcomma }}</div>
+        <div class="swim-insight-label">Kulüp ve okul takımı</div>
+        <div class="swim-insight-network"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="swim-insight-foot"><i class="bi bi-shield-check"></i><span>Federasyon ağı</span><b>BAĞLI</b></div>
     </div>
-    <div class="swim-stat-box border-l-4 border-l-amber-500">
-        <div class="swim-text-warning mb-1 text-2xl"><i class="bi bi-arrow-left-right"></i></div>
-        <div class="swim-stat-val">{{ toplam_transfer|intcomma }}</div>
-        <div class="swim-stat-lbl">Kulüp Temsil Dönemi</div>
+    <div class="swim-stat-box swim-insight-card swim-insight-card-transfers">
+        <div class="swim-insight-topline"><span>CAREER TRACE</span><i class="bi bi-arrow-left-right"></i></div>
+        <div class="swim-insight-number">{{ toplam_transfer|intcomma }}</div>
+        <div class="swim-insight-label">Kulüp temsil dönemi</div>
+        <div class="swim-insight-route"><span>START</span><i class="bi bi-chevron-right"></i><i class="bi bi-chevron-right"></i><i class="bi bi-chevron-right"></i><span>NOW</span></div>
+        <div class="swim-insight-foot"><i class="bi bi-clock-history"></i><span>Kariyer izleri</span><b>İZLENİYOR</b></div>
     </div>
 </div>
 

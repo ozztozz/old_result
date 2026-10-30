@@ -49,7 +49,8 @@
         <!-- Sağ: Doğal İstatistik Kutuları (SwimUI swim-stat-box) -->
         <div class="flex items-center gap-2 sm:gap-3 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
             <!-- Madalya & Kürsü Vitrini -->
-            <div class="swim-stat-box p-3 min-w-[115px] flex-1 sm:flex-initial" title="Kürsü & Madalya Vitrini">
+            <div class="swim-stat-box swim-profile-stat swim-profile-stat-medals p-3 min-w-[115px] flex-1 sm:flex-initial" title="Kürsü & Madalya Vitrini">
+                <div class="swim-profile-stat-kicker">PODYUM</div>
                 <div class="swim-stat-val text-xl sm:text-2xl font-mono text-amber-500 flex items-center justify-center gap-1">
                     <span title="Altın">🥇{{ degerlendirme.altin_sayisi }}</span>
                     <span class="swim-text-muted text-base" title="Gümüş">🥈{{ degerlendirme.gumus_sayisi }}</span>
@@ -61,7 +62,8 @@
             </div>
 
             <!-- Zirve FINA -->
-            <div class="swim-stat-box p-3 min-w-[110px] flex-1 sm:flex-initial">
+            <div class="swim-stat-box swim-profile-stat swim-profile-stat-fina p-3 min-w-[110px] flex-1 sm:flex-initial">
+                <div class="swim-profile-stat-kicker">PERFORMANS</div>
                 <div class="swim-stat-val text-xl sm:text-2xl font-mono swim-text-primary">
                     {% if degerlendirme.best_race %}{{ degerlendirme.best_race.puan }}{% else %}-{% endif %}
                 </div>
@@ -69,7 +71,8 @@
             </div>
 
             <!-- Toplam Yarış -->
-            <div class="swim-stat-box p-3 min-w-[100px] flex-1 sm:flex-initial">
+            <div class="swim-stat-box swim-profile-stat swim-profile-stat-races p-3 min-w-[100px] flex-1 sm:flex-initial">
+                <div class="swim-profile-stat-kicker">RİTİM</div>
                 <div class="swim-stat-val text-xl sm:text-2xl font-mono swim-text-main">
                     {{ sporcu.toplam_yaris_sayisi }}
                 </div>

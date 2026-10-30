@@ -26,7 +26,7 @@
     <link rel="icon" type="image/svg+xml" href="{% static 'img/icon.svg' %}">
 
     <!-- Central Design System (Tailwind CSS with Dynamic Theme Variables) -->
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=4">
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -66,7 +66,7 @@
 
     {% block extra_head %}{% endblock %}
 </head>
-<body class="swim-page">
+<body class="swim-page swim-app-shell">
     <!-- Navbar -->
     <header class="swim-navbar">
         <div class="swim-container">
@@ -276,9 +276,27 @@
     <!-- Main Content Container -->
     <main class="swim-main">
         <div class="swim-container">
-            {% block content %}{% endblock %}
+            <div class="swim-page-content swim-template-surface" data-screen="{{ request.resolver_match.url_name|default:'index' }}">
+                {% block content %}{% endblock %}
+            </div>
         </div>
     </main>
+
+    <!-- Mobile navigation inspired by the reference app's compact tab bar. -->
+    <nav class="swim-mobile-bottom-nav" aria-label="Mobil hızlı erişim">
+        <a class="{% if request.resolver_match.url_name == 'index' %}is-active{% endif %}" href="{% url 'sonuclar:index' %}">
+            <i class="bi bi-house"></i><span>Ana Sayfa</span>
+        </a>
+        <a class="{% if 'sporcu' in request.path and not 'eslestir' in request.path %}is-active{% endif %}" href="{% url 'sonuclar:sporcu_listesi' %}">
+            <i class="bi bi-people"></i><span>Sporcular</span>
+        </a>
+        <a class="{% if 'musabaka' in request.path or 'yaris' in request.path %}is-active{% endif %}" href="{% url 'sonuclar:musabaka_listesi' %}">
+            <i class="bi bi-calendar-event"></i><span>Yarışlar</span>
+        </a>
+        <a class="{% if 'kulup' in request.path %}is-active{% endif %}" href="{% url 'sonuclar:kulup_listesi' %}">
+            <i class="bi bi-shield"></i><span>Kulüpler</span>
+        </a>
+    </nav>
 
     <!-- Footer -->
     <footer class="swim-footer">

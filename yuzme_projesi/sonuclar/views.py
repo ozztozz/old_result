@@ -1746,12 +1746,6 @@ def musabaka_analiz(request, pk):
         Q(baraj__isnull=True) | Q(baraj='') | Q(baraj='-') | Q(baraj__iexact='HAYIR') | Q(baraj__iexact='GEÇMEDİ') | Q(baraj__iexact='GECMEDI') | Q(baraj__iexact='YOK')
     ).count()
 
-    # 4. MVP / Zirve Performanslar (Top 3)
-    mvp_list = list(
-        puan_qs.select_related('sporcu', 'kulup')
-        .order_by('-puan')[:3]
-    )
-
     # 5. Kulüp Sıralaması (Ortalama veya Toplam FINA Puanı - Varsayılan: Ortalama, Min. 3 Sporcu)
     kulup_sirala = request.GET.get('kulup_sirala', 'ortalama').strip()
     if kulup_sirala not in ('ortalama', 'toplam'):
@@ -1801,23 +1795,7 @@ def musabaka_analiz(request, pk):
             c['ort_puan'] = round(c['ort_puan'], 1) if c['ort_puan'] else 0
             c['oran'] = round((c['toplam_puan'] / max_benchmark) * 100, 1)
 
-    # 6. En İyi Performanslar (En yüksek FINA puanlı dereceler)
-    en_iyi_genel = list(
-        puan_qs.select_related('sporcu', 'kulup')
-        .order_by('-puan')[:15]
-    )
-    en_iyi_erkekler = list(
-        puan_qs.filter(cinsiyet__istartswith='E')
-        .select_related('sporcu', 'kulup')
-        .order_by('-puan')[:10]
-    )
-    en_iyi_kadinlar = list(
-        puan_qs.filter(cinsiyet__istartswith='K')
-        .select_related('sporcu', 'kulup')
-        .order_by('-puan')[:10]
-    )
-
-    # 7. Tekil Yarış Seçilmişse Kürsü (Podium) ve Tüm Sonuçlar
+    # 6. Tekil Yarış Seçilmişse kürsü ve tam sonuçlar
     yaris_podium = []
     tekil_yaris_sonuclari = []
     if secili_yaris_no:
@@ -1854,7 +1832,19 @@ def musabaka_analiz(request, pk):
     toplam_fark_sn = 0.0
 
     gelisen_sporcular = []
-    club_gelisim_dict = defaultdict(lambda: {'kulup_id': None, 'kulup_adi': '', 'toplam': 0, 'gelistiren': 0, 'toplam_fark': 0.0, 'sporcular': set()})
+    club_gelisim_dict = defaultdict(lambda: {
+        'kulup_id': None,
+        'kulup_adi': '',
+        'toplam': 0,
+        'gelistiren': 0,
+        'toplam_fark': 0.0,
+        'toplam_yuzde': 0.0,
+        'sporcular': set(),
+        'yarislar': set(),
+        'sporcu_sonuclari': defaultdict(lambda: {'toplam': 0, 'gelistiren': 0}),
+    })
+    race_gelisim_dict = defaultdict(lambda: {'toplam': 0, 'gelistiren': 0, 'gerileyen': 0, 'toplam_fark': 0.0, 'toplam_yuzde': 0.0})
+    athlete_gelisim_dict = defaultdict(lambda: {'toplam': 0, 'gelistiren': 0, 'gerileyen': 0, 'toplam_fark': 0.0, 'toplam_yuzde': 0.0})
 
     for r in giris_qs:
         g_raw = (r.giris_derecesi or '').strip()
@@ -1873,6 +1863,15 @@ def musabaka_analiz(request, pk):
 
         toplam_fark_sn += fark
 
+        race_entry = race_gelisim_dict[str(r.yaris_no).strip()]
+        race_entry['toplam'] += 1
+        race_entry['toplam_fark'] += fark
+        race_entry['toplam_yuzde'] += yuzde
+        athlete_entry = athlete_gelisim_dict[r.sporcu_id]
+        athlete_entry['toplam'] += 1
+        athlete_entry['toplam_fark'] += fark
+        athlete_entry['toplam_yuzde'] += yuzde
+
         kid = r.kulup_id or 0
         k_adi = r.kulup.kulup_adi if r.kulup else 'Ferdi'
         c_entry = club_gelisim_dict[kid]
@@ -1880,11 +1879,19 @@ def musabaka_analiz(request, pk):
         c_entry['kulup_adi'] = k_adi
         c_entry['toplam'] += 1
         c_entry['toplam_fark'] += fark
+        c_entry['toplam_yuzde'] += yuzde
         c_entry['sporcular'].add(r.sporcu_id)
+        if r.yaris_no:
+            c_entry['yarislar'].add(str(r.yaris_no).strip())
+        athlete_result = c_entry['sporcu_sonuclari'][r.sporcu_id]
+        athlete_result['toplam'] += 1
 
         if fark < 0:
             gelistiren_count += 1
             c_entry['gelistiren'] += 1
+            athlete_result['gelistiren'] += 1
+            race_entry['gelistiren'] += 1
+            athlete_entry['gelistiren'] += 1
             gelisen_sporcular.append({
                 'sporcu': r.sporcu,
                 'kulup': r.kulup,
@@ -1900,6 +1907,8 @@ def musabaka_analiz(request, pk):
             })
         elif fark > 0:
             gerileyen_count += 1
+            race_entry['gerileyen'] += 1
+            athlete_entry['gerileyen'] += 1
         else:
             ayni_count += 1
 
@@ -1916,13 +1925,119 @@ def musabaka_analiz(request, pk):
     # Kulüp gelişim sıralaması (en yüksek gelişim başarı oranı, en az min_sporcu yarışçı)
     club_gelisim_list = []
     for kid, c_data in club_gelisim_dict.items():
-        if len(c_data['sporcular']) >= min_sporcu:
+        if len(c_data['sporcular']) >= max(min_sporcu, 5) and c_data['toplam'] >= 10 and len(c_data['yarislar']) >= 3:
             c_data['sporcu_sayisi'] = len(c_data['sporcular'])
             c_data['oran'] = round((c_data['gelistiren'] / c_data['toplam']) * 100, 1)
             c_data['ort_fark'] = round(c_data['toplam_fark'] / c_data['toplam'], 2)
+            c_data['ort_gelisim_yuzdesi'] = round(c_data['toplam_yuzde'] / c_data['toplam'], 2)
+            c_data['yaris_sayisi'] = len(c_data['yarislar'])
+            c_data['gelisen_sporcu_sayisi'] = sum(
+                1 for result in c_data['sporcu_sonuclari'].values()
+                if result['gelistiren'] > 0
+            )
+            c_data['sporcu_gelisim_orani'] = round(
+                (c_data['gelisen_sporcu_sayisi'] / c_data['sporcu_sayisi']) * 100,
+                1,
+            )
+            c_data['gelisim_skoru'] = round(
+                (c_data['ort_gelisim_yuzdesi'] * 0.5)
+                + (c_data['oran'] * 0.3)
+                + (c_data['sporcu_gelisim_orani'] * 0.2),
+                1,
+            )
             club_gelisim_list.append(c_data)
 
-    club_gelisim_list.sort(key=lambda x: (x['oran'], x['gelistiren']), reverse=True)
+    club_gelisim_list.sort(
+        key=lambda x: (x['gelisim_skoru'], x['ort_gelisim_yuzdesi'], x['toplam']),
+        reverse=True,
+    )
+
+    # 9. Analiz haritası: yarış, sporcu, yaş grubu ve stil bazında karşılaştırılabilir özetler.
+    race_stats = {
+        str(row['yaris_no']).strip(): row
+        for row in puan_qs.values('yaris_no').annotate(
+            sporcu_sayisi=Count('sporcu_id', distinct=True),
+            ort_puan=Avg('puan'),
+            max_puan=Max('puan'),
+            baraj_sayisi=Count('id', filter=~Q(baraj__isnull=True) & ~Q(baraj='') & ~Q(baraj='-') & ~Q(baraj__iexact='HAYIR') & ~Q(baraj__iexact='GEÇMEDİ') & ~Q(baraj__iexact='GECMEDI') & ~Q(baraj__iexact='YOK')),
+        )
+        if row['yaris_no']
+    }
+    race_insights = []
+    for race in yaris_programi:
+        stats = race_stats.get(race['yaris_no'], {})
+        growth = race_gelisim_dict.get(race['yaris_no'], {})
+        growth_total = growth.get('toplam', 0)
+        race_insights.append({
+            **race,
+            'puanli_sporcu_sayisi': stats.get('sporcu_sayisi', 0),
+            'ort_puan': round(stats.get('ort_puan') or 0, 1),
+            'max_puan': stats.get('max_puan') or 0,
+            'baraj_sayisi': stats.get('baraj_sayisi', 0),
+            'gelisim_sayisi': growth.get('gelistiren', 0),
+            'gerileme_sayisi': growth.get('gerileyen', 0),
+            'gelisim_orani': round((growth.get('gelistiren', 0) / growth_total) * 100, 1) if growth_total else 0,
+            'ort_fark': round(growth.get('toplam_fark', 0) / growth_total, 2) if growth_total else 0,
+            'ort_gelisim_yuzdesi': round(growth.get('toplam_yuzde', 0) / growth_total, 2) if growth_total else 0,
+        })
+    race_insights.sort(key=lambda item: (-item['ort_gelisim_yuzdesi'], -item['gelisim_orani'], item['yaris_no']))
+
+    athlete_profiles = list(
+        puan_qs.values(
+            'sporcu_id', 'sporcu__sporcu_adi', 'kulup_id', 'kulup__kulup_adi'
+        ).annotate(
+            yaris_sayisi=Count('id'),
+            toplam_puan=Sum('puan'),
+            ort_puan=Avg('puan'),
+            max_puan=Max('puan'),
+            podium_sayisi=Count('id', filter=Q(sira__in=['1', '2', '3'])),
+            birincilik=Count('id', filter=Q(sira='1')),
+        ).order_by('-toplam_puan', '-ort_puan')[:30]
+    )
+    for athlete in athlete_profiles:
+        athlete['ort_puan'] = round(athlete['ort_puan'] or 0, 1)
+        growth = athlete_gelisim_dict.get(athlete['sporcu_id'], {})
+        growth_total = growth.get('toplam', 0)
+        athlete['gelisim_sayisi'] = growth.get('gelistiren', 0)
+        athlete['gelisim_orani'] = round((growth.get('gelistiren', 0) / growth_total) * 100, 1) if growth_total else 0
+        athlete['ort_fark'] = round(growth.get('toplam_fark', 0) / growth_total, 2) if growth_total else 0
+        athlete['ort_gelisim_yuzdesi'] = round(growth.get('toplam_yuzde', 0) / growth_total, 2) if growth_total else 0
+    athlete_profiles.sort(key=lambda item: (-item['ort_gelisim_yuzdesi'], -item['gelisim_orani'], item['ort_fark']))
+
+    age_stats = list(
+        base_qs.values('yas_grubu').annotate(
+            sporcu_sayisi=Count('sporcu_id', distinct=True),
+            sonuc_sayisi=Count('id'),
+            ort_puan=Avg('puan', filter=Q(puan__gt=0)),
+            baraj_sayisi=Count('id', filter=~Q(baraj__isnull=True) & ~Q(baraj='') & ~Q(baraj='-') & ~Q(baraj__iexact='HAYIR') & ~Q(baraj__iexact='GEÇMEDİ') & ~Q(baraj__iexact='GECMEDI') & ~Q(baraj__iexact='YOK')),
+        ).exclude(yas_grubu__isnull=True).exclude(yas_grubu='')
+        .order_by('-sporcu_sayisi')[:15]
+    )
+    for age in age_stats:
+        age['ort_puan'] = round(age['ort_puan'] or 0, 1)
+
+    style_stats = list(
+        base_qs.values('stil').annotate(
+            sporcu_sayisi=Count('sporcu_id', distinct=True),
+            sonuc_sayisi=Count('id'),
+            ort_puan=Avg('puan', filter=Q(puan__gt=0)),
+            en_yuksek_puan=Max('puan'),
+        ).exclude(stil__isnull=True).exclude(stil='').order_by('-sonuc_sayisi')
+    )
+    for style in style_stats:
+        style['ort_puan'] = round(style['ort_puan'] or 0, 1)
+
+    toplam_kayit = base_qs.count()
+    puanli_kayit = puan_qs.count()
+    dereceli_kayit = base_qs.filter(derece_saniye__gt=0).count()
+    veri_kapsami = {
+        'toplam_kayit': toplam_kayit,
+        'puanli_kayit': puanli_kayit,
+        'dereceli_kayit': dereceli_kayit,
+        'giris_karsilastirmasi': toplam_karsilastirilan,
+        'puan_orani': round((puanli_kayit / toplam_kayit) * 100, 1) if toplam_kayit else 0,
+        'derece_orani': round((dereceli_kayit / toplam_kayit) * 100, 1) if toplam_kayit else 0,
+    }
 
     # Tekil yarış sonuçlarına da fark hesaplamalarını ekle
     if secili_yaris_no and tekil_yaris_sonuclari:
@@ -1961,13 +2076,9 @@ def musabaka_analiz(request, pk):
         'toplam_sporcu': toplam_sporcu,
         'toplam_kulup': toplam_kulup,
         'baraj_gecenler': baraj_gecenler,
-        'mvp_list': mvp_list,
         'club_rankings': club_rankings,
         'kulup_sirala': kulup_sirala,
         'min_sporcu': min_sporcu,
-        'en_iyi_genel': en_iyi_genel,
-        'en_iyi_erkekler': en_iyi_erkekler,
-        'en_iyi_kadinlar': en_iyi_kadinlar,
         'yaris_podium': yaris_podium,
         'tekil_yaris_sonuclari': tekil_yaris_sonuclari,
         'has_giris_analizi': has_giris_analizi,
@@ -1981,16 +2092,25 @@ def musabaka_analiz(request, pk):
         'ort_fark': ort_fark,
         'en_cok_gelistirenler': en_cok_gelistirenler,
         'club_gelisim_list': club_gelisim_list,
+        'race_insights': race_insights,
+        'athlete_profiles': athlete_profiles,
+        'age_stats': age_stats,
+        'style_stats': style_stats,
+        'veri_kapsami': veri_kapsami,
+        'gelisim_ozeti': {
+            'gelistiren': gelistiren_count,
+            'gerileyen': gerileyen_count,
+            'ayni': ayni_count,
+            'oran': gelisim_orani,
+            'ort_fark': ort_fark,
+            'ort_gelisim_yuzdesi': round(
+                sum(item['toplam_yuzde'] for item in race_gelisim_dict.values()) / toplam_karsilastirilan,
+                2,
+            ) if toplam_karsilastirilan else 0,
+        },
     }
 
     if request.headers.get('HX-Request'):
         return render(request, 'sonuclar/partials/musabaka_analiz_content.html', context)
 
     return render(request, 'sonuclar/musabaka_analiz.html', context)
-
-
-
-
-
-
-

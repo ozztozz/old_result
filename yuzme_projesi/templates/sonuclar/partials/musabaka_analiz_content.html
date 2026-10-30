@@ -27,7 +27,8 @@
 </div>
 {% endif %}
 
-<!-- 2. KPI Özet İstatistik Kartları -->
+{% if False %}
+<!-- Legacy KPI cards replaced by the data coverage and race map section below. -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
     <!-- Toplam FINA Puanı -->
     <div class="swim-stat-box p-3.5 sm:p-4">
@@ -89,8 +90,171 @@
         </div>
     </div>
 </div>
+{% endif %}
 
-<!-- 3. Kürsü (Podium) veya MVP Vitrini -->
+<!-- 3. Analiz kapsamı ve yarış haritası -->
+<div class="swim-card p-4 sm:p-5 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+        <div>
+            <span class="swim-kicker">VERİ KAPSAMI</span>
+            <h2 class="swim-title text-base sm:text-lg mt-1">Müsabaka resmi</h2>
+            <p class="text-xs swim-text-muted mt-1">Ana değerlendirme giriş derecesi ile yarış derecesi arasındaki değişime dayanır.</p>
+        </div>
+        <div class="text-xs swim-text-muted">
+            {{ veri_kapsami.puanli_kayit|intcomma }}/{{ veri_kapsami.toplam_kayit|intcomma }} kayıt puanlı
+        </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+        <div class="swim-insight-card">
+            <span class="swim-insight-label">Gelişen sonuç</span>
+            <strong>{{ gelisim_ozeti.gelistiren|intcomma }}</strong>
+            <small>%{{ gelisim_ozeti.oran }} karşılaştırma</small>
+        </div>
+        <div class="swim-insight-card">
+            <span class="swim-insight-label">Ortalama değişim</span>
+            <strong>{% if gelisim_ozeti.ort_gelisim_yuzdesi > 0 %}+{% endif %}{{ gelisim_ozeti.ort_gelisim_yuzdesi }}%</strong>
+            <small>ortalama göreli değişim</small>
+        </div>
+        <div class="swim-insight-card">
+            <span class="swim-insight-label">Karşılaştırılan</span>
+            <strong>{{ toplam_karsilastirilan|intcomma }}</strong>
+            <small>geçerli giriş derecesi</small>
+        </div>
+        <div class="swim-insight-card">
+            <span class="swim-insight-label">İlk derece / NT</span>
+            <strong>{{ nt_count|intcomma }}</strong>
+            <small>karşılaştırma dışı</small>
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between mb-3">
+        <div>
+            <span class="swim-kicker">YARIŞ HARİTASI</span>
+            <h3 class="swim-title text-sm sm:text-base mt-1">Hangi yarışlarda gelişim oldu?</h3>
+        </div>
+        <span class="swim-badge swim-badge-neutral text-xs">{{ race_insights|length }} yarış</span>
+    </div>
+    <div class="swim-table-wrapper swim-race-map">
+        <table class="swim-table">
+            <thead class="swim-thead">
+                <tr>
+                    <th class="swim-th">Yarış</th>
+                    <th class="swim-th">Karşılaştırma</th>
+                    <th class="swim-th text-right">Gelişim</th>
+                    <th class="swim-th text-right">Ort. fark</th>
+                    <th class="swim-th text-right">Gerileme</th>
+                </tr>
+            </thead>
+            <tbody class="swim-tbody">
+                {% for race in race_insights %}
+                <tr class="swim-tr">
+                    <td class="swim-td">
+                        <a class="swim-link swim-race-title font-semibold" href="?yaris_no={{ race.yaris_no }}{% if cinsiyet_filtre %}&cinsiyet={{ cinsiyet_filtre }}{% endif %}">
+                            #{{ race.yaris_no }} · {{ race.mesafe }}m {{ race.stil }}
+                        </a>
+                        <div class="text-xs swim-race-meta">{{ race.cinsiyet }}{% if race.yas_grubu %} · {{ race.yas_grubu }}{% endif %}</div>
+                    </td>
+                    <td class="swim-td swim-race-stat">{{ race.gelisim_sayisi|add:race.gerileme_sayisi }} sonuç</td>
+                    <td class="swim-td swim-race-value text-right font-mono font-semibold">%{{ race.ort_gelisim_yuzdesi }}</td>
+                    <td class="swim-td swim-race-value text-right font-mono">{% if race.ort_fark < 0 %}{{ race.ort_fark }}{% else %}+{{ race.ort_fark }}{% endif %} sn</td>
+                    <td class="swim-td swim-race-value text-right font-mono">{{ race.gerileme_sayisi }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="swim-td text-center swim-text-muted">Yarış özeti oluşturulamadı.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 4. Sporcu profilleri ve kulüp karşılaştırması -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+    <div class="swim-card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <span class="swim-kicker">SPORCU PROFİLLERİ</span>
+                <h2 class="swim-title text-base mt-1">Gelişim liderleri</h2>
+            </div>
+            <span class="swim-badge swim-badge-neutral text-xs">Giriş → çıkış</span>
+        </div>
+        <div class="space-y-2">
+            {% for athlete in athlete_profiles|slice:":8" %}
+            <div class="swim-ranking-row">
+                <span class="swim-ranking-index">{{ forloop.counter }}</span>
+                <div class="min-w-0 flex-1">
+                    <a class="swim-link font-semibold truncate block" href="{% url 'sonuclar:sporcu_detay' athlete.sporcu_id %}">{{ athlete.sporcu__sporcu_adi }}</a>
+                    <small class="swim-text-subtle">{{ athlete.kulup__kulup_adi|default:"Ferdi" }} · {{ athlete.gelisim_sayisi }} gelişen sonuç · {{ athlete.gelisim_orani }}%</small>
+                </div>
+                <strong class="font-mono text-sm">{% if athlete.ort_gelisim_yuzdesi > 0 %}+{% endif %}{{ athlete.ort_gelisim_yuzdesi }}%</strong>
+            </div>
+            {% empty %}
+            <p class="text-sm swim-text-muted">Sporcu profili oluşturulamadı.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="swim-card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <span class="swim-kicker">KULÜP KARŞILAŞTIRMASI</span>
+                <h2 class="swim-title text-base mt-1">Kalite ve katkı birlikte</h2>
+            </div>
+            <span class="swim-badge swim-badge-neutral text-xs">{{ club_rankings|length }} kulüp</span>
+        </div>
+        <div class="space-y-2">
+            {% for club in club_rankings|slice:":8" %}
+            <div class="swim-ranking-row">
+                <span class="swim-ranking-index">{{ club.sira }}</span>
+                <div class="min-w-0 flex-1">
+                    <span class="font-semibold truncate block">{{ club.kulup__kulup_adi }}</span>
+                    <small class="swim-text-subtle">{{ club.sporcu_sayisi }} sporcu · {{ club.yaris_sayisi }} sonuç · {{ club.birincilik }} altın</small>
+                </div>
+                <strong class="font-mono text-sm">{{ club.ort_puan|floatformat:1 }}</strong>
+            </div>
+            {% empty %}
+            <p class="text-sm swim-text-muted">Kulüp karşılaştırması oluşturulamadı.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 5. Yaş grubu ve stil dağılımı -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="swim-card p-4 sm:p-5">
+        <span class="swim-kicker">YAŞ GRUBU</span>
+        <h2 class="swim-title text-base mt-1 mb-4">Katılım ve puan seviyesi</h2>
+        <div class="space-y-3">
+            {% for age in age_stats %}
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-semibold">{{ age.yas_grubu }}</span>
+                    <span class="swim-text-muted">{{ age.sporcu_sayisi }} sporcu · {{ age.ort_puan|floatformat:1 }} FINA</span>
+                </div>
+                <div class="swim-insight-meter"><span style="width: {% widthratio age.sporcu_sayisi toplam_sporcu 100 %}%"></span></div>
+            </div>
+            {% empty %}
+            <p class="text-sm swim-text-muted">Yaş grubu verisi bulunamadı.</p>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="swim-card p-4 sm:p-5">
+        <span class="swim-kicker">STİL / BRANŞ</span>
+        <h2 class="swim-title text-base mt-1 mb-4">Hangi stiller öne çıktı?</h2>
+        <div class="grid grid-cols-2 gap-2">
+            {% for style in style_stats %}
+            <div class="swim-mini-metric">
+                <span>{{ style.stil }}</span>
+                <strong>{{ style.ort_puan|floatformat:1 }}</strong>
+                <small>{{ style.sonuc_sayisi }} sonuç · {{ style.sporcu_sayisi }} sporcu</small>
+            </div>
+            {% empty %}
+            <p class="text-sm swim-text-muted">Stil verisi bulunamadı.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 6. Kürsü (Podium) veya MVP Vitrini -->
 {% if secili_yaris_no and yaris_podium %}
 <!-- Tekil Yarış Kürsüsü (Podium) -->
 <div class="swim-card p-4 sm:p-5 mb-6">
@@ -149,7 +313,7 @@
         {% endfor %}
     </div>
 </div>
-{% elif not secili_yaris_no and mvp_list %}
+{% elif False %}
 <!-- Genel Müsabaka MVP Vitrini (En Yüksek 3 Derece) -->
 <div class="swim-card p-4 sm:p-5 mb-6">
     <div class="flex items-center justify-between mb-4 pb-2 swim-border-b">
@@ -286,7 +450,7 @@
                 <i class="bi bi-lightning-charge-fill mr-1 text-emerald-500"></i>En Çok Derece Düşürenler (Top İlerleme)
             </button>
             <button type="button" class="swim-tab-pill" onclick="switchGelisimTab(this, 'tabGelisimKulupler')">
-                <i class="bi bi-shield-check mr-1 text-sky-500"></i>Kulüp Gelişim Karnesi
+                <i class="bi bi-shield-check mr-1 text-sky-500"></i>Kulüp gelişim etkisi
             </button>
         </div>
     </div>
@@ -368,8 +532,12 @@
         {% endif %}
     </div>
 
-    <!-- Sekme 2: Kulüp Gelişim Karnesi -->
+    <!-- Sekme 2: Örneklem kontrollü kulüp gelişim etkisi -->
     <div id="tabGelisimKulupler" class="gelisim-tab-content hidden">
+        <p class="text-xs swim-text-muted mb-3">
+            Etki skoru; ortalama göreli gelişim (%50), gelişen sonuç oranı (%30) ve gelişen sporcu oranını (%20) birleştirir.
+            Sıralamaya en az 5 sporcu, 10 karşılaştırılabilir sonuç ve 3 yarış bulunan kulüpler alınır.
+        </p>
         {% if club_gelisim_list %}
         <div class="swim-table-wrapper">
             <table class="swim-table">
@@ -377,10 +545,11 @@
                     <tr>
                         <th class="swim-th w-14 text-center">Sıra</th>
                         <th class="swim-th">Kulüp / Takım</th>
-                        <th class="swim-th text-center w-28">Kayıtlı Yarış</th>
-                        <th class="swim-th text-center w-32">Geliştiren Sayısı</th>
-                        <th class="swim-th text-right w-48">Gelişim Oranı</th>
-                        <th class="swim-th text-right w-36">Ort. Zaman Kazancı</th>
+                        <th class="swim-th text-center w-24">Sporcu</th>
+                        <th class="swim-th text-center w-24">Sonuç</th>
+                        <th class="swim-th text-right w-36">Etki skoru</th>
+                        <th class="swim-th text-right w-36">Ort. gelişim</th>
+                        <th class="swim-th text-right w-32">Gelişen sporcu</th>
                     </tr>
                 </thead>
                 <tbody class="swim-tbody">
@@ -404,28 +573,27 @@
                             {% endif %}
                         </td>
                         <td class="swim-td text-center text-xs font-mono">
+                            {{ c.sporcu_sayisi }}
+                        </td>
+                        <td class="swim-td text-center text-xs font-mono">
                             {{ c.toplam }}
                         </td>
-                        <td class="swim-td text-center text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            {{ c.gelistiren }}
-                        </td>
                         <td class="swim-td text-right">
-                            <div class="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                                %{{ c.oran }}
+                            <div class="font-mono font-bold text-xs swim-text-primary">
+                                {{ c.gelisim_skoru }}
                             </div>
                             <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1">
-                                <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-300" style="width: {{ c.oran }}%;"></div>
+                                <div class="bg-sky-500 h-1.5 rounded-full transition-all duration-300" style="width: {% if c.gelisim_skoru > 100 %}100{% elif c.gelisim_skoru < 0 %}0{% else %}{{ c.gelisim_skoru }}{% endif %}%;"></div>
                             </div>
                         </td>
                         <td class="swim-td text-right font-mono font-bold text-xs">
-                            {% if c.ort_fark < 0 %}
-                                <span class="text-emerald-600 dark:text-emerald-400">{{ c.ort_fark }} sn</span>
-                            {% elif c.ort_fark > 0 %}
-                                <span class="text-rose-500">+{{ c.ort_fark }} sn</span>
+                            {% if c.ort_gelisim_yuzdesi > 0 %}
+                                <span>+{{ c.ort_gelisim_yuzdesi }}%</span>
                             {% else %}
-                                <span class="swim-text-muted">0.00 sn</span>
+                                <span>{{ c.ort_gelisim_yuzdesi }}%</span>
                             {% endif %}
                         </td>
+                        <td class="swim-td text-right font-mono text-xs">{{ c.sporcu_gelisim_orani }}%</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -438,7 +606,7 @@
 </div>
 {% endif %}
 
-<!-- 5. Kulüp Sıralaması (Ortalama veya Toplam FINA Puanı) -->
+{% if False %}
 <div class="swim-card p-4 sm:p-5 mb-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-2 swim-border-b">
         <div>
@@ -595,8 +763,9 @@
     </div>
     {% endif %}
 </div>
+{% endif %}
 
-<!-- 6. En Yüksek FINA Performansları (Sporcu Bireysel Dereceleri) -->
+{% if False %}
 <div class="swim-card p-4 sm:p-5 mb-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-2 swim-border-b">
         <div>
@@ -605,6 +774,7 @@
             </h3>
             <p class="text-xs swim-text-muted mt-0.5">En yüksek puana ulaşan bireysel sporcu dereceleri</p>
         </div>
+        {% endif %}
         <!-- Sekmeler (Tabs) -->
         <div class="swim-tabs-pills">
             <button type="button" class="swim-tab-pill swim-tab-pill-active" onclick="switchPerformanceTab(this, 'tabTum')">
