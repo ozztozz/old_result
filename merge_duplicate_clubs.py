@@ -43,27 +43,29 @@ def run_club_merge():
             continue
 
         with transaction.atomic():
-            # 1. Yarış Sonuçlarını Taşı
-            ys_updated = YarisSonucu.objects.filter(kulup=k).update(kulup=canonical)
-            total_races_moved += ys_updated
-
-            # 2. Sporcuları Taşı
-            sp_updated = Sporcu.objects.filter(birincil_kulup=k).update(birincil_kulup=canonical)
-            total_athletes_moved += sp_updated
-
-            # 3. Kulüp Tarihçelerini Düzenle
+            # 1. Kulüp Tarihçelerini ve bağlı Yarış Sonuçlarını Düzenle
             for th in SporcuKulupTarihce.objects.filter(kulup=k):
-                # Aynı sporcunun ana kulüpte aynı dönem kaydı var mı?
                 existing_th = SporcuKulupTarihce.objects.filter(
                     sporcu_id=th.sporcu_id,
-                    kulup=canonical,
-                    donem_sirasi=th.donem_sirasi
+                    kulup=canonical
                 ).first()
                 if existing_th:
+                    YarisSonucu.objects.filter(sporcu_kulup_tarihce=th).update(
+                        sporcu_kulup_tarihce=existing_th,
+                        kulup=canonical
+                    )
                     th.delete()
                 else:
                     th.kulup = canonical
                     th.save(update_fields=['kulup'])
+
+            # 2. Doğrudan kulübe bağlı kalan diğer Yarış Sonuçlarını Taşı
+            ys_updated = YarisSonucu.objects.filter(kulup=k).update(kulup=canonical)
+            total_races_moved += ys_updated
+
+            # 3. Sporcuları Taşı
+            sp_updated = Sporcu.objects.filter(birincil_kulup=k).update(birincil_kulup=canonical)
+            total_athletes_moved += sp_updated
 
             # 4. Ana Kulüp İstatistiklerini Güncelle
             canonical.toplam_sporcu_sayisi = Sporcu.objects.filter(birincil_kulup=canonical).count()
