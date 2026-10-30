@@ -14,6 +14,7 @@ HTTP API katmanına ve Cloud Scheduler'a ihtiyaç duymadan doğrudan Django ORM 
 
 import os
 import re
+import time
 from datetime import datetime, timezone as dt_timezone, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 
