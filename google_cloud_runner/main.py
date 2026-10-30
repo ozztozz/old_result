@@ -86,38 +86,41 @@ def get_fallback_gemini_client() -> Optional[genai.Client]:
 def generate_content_with_fallback(
     primary_client: genai.Client,
     model: str,
-    contents: List[Any],
+    contents: List[Any], 
     config: types.GenerateContentConfig
 ):
     """
-    Önce birincil GEMINI_API_KEY ile istek atar; kota/limit hatası (429) alınırsa
-    GEMINI_API_KEY_2'ye geçer. İkisi de dolmuşsa veya kota aşımı varsa kısa bir bekleme (backoff) ile yeniden dener.
+    ?nce birincil GEMINI_API_KEY ile istek atar; kota/limit hatas? (429) al?n?rsa
+    GEMINI_API_KEY_2'ye ge?er. ?kisi de dolmu?sa veya kota a??m? varsa k?sa bir bekleme (backoff) ile yeniden dener.
     """
     global _USE_FALLBACK_KEY
     fallback_client = get_fallback_gemini_client()
 
-    for attempt in range(2):
-        client = fallback_client if (_USE_FALLBACK_KEY and fallback_client is not None) else primary_client
+    for attempt in range(4):
+        use_fallback = (_USE_FALLBACK_KEY and fallback_client is not None)
+        client = fallback_client if use_fallback else primary_client
         try:
             return client.models.generate_content(model=model, contents=contents, config=config)
         except Exception as e:
             if _is_quota_error(e):
-                if not _USE_FALLBACK_KEY and fallback_client is not None:
-                    print(f"  [!] Birincil API kota doldu, GEMINI_API_KEY_2 deneniyor...")
+                if '402' in str(e) or 'prepayment' in str(e).lower() or 'depleted' in str(e).lower():
+                    _USE_FALLBACK_KEY = False
+                elif not _USE_FALLBACK_KEY and fallback_client is not None:
+                    print('  [!] Birincil API kota doldu, GEMINI_API_KEY_2 deneniyor...')
                     try:
                         res = fallback_client.models.generate_content(model=model, contents=contents, config=config)
                         _USE_FALLBACK_KEY = True
                         return res
                     except Exception as fb_err:
-                        print(f"  [!] GEMINI_API_KEY_2 de kota/kredi hatası verdi: {fb_err}")
-                
-                # 429 RPM limitinde 25 saniye bekleyip tekrar dene (free tier kota yenilenmesi)
-                if attempt == 0:
-                    print(f"  [*] Gemini 429/RPM limiti aşıldı. 25 saniye beklenip tekrar deneniyor...")
-                    time.sleep(25)
+                        print(f'  [!] GEMINI_API_KEY_2 de kota/kredi hatas? verdi: {fb_err}')
+                        _USE_FALLBACK_KEY = False
+
+                if attempt < 3:
+                    wait_sec = 25 + (attempt * 10)
+                    print(f'  [*] Gemini 429/RPM limiti a??ld?. {wait_sec} sn beklenip tekrar deneniyor ({attempt + 1}/3)...')
+                    time.sleep(wait_sec)
                     continue
             raise
-
 
 def get_http_session() -> requests.Session:
     global _HTTP_SESSION
