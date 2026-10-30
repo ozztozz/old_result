@@ -54,9 +54,9 @@ class SwimStatusBadge extends StatelessWidget {
 
     switch (type) {
       case SwimBadgeType.finished:
-        bg = colors.success.withOpacity(isDark ? 0.2 : 0.1);
+        bg = colors.success.withValues(alpha: isDark ? 0.2 : 0.1);
         fg = colors.success;
-        border = colors.success.withOpacity(0.3);
+        border = colors.success.withValues(alpha: 0.3);
         icon = Icons.check_circle_outline;
         label = customLabel ?? 'Sonuçlandı';
         break;
@@ -64,31 +64,31 @@ class SwimStatusBadge extends StatelessWidget {
       case SwimBadgeType.waiting:
         bg = colors.pendingBg;
         fg = colors.pending;
-        border = colors.pending.withOpacity(0.4);
+        border = colors.pending.withValues(alpha: 0.4);
         icon = Icons.schedule;
         label = customLabel ?? 'Bekleniyor';
         break;
 
       case SwimBadgeType.disqualified:
-        bg = colors.danger.withOpacity(isDark ? 0.2 : 0.1);
+        bg = colors.danger.withValues(alpha: isDark ? 0.2 : 0.1);
         fg = colors.danger;
-        border = colors.danger.withOpacity(0.4);
+        border = colors.danger.withValues(alpha: 0.4);
         icon = Icons.cancel_outlined;
         label = customLabel ?? 'DQ';
         break;
 
       case SwimBadgeType.pb:
-        bg = colors.pb.withOpacity(isDark ? 0.25 : 0.1);
+        bg = colors.pb.withValues(alpha: isDark ? 0.25 : 0.1);
         fg = colors.pb;
-        border = colors.pb.withOpacity(0.5);
+        border = colors.pb.withValues(alpha: 0.5);
         icon = Icons.star;
         label = customLabel ?? 'Yeni PB';
         break;
 
       case SwimBadgeType.standard:
-        bg = colors.success.withOpacity(isDark ? 0.2 : 0.1);
+        bg = colors.success.withValues(alpha: isDark ? 0.2 : 0.1);
         fg = colors.success;
-        border = colors.success.withOpacity(0.3);
+        border = colors.success.withValues(alpha: 0.3);
         icon = Icons.verified_outlined;
         label = customLabel != null ? 'Baraj $customLabel' : 'Baraj';
         break;
@@ -129,3 +129,4 @@ class SwimStatusBadge extends StatelessWidget {
     );
   }
 }
+

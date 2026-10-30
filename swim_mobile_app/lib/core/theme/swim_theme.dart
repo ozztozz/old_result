@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'swim_colors.dart';
 
@@ -93,7 +92,7 @@ class SwimTheme {
         bodyColor: text,
         displayColor: text,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -132,3 +131,4 @@ class SwimTheme {
 extension SwimThemeContext on BuildContext {
   SwimColors get swimColors => Theme.of(this).extension<SwimColors>()!;
 }
+

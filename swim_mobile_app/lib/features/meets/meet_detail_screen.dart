@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/swim_theme.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
@@ -201,7 +200,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                 // Kulüp Seçimi
                 Expanded(
                   child: DropdownButtonFormField<int?>(
-                    value: _selectedClubId,
+                    initialValue: _selectedClubId,
                     isExpanded: true,
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -233,7 +232,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                 // Sporcu Seçimi
                 Expanded(
                   child: DropdownButtonFormField<int?>(
-                    value: _selectedAthleteId,
+                    initialValue: _selectedAthleteId,
                     isExpanded: true,
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

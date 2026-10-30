@@ -45,19 +45,19 @@ class SwimResultCard extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: medalColor != null
-                      ? medalColor.withOpacity(0.15)
+                      ? medalColor.withValues(alpha: 0.15)
                       : isWaiting
                           ? colors.pendingBg
                           : isDq
-                              ? colors.danger.withOpacity(0.12)
+                              ? colors.danger.withValues(alpha: 0.12)
                               : Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: medalColor ??
                         (isWaiting
-                            ? colors.pending.withOpacity(0.4)
+                            ? colors.pending.withValues(alpha: 0.4)
                             : isDq
-                                ? colors.danger.withOpacity(0.4)
+                                ? colors.danger.withValues(alpha: 0.4)
                                 : Theme.of(context).colorScheme.outline),
                     width: 1,
                   ),
@@ -183,3 +183,4 @@ class SwimResultCard extends StatelessWidget {
     );
   }
 }
+

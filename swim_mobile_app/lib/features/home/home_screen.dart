@@ -225,6 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMeetCard(MeetSummary meet) {
     final is25m = meet.course == 'SC';
     final colors = context.swimColors;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -259,16 +260,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: is25m ? colors.accent.withOpacity(0.12) : colors.primary.withOpacity(0.12),
+                      color: is25m ? colors.accent.withValues(alpha: 0.12) : primaryColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: is25m ? colors.accent.withOpacity(0.4) : colors.primary.withOpacity(0.4),
+                        color: is25m ? colors.accent.withValues(alpha: 0.4) : primaryColor.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Text(
                       is25m ? '25m (Kısa)' : '50m (Uzun)',
                       style: TextStyle(
-                        color: is25m ? colors.accent : colors.primary,
+                        color: is25m ? colors.accent : primaryColor,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -297,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     '${meet.totalRaces} Yarış',
-                    style: TextStyle(color: colors.primary, fontWeight: FontWeight.w600, fontSize: 12),
+                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600, fontSize: 12),
                   ),
                   const Text(' · ', style: TextStyle(color: Colors.grey)),
                   Text(

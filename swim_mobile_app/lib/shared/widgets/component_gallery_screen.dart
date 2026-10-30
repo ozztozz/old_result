@@ -240,7 +240,7 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: color, width: 1),
         ),
@@ -258,3 +258,4 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
     );
   }
 }
+

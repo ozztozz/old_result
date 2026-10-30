@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
 
@@ -155,7 +154,7 @@ class _LiveScreenState extends State<LiveScreen> {
                             ? live.startListProgress.processed / live.startListProgress.total
                             : 0,
                         backgroundColor: Colors.blue.shade100,
-                        color: AppTheme.primaryBlue,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ],
                   ),

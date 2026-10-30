@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/utils/swim_time_formatter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../athletes/athlete_profile_screen.dart';
 
@@ -109,7 +107,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 Row(
                                   children: [
                                     CircleAvatar(
-                                      backgroundColor: AppTheme.primaryBlue,
+                                      backgroundColor: Theme.of(context).colorScheme.primary,
                                       child: const Icon(Icons.person, color: Colors.white),
                                     ),
                                     const SizedBox(width: 12),
