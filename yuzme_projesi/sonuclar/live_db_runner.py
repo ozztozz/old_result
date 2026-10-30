@@ -34,6 +34,7 @@ from sonuclar.models import (
 )
 from sonuclar.athlete_matcher import match_athlete
 from sonuclar.turkish_names import standardize_turkish_athlete_name, tr_fold
+from sonuclar.fina_calculator import calculate_fina_points, detect_course
 
 from google import genai
 from google_cloud_runner.main import (
@@ -441,6 +442,7 @@ def _process_single_race_payload(payload: dict) -> dict:
             dosya_obj.son_kontrol_tarihi = timezone.now()
             dosya_obj.save()
 
+    course = detect_course(musabaka_adi or (event.musabaka_adi if event else ""))
     existing_races_map = {}
     if musabaka_adi and mesafe and stil:
         q_init = YarisSonucu.objects.filter(mesafe=mesafe, stil=stil)
@@ -553,6 +555,14 @@ def _process_single_race_payload(payload: dict) -> dict:
                         target_race.uyari_notu = derece_val
                 else:
                     derece_sn = _time_to_seconds(derece_val)
+                    if not puan_val and derece_sn and derece_sn > 0:
+                        puan_val = calculate_fina_points(
+                            target_race.cinsiyet or cinsiyet,
+                            target_race.mesafe or mesafe,
+                            target_race.stil or stil,
+                            derece_sn,
+                            course=course
+                        )
 
                 target_race.derece = derece_val or target_race.derece
                 target_race.derece_saniye = derece_sn
@@ -619,6 +629,10 @@ def _process_single_race_payload(payload: dict) -> dict:
 
         giris_derecesi_val = item.get('giris_derecesi') or item.get('seed_time')
         derece_sn = _time_to_seconds(derece_val)
+        if not puan_val and derece_sn and derece_sn > 0 and tur == 'sonuc_listesi':
+            puan_val = calculate_fina_points(
+                cinsiyet, mesafe, stil, derece_sn, course=course
+            )
 
         kulup = get_or_resolve_canonical_club(
             kulup_adi, club_cache, is_okul_musabakasi, musabaka_adi, stats=stats
