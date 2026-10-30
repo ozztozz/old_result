@@ -143,30 +143,7 @@
                         <td class="swim-td text-xs swim-text-subtle font-mono">
                             {{ yaris.son_islem_tarihi|date:"d.m.Y H:i"|default:"-" }}
                         </td>
-                        <td class="swim-td text-right">
-                            <div class="flex items-center justify-end gap-1.5">
-                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}" class="inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="swim-btn-primary swim-btn-sm text-xs py-1 px-2.5" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %} title="Canlı Yarışı Tara / Güncelle">
-                                        <i class="bi bi-play-fill"></i> Tara
-                                    </button>
-                                </form>
-                                <button type="button" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" onclick="openLogModal({{ yaris.id }})" title="Canlı İlerleme ve Sunucu Logu">
-                                    <i class="bi bi-terminal"></i>
-                                </button>
-                                {% if yaris.event %}
-                                <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" title="Müsabaka Sonuçları Sayfasına Git">
-                                    <i class="bi bi-table"></i>
-                                </a>
-                                {% endif %}
-                                <form method="post" action="{% url 'sonuclar:canli_yaris_sil' yaris.id %}" class="inline" onsubmit="return confirm('Bu canlı yarış kaydını silmek istediğinizden emin misiniz?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="swim-btn-danger swim-btn-sm text-xs py-1 px-2" title="Sil">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
+
                     </tr>
                     {% empty %}
                     <tr>
