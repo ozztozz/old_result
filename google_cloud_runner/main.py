@@ -398,6 +398,10 @@ def split_masked_name(masked_name: str) -> Tuple[List[str], str]:
     tokens = norm.split()
     if not tokens:
         return [], ""
+    if "*" not in norm:
+        if len(tokens) > 1:
+            return tokens[:-1], tokens[-1]
+        return tokens, ""
     first_tokens = []
     surname_tokens = []
     found_mask = False
@@ -475,6 +479,10 @@ def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[f
 
     if norm_masked == norm_cand:
         return 100.0
+
+    if "*" in norm_cand and "*" not in norm_masked:
+        # Maske adayın içindeyse simetrik olarak eşleştir
+        return masked_name_match_score(candidate_name, masked_name)
 
     masked_tokens = norm_masked.split()
     candidate_tokens = norm_cand.split()
