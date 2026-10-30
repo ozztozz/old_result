@@ -264,6 +264,66 @@ def _time_to_seconds(time_str):
         return None
 
 
+def clean_and_expand_club_name(name: str) -> str:
+    """Kulüp isimlerindeki S.K., GSK, YSK gibi kısaltmaları standart kanonik haline getirir."""
+    if not name:
+        return ""
+    text = name.strip()
+    text = re.sub(r'[\s\.]*\bS[\.\s]*K[\.\s]*$', ' Spor Kulübü', text, flags=re.IGNORECASE)
+    text = re.sub(r'[\s\.]*\bGSK[\.\s]*$', ' Gençlik ve Spor Kulübü', text, flags=re.IGNORECASE)
+    text = re.sub(r'[\s\.]*\bYSK[\.\s]*$', ' Yüzme Spor Kulübü', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bS[\.\s]*K[\.\s]*\b', ' Spor Kulübü ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bG[\.\s]*S[\.\s]*K[\.\s]*\b', ' Gençlik ve Spor Kulübü ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text.rstrip('. ')
+
+
+def get_or_resolve_canonical_club(
+    raw_name: str,
+    club_cache: dict,
+    is_okul_context: bool = False,
+    meet_name: str = "",
+    stats: Optional[dict] = None
+) -> Kulup:
+    """
+    Kulüp adını kanonikleştirir; S.K. ile Spor Kulübü gibi mükerrer kayıt oluşmasını engeller.
+    Mevcut ana kulüp varsa onu döner; yoksa genişletilmiş adla oluşturur.
+    """
+    if not raw_name:
+        raw_name = "Ferdi"
+    c_raw = raw_name.strip()
+    c_low = c_raw.lower()
+    if c_low in club_cache:
+        return club_cache[c_low]
+
+    expanded = clean_and_expand_club_name(c_raw)
+    exp_low = expanded.lower()
+    if exp_low in club_cache:
+        club_cache[c_low] = club_cache[exp_low]
+        return club_cache[exp_low]
+
+    # Veritabanında ara: ham ad, genişletilmiş ad veya "Derneği" varyantı
+    k_obj = Kulup.objects.filter(
+        Q(kulup_adi__iexact=c_raw) |
+        Q(kulup_adi__iexact=expanded) |
+        Q(kulup_adi__iexact=f"{expanded} Derneği")
+    ).first()
+
+    if not k_obj:
+        target_name = expanded or c_raw
+        k_obj, k_created = Kulup.objects.get_or_create(kulup_adi=target_name)
+        if k_created and stats is not None:
+            stats['yeni_kulup'] += 1
+        if c_low != 'ferdi':
+            if is_okul_context or is_school_meet(meet_name) or is_school_team(target_name):
+                k_obj.okul_mu = 1
+                k_obj.save(update_fields=['okul_mu'])
+
+    club_cache[c_low] = k_obj
+    club_cache[exp_low] = k_obj
+    return k_obj
+
+
 def _process_single_race_payload(payload: dict) -> dict:
     """Tek bir yarışın (start listesi veya sonuç listesi) kayıtlarını doğrudan veritabanına aktarır."""
     tur = payload.get('tur', 'sonuc_listesi')
@@ -420,16 +480,9 @@ def _process_single_race_payload(payload: dict) -> dict:
         club_cache[k.kulup_adi.lower()] = k
 
     for c_name in unique_clubs:
-        c_low = c_name.lower()
-        if c_low not in club_cache:
-            k_obj, k_created = Kulup.objects.get_or_create(kulup_adi=c_name)
-            if k_created:
-                stats['yeni_kulup'] += 1
-                if c_low != 'ferdi':
-                    if is_okul_musabakasi or is_school_meet(musabaka_adi) or is_school_team(c_name):
-                        k_obj.okul_mu = 1
-                        k_obj.save(update_fields=['okul_mu'])
-            club_cache[c_low] = k_obj
+        get_or_resolve_canonical_club(
+            c_name, club_cache, is_okul_musabakasi, musabaka_adi, stats=stats
+        )
 
     sporcu_exact_cache = {}
     for sp in Sporcu.objects.filter(sporcu_adi__in=unique_names).select_related('birincil_kulup'):
@@ -567,10 +620,9 @@ def _process_single_race_payload(payload: dict) -> dict:
         giris_derecesi_val = item.get('giris_derecesi') or item.get('seed_time')
         derece_sn = _time_to_seconds(derece_val)
 
-        kulup = club_cache.get(kulup_adi.lower())
-        if not kulup:
-            kulup, _ = Kulup.objects.get_or_create(kulup_adi=kulup_adi)
-            club_cache[kulup_adi.lower()] = kulup
+        kulup = get_or_resolve_canonical_club(
+            kulup_adi, club_cache, is_okul_musabakasi, musabaka_adi, stats=stats
+        )
 
         sporcu = None
         masked_resolution = resolve_masked_athlete(
