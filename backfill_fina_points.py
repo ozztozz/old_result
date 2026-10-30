@@ -9,6 +9,7 @@ puanlarını hesaplayıp toplu günceller.
 
 import os
 import sys
+import time
 import django
 
 sys.path.insert(0, '/home/ubuntu/app/yuzme_projesi')
@@ -63,12 +64,28 @@ def run_fina_backfill(event_id=None, batch_size=2000):
             skipped_count += 1
 
         if len(batch) >= batch_size:
-            YarisSonucu.objects.bulk_update(batch, ['puan'])
+            for retry in range(5):
+                try:
+                    YarisSonucu.objects.bulk_update(batch, ['puan'])
+                    break
+                except Exception as e:
+                    if 'locked' in str(e).lower() and retry < 4:
+                        time.sleep(1 + retry)
+                    else:
+                        raise
             print(f"  [>] {updated_count} / {total_count} kayıt güncellendi...")
             batch.clear()
 
     if batch:
-        YarisSonucu.objects.bulk_update(batch, ['puan'])
+        for retry in range(5):
+            try:
+                YarisSonucu.objects.bulk_update(batch, ['puan'])
+                break
+            except Exception as e:
+                if 'locked' in str(e).lower() and retry < 4:
+                    time.sleep(1 + retry)
+                else:
+                    raise
         print(f"  [>] {updated_count} / {total_count} kayıt güncellendi...")
         batch.clear()
 
