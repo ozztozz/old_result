@@ -44,3 +44,7 @@ yuzme_projesi/package-lock.json
 # OS Specific
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+*.log.*
