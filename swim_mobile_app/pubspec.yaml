@@ -1,0 +1,43 @@
+name: swim_mobile_app
+description: "TYF Yüzme Sonuçları ve Canlı Yarış Takip Mobil Uygulaması"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Ağ & HTTP İstemcisi
+  dio: ^5.7.0
+  dio_cache_interceptor: ^3.5.0
+
+  # Durum Yönetimi (State Management)
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+
+  # Navigasyon (Routing)
+  go_router: ^14.6.2
+
+  # Yerel Depolama & SQLite (İlişkisel Çevrimdışı Önbellek & Favoriler)
+  drift: ^2.24.0
+  drift_flutter: ^0.2.2
+  shared_preferences: ^2.3.3
+
+  # UI Yardımcıları, İkonlar & Animasyonlar
+  cupertino_icons: ^1.0.8
+  intl: ^0.19.0
+  shimmer: ^3.0.0
+  fl_chart: ^0.70.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.24.0
+  build_runner: ^2.4.14
+
+flutter:
+  uses-material-design: true
