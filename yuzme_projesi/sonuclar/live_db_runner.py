@@ -1022,6 +1022,8 @@ def process_single_meet_db(
                 })
                 stats["toplam_sporcu"] = 0
                 print(f"  [+] {filename} doğrudan veritabanına yazıldı ({record_count} kayıt).")
+                # Gemini Free Tier (15 RPM) kota asimini onlemek icin nefes alma suresi
+                time.sleep(4)
 
             except Exception as e:
                 err = f"{filename} ({doc_type}): {str(e)}"
