@@ -371,10 +371,47 @@ def normalize_masked_name(value: Any) -> str:
     text = unicodedata.normalize("NFKC", str(value)).strip().upper()
     mapping = str.maketrans({
         "İ": "I", "Ş": "S", "Ğ": "G", "Ü": "U", "Ö": "O", "Ç": "C",
+        "|": "L",
     })
     text = text.translate(mapping)
+    # OCR ve baskı düzeltmesi: Kelime sonundaki 'OGU' genellikle 'OGLU' (oğlu)dur
+    text = re.sub(r'OGU\b', 'OGLU', text)
     text = re.sub(r"[^A-Z0-9*]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def is_subsequence(sub: str, string: str) -> bool:
+    """sub karakterlerinin tamamı string içinde aynı sırada yer alıyor mu?"""
+    if not sub:
+        return True
+    it = iter(string)
+    return all(c in it for c in sub)
+
+
+def split_masked_name(masked_name: str) -> Tuple[List[str], str]:
+    """
+    Maskeli adı ad(lar) ve maskeli soyad olarak ikiye ayırır.
+    KVKK/TYF kurallarında ön adlar maskelenmez; maskeleme soyadda başlar.
+    Örn: 'Mehmet Aras **|*ıç' -> (['MEHMET', 'ARAS'], '**L*IC')
+    """
+    norm = normalize_masked_name(masked_name)
+    tokens = norm.split()
+    if not tokens:
+        return [], ""
+    first_tokens = []
+    surname_tokens = []
+    found_mask = False
+    for t in tokens:
+        if "*" in t:
+            found_mask = True
+        if not found_mask:
+            first_tokens.append(t)
+        else:
+            surname_tokens.append(t)
+    if not first_tokens and len(tokens) > 1:
+        first_tokens = tokens[:-1]
+        surname_tokens = [tokens[-1]]
+    return first_tokens, " ".join(surname_tokens)
 
 
 def _masked_token_match(masked: str, candidate: str) -> Tuple[bool, float]:
@@ -397,19 +434,62 @@ def _masked_token_match(masked: str, candidate: str) -> Tuple[bool, float]:
 def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[float]:
     """
     Maskeli adı tam ad yapısını koruyarak puanlar.
+    Önce birebir token kontrolü yapar; uymazsa 'Ön Ad + Soyadı Alt Dizi (Subsequence)'
+    mantığıyla harf düşmesi / OCR bozulmalarına toleranslı eşleştirir.
     Sonuç 0-100 arasındadır; eşleşmeyen token veya farklı ad yapısı None döner.
     """
-    masked_tokens = normalize_masked_name(masked_name).split()
-    candidate_tokens = normalize_masked_name(candidate_name).split()
-    if not masked_tokens or len(masked_tokens) != len(candidate_tokens):
+    norm_masked = normalize_masked_name(masked_name)
+    norm_cand = normalize_masked_name(candidate_name)
+    if not norm_masked or not norm_cand:
         return None
-    scores = []
-    for masked_token, candidate_token in zip(masked_tokens, candidate_tokens):
-        matched, visible_ratio = _masked_token_match(masked_token, candidate_token)
-        if not matched:
+
+    masked_tokens = norm_masked.split()
+    candidate_tokens = norm_cand.split()
+
+    # 1. Aşama: Birebir token eşleşmesi (aynı token sayısında)
+    if len(masked_tokens) == len(candidate_tokens):
+        scores = []
+        all_matched = True
+        for masked_token, candidate_token in zip(masked_tokens, candidate_tokens):
+            matched, visible_ratio = _masked_token_match(masked_token, candidate_token)
+            if not matched:
+                all_matched = False
+                break
+            scores.append(visible_ratio)
+        if all_matched:
+            return round(sum(scores) / len(scores) * 100, 1)
+
+    # 2. Aşama: Ön Ad Çekirdeği + Soyadı Alt Dizi (Subsequence) Eşleşmesi
+    m_firsts, m_surname = split_masked_name(masked_name)
+    if not m_firsts or not candidate_tokens:
+        return None
+
+    c_firsts = candidate_tokens[:-1] if len(candidate_tokens) > 1 else candidate_tokens
+    c_surname = candidate_tokens[-1] if len(candidate_tokens) > 1 else ""
+
+    # Ön adlar uyuşuyor mu?
+    if m_firsts != c_firsts:
+        # Adayın ön adları arasında maskeli ön adların tamamı sırayla var mı?
+        it = iter(c_firsts)
+        if not all(tok in it for tok in m_firsts):
             return None
-        scores.append(visible_ratio)
-    return round(sum(scores) / len(scores) * 100, 1)
+
+    # Soyadı kontrolü
+    if not m_surname:
+        return 70.0
+
+    vis_surname = re.sub(r"[^A-Z0-9]", "", m_surname)
+    if not vis_surname:
+        # Soyad sadece yıldızlardan oluşuyor (örn: "**")
+        return 75.0
+
+    # Görünen harfler aday soyadı içinde aynı sırada var mı?
+    if is_subsequence(vis_surname, c_surname):
+        vis_ratio = len(vis_surname) / max(len(c_surname), 1)
+        score = 75.0 + min(vis_ratio * 20.0, 20.0)
+        return round(score, 1)
+
+    return None
 
 
 def resolve_masked_athlete(

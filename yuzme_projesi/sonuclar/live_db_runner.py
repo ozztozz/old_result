@@ -537,6 +537,22 @@ def _process_single_race_payload(payload: dict) -> dict:
             except Exception:
                 pass
 
+        if not dogum_yili and yas_grubu:
+            m_year = re.search(r'\b(19\d{2}|20\d{2})\b', str(yas_grubu))
+            if m_year:
+                dogum_yili = int(m_year.group(1))
+            else:
+                m_age = re.search(r'\b(\d{1,2})\s*YAŞ', str(yas_grubu).upper())
+                if m_age:
+                    age = int(m_age.group(1))
+                    ref_y = yaris_tarihi_baslangic.year if yaris_tarihi_baslangic else 2026
+                    dogum_yili = ref_y - age
+
+        if not dogum_yili and musabaka_adi:
+            m_year = re.search(r'\b(19\d{2}|20\d{2})\b', str(musabaka_adi))
+            if m_year:
+                dogum_yili = int(m_year.group(1))
+
         if not sporcu_adi:
             continue
 
