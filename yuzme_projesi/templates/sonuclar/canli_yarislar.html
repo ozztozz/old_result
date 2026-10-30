@@ -3,6 +3,17 @@
 {% block title %}Canlı Yarış Takibi - Yüzme Sonuçları{% endblock %}
 
 {% block content %}
+<style>
+    .swim-table tbody tr.swim-tr {
+        transition: background-color 0.15s ease-in-out;
+    }
+    .swim-table tbody tr.swim-tr:hover {
+        background-color: var(--swim-table-tr-hover, rgba(148, 163, 184, 0.12)) !important;
+    }
+    .swim-table tbody tr.swim-tr:hover .swim-text-main {
+        color: var(--swim-text-main) !important;
+    }
+</style>
 <div class="py-2">
     <!-- Başlık ve Yeni Ekleme -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">

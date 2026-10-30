@@ -1504,7 +1504,7 @@ html[data-theme="kizil-gumus"] {
       }
 
       .swim-app-shell .swim-tr:hover {
-        background: #fff5f2 !important;
+        background: var(--swim-table-tr-hover) !important;
       }
 
       .swim-app-shell .swim-badge-primary,
@@ -2155,7 +2155,7 @@ html[data-theme="kizil-gumus"] {
     }
 
     .swim-app-shell .swim-tr:hover {
-      background-color: #fff5f2 !important;
+      background-color: var(--swim-table-tr-hover) !important;
     }
 
     .swim-app-shell .swim-theme-btn,
@@ -2981,17 +2981,17 @@ html[data-theme="kizil-gumus"] {
   }
 
   .swim-app-shell .swim-page-content .swim-table-wrapper {
-    border-color: #e6e7e2;
+    border-color: var(--swim-table-border, #e6e7e2);
     border-radius: 1.25rem;
-    background: #fff;
+    background: var(--swim-card-bg, #fff);
   }
 
   .swim-app-shell .swim-page-content .swim-thead {
-    background: #f7f7f2;
+    background: var(--swim-table-th-bg, #f7f7f2);
   }
 
   .swim-app-shell .swim-page-content .swim-tr:hover {
-    background: #f7f7f2;
+    background: var(--swim-table-tr-hover) !important;
   }
 
   .swim-app-shell .swim-page-content .swim-stat-box {
