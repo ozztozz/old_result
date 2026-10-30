@@ -125,20 +125,26 @@ def evaluate_single_meet(meet: Dict[str, Any], today: Optional[date] = None) -> 
     if gercekten_tamam:
         return False, f"[{title}] Müsabaka ve tüm sonuç listeleri ({islenen_sonuc}/{toplam_sonuc}) tamamlanmış durumda."
 
-    # 1. KURAL: Start listeleri henüz ayrıştırılmamış mı?
+    # 1. KURAL: Start listeleri hen?z ayr??t?r?lmam?? m??
     startlist_tamam = (toplam_start > 0 and islenen_start >= toplam_start)
     if not startlist_tamam:
-        kalan = max(0, toplam_start - islenen_start) if toplam_start > 0 else "Bilinmiyor"
-        return True, f"[{title}] Start listeleri henüz ayrıştırılmadı (İşlenen: {islenen_start}/{toplam_start}, Kalan: {kalan}). Parser çalışmalı."
+        kalan = max(0, toplam_start - islenen_start) if toplam_start > 0 else 'Bilinmiyor'
+        return True, f'[{title}] Start listeleri hen?z ayr??t?r?lmad? (??lenen: {islenen_start}/{toplam_start}, Kalan: {kalan}). Parser ?al??mal?.'
 
-    # 2. KURAL: Start listeleri tamam, yarış günü kontrolü
+    # 1.5 KURAL: Hen?z i?lenmemi? sonu? listeleri varsa (tarihe bak?lmaks?z?n) sonu?lar? an?nda tara!
+    if toplam_sonuc > 0 and islenen_sonuc < toplam_sonuc:
+        return True, f'[{title}] Yeni yay?nlanan sonu? listeleri mevcut (??lenen: {islenen_sonuc}/{toplam_sonuc}). Sonu?lar aktar?lmal?.'
+
+    # 2. KURAL: Start listeleri tamam, yar?? g?n? kontrol?
     # API'den gelen ISO tarih bilgileri (YYYY-MM-DD)
-    start_iso = meet.get("baslangic_tarihi")
-    end_iso = meet.get("bitis_tarihi") or start_iso
+    start_iso = meet.get('baslangic_tarihi')
+    end_iso = meet.get('bitis_tarihi') or start_iso
 
     if start_iso and end_iso:
-        today_str = today.isoformat()
+        if str(start_iso) > str(end_iso):
+            return True, f'[{title}] Tarih aral??? tutars?z ({start_iso} > {end_iso}), g?venli modda ?al??t?r?l?yor.'
 
+        today_str = today.isoformat()
         # A) Yarış henüz başlamadı (Gelecek tarih)
         if today_str < start_iso:
             return False, f"[{title}] Start listeleri hazır. Yarış {start_iso} tarihinde başlayacak. Şu an sonuç yok, yarış gününe kadar bekleniyor."

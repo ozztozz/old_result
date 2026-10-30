@@ -285,17 +285,29 @@ def update_meet_status(base_url: str, payload: Dict[str, Any], api_key: Optional
 
 
 def parse_tr_date_range(d_str: str) -> Tuple[str, str]:
-    """Türkçe tarih aralığını ISO formatına dönüştürür (örn: '24. - 26.4.2026' -> '2026-04-24', '2026-04-26')."""
+    """T?rk?e tarih aral???n? ISO format?na d?n??t?r?r (?rn: '30.10. - 1.11.2026' -> '2026-10-30', '2026-11-01')."""
     if not d_str:
         return '', ''
     d_clean = re.sub(r'\s+', ' ', d_str.strip())
-    m = re.search(r'(\d{1,2})\.?\s*(?:-\s*(\d{1,2})\.?)?\s*(\d{1,2})\.(\d{4})', d_clean)
-    if m:
-        d1, d2, month, year = m.group(1), m.group(2), m.group(3), m.group(4)
-        m_str = f'{int(month):02d}'
-        start_date = f'{year}-{m_str}-{int(d1):02d}'
-        end_date = f'{year}-{m_str}-{int(d2):02d}' if d2 else start_date
-        return start_date, end_date
+    # 1. Farkl? aylar i?eren aral?klar (?rn: 30.10. - 1.11.2026 veya 30.10.2026 - 1.11.2026)
+    m_diff = re.search(r'(\d{1,2})\.(\d{1,2})\.?(?:\d{4})?\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{4})', d_clean)
+    if m_diff:
+        d1, m1, d2, m2, y = m_diff.groups()
+        return f'{y}-{int(m1):02d}-{int(d1):02d}', f'{y}-{int(m2):02d}-{int(d2):02d}'
+
+    # 2. Ayn? ay i?indeki aral?klar (?rn: 24. - 26.4.2026 veya 24-26.04.2026)
+    m_same = re.search(r'(\d{1,2})\.?\s*-\s*(\d{1,2})\.(\d{1,2})\.(\d{4})', d_clean)
+    if m_same:
+        d1, d2, m, y = m_same.groups()
+        return f'{y}-{int(m):02d}-{int(d1):02d}', f'{y}-{int(m):02d}-{int(d2):02d}'
+
+    # 3. Tekil tarih (?rn: 24.4.2026)
+    m_single = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', d_clean)
+    if m_single:
+        d, m, y = m_single.groups()
+        iso = f'{y}-{int(m):02d}-{int(d):02d}'
+        return iso, iso
+
     return '', ''
 
 
