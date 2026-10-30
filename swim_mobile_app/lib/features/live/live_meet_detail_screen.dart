@@ -50,98 +50,54 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Canlı akış verisini çek
+      // 1. Canlı akış verisini çek (Backend her yarışın 'Sonuçlandı' veya 'Bekliyor' durumunu doğrudan döner)
       final feed = await widget.repository.getLiveFeedResponse(widget.live.id);
 
-      // 2. Müsabaka detayını (program ve cinsiyetler) ve sonuçları çek
-      MeetDetail? meetDetail;
-      List<RaceResult> allResults = List.from(feed.data);
+      List<LiveEventProgramItem> events = feed.events;
 
-      if (widget.live.meetId != null) {
+      // 2. Canlı akış listesi boşsa ancak meetId varsa müsabaka detayından çek
+      if (events.isEmpty && widget.live.meetId != null) {
         try {
-          final res = await Future.wait([
-            widget.repository.getMeetDetail(widget.live.meetId!),
-            if (allResults.isEmpty)
-              widget.repository.getMeetResults(widget.live.meetId!, page: 1),
-          ]);
-          meetDetail = res[0] as MeetDetail;
-          if (res.length > 1) {
-            allResults = res[1] as List<RaceResult>;
-          }
+          final meetDetail = await widget.repository.getMeetDetail(widget.live.meetId!);
+          events = meetDetail.events.map((p) {
+            return LiveEventProgramItem(
+              eventNo: p.eventNo,
+              name: '${p.distance ?? ''}m ${p.strokeLabel}'.trim(),
+              distance: p.distance,
+              stroke: p.stroke,
+              strokeLabel: p.strokeLabel,
+              gender: p.gender,
+              isPending: p.isPending,
+              status: p.status,
+            );
+          }).toList();
+        } catch (_) {}
+      } else if (events.isNotEmpty && widget.live.meetId != null) {
+        // Cinsiyet bilgisi eksik olan yarış varsa meetDetail ile zenginleştir
+        try {
+          final meetDetail = await widget.repository.getMeetDetail(widget.live.meetId!);
+          final genderMap = {for (var me in meetDetail.events) me.eventNo: me.gender};
+          events = events.map((e) {
+            final g = (e.gender == null || e.gender!.isEmpty)
+                ? (genderMap[e.eventNo] ?? e.gender)
+                : e.gender;
+            return LiveEventProgramItem(
+              eventNo: e.eventNo,
+              name: e.name,
+              distance: e.distance,
+              stroke: e.stroke,
+              strokeLabel: e.strokeLabel,
+              gender: g,
+              ageGroup: e.ageGroup,
+              isPending: e.isPending,
+              status: e.status,
+              totalAthletes: e.totalAthletes,
+            );
+          }).toList();
         } catch (_) {}
       }
 
-      // 3. Hangi yarışların sonuçlandığını (derecesi olduğunu) belirle
-      // 3. Hangi yarışların sonuçlandığını belirle:
-      // Kullanıcı kuralı: "Bekliyor" statüsü SONUCU OLMAYAN yarış demektir.
-      // Yarışa girmemiş tekil sporcular 'Bekleniyor' görünse dahi,
-      // yarışta en az 1 sporcunun derecesi varsa o yarış "Sonuçlandı" kabul edilir!
-      final Set<String> finishedEventNos = {};
-      for (final r in allResults) {
-        final eno = r.eventNo.trim();
-        final hasTime = r.time != null &&
-            r.time!.isNotEmpty &&
-            r.time != 'Bekleniyor' &&
-            r.time != '-';
-        final hasTimeCs = (r.timeCs != null && r.timeCs! > 0);
-        final isOk = (r.resultStatus == 'OK' && hasTime);
-
-        if (hasTime || hasTimeCs || isOk) {
-          finishedEventNos.add(eno);
-        }
-      }
-
-      // Canlı yarış sonuç ilerleme sayacı (eğer backend'den geliyorsa)
-      final processedCount = widget.live.resultListProgress.processed;
-
-      // 4. Müsabaka programındaki tüm yarışları (hem sonuçlananları hem bekleyenleri) eksiksiz birleştir
-      List<LiveEventProgramItem> events = [];
-
-      if (meetDetail != null && meetDetail.events.isNotEmpty) {
-        // Resmi müsabaka programı tüm yarışları ve cinsiyetleri kesin olarak içerir
-        events = meetDetail.events.map((p) {
-          final int? eventIdx = int.tryParse(p.eventNo);
-          final bool isFin = finishedEventNos.contains(p.eventNo) ||
-              p.status == 'Sonuçlandı' ||
-              !p.isPending ||
-              (processedCount > 0 && eventIdx != null && eventIdx <= processedCount);
-
-          return LiveEventProgramItem(
-            eventNo: p.eventNo,
-            name: '${p.distance ?? ''}m ${p.strokeLabel}'.trim(),
-            distance: p.distance,
-            stroke: p.stroke,
-            strokeLabel: p.strokeLabel,
-            gender: p.gender,
-            isPending: !isFin,
-            status: isFin ? 'Sonuçlandı' : 'Bekliyor',
-          );
-        }).toList();
-      } else {
-        // Canlı akış listesinden al ve sonuç durumunu hesapla
-        events = feed.events.map((e) {
-          final int? eventIdx = int.tryParse(e.eventNo);
-          final bool isFin = finishedEventNos.contains(e.eventNo) ||
-              e.status == 'Sonuçlandı' ||
-              !e.isPending ||
-              (processedCount > 0 && eventIdx != null && eventIdx <= processedCount);
-
-          return LiveEventProgramItem(
-            eventNo: e.eventNo,
-            name: e.name,
-            distance: e.distance,
-            stroke: e.stroke,
-            strokeLabel: e.strokeLabel,
-            gender: e.gender,
-            ageGroup: e.ageGroup,
-            isPending: !isFin,
-            status: isFin ? 'Sonuçlandı' : 'Bekliyor',
-            totalAthletes: e.totalAthletes,
-          );
-        }).toList();
-      }
-
-      // 5. Resmi yarış programı sırasına göre sırala
+      // 3. Resmi yarış programı sırasına göre sırala (yaris_no)
       events.sort((a, b) {
         final int numA = int.tryParse(a.eventNo) ?? 9999;
         final int numB = int.tryParse(b.eventNo) ?? 9999;
