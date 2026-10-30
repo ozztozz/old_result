@@ -270,7 +270,12 @@ def _process_single_race_payload(payload: dict) -> dict:
     sehir = (payload.get('sehir') or '').strip()
     yaris_tarihi = (payload.get('yaris_tarihi') or payload.get('tarih') or '').strip()
     yaris_tarihi_baslangic = (payload.get('yaris_tarihi_baslangic') or yaris_tarihi).strip()
+    dosya_adi = (payload.get('dosya_adi') or '').strip()
     yaris_no = str(payload.get('yaris_no') or '').strip()
+    if not yaris_no and dosya_adi:
+        m_yno = re.search(r'(?:StartList|ResultList)_(\d+)', dosya_adi, re.I)
+        if m_yno:
+            yaris_no = m_yno.group(1)
     cinsiyet = (payload.get('cinsiyet') or '').strip()
     mesafe = payload.get('mesafe')
     if mesafe:
@@ -280,7 +285,6 @@ def _process_single_race_payload(payload: dict) -> dict:
             pass
     stil = (payload.get('stil') or '').strip()
     yas_grubu = (payload.get('yas_grubu') or '').strip()
-    dosya_adi = (payload.get('dosya_adi') or '').strip()
     kayitlar = payload.get('kayitlar', [])
     is_okul_musabakasi = bool(payload.get('okul_musabakasi')) or is_school_meet(musabaka_adi)
 

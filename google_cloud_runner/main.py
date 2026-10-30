@@ -813,6 +813,11 @@ SADECE JSON nesnesi (object) döndür."""
         if isinstance(new_swimmers, list):
             header_data.setdefault("yeni_sporcular", []).extend(new_swimmers)
 
+    if not header_data.get("yaris_no") and (pdf_url or ""):
+        m_yno = re.search(r'(?:StartList|ResultList)_(\d+)', pdf_url, re.I)
+        if m_yno:
+            header_data["yaris_no"] = m_yno.group(1)
+
     if doc_type == "sonuc_listesi":
         header_data["kayitlar"] = reconcile_result_ids(
             header_data.get("kayitlar", []),
