@@ -1,23 +1,37 @@
 ---
-description: Apple Health / Strava tarzı minimalist spor gösterge paneli tasarım sistemi kuralları
+description: Katı Tasarım Sistemi (Design System) ve Bileşen Odaklı Geliştirme (Component-Driven Development) Kuralları
 globs: swim_mobile_app/**/*.dart
 ---
 
-# TYF Swim Mobile App - Tasarım Sistemi Kuralları
+# TYF Swim Mobile App — Tasarım Sistemi ve Mimari Kuralları
 
-Bu Flutter projesinde Apple Health/Strava tarzı minimalist bir spor gösterge paneli dili kullanılmaktadır.
+Bu Flutter projesinde tüm UI geliştirmeleri katı bir "Design System" (Tasarım Sistemi) ve "Component-Driven Development" (Bileşen Odaklı Geliştirme) mimarisine göre yapılacaktır. Ekranlarda serbest stil tanımlamaları kesinlikle yasaktır.
 
-- **Arka Plan Rengi:** Daima `#F8FAFC` (`AppColors.background`).
-- **Yüzey / Kartlar:** Daima beyaz `Colors.white` (`AppColors.surface`).
-- **Ana Metinler & Rakamlar:** Daima `#0F172A` (`AppColors.textPrimary` / `AppTextStyles.metricLarge`).
-- **İkincil Etiketler:** Daima `#64748B` (`AppColors.textSecondary` / `AppTextStyles.cardSubtitle`).
-- **Pasif / Tarih / Metraj:** Daima `#94A3B8` (`AppColors.textMuted` / `AppTextStyles.labelMuted`).
-- **Tek Vurgu Rengi (Accent):** Daima `#4F46E5` (`AppColors.accent`) — yalnızca aktif tab, seçili filtre veya zirve derece için.
-- **Durum Rengi (Başarı / Canlı):** Daima `#10B981` (`AppColors.statusLive` / `AppColors.statusSuccess`).
-- **Çerçeveler:** Daima `#E2E8F0`, 1.0px (`AppBorders.border` / `Border.all(color: Color(0xFFE2E8F0), width: 1.0)`).
-- **Köşe Yuvarlaklıkları:** Standart `BorderRadius.circular(14)` veya `16` (`AppBorders.cell` / `AppBorders.panel`).
-- **Ayırıcı Çizgiler:** Daima `Divider(color: Color(0xFFF1F5F9), thickness: 1.0)` (`AppBorders.divider()`).
+Yeni bir özellik, ekran veya bileşen yazarken şu kurallara kesinlikle uyulmalıdır:
 
-Gereksiz renkli çiplerden ve kutu karmaşasından kaçınılmalı, tipografik sütunlar ve dikey ayırıcı çizgilerle monokrom bir veri hiyerarşisi kurulmalıdır.
-Tüm bileşenler `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`, `app_decorations.dart`) ve `lib/shared/widgets/` (`AppScaffold`, `StrokeTelemetryRow`, `StatusBadge`, `LiveBadge`, `ModernRaceCard`, `HeroRaceCard`) üzerinden merkezi olarak yönetilmelidir.
+---
 
+### 1. Hardcoded Değer Yasağı
+- Ekran ve widget dosyalarında doğrudan renk (`Color(...)`), sabit boşluk (`SizedBox(height: 16)`), keyfi padding veya doğrudan `BorderRadius` tanımlanamaz.
+- Tüm bu değerler merkezi token sınıflarından (`AppSpacing`, `AppRadius`, `AppColors`) veya dinamik tema üzerinden (`context.palette` / `Theme.of(context)`) okunmalıdır.
+
+### 2. Katmanlı Mimari Hiyerarşisi
+UI geliştirmeleri şu 4 katmana göre inşa edilir:
+1. **Design Tokens (`lib/core/theme/tokens/`):**
+   - `app_spacing.dart`: Sabit boşluklar (`AppSpacing.vSm`, `AppSpacing.hMd`, `AppSpacing.cardPadding` vb.).
+   - `app_radius.dart`: Köşe yuvarlatma sabitleri (`AppRadius.cardRadius`, `AppRadius.buttonRadius` vb.).
+   - `app_color_palette.dart`: Çoklu palet ve tema renkleri soyutlaması (`AppColorPalette`, `LightColorPalette`, `DarkColorPalette`, `context.palette`).
+   - `app_colors.dart`: Temel palet sabitleri ve geriye dönük uyumluluk takma adları.
+   - `app_typography.dart`: Tabular rakamlar, spor paneli metrikleri ve başlık hiyerarşisi (`AppTextStyles`).
+2. **Global ThemeData (`lib/core/theme/app_theme.dart`):**
+   - Material 3 tabanlı merkezi tema (`AppTheme.light`, `AppTheme.dark`).
+   - `FilledButton`, `OutlinedButton`, `TextField`, `Card`, `AppBar`, `Divider`, `Chip` gibi standart bileşenlerin stilleri burada tanımlanır.
+3. **Atomik UI Bileşenleri (`lib/core/components/` veya `lib/shared/widgets/`):**
+   - Projeye özel kartlar (`AppCard`), durum butonları (`AppButton`), yüklenme iskeletleri (`AppSkeleton`) ve boş durum şablonları (`EmptyStateWidget`) bu dizinde tekil olarak üretilir.
+4. **Ekranlar (`lib/features/.../presentation/views/` veya `lib/features/.../*_screen.dart`):**
+   - Ekranlar sadece bu hazır bileşenleri ve düzenleme (layout) kurallarını kullanarak bir araya getirilen bir montaj hattıdır. Ekran içerisinde sıfırdan stil, kutu süslemesi veya keyfi renk tanımlanmaz.
+
+### 3. Çoklu Palet & Dinamik Tema Desteği
+- Renk şemaları soyut `AppColorPalette` arayüzü ve `ThemeExtension` (`AppPaletteExtension`) üzerinden yönetilir.
+- Ekranlar veya widget'lar renk ihtiyacında `context.palette.<color>` getter'ını kullanır.
+- Açık/Koyu mod veya farklı yarış/kulüp renk paletlerine geçişlerde ekran kodu değiştirilmez; sadece palet nesnesi değişir.

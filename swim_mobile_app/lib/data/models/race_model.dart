@@ -1,4 +1,4 @@
-/// TYF Yüzme Sonuçları — Yarış Modeli
+/// TYF Yüzme Sonuçları — Canlı Yarış Arayüz Modeli
 enum RaceStatus { completed, live, upcoming }
 
 class RaceModel {
@@ -12,6 +12,7 @@ class RaceModel {
   final String? heatLaneInfo;
   final String? winnerSummary;
   bool isFavorite;
+  final int myTeamAthleteCount;
   final dynamic rawEvent;
 
   RaceModel({
@@ -25,7 +26,7 @@ class RaceModel {
     this.heatLaneInfo,
     this.winnerSummary,
     this.isFavorite = false,
+    this.myTeamAthleteCount = 0,
     this.rawEvent,
   });
 }
-

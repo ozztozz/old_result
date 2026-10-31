@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/theme/app_decorations.dart';
+import '../../core/theme/tokens/tokens.dart';
 
 /// TYF Yüzme Sonuçları — Durum Rozeti (v2.0)
 /// "Tamamlandı", "Canlı", "PB", "Bekliyor" mikro rozetleri
@@ -50,42 +48,22 @@ class StatusBadge extends StatelessWidget {
     );
   }
 
-  /// Kişisel En İyi Derece (PB)
-  factory StatusBadge.pb({String label = 'PB'}) {
-    return StatusBadge(
-      label: label,
-      bgColor: AppColors.accentLight,
-      textColor: AppColors.accent,
-      hasBorder: true,
-    );
-  }
-
-  /// Sıradaki / Bekliyor (Açık Nötr)
+  /// Bekliyor / Başlamadı
   factory StatusBadge.pending({String label = 'Bekliyor'}) {
     return StatusBadge(
       label: label,
-      bgColor: AppColors.background,
+      bgColor: const Color(0xFFFAF8F7),
       textColor: AppColors.textSecondary,
       hasBorder: true,
     );
   }
 
-  /// Durum Metninden Otomatik Rozet Üretimi
-  factory StatusBadge.fromStatus(String status) {
-    final s = status.toLowerCase();
-    if (s.contains('canli') || s.contains('live') || s.contains('isleniyor')) {
-      return StatusBadge.live(label: status);
-    }
-    if (s.contains('tamam') || s.contains('sonuc') || s.contains('ok')) {
-      return StatusBadge.completed(label: status);
-    }
-    if (s.contains('pb') || s.contains('zirve')) {
-      return StatusBadge.pb(label: status);
-    }
+  /// Kişisel En İyi (Personal Best - PB)
+  factory StatusBadge.pb({String label = 'PB'}) {
     return StatusBadge(
-      label: status,
-      bgColor: AppColors.background,
-      textColor: AppColors.textSecondary,
+      label: label,
+      bgColor: AppColors.goldBg,
+      textColor: AppColors.gold,
       hasBorder: true,
     );
   }
@@ -93,13 +71,11 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: AppBorders.small,
-        border: hasBorder
-            ? Border.all(color: textColor.withValues(alpha: 0.25), width: 1.0)
-            : null,
+        borderRadius: BorderRadius.circular(6),
+        border: hasBorder ? Border.all(color: textColor.withValues(alpha: 0.15), width: 0.8) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -108,22 +84,14 @@ class StatusBadge extends StatelessWidget {
           if (leading != null) leading!,
           Text(
             label,
-            style: AppTextStyles.badge.copyWith(color: textColor),
+            style: AppTextStyles.badge.copyWith(
+              color: textColor,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
     );
   }
 }
-
-class LiveBadge extends StatelessWidget {
-  final String label;
-
-  const LiveBadge({super.key, this.label = 'CANLI'});
-
-  @override
-  Widget build(BuildContext context) {
-    return StatusBadge.live(label: label);
-  }
-}
-

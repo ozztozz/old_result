@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/tokens/tokens.dart';
 
 /// TYF Yüzme Sonuçları — Ana Kabuk ve Navigasyon (v2.0)
-/// Apple Esintili Yalınlık:
-/// - Zemin: #FAF8F7 ferah kırık beyaz
-/// - Alt Bar: #FFFFFF temiz beyaz, 1px #EFE9E7 üst sınır çizgisi
-/// - Seçili sekmenin altında #BC8C91 renginde 2px kalınlığında zarif bir çizgi
+/// Apple Esintili Yalınlık, dinamik AppColorPalette desteği.
 class AppScaffold extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onNavigationChanged;
@@ -20,18 +17,20 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.background,
       body: IndexedStack(
         index: currentIndex,
         children: screens,
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration: BoxDecoration(
+          color: palette.surface,
           border: Border(
             top: BorderSide(
-              color: AppColors.divider,
+              color: palette.divider,
               width: 1.0,
             ),
           ),
@@ -42,9 +41,9 @@ class AppScaffold extends StatelessWidget {
             height: 56,
             child: Row(
               children: [
-                _buildNavItem(0, 'Ana Sayfa', Icons.home_outlined, Icons.home_rounded),
-                _buildNavItem(1, 'Canlı Takip', Icons.sensors_outlined, Icons.sensors_rounded),
-                _buildNavItem(2, 'Favorilerim', Icons.star_outline_rounded, Icons.star_rounded),
+                _buildNavItem(context, 0, 'Ana Sayfa', Icons.home_outlined, Icons.home_rounded),
+                _buildNavItem(context, 1, 'Canlı Takip', Icons.sensors_outlined, Icons.sensors_rounded),
+                _buildNavItem(context, 2, 'Favorilerim', Icons.star_outline_rounded, Icons.star_rounded),
               ],
             ),
           ),
@@ -53,36 +52,38 @@ class AppScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, String label, IconData icon, IconData activeIcon) {
+  Widget _buildNavItem(BuildContext context, int index, String label, IconData icon, IconData activeIcon) {
+    final palette = context.palette;
     final isSelected = currentIndex == index;
+
     return Expanded(
       child: InkWell(
         onTap: () => onNavigationChanged(index),
         child: Column(
           children: [
-            // Seçili olan sekmenin üstünde 2px kalınlığında zarif #BC8C91 çizgi
+            // Seçili olan sekmenin üstünde 2px kalınlığında zarif çizgi
             Container(
               height: 2,
               width: 36,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.accent : Colors.transparent,
-                borderRadius: BorderRadius.circular(1),
+                color: isSelected ? palette.primary : Colors.transparent,
+                borderRadius: AppRadius.smallRadius,
               ),
             ),
             const Spacer(),
             Icon(
               isSelected ? activeIcon : icon,
               size: 21,
-              color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+              color: isSelected ? palette.textPrimary : palette.textSecondary,
             ),
             const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: AppTextStyles.fontFamily,
                 fontSize: 11.5,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isSelected ? palette.textPrimary : palette.textSecondary,
               ),
             ),
             const SizedBox(height: 6),
@@ -92,4 +93,3 @@ class AppScaffold extends StatelessWidget {
     );
   }
 }
-

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
+import '../../core/theme/tokens/tokens.dart';
+import '../../core/services/selected_club_service.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
@@ -19,10 +19,8 @@ String _toTitleCase(String text) {
 }
 
 /// TYF Yüzme Sonuçları — Canlı Yarış Sonuçları Ekranı (v2.0)
-/// Apple Esintili Yalınlık:
-/// - Zemin: #FAF8F7 nötr kırık beyaz
-/// - Satırlar: 52px min-yükseklik, 18px kulvar, 15px tabular derece, 20px gri rozet
-/// - Satırlar arası 32px girintili 1px #EFE9E7 ayırıcı çizgi
+/// Apple Esintili Spor Gösterge Paneli
+/// Kulüp seçili olduğunda en başta kulüp sporcularının özet kartı (Pinned Section) gösterilir.
 class LiveRaceResultsScreen extends StatefulWidget {
   final LiveMeetSummary live;
   final LiveEventProgramItem event;
@@ -54,14 +52,20 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
   @override
   void initState() {
     super.initState();
+    SelectedClubService.instance.addListener(_onClubChanged);
     _loadResults();
   }
 
   @override
   void dispose() {
+    SelectedClubService.instance.removeListener(_onClubChanged);
     _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onClubChanged() {
+    if (mounted) setState(() {});
   }
 
   void _toggleAutoRefresh(bool enable) {
@@ -135,21 +139,59 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     });
   }
 
+  /// Seçili kulübe ait sporcuların bu yarıştaki sonuçları
+  List<RaceResult> get _myClubResults {
+    if (!SelectedClubService.instance.hasSelectedClub) return [];
+    return _allResults.where((r) {
+      return SelectedClubService.instance.matches(r.clubName, r.clubId);
+    }).toList();
+  }
+
+  /// Sporcunun genel yarış sıralamasındaki kesin sırası
+  int? _getOverallRank(RaceResult result) {
+    final parsed = int.tryParse(result.rank.replaceAll('.', '').trim());
+    if (parsed != null && parsed > 0) return parsed;
+    final idx = _allResults.indexOf(result);
+    return idx >= 0 ? idx + 1 : null;
+  }
+
+  void _openAthleteProfile(RaceResult result) {
+    if (result.athleteId > 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AthleteProfileScreen(
+            athleteId: result.athleteId,
+            athleteName: result.athleteName,
+            repository: widget.repository,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final title = widget.event.name.isNotEmpty
         ? widget.event.name
         : '${widget.event.distance ?? ''} ${widget.event.strokeLabel}'.trim();
 
+    final myClubResults = _myClubResults;
+    final hasClubAthletes = myClubResults.isNotEmpty;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: palette.background,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.textPrimary, size: 18),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: palette.textPrimary,
+            size: 18,
+          ),
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Column(
@@ -157,14 +199,14 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
           children: [
             Text(
               _toTitleCase(title),
-              style: AppTextStyles.raceTitle,
+              style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(
               _toTitleCase(widget.live.name),
-              style: AppTextStyles.categorySeries,
+              style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -174,14 +216,14 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
           IconButton(
             icon: Icon(
               _isAutoRefresh ? Icons.sync_rounded : Icons.sync_disabled_rounded,
-              color: _isAutoRefresh ? AppColors.accent : AppColors.textSecondary,
+              color: _isAutoRefresh ? palette.primary : palette.textSecondary,
               size: 20,
             ),
             tooltip: _isAutoRefresh ? 'Otomatik Yenileme Açık' : 'Otomatik Yenileme Kapalı',
             onPressed: () => _toggleAutoRefresh(!_isAutoRefresh),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 20),
+            icon: Icon(Icons.refresh_rounded, color: palette.textSecondary, size: 20),
             tooltip: 'Yenile',
             onPressed: () => _loadResults(),
           ),
@@ -189,7 +231,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.accent,
+        color: palette.primary,
         onRefresh: () => _loadResults(),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -200,14 +242,14 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border, width: 1.0),
-                  boxShadow: const [
+                  color: palette.surface,
+                  borderRadius: AppRadius.cardRadius,
+                  border: Border.all(color: palette.border, width: 1.0),
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x083D3038),
+                      color: palette.textPrimary.withValues(alpha: 0.03),
                       blurRadius: 3,
-                      offset: Offset(0, 1),
+                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
@@ -216,25 +258,27 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          _toTitleCase(title),
-                          style: AppTextStyles.raceTitle,
+                        Expanded(
+                          child: Text(
+                            _toTitleCase(title),
+                            style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
+                          ),
                         ),
-                        const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                           decoration: BoxDecoration(
-                            color: AppColors.background,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.border),
+                            color: palette.background,
+                            borderRadius: AppRadius.badgeRadius,
+                            border: Border.all(color: palette.border),
                           ),
                           child: Text(
                             '${_allResults.length} Sporcu',
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.textSecondary,
+                              color: palette.textSecondary,
+                              fontFeatures: const [FontFeature.tabularFigures()],
                             ),
                           ),
                         ),
@@ -243,7 +287,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '${widget.live.name} • ${widget.event.status}',
-                      style: AppTextStyles.categorySeries,
+                      style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
                     ),
                   ],
                 ),
@@ -254,15 +298,18 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border, width: 1.0),
+                  color: palette.surface,
+                  borderRadius: AppRadius.inputRadius,
+                  border: Border.all(color: palette.border, width: 1.0),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded,
-                        color: AppColors.textSecondary, size: 18),
-                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.search_rounded,
+                      color: palette.textSecondary,
+                      size: 18,
+                    ),
+                    AppSpacing.hSm,
                     Expanded(
                       child: TextField(
                         controller: _searchController,
@@ -270,17 +317,17 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                           _searchQuery = val;
                           _applyFilter();
                         },
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
                           fontSize: 14,
-                          color: AppColors.textPrimary,
+                          color: palette.textPrimary,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Sporcu veya kulüp ara...',
                           hintStyle: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: AppTextStyles.fontFamily,
                             fontSize: 13.5,
-                            color: AppColors.laneNeutral,
+                            color: palette.textMuted,
                           ),
                           border: InputBorder.none,
                           isDense: true,
@@ -294,8 +341,11 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                           _searchQuery = '';
                           _applyFilter();
                         },
-                        child: const Icon(Icons.close_rounded,
-                            size: 16, color: AppColors.textSecondary),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: palette.textSecondary,
+                        ),
                       ),
                   ],
                 ),
@@ -333,45 +383,60 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 4. Sonuç Listesi Başlığı
+              // 4. KULÜP ÖNE ÇIKARILAN BÖLÜM (PINNED SECTION)
+              // Kulüp seçiliyse ve o yarışta sporcuları varsa listenin en başında vitrin olarak gösterilir
+              if (!_isLoading && hasClubAthletes) ...[
+                _buildClubPinnedSection(context, myClubResults),
+                const SizedBox(height: 8),
+              ],
+
+              // 5. Genel Sonuç Listesi Başlığı
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
-                  'Yarış Sıralaması (${_filteredResults.length})',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
+                  hasClubAthletes
+                      ? 'Tüm Yarış Sıralaması (${_filteredResults.length})'
+                      : 'Yarış Sıralaması (${_filteredResults.length})',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: palette.textPrimary,
                   ),
                 ),
               ),
 
-              // 5. Sonuç Listesi Paneli (Beyaz Zemin, 16px radius, satırlar arası 32px girintili 1px çizgi)
+              // 6. Genel Sonuç Listesi Paneli
               if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: CircularProgressIndicator(color: palette.primary),
+                  ),
                 )
               else if (_filteredResults.isEmpty)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
+                    color: palette.surface,
+                    borderRadius: AppRadius.cardRadius,
+                    border: Border.all(color: palette.border),
                   ),
-                  child: const Column(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.person_search_outlined, size: 40, color: AppColors.laneNeutral),
-                      SizedBox(height: 12),
+                      Icon(
+                        Icons.person_search_outlined,
+                        size: 40,
+                        color: palette.textMuted,
+                      ),
+                      const SizedBox(height: 12),
                       Text(
                         'Kriterlere uygun sonuç bulunamadı',
                         style: TextStyle(
-                          fontFamily: 'Inter',
-                          color: AppColors.textSecondary,
+                          fontFamily: AppTextStyles.fontFamily,
+                          color: palette.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -381,14 +446,14 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
               else
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border, width: 1.0),
-                    boxShadow: const [
+                    color: palette.surface,
+                    borderRadius: AppRadius.cardRadius,
+                    border: Border.all(color: palette.border, width: 1.0),
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x083D3038),
+                        color: palette.textPrimary.withValues(alpha: 0.03),
                         blurRadius: 3,
-                        offset: Offset(0, 1),
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
@@ -403,20 +468,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                         result: result,
                         rankIndex: index + 1,
                         showDivider: !isLast,
-                        onTap: () {
-                          if (result.athleteId > 0) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AthleteProfileScreen(
-                                  athleteId: result.athleteId,
-                                  athleteName: result.athleteName,
-                                  repository: widget.repository,
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                        onTap: () => _openAthleteProfile(result),
                       );
                     }).toList(),
                   ),
@@ -424,6 +476,91 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Kulüp Sporcularının Listenin Başında Ayrı ve Vurgulu Gösterildiği Vitrin Paneli
+  Widget _buildClubPinnedSection(BuildContext context, List<RaceResult> clubResults) {
+    final palette = context.palette;
+    final clubName = SelectedClubService.instance.clubName ?? 'Kulübünüz';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(
+          color: palette.primary.withValues(alpha: 0.35),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: palette.primary.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Üst Bilgi Başlığı (Marka Vurgulu Zemin)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            color: palette.primaryContainer,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.shield_rounded,
+                  size: 16,
+                  color: palette.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${_toTitleCase(clubName)} (${clubResults.length} Sporcu)',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: palette.primary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  'KULÜP ÖZETİ',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: palette.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Kulüp Sporcularının Satırları
+          Column(
+            children: clubResults.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final result = entry.value;
+              final isLast = idx == clubResults.length - 1;
+              final overallRank = _getOverallRank(result);
+
+              return SwimResultCard(
+                result: result,
+                rankIndex: overallRank,
+                showDivider: !isLast,
+                onTap: () => _openAthleteProfile(result),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

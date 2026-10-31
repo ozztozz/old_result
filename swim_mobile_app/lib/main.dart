@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'core/theme/swim_theme.dart';
+import 'core/theme/app_theme.dart';
 import 'core/network/api_client.dart';
+import 'core/services/selected_club_service.dart';
 import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
 import 'features/live/live_screen.dart';
 import 'features/favorites/favorites_screen.dart';
 import 'shared/widgets/app_scaffold.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Global Tercihler ve Kulüp Servisi
+  await SelectedClubService.instance.init();
 
   // Merkezi HTTP ve Veri Deposu
   final apiClient = ApiClient();
@@ -28,8 +32,8 @@ class SwimApp extends StatelessWidget {
     return MaterialApp(
       title: 'TYF Yüzme Sonuçları',
       debugShowCheckedModeBanner: false,
-      theme: SwimTheme.light(),
-      darkTheme: SwimTheme.light(),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.light,
       home: MainNavigationContainer(repository: repository),
     );

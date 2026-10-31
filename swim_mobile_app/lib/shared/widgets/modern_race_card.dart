@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/race_model.dart';
 import 'status_badge.dart';
 
 /// TYF Yüzme Sonuçları — Modern Yarış Kartı Bileşeni (v2.0)
-/// Apple Esintili Sade Kart: #FFFFFF zemin, 16px radius, 1px #EFE9E7 sınır
+/// Apple Esintili Sade Kart: #FFFFFF zemin, 16px radius, 1px sınır
 class ModernRaceCard extends StatelessWidget {
   final RaceModel race;
   final VoidCallback? onFavoriteToggle;
@@ -19,23 +19,24 @@ class ModernRaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final cleanAge = race.ageCategory.replaceAll(RegExp(r'\s*\(\d{4}\)'), '').trim();
     final subtitle = cleanAge.isNotEmpty ? '${race.gender} • $cleanAge' : race.gender;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: palette.surface,
+        borderRadius: AppRadius.cardRadius,
         border: Border.all(
-          color: AppColors.border,
+          color: palette.border,
           width: 1.0,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x083D3038),
+            color: palette.textPrimary.withValues(alpha: 0.03),
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -43,62 +44,101 @@ class ModernRaceCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.cardRadius,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // 1. Sade Metraj (Kutusuz)
                 SizedBox(
-                  width: 42,
+                  width: 44,
                   child: Text(
                     race.distance,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: palette.textPrimary,
                       letterSpacing: -0.3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                AppSpacing.hSm,
 
-                // 2. Branş Adı & Kategori Bilgisi
+                // 2. Branş Adı, Kategori Bilgisi & Takım Sporcu Rozeti
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         race.strokeName,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
+                          color: palette.textPrimary,
                           letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          color: AppColors.textSecondary,
+                          color: palette.textSecondary,
                         ),
                       ),
+
+                      // Kullanıcının seçili takımından katılan sporcu sayısı
+                      if (race.myTeamAthleteCount > 0) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: palette.primaryContainer,
+                            borderRadius: AppRadius.badgeRadius,
+                            border: Border.all(
+                              color: palette.primary.withValues(alpha: 0.25),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.shield_rounded,
+                                size: 12,
+                                color: palette.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${race.myTeamAthleteCount} Sporcunuz',
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.primary,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       if (race.winnerSummary != null) ...[
                         const SizedBox(height: 3),
                         Text(
                           race.winnerSummary!,
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.statusSuccess,
+                            color: palette.statusSuccess,
                           ),
                         ),
                       ],
@@ -115,7 +155,7 @@ class ModernRaceCard extends StatelessWidget {
                   onTap: onFavoriteToggle,
                   child: Icon(
                     race.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: race.isFavorite ? AppColors.accent : AppColors.laneNeutral,
+                    color: race.isFavorite ? palette.primary : palette.textMuted,
                     size: 20,
                   ),
                 ),
@@ -140,4 +180,3 @@ class ModernRaceCard extends StatelessWidget {
     }
   }
 }
-
