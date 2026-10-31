@@ -128,6 +128,8 @@ class LiveFeedResponse {
   final List<LiveEventProgramItem> events;
   final List<RaceResult> data;
 
+  List<RaceResult> get results => data;
+
   LiveFeedResponse({
     required this.liveId,
     required this.status,

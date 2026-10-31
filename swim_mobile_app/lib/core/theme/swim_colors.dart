@@ -1,16 +1,5 @@
 import 'package:flutter/material.dart';
-
-/// Minimalist İskandinav Pastel Renk Paleti (AppColors)
-class AppColors {
-  static const bg = Color(0xFFEEF2F0);
-  static const card = Color(0xFFF7F7F7);
-  static const mint = Color(0xFFCFE8C9);
-  static const lime = Color(0xFFE6F26B);
-  static const lavender = Color(0xFFDCD3F0);
-  static const teal = Color(0xFFCDE3DE);
-  static const ink = Color(0xFF1E1E1E);
-  static const muted = Color(0xFF9A9A9A);
-}
+export 'app_colors.dart';
 
 /// TYF Yüzme Mobil Uygulaması Özel Renk Uzantısı (ThemeExtension)
 /// Widget'lar sabit renkler yerine Theme.of(context).extension<SwimColors>()! kullanır.
@@ -37,6 +26,18 @@ class SwimColors extends ThemeExtension<SwimColors> {
     required this.medalSilver,
     required this.medalBronze,
   });
+
+  static const defaultColors = SwimColors(
+    success: Color(0xFF4A7C59),
+    pending: Color(0xFFB8860B),
+    pendingBg: Color(0x14B8860B),
+    danger: Color(0xFFB91C1C),
+    pb: Color(0xFFB8860B),
+    accent: Color(0xFFBC8C91),
+    medalGold: Color(0xFFD4A373),
+    medalSilver: Color(0xFFB3A8AE),
+    medalBronze: Color(0xFFB8860B),
+  );
 
   @override
   SwimColors copyWith({
@@ -80,3 +81,7 @@ class SwimColors extends ThemeExtension<SwimColors> {
   }
 }
 
+extension SwimColorsExtension on BuildContext {
+  SwimColors get swimColors =>
+      Theme.of(this).extension<SwimColors>() ?? SwimColors.defaultColors;
+}

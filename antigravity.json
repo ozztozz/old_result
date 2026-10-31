@@ -1,0 +1,4 @@
+{
+  "system_instruction": "Bu Flutter projesinde Apple Health/Strava tarzı minimalist bir spor gösterge paneli dili kullanılmaktadır. Arka plan rengi daima #F8FAFC, ana metinler #0F172A, ikincil etiketler #64748B, çerçeveler #E2E8F0 olmalıdır. Gereksiz renkli çiplerden ve kutu karmaşasından kaçınılmalı, tipografik sütunlar ve dikey ayırıcı çizgilerle monokrom bir veri hiyerarşisi kurulmalıdır."
+}
+

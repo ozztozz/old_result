@@ -1,16 +1,28 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../core/theme/swim_colors.dart';
-import '../../core/theme/swim_theme.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../../shared/widgets/swim_design_components.dart';
+import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/swim_result_card.dart';
 import '../athletes/athlete_profile_screen.dart';
 
-/// Tek Bir Canlı Yarışın Sonuçları Ekranı (Dereceler, Seriler, Kulvarlar)
-/// Başlıkta veya ekranda yarış numarası KESİNLİKLE yer almaz.
+String _toTitleCase(String text) {
+  if (text.isEmpty) return text;
+  return text.split(' ').map((word) {
+    if (word.isEmpty) return word;
+    final lower = word.toLowerCase();
+    return lower[0].toUpperCase() + lower.substring(1);
+  }).join(' ');
+}
+
+/// TYF Yüzme Sonuçları — Canlı Yarış Sonuçları Ekranı (v2.0)
+/// Apple Esintili Yalınlık:
+/// - Zemin: #FAF8F7 nötr kırık beyaz
+/// - Satırlar: 52px min-yükseklik, 18px kulvar, 15px tabular derece, 20px gri rozet
+/// - Satırlar arası 32px girintili 1px #EFE9E7 ayırıcı çizgi
 class LiveRaceResultsScreen extends StatefulWidget {
   final LiveMeetSummary live;
   final LiveEventProgramItem event;
@@ -59,12 +71,6 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
         _loadResults(silent: true);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Otomatik yenileme devrede (15 sn)'),
-          duration: Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -75,156 +81,133 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       final feed = await widget.repository.getLiveFeedResponse(
         widget.live.id,
         eventNo: widget.event.eventNo,
-        status: _selectedStatus,
       );
 
-      List<RaceResult> results = feed.data;
-
-      // Canlı akış henüz bu yarış için boşsa ancak meetId varsa müsabaka sonuçlarından çek
-      if (results.isEmpty && widget.live.meetId != null) {
-        try {
-          results = await widget.repository.getMeetResults(
-            widget.live.meetId!,
-            eventNo: widget.event.eventNo,
-            status: _selectedStatus != 'all' ? _selectedStatus : null,
-          );
-        } catch (_) {}
-      }
+      final list = feed.results;
 
       if (mounted) {
         setState(() {
-          _allResults = results;
-          _applyFilter();
+          _allResults = list;
           _isLoading = false;
         });
+        _applyFilter();
       }
-    } catch (e) {
-      if (mounted && !silent) {
-        setState(() => _isLoading = false);
-      }
+    } catch (_) {
+      if (mounted && !silent) setState(() => _isLoading = false);
     }
   }
 
   void _applyFilter() {
-    List<RaceResult> list;
-    if (_searchQuery.trim().isEmpty) {
-      list = List.from(_allResults);
-    } else {
+    var filtered = List<RaceResult>.from(_allResults);
+
+    // Durum filtresi
+    if (_selectedStatus == 'finished') {
+      filtered = filtered.where((r) {
+        final isWait = r.resultStatus == 'WAITING';
+        final isDq = r.resultStatus == 'DQ' ||
+            r.resultStatus == 'DNS' ||
+            r.resultStatus == 'DNF' ||
+            r.rank.toUpperCase().startsWith('DQ');
+        final hasTime = (r.timeCs != null && r.timeCs! > 0) ||
+            (r.time != null && r.time!.isNotEmpty);
+        return !isWait && !isDq && hasTime;
+      }).toList();
+    } else if (_selectedStatus == 'pending') {
+      filtered = filtered.where((r) {
+        final isWait = r.resultStatus == 'WAITING';
+        final hasNoTime = (r.timeCs == null || r.timeCs == 0) &&
+            (r.time == null || r.time!.isEmpty);
+        return isWait || hasNoTime;
+      }).toList();
+    }
+
+    // Arama filtresi
+    if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      list = _allResults.where((r) {
+      filtered = filtered.where((r) {
         return r.athleteName.toLowerCase().contains(q) ||
             r.clubName.toLowerCase().contains(q);
       }).toList();
     }
 
-    // Sıralama Kuralı:
-    // 1. Sonuçlar varsa dereceye göre sırala (en hızlı derece en üstte)
-    // 2. Diskalifiyeler (DQ, DNS, DNF) DAİMA EN SONDA
-    // 3. Sonuç yoksa (veya derecesizler) seri ve kulvara göre sırala
-    final bool hasFinishedResults = list.any((r) => r.timeCs != null && r.timeCs! > 0);
-
-    list.sort((a, b) {
-      final bool isDqA = a.resultStatus == 'DQ' ||
-          a.resultStatus == 'DNS' ||
-          a.resultStatus == 'DNF' ||
-          a.rank.toUpperCase().startsWith('DQ') ||
-          a.rank.toUpperCase().startsWith('DSQ');
-      final bool isDqB = b.resultStatus == 'DQ' ||
-          b.resultStatus == 'DNS' ||
-          b.resultStatus == 'DNF' ||
-          b.rank.toUpperCase().startsWith('DQ') ||
-          b.rank.toUpperCase().startsWith('DSQ');
-
-      // 1. Diskalifiyeler EN SONDA
-      if (isDqA && !isDqB) return 1;
-      if (!isDqA && isDqB) return -1;
-      if (isDqA && isDqB) {
-        final heatA = int.tryParse(a.heat) ?? 999;
-        final heatB = int.tryParse(b.heat) ?? 999;
-        if (heatA != heatB) return heatA.compareTo(heatB);
-        return (a.lane ?? 999).compareTo(b.lane ?? 999);
-      }
-
-      // 2. Sonuçlar varsa: Dereceye göre sırala (küçükten büyüğe)
-      if (hasFinishedResults) {
-        final bool hasTimeA = a.timeCs != null && a.timeCs! > 0;
-        final bool hasTimeB = b.timeCs != null && b.timeCs! > 0;
-
-        if (hasTimeA && !hasTimeB) return -1;
-        if (!hasTimeA && hasTimeB) return 1;
-
-        if (hasTimeA && hasTimeB) {
-          final cmp = a.timeCs!.compareTo(b.timeCs!);
-          if (cmp != 0) return cmp;
-          final rankA = int.tryParse(a.rank) ?? 999;
-          final rankB = int.tryParse(b.rank) ?? 999;
-          if (rankA != rankB) return rankA.compareTo(rankB);
-        }
-      }
-
-      // 3. Sonuç yoksa: Seri ve kulvara göre sırala
-      final heatA = int.tryParse(a.heat) ?? 999;
-      final heatB = int.tryParse(b.heat) ?? 999;
-      if (heatA != heatB) return heatA.compareTo(heatB);
-      return (a.lane ?? 999).compareTo(b.lane ?? 999);
+    setState(() {
+      _filteredResults = filtered;
     });
-
-    _filteredResults = list;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isRunning = widget.live.status == 'ISLENIYOR';
-    final title = widget.event.genderLabel.isNotEmpty
-        ? '${widget.event.displayTitle} - ${widget.event.genderLabel}'
-        : widget.event.displayTitle;
+    final title = widget.event.name.isNotEmpty
+        ? widget.event.name
+        : '${widget.event.distance ?? ''} ${widget.event.strokeLabel}'.trim();
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => _loadResults(silent: true),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppColors.textPrimary, size: 18),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _toTitleCase(title),
+              style: AppTextStyles.raceTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _toTitleCase(widget.live.name),
+              style: AppTextStyles.categorySeries,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isAutoRefresh ? Icons.sync_rounded : Icons.sync_disabled_rounded,
+              color: _isAutoRefresh ? AppColors.accent : AppColors.textSecondary,
+              size: 20,
+            ),
+            tooltip: _isAutoRefresh ? 'Otomatik Yenileme Açık' : 'Otomatik Yenileme Kapalı',
+            onPressed: () => _toggleAutoRefresh(!_isAutoRefresh),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 20),
+            tooltip: 'Yenile',
+            onPressed: () => _loadResults(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: RefreshIndicator(
+        color: AppColors.accent,
+        onRefresh: () => _loadResults(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Üst Bar (RoundIconButton ile Geri, Otomatik Yenileme ve Manuel Yenileme)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  RoundIconButton(
-                    Icons.arrow_back,
-                    onTap: () => Navigator.maybePop(context),
-                  ),
-                  Row(
-                    children: [
-                      RoundIconButton(
-                        _isAutoRefresh ? Icons.sync : Icons.sync_disabled,
-                        color: _isAutoRefresh ? AppColors.lime : Colors.white,
-                        iconColor: AppColors.ink,
-                        onTap: () => _toggleAutoRefresh(!_isAutoRefresh),
-                      ),
-                      const SizedBox(width: 8),
-                      RoundIconButton(
-                        Icons.refresh,
-                        onTap: () => _loadResults(),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // 2. Yarış Bilgi Başlığı Kartı (24dp radius, dairesel branş ikonu, pastel haplar)
+              // 1. Yarış Üst Bilgi Kartı (Apple 16px radius & mikro-derinlik)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: Color(0x083D3038),
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
                     ),
                   ],
                 ),
@@ -233,311 +216,213 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                   children: [
                     Row(
                       children: [
-                        _buildStrokeIcon(widget.event.stroke),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: AppColors.ink,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                widget.live.name,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.muted,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                        Text(
+                          _toTitleCase(title),
+                          style: AppTextStyles.raceTitle,
                         ),
-                        if (isRunning)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.mint,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircleAvatar(radius: 3.5, backgroundColor: AppColors.ink),
-                                SizedBox(width: 5),
-                                Text(
-                                  'CANLI',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.ink,
-                                  ),
-                                ),
-                              ],
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Text(
+                            '${_allResults.length} Sporcu',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        if (widget.event.gender != null && widget.event.gender!.isNotEmpty)
-                          _buildPill(
-                            widget.event.gender!,
-                            AppColors.lavender,
-                          ),
-                        if (widget.event.ageGroup != null && widget.event.ageGroup!.isNotEmpty)
-                          _buildPill(
-                            widget.event.ageGroup!,
-                            AppColors.teal,
-                          ),
-                        _buildPill(
-                          '${_allResults.length} Sporcu',
-                          AppColors.mint,
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 3. Arama Çubuğu
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${widget.live.name} • ${widget.event.status}',
+                      style: AppTextStyles.categorySeries,
                     ),
                   ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  style: const TextStyle(fontSize: 14, color: AppColors.ink),
-                  decoration: InputDecoration(
-                    hintText: 'Sporcu veya kulüp ara...',
-                    hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.muted),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18, color: AppColors.muted),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                                _applyFilter();
-                              });
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val;
-                      _applyFilter();
-                    });
-                  },
                 ),
               ),
               const SizedBox(height: 12),
 
-              // 4. Durum Filtre Hapları (Pastel pill buttons)
+              // 2. Arama Çubuğu
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border, width: 1.0),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded,
+                        color: AppColors.textSecondary, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          _searchQuery = val;
+                          _applyFilter();
+                        },
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Sporcu veya kulüp ara...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                            color: AppColors.laneNeutral,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          _searchQuery = '';
+                          _applyFilter();
+                        },
+                        child: const Icon(Icons.close_rounded,
+                            size: 16, color: AppColors.textSecondary),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 3. Durum Filtre Çipleri
               Row(
                 children: [
-                  _buildStatusChip('all', 'Tümü'),
-                  const SizedBox(width: 8),
-                  _buildStatusChip('finished', 'Sonuçlananlar'),
-                  const SizedBox(width: 8),
-                  _buildStatusChip('pending', 'Beklenenler'),
+                  ModernFilterChip(
+                    label: 'Tümü',
+                    isSelected: _selectedStatus == 'all',
+                    onTap: () {
+                      setState(() => _selectedStatus = 'all');
+                      _applyFilter();
+                    },
+                  ),
+                  ModernFilterChip(
+                    label: 'Sonuçlananlar',
+                    isSelected: _selectedStatus == 'finished',
+                    onTap: () {
+                      setState(() => _selectedStatus = 'finished');
+                      _applyFilter();
+                    },
+                  ),
+                  ModernFilterChip(
+                    label: 'Beklenenler',
+                    isSelected: _selectedStatus == 'pending',
+                    onTap: () {
+                      setState(() => _selectedStatus = 'pending');
+                      _applyFilter();
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // 5. Sonuç Listesi Başlığı
+              // 4. Sonuç Listesi Başlığı
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
                   'Yarış Sıralaması (${_filteredResults.length})',
                   style: const TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
 
-              // 6. Sonuç Kartları
+              // 5. Sonuç Listesi Paneli (Beyaz Zemin, 16px radius, satırlar arası 32px girintili 1px çizgi)
               if (_isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
                 )
               else if (_filteredResults.isEmpty)
-                _buildEmptyState()
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_search_outlined, size: 40, color: AppColors.laneNeutral),
+                      SizedBox(height: 12),
+                      Text(
+                        'Kriterlere uygun sonuç bulunamadı',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               else
-                ..._filteredResults.map((result) {
-                  return SwimResultCard(
-                    result: result,
-                    onTap: () {
-                      if (result.athleteId > 0) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AthleteProfileScreen(
-                              athleteId: result.athleteId,
-                              athleteName: result.athleteName,
-                              repository: widget.repository,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  );
-                }),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border, width: 1.0),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x083D3038),
+                        blurRadius: 3,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: _filteredResults.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final result = entry.value;
+                      final isLast = index == _filteredResults.length - 1;
+
+                      return SwimResultCard(
+                        result: result,
+                        rankIndex: index + 1,
+                        showDivider: !isLast,
+                        onTap: () {
+                          if (result.athleteId > 0) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AthleteProfileScreen(
+                                  athleteId: result.athleteId,
+                                  athleteName: result.athleteName,
+                                  repository: widget.repository,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStrokeIcon(String stroke) {
-    IconData iconData = Icons.pool_rounded;
-    Color iconBg = AppColors.mint;
-
-    switch (stroke.toUpperCase()) {
-      case 'FREE':
-        iconData = Icons.waves_rounded;
-        iconBg = AppColors.teal;
-        break;
-      case 'BACK':
-        iconData = Icons.water_rounded;
-        iconBg = AppColors.lavender;
-        break;
-      case 'BREAST':
-        iconData = Icons.arrow_downward_rounded;
-        iconBg = AppColors.mint;
-        break;
-      case 'FLY':
-        iconData = Icons.air_rounded;
-        iconBg = AppColors.lime;
-        break;
-      case 'MEDLEY':
-        iconData = Icons.auto_awesome_rounded;
-        iconBg = AppColors.lavender;
-        break;
-    }
-
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: iconBg,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(iconData, color: AppColors.ink, size: 20),
-    );
-  }
-
-  Widget _buildPill(String text, Color bg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String val, String label) {
-    final isSelected = _selectedStatus == val;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _selectedStatus = val);
-        _loadResults();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.lime : AppColors.card,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: AppColors.ink,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
-      child: Center(
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                color: AppColors.card,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.sports_score_rounded, size: 28, color: AppColors.muted),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Bu yarış için henüz netice bulunmuyor.',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Yarış yüzüldükçe sonuçlar buraya anlık olarak gelecektir.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
     );

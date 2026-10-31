@@ -1,134 +1,108 @@
 import 'package:flutter/material.dart';
 import 'swim_colors.dart';
+import 'app_typography.dart';
 
-/// Yüzme Sporuna Özel Tasarım Sistemi (SwimDesign)
-class SwimTheme {
-  // İmza Süre Tipografisi (Tabular Figures ile sabit genişlikli rakamlar)
-  static const TextStyle timeDisplay = TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.5,
-    fontFeatures: [FontFeature.tabularFigures()],
-  );
+export 'swim_colors.dart';
+export 'app_colors.dart';
+export 'app_typography.dart';
+export 'app_decorations.dart';
 
-  static const TextStyle timeDisplaySmall = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.3,
-    fontFeatures: [FontFeature.tabularFigures()],
-  );
+/// TYF Yüzme Sonuçları — Mobil Tasarım Sistemi ve Şartnamesi (v2.0)
+class TYFTheme {
+  static const Color background = Color(0xFFFAF8F7);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color primaryText = Color(0xFF3D3038);
+  static const Color secondaryText = Color(0xFF81777D);
+  static const Color accent = Color(0xFFBC8C91);
+  static const Color divider = Color(0xFFEFE9E7);
 
-  static ThemeData light() => _build(
-        brightness: Brightness.light,
-        primary: const Color(0xFF0A5C99),     // Derin Okyanus Mavisi
-        background: AppColors.bg,             // Serin Pastel Zemin (0xFFEEF2F0)
-        surface: AppColors.card,              // Yumuşak Kart Zemin (0xFFF7F7F7)
-        text: AppColors.ink,                  // Yüksek Kontrastlı Füme Metin (0xFF1E1E1E)
-        textSecondary: AppColors.muted,       // Muted Metin (0xFF9A9A9A)
-        outline: const Color(0xFFE2E7E4),     // İnce Kenarlık
-        colors: const SwimColors(
-          success: Color(0xFF1B7F4B),
-          pending: Color(0xFFB26A00),
-          pendingBg: Color(0xFFFFF4DD),
-          danger: Color(0xFFB3261E),
-          pb: Color(0xFF00838F),             // Yeni PB için Turkuaz/Cyan
-          accent: Color(0xFF1AA6B7),
-          medalGold: Color(0xFFC9A227),
-          medalSilver: Color(0xFF9AA5B1),
-          medalBronze: Color(0xFFB0713A),
-        ),
-      );
-
-  static ThemeData dark() => _build(
-        brightness: Brightness.dark,
-        primary: const Color(0xFF5FB3F0),     // Koyu Zeminde Açılmış Mavi
-        background: const Color(0xFF0B141C),  // Derin Okyanus Karanlığı (Saf Siyah Değil)
-        surface: const Color(0xFF121E28),     // Koyu Kart Yüzeyi
-        text: const Color(0xFFE6EEF4),        // Yumuşak Beyaz Metin
-        textSecondary: const Color(0xFF9BB0C0),
-        outline: const Color(0xFF24323E),     // Koyu İnce Kenarlık
-        colors: const SwimColors(
-          success: Color(0xFF5CCB8A),
-          pending: Color(0xFFF2B84B),
-          pendingBg: Color(0xFF2A2210),
-          danger: Color(0xFFFF8A80),
-          pb: Color(0xFF4DD0E1),
-          accent: Color(0xFF4DD0E1),
-          medalGold: Color(0xFFC9A227),
-          medalSilver: Color(0xFF9AA5B1),
-          medalBronze: Color(0xFFB0713A),
-        ),
-      );
-
-  static ThemeData _build({
-    required Brightness brightness,
-    required Color primary,
-    required Color background,
-    required Color surface,
-    required Color text,
-    required Color textSecondary,
-    required Color outline,
-    required SwimColors colors,
-  }) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: brightness,
-    ).copyWith(
-      primary: primary,
-      surface: surface,
-      outline: outline,
-    );
-
-    final base = ThemeData(
-      brightness: brightness,
-      useMaterial3: true,
-      colorScheme: scheme,
-    );
-
-    return base.copyWith(
+  static ThemeData get lightTheme {
+    return ThemeData(
       scaffoldBackgroundColor: background,
-      textTheme: base.textTheme.apply(
-        fontFamily: 'Inter',
-        bodyColor: text,
-        displayColor: text,
+      fontFamily: 'Inter',
+      useMaterial3: true,
+      colorScheme: const ColorScheme.light(
+        surface: surface,
+        primary: primaryText,
+        secondary: accent,
       ),
-      cardTheme: CardThemeData(
-        color: surface,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: outline, width: 1),
-        ),
-      ),
-      chipTheme: base.chipTheme.copyWith(
-        shape: const StadiumBorder(),
-        side: BorderSide(color: outline, width: 1),
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        foregroundColor: text,
-        titleTextStyle: TextStyle(
-          color: text,
-          fontFamily: 'Inter',
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      dividerTheme: DividerThemeData(
-        color: outline,
+      dividerTheme: const DividerThemeData(
+        color: divider,
         thickness: 1,
         space: 1,
       ),
-      extensions: [colors],
+      textTheme: const TextTheme(
+        headlineSmall: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          color: primaryText,
+          letterSpacing: -0.2,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: primaryText,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: secondaryText,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          fontFeatures: [FontFeature.tabularFigures()],
+          color: primaryText,
+        ),
+      ),
     );
   }
 }
 
-/// Kolay Erişim Yardımcısı (Extension Getter)
-extension SwimThemeContext on BuildContext {
-  SwimColors get swimColors => Theme.of(this).extension<SwimColors>()!;
-}
+/// TYF Yüzme Sporuna Özel Merkezi Tasarım Sistemi (SwimTheme v2.0)
+class SwimTheme {
+  static const TextStyle timeDisplay = AppTextStyles.officialTime;
+  static const TextStyle timeDisplaySmall = AppTextStyles.categorySeries;
 
+  static ThemeData light() => _buildLight();
+  static ThemeData dark() => _buildLight(); // v2.0: Ferah Nötr Aydınlık Zemin (#FAF8F7)
+
+  static ThemeData _buildLight() {
+    final base = TYFTheme.lightTheme;
+    const colors = SwimColors(
+      success: AppColors.statusSuccess,
+      pending: AppColors.warning,
+      pendingBg: AppColors.warningBg,
+      danger: AppColors.danger,
+      pb: AppColors.gold,
+      accent: AppColors.accent,
+      medalGold: AppColors.starGold,
+      medalSilver: AppColors.laneNeutral,
+      medalBronze: AppColors.warning,
+    );
+
+    return base.copyWith(
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.border),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          color: AppColors.textPrimary,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      extensions: const [colors],
+    );
+  }
+}

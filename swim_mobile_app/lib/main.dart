@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'core/theme/swim_theme.dart';
 import 'core/network/api_client.dart';
 import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
 import 'features/live/live_screen.dart';
 import 'features/favorites/favorites_screen.dart';
+import 'shared/widgets/app_scaffold.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,8 +29,8 @@ class SwimApp extends StatelessWidget {
       title: 'TYF Yüzme Sonuçları',
       debugShowCheckedModeBanner: false,
       theme: SwimTheme.light(),
-      darkTheme: SwimTheme.dark(),
-      themeMode: ThemeMode.system,
+      darkTheme: SwimTheme.light(),
+      themeMode: ThemeMode.light,
       home: MainNavigationContainer(repository: repository),
     );
   }
@@ -44,49 +46,62 @@ class MainNavigationContainer extends StatefulWidget {
 }
 
 class _MainNavigationContainerState extends State<MainNavigationContainer> {
-  int _currentIndex = 0;
-  late final List<Widget> _screens;
+  int _currentIndex = 1; // Canlı Takip ile açılış
+  late final List<GlobalKey<NavigatorState>> _navigatorKeys;
 
   @override
   void initState() {
     super.initState();
-    _screens = [
-      HomeScreen(repository: widget.repository),
-      LiveScreen(repository: widget.repository),
-      FavoritesScreen(repository: widget.repository),
+    _navigatorKeys = [
+      GlobalKey<NavigatorState>(),
+      GlobalKey<NavigatorState>(),
+      GlobalKey<NavigatorState>(),
     ];
+  }
+
+  void _onNavigationChanged(int index) {
+    if (index == _currentIndex) {
+      // Aktif sekmeye tekrar tıklandığında o sekmenin kök sayfasına dön
+      _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
+    } else {
+      setState(() => _currentIndex = index);
+    }
+  }
+
+  Widget _buildTabNavigator(int index, Widget rootScreen) {
+    return Navigator(
+      key: _navigatorKeys[index],
+      onGenerateRoute: (routeSettings) {
+        return MaterialPageRoute(
+          builder: (context) => rootScreen,
+          settings: routeSettings,
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        elevation: 0,
-        backgroundColor: Theme.of(context).cardTheme.color,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Ana Sayfa',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.sensors_outlined),
-            selectedIcon: Icon(Icons.sensors, color: context.swimColors.danger),
-            label: 'Canlı Takip',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.star_outline),
-            selectedIcon: Icon(Icons.star, color: context.swimColors.medalGold),
-            label: 'Favorilerim',
-          ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        final currentNavigator = _navigatorKeys[_currentIndex].currentState;
+        if (currentNavigator != null && currentNavigator.canPop()) {
+          currentNavigator.pop();
+        } else if (_currentIndex != 1) {
+          setState(() => _currentIndex = 1);
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: AppScaffold(
+        currentIndex: _currentIndex,
+        onNavigationChanged: _onNavigationChanged,
+        screens: [
+          _buildTabNavigator(0, HomeScreen(repository: widget.repository)),
+          _buildTabNavigator(1, LiveScreen(repository: widget.repository)),
+          _buildTabNavigator(2, FavoritesScreen(repository: widget.repository)),
         ],
       ),
     );

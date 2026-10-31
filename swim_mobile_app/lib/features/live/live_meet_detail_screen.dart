@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/swim_colors.dart';
-import '../../core/theme/swim_theme.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../data/models/live_meet.dart';
-import '../../data/models/meet.dart';
-import '../../data/models/race_result.dart';
+import '../../data/models/race_model.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../../shared/widgets/swim_design_components.dart';
-import '../meets/meet_detail_screen.dart';
+import '../../shared/widgets/hero_race_card.dart';
+import '../../shared/widgets/modern_filter_chips.dart';
+import '../../shared/widgets/modern_race_card.dart';
+import '../../shared/widgets/modern_segmented_tab_bar.dart';
 import 'live_race_results_screen.dart';
 
-/// Canlı Müsabaka Detayı: Yarışlar Listesi Ekranı
-/// Müsabakaya ait yarışları (50m Serbest - Erkekler vb.) resmi yarış sırasına göre listeler.
-/// Sayfa açıldığında otomatik olarak ilk "Bekliyor" durumundaki yarışa odaklanır.
+String _toTitleCase(String text) {
+  if (text.isEmpty) return text;
+  return text.split(' ').map((word) {
+    if (word.isEmpty) return word;
+    final lower = word.toLowerCase();
+    return lower[0].toUpperCase() + lower.substring(1);
+  }).join(' ');
+}
+
+/// TYF Yüzme Sonuçları — Canlı Müsabaka Detayı: Yarışlar Ekranı (v2.0)
+/// Apple Esintili 2 Sekmeli Tasarım:
+/// 1. Sekme: Sonuçlananlar (Ters sıralı: Son sonuçlanan en üstte)
+/// 2. Sekme: Bekleyenler (Resmi yarış sırasına göre)
 class LiveMeetDetailScreen extends StatefulWidget {
   final LiveMeetSummary live;
   final SwimRepository repository;
@@ -26,738 +37,427 @@ class LiveMeetDetailScreen extends StatefulWidget {
   State<LiveMeetDetailScreen> createState() => _LiveMeetDetailScreenState();
 }
 
-class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen> {
+class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
   bool _isLoading = true;
-  List<LiveEventProgramItem> _allEvents = [];
-  List<LiveEventProgramItem> _filteredEvents = [];
-
-  String _searchQuery = '';
-  String _selectedGenderFilter = 'all'; // 'all', 'erkek', 'kadin'
-  final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  String _selectedFilter = 'Tümü';
+  List<RaceModel> _races = [];
 
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadFeedData();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _scrollController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadEvents() async {
+  Future<void> _loadFeedData() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Canlı akış verisini çek
       final feed = await widget.repository.getLiveFeedResponse(widget.live.id);
-      List<LiveEventProgramItem> events = feed.events;
+      final rawEvents = feed.events;
+      final results = feed.results;
 
-      // 2. Canlı akış listesi boşsa ancak meetId varsa müsabaka detayından çek
-      if (events.isEmpty && widget.live.meetId != null) {
-        try {
-          final meetDetail = await widget.repository.getMeetDetail(widget.live.meetId!);
-          events = meetDetail.events.map((p) {
-            return LiveEventProgramItem(
-              eventNo: p.eventNo,
-              name: '${p.distance ?? ''}m ${p.strokeLabel}'.trim(),
-              distance: p.distance,
-              stroke: p.stroke,
-              strokeLabel: p.strokeLabel,
-              gender: p.gender,
-              isPending: p.isPending,
-              status: p.status,
-            );
-          }).toList();
-        } catch (_) {}
-      } else if (events.isNotEmpty && widget.live.meetId != null) {
-        // Cinsiyet bilgisi eksik olan yarış varsa meetDetail ile zenginleştir
-        try {
-          final meetDetail = await widget.repository.getMeetDetail(widget.live.meetId!);
-          final genderMap = {for (var me in meetDetail.events) me.eventNo: me.gender};
-          events = events.map((e) {
-            final g = (e.gender == null || e.gender!.isEmpty)
-                ? (genderMap[e.eventNo] ?? e.gender)
-                : e.gender;
-            return LiveEventProgramItem(
-              eventNo: e.eventNo,
-              name: e.name,
-              distance: e.distance,
-              stroke: e.stroke,
-              strokeLabel: e.strokeLabel,
-              gender: g,
-              ageGroup: e.ageGroup,
-              isPending: e.isPending,
-              status: e.status,
-              totalAthletes: e.totalAthletes,
-            );
-          }).toList();
-        } catch (_) {}
-      }
+      // Program etkinliklerini RaceModel'e dönüştür
+      final converted = rawEvents.map((e) {
+        final dist = e.distance != null && e.distance! > 0
+            ? '${e.distance}'
+            : (RegExp(r'\d+').firstMatch(e.name)?.group(0) ?? '50');
 
-      // 3. Resmi yarış programı sırasına göre sırala (yaris_no)
-      events.sort((a, b) {
-        final int numA = int.tryParse(a.eventNo) ?? 9999;
-        final int numB = int.tryParse(b.eventNo) ?? 9999;
-        return numA.compareTo(numB);
-      });
+        final stroke = e.strokeLabel.isNotEmpty
+            ? e.strokeLabel
+            : (e.stroke.isNotEmpty ? e.stroke : 'Serbest');
+
+        final gender = e.gender != null && e.gender!.isNotEmpty
+            ? _toTitleCase(e.gender!)
+            : (e.name.toLowerCase().contains('bayan') ||
+                    e.name.toLowerCase().contains('kadin') ||
+                    e.name.toLowerCase().contains('kız')
+                ? 'Kadınlar'
+                : 'Erkekler');
+
+        final ageGroup = e.ageGroup != null && e.ageGroup!.isNotEmpty
+            ? e.ageGroup!
+            : '';
+
+        final isFinished = !e.isPending ||
+            e.status.toLowerCase().contains('tamam') ||
+            e.status.toLowerCase().contains('sonuc');
+
+        // Kazanan özeti (Tamamlanmışsa)
+        String? winner;
+        if (isFinished) {
+          final matched = results.where((r) => r.eventNo == e.eventNo).toList();
+          if (matched.isNotEmpty) {
+            matched.sort((a, b) => (a.timeCs ?? 999999).compareTo(b.timeCs ?? 999999));
+            final top = matched.first;
+            final topTime = top.time ?? (top.timeCs != null ? '${(top.timeCs! / 100).toStringAsFixed(2)}' : '');
+            if (topTime.isNotEmpty) {
+              winner = '🥇 1. ${_toTitleCase(top.athleteName)} • $topTime';
+            }
+          }
+        }
+
+        return RaceModel(
+          id: e.eventNo,
+          distance: dist,
+          strokeName: _toTitleCase(stroke),
+          gender: gender,
+          ageCategory: ageGroup,
+          status: isFinished
+              ? RaceStatus.completed
+              : (e.status.toLowerCase().contains('canli') ||
+                      e.status.toLowerCase().contains('isleniyor')
+                  ? RaceStatus.live
+                  : RaceStatus.upcoming),
+          startTime: e.status,
+          heatLaneInfo: isFinished ? null : 'Havuzda • Sonuç Bekleniyor',
+          winnerSummary: winner,
+          rawEvent: e,
+        );
+      }).toList();
 
       if (mounted) {
         setState(() {
-          _allEvents = events;
-          _applyFilter(shouldScrollToPending: true);
+          _races = converted;
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _applyFilter({bool shouldScrollToPending = false}) {
-    List<LiveEventProgramItem> list = List.from(_allEvents);
-
-    // Cinsiyet Filtresi
-    if (_selectedGenderFilter == 'erkek') {
-      list = list.where((e) {
-        final g = (e.gender ?? '').toLowerCase();
-        return g.contains('erkek');
-      }).toList();
-    } else if (_selectedGenderFilter == 'kadin') {
-      list = list.where((e) {
-        final g = (e.gender ?? '').toLowerCase();
-        return g.contains('kad') || g.contains('bayan');
-      }).toList();
-    }
-
-    // Arama Filtresi (Yarış adı, stili, cinsiyet)
-    if (_searchQuery.trim().isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      list = list.where((e) {
-        return e.displayTitle.toLowerCase().contains(q) ||
-            e.strokeLabel.toLowerCase().contains(q) ||
-            e.genderLabel.toLowerCase().contains(q) ||
-            (e.ageGroup ?? '').toLowerCase().contains(q);
-      }).toList();
-    }
-
-    // Resmi yarış sırasını koru
-    list.sort((a, b) {
-      final int numA = int.tryParse(a.eventNo) ?? 9999;
-      final int numB = int.tryParse(b.eventNo) ?? 9999;
-      return numA.compareTo(numB);
-    });
-
-    setState(() {
-      _filteredEvents = list;
-    });
-
-    if (shouldScrollToPending) {
-      _scrollToFirstPending();
-    }
-  }
-
-  void _scrollToFirstPending() {
-    final firstPendingIndex = _filteredEvents.indexWhere((e) => e.isPending);
-    if (firstPendingIndex >= 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final viewportHeight = _scrollController.position.viewportDimension;
-          const double headerAreaHeight = 310.0;
-          const double cardHeight = 88.0;
-
-          final double itemCenter = headerAreaHeight + (firstPendingIndex * cardHeight) + (cardHeight / 2.0);
-          final double targetOffset = (itemCenter - (viewportHeight / 2.0))
-              .clamp(0.0, _scrollController.position.maxScrollExtent);
-
-          _scrollController.animateTo(
-            targetOffset,
-            duration: const Duration(milliseconds: 650),
-            curve: Curves.easeInOutCubic,
+  void _openRaceResults(RaceModel race) {
+    final eventItem = race.rawEvent is LiveEventProgramItem
+        ? race.rawEvent as LiveEventProgramItem
+        : LiveEventProgramItem(
+            eventNo: race.id,
+            name: '${race.distance} ${race.strokeName}',
+            stroke: race.strokeName,
+            strokeLabel: race.strokeName,
+            distance: int.tryParse(race.distance),
+            gender: race.gender,
+            ageGroup: race.ageCategory,
           );
-        }
-      });
-    }
-  }
 
-  void _openRaceResults(LiveEventProgramItem event) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => LiveRaceResultsScreen(
           live: widget.live,
-          event: event,
+          event: eventItem,
           repository: widget.repository,
         ),
       ),
     );
   }
 
+  List<RaceModel> _applyGenderFilter(List<RaceModel> list) {
+    if (_selectedFilter == 'Kadınlar') {
+      return list.where((r) => r.gender.toLowerCase().contains('kadın')).toList();
+    } else if (_selectedFilter == 'Erkekler') {
+      return list.where((r) => r.gender.toLowerCase().contains('erkek')).toList();
+    } else if (_selectedFilter == '★ Favoriler') {
+      return list.where((r) => r.isFavorite).toList();
+    }
+    return list;
+  }
+
+  // 1. Sekme: Sonuçlananlar (Ters sıralı: Son sonuçlanan en üstte)
+  List<RaceModel> get _completedRaces {
+    final list = _races.where((r) => r.status == RaceStatus.completed).toList();
+    return _applyGenderFilter(list.reversed.toList());
+  }
+
+  // 2. Sekme: Bekleyenler (Sıradaki ve Gelecek Yarışlar)
+  List<RaceModel> get _pendingRaces {
+    final list = _races.where((r) => r.status != RaceStatus.completed).toList();
+    return _applyGenderFilter(list);
+  }
+
+  RaceModel? get _firstPendingRace {
+    final pending = _races.where((r) => r.status != RaceStatus.completed).toList();
+    return pending.isNotEmpty ? pending.first : null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isRunning = widget.live.status == 'ISLENIYOR';
-    final firstPendingEventNo = _filteredEvents.firstWhere(
-      (e) => e.isPending,
-      orElse: () => LiveEventProgramItem(eventNo: '', name: '', stroke: '', strokeLabel: ''),
-    ).eventNo;
+    final completed = _completedRaces;
+    final pending = _pendingRaces;
+    final heroRace = _firstPendingRace;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadEvents,
-          child: ListView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            children: [
-              // 1. Üst Bar (RoundIconButton ile Geri ve Yenileme Butonları)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  RoundIconButton(
-                    Icons.arrow_back,
-                    onTap: () => Navigator.maybePop(context),
-                  ),
-                  RoundIconButton(
-                    Icons.refresh,
-                    onTap: _loadEvents,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // 2. Müsabaka Genel Durum Kartı (24dp radius, yumuşak gölge)
-              _buildMeetHeaderCard(isRunning),
-              const SizedBox(height: 16),
-
-              // 3. Yarış Arama Çubuğu
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  style: const TextStyle(fontSize: 14, color: AppColors.ink),
-                  decoration: InputDecoration(
-                    hintText: 'Yarış ara (örn: 50m Serbest, Sırtüstü)...',
-                    hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.muted),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18, color: AppColors.muted),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchQuery = '';
-                              _applyFilter();
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                  onChanged: (val) {
-                    _searchQuery = val;
-                    _applyFilter();
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // 4. Cinsiyet Filtre Butonları (Pastel hap butonlar)
-              Row(
-                children: [
-                  _buildGenderChip('all', 'Tüm Yarışlar'),
-                  const SizedBox(width: 8),
-                  _buildGenderChip('erkek', 'Erkekler'),
-                  const SizedBox(width: 8),
-                  _buildGenderChip('kadin', 'Kadınlar'),
-                  const Spacer(),
-                  Text(
-                    '${_filteredEvents.length} yarış',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // 5. Yarış Programı Başlığı & "Sıradaki Yarışa Git" Hapı
-              Row(
-                children: [
-                  const Text(
-                    'Yarış Programı',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (firstPendingEventNo.isNotEmpty)
-                    GestureDetector(
-                      onTap: _scrollToFirstPending,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.lime,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppColors.textPrimary, size: 18),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _toTitleCase(widget.live.name),
+              style: AppTextStyles.raceTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${widget.live.city} • ${widget.live.totalAthletes} Sporcu',
+              style: AppTextStyles.categorySeries,
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 20),
+            tooltip: 'Yenile',
+            onPressed: _loadFeedData,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            )
+          : RefreshIndicator(
+              color: AppColors.accent,
+              onRefresh: _loadFeedData,
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    // 1. Vitrin Canlı Yarış Kartı
+                    if (heroRace != null)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                          child: HeroRaceCard(
+                            race: heroRace,
+                            onTap: () => _openRaceResults(heroRace),
+                          ),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.arrow_downward_rounded, size: 13, color: AppColors.ink),
-                            SizedBox(width: 4),
-                            Text(
-                              'Sıradaki Yarış',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink,
-                              ),
-                            ),
+                      ),
+
+                    // 2. İlerleme Çubuğu
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: _buildProgressHeader(),
+                      ),
+                    ),
+
+                    // 3. Cinsiyet ve Kategori Filtre Çipleri
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 12),
+                        child: ModernFilterChipBar(
+                          chips: const [
+                            FilterChipItem(label: 'Tümü'),
+                            FilterChipItem(label: 'Kadınlar'),
+                            FilterChipItem(label: 'Erkekler'),
+                            FilterChipItem(label: '★ Favoriler'),
                           ],
+                          selectedChip: _selectedFilter,
+                          onSelected: (chip) => setState(() => _selectedFilter = chip),
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 10),
 
-              // 6. Yarışlar Listesi
-              if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_filteredEvents.isEmpty)
-                _buildEmptyState()
-              else
-                ..._filteredEvents.map((ev) {
-                  final isFirstPending = ev.isPending && ev.eventNo == firstPendingEventNo;
-                  return _buildRaceCard(ev, isFirstPending: isFirstPending);
-                }),
-            ],
-          ),
-        ),
-      ),
+                    // 4. Sabit 2 Sekmeli Segmented TabBar
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabHeaderDelegate(
+                        child: Container(
+                          color: AppColors.background,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: ModernSegmentedTabBar(
+                            controller: _tabController,
+                            tabs: [
+                              TabItemData(
+                                title: 'Sonuçlananlar (${completed.length})',
+                                icon: Icons.check_circle_outline_rounded,
+                              ),
+                              TabItemData(
+                                title: 'Bekleyenler (${pending.length})',
+                                icon: Icons.schedule_rounded,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ];
+                },
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Sekme 1: Sonuçlananlar (Ters sıralı: Sonuçlanan ilk sırada)
+                    _buildRaceListView(
+                      races: completed,
+                      isCompletedTab: true,
+                      emptyMessage: 'Henüz sonuçlanmış bir yarış bulunmuyor.',
+                    ),
+
+                    // Sekme 2: Bekleyenler
+                    _buildRaceListView(
+                      races: pending,
+                      isCompletedTab: false,
+                      emptyMessage: 'Bekleyen yarış bulunmuyor, tüm program tamamlandı.',
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
-  Widget _buildMeetHeaderCard(bool isRunning) {
+  Widget _buildProgressHeader() {
+    final resTotal = widget.live.resultListProgress.total;
+    final resProcessed = widget.live.resultListProgress.processed;
+    final resRatio = resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
+    final resPercent = (resRatio * 100).toInt();
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border, width: 1.0),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isRunning ? AppColors.mint : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(
-                      radius: 3.5,
-                      backgroundColor: isRunning ? AppColors.ink : AppColors.muted,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isRunning ? 'CANLI TAKİP' : widget.live.status,
-                      style: TextStyle(
-                        color: isRunning ? AppColors.ink : AppColors.muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'CANLI SEANS',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  letterSpacing: 0.6,
                 ),
               ),
               const Spacer(),
-              if (widget.live.city.isNotEmpty)
-                Text(
-                  widget.live.city,
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.live.name,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
-              color: AppColors.ink,
-              letterSpacing: -0.3,
-            ),
-          ),
-          if (widget.live.date.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                widget.live.date,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-            ),
-          const SizedBox(height: 14),
-
-          // Start & Sonuç Listesi İlerleme Çubukları
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Start Listesi: ${widget.live.startListProgress.processed} / ${widget.live.startListProgress.total}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.ink),
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: widget.live.startListProgress.total > 0
-                            ? widget.live.startListProgress.processed / widget.live.startListProgress.total
-                            : 0,
-                        backgroundColor: AppColors.bg,
-                        color: AppColors.teal,
-                        minHeight: 6,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sonuç Listesi: ${widget.live.resultListProgress.processed} / ${widget.live.resultListProgress.total}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.ink),
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: widget.live.resultListProgress.total > 0
-                            ? widget.live.resultListProgress.processed / widget.live.resultListProgress.total
-                            : 0,
-                        backgroundColor: AppColors.bg,
-                        color: AppColors.mint,
-                        minHeight: 6,
-                      ),
-                    ),
-                  ],
+              Text(
+                '$resProcessed / $resTotal Tamamlandı (%$resPercent)',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-
-          if (widget.live.meetId != null) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.emoji_events_rounded, size: 16, color: AppColors.ink),
-                label: const Text(
-                  'Tüm Resmi Sonuçları Görüntüle',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MeetDetailScreen(
-                        meetId: widget.live.meetId!,
-                        meetTitle: widget.live.name,
-                        repository: widget.repository,
-                      ),
-                    ),
-                  );
-                },
-              ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: resRatio,
+              backgroundColor: AppColors.divider,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+              minHeight: 4,
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRaceCard(LiveEventProgramItem ev, {bool isFirstPending = false}) {
-    final genderText = ev.genderLabel;
-    final fullTitle = genderText.isNotEmpty
-        ? '${ev.displayTitle} - $genderText'
-        : ev.displayTitle;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: isFirstPending
-            ? Border.all(color: AppColors.ink, width: 1.5)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.035),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openRaceResults(ev),
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                // 1. Branş Dairesel İkonu
-                _buildStrokeIcon(ev.stroke),
-                const SizedBox(width: 14),
-
-                // 2. Yarış Başlığı (Numarasız) ve Rozetler
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        fullTitle,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                          color: AppColors.ink,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          if (genderText.isNotEmpty)
-                            _buildPill(
-                              genderText,
-                              genderText.toLowerCase().contains('kad')
-                                  ? AppColors.lavender
-                                  : AppColors.teal,
-                            ),
-                          if (ev.ageGroup != null && ev.ageGroup!.isNotEmpty)
-                            _buildPill(ev.ageGroup!, Colors.white),
-                        ],
-                      ),
-                    ],
-                  ),
+  Widget _buildRaceListView({
+    required List<RaceModel> races,
+    required bool isCompletedTab,
+    required String emptyMessage,
+  }) {
+    if (races.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isCompletedTab ? Icons.emoji_events_outlined : Icons.schedule_outlined,
+                size: 40,
+                color: AppColors.laneNeutral,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                emptyMessage,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
                 ),
-
-                const SizedBox(width: 8),
-
-                // 3. Durum Rozeti (Sonuçlandı vs Bekliyor)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: ev.isPending
-                        ? (isFirstPending ? AppColors.lime : Colors.white)
-                        : AppColors.mint,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    ev.isPending
-                        ? (isFirstPending ? '⚡ Sıradaki' : '⏱ Bekliyor')
-                        : '✓ Sonuçlandı',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: ev.isPending && !isFirstPending
-                          ? AppColors.muted
-                          : AppColors.ink,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: AppColors.muted,
-                ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStrokeIcon(String stroke) {
-    IconData iconData = Icons.pool_rounded;
-    Color iconBg = AppColors.mint;
-
-    switch (stroke.toUpperCase()) {
-      case 'FREE':
-        iconData = Icons.waves_rounded;
-        iconBg = AppColors.teal;
-        break;
-      case 'BACK':
-        iconData = Icons.water_rounded;
-        iconBg = AppColors.lavender;
-        break;
-      case 'BREAST':
-        iconData = Icons.arrow_downward_rounded;
-        iconBg = AppColors.mint;
-        break;
-      case 'FLY':
-        iconData = Icons.air_rounded;
-        iconBg = AppColors.lime;
-        break;
-      case 'MEDLEY':
-        iconData = Icons.auto_awesome_rounded;
-        iconBg = AppColors.lavender;
-        break;
+      );
     }
 
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: iconBg,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(iconData, color: AppColors.ink, size: 20),
-    );
-  }
-
-  Widget _buildPill(String text, Color bg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.ink,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGenderChip(String val, String label) {
-    final isSelected = _selectedGenderFilter == val;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _selectedGenderFilter = val);
-        _applyFilter();
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      itemCount: races.length,
+      itemBuilder: (context, index) {
+        final race = races[index];
+        return ModernRaceCard(
+          race: race,
+          onTap: () => _openRaceResults(race),
+          onFavoriteToggle: () {
+            setState(() {
+              race.isFavorite = !race.isFavorite;
+            });
+          },
+        );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.lime : AppColors.card,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: AppColors.ink,
-          ),
-        ),
-      ),
     );
   }
+}
 
-  Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
-      child: Center(
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                color: AppColors.card,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.pool_rounded, size: 28, color: AppColors.muted),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Aramanıza uygun bir yarış bulunamadı.',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Farklı bir arama terimi deneyebilir veya filtreyi temizleyebilirsiniz.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+class _SliverTabHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _SliverTabHeaderDelegate({required this.child});
+
+  @override
+  double get minExtent => 52.0;
+
+  @override
+  double get maxExtent => 52.0;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverTabHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child;
   }
 }

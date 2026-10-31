@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
 import 'live_meet_detail_screen.dart';
 
-/// 4. Ekran: Canlı Yarış İzleyici (Live Viewer)
+/// TYF Yüzme Sonuçları — Canlı Müsabakalar Ekranı (v2.0)
+/// Apple Esintili Yalınlık:
+/// - Zemin: #FAF8F7 nötr kırık beyaz
+/// - Üst Bar: Minimal TYF başlığı, ince hatlı aksiyonlar
+/// - Canlı Takip Kartı: #FFFFFF, 16px radius, mikro-derinlik, soluk pudra gülü canlı nokta
 class LiveScreen extends StatefulWidget {
   final SwimRepository repository;
 
@@ -16,6 +22,7 @@ class LiveScreen extends StatefulWidget {
 class _LiveScreenState extends State<LiveScreen> {
   bool _isLoading = true;
   List<LiveMeetSummary> _liveMeets = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -33,7 +40,7 @@ class _LiveScreenState extends State<LiveScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -50,193 +57,268 @@ class _LiveScreenState extends State<LiveScreen> {
     );
   }
 
+  List<LiveMeetSummary> get _filteredMeets {
+    if (_searchQuery.trim().isEmpty) return _liveMeets;
+    final q = _searchQuery.toLowerCase();
+    return _liveMeets.where((m) {
+      return m.name.toLowerCase().contains(q) ||
+          m.city.toLowerCase().contains(q);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final meets = _filteredMeets;
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Row(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.sensors, color: Colors.red),
-            SizedBox(width: 8),
-            Text('TYF Canlı Yarış Takibi'),
+            const Text(
+              'TÜRKİYE YÜZME FEDERASYONU',
+              style: AppTextStyles.appTitle,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${_liveMeets.length} Canlı Müsabaka',
+              style: AppTextStyles.categorySeries,
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 20),
             tooltip: 'Yenile',
             onPressed: _loadLiveMeets,
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            )
           : RefreshIndicator(
+              color: AppColors.accent,
               onRefresh: _loadLiveMeets,
-              child: _liveMeets.isEmpty
-                  ? Center(
-                      child: Column(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                children: [
+                  // Minimalist Arama Girişi
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border, width: 1.0),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search_rounded,
+                            color: AppColors.textSecondary, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            onChanged: (val) => setState(() => _searchQuery = val),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Müsabaka veya şehir ara...',
+                              hintStyle: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13.5,
+                                color: AppColors.laneNeutral,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Müsabaka Listesi
+                  if (meets.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.pool, size: 64, color: Colors.grey.shade400),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Şu anda aktif bir canlı yarış bulunmuyor.',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
+                          Icon(Icons.pool_outlined,
+                              size: 40, color: AppColors.laneNeutral),
+                          SizedBox(height: 12),
                           Text(
-                            'Yeni bir TYF canlı yarış oturumu başladığında burada listelenecektir.',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                            'Şu anda aktif canlı müsabaka bulunmuyor',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _liveMeets.length,
-                      itemBuilder: (context, index) {
-                        return _buildLiveCard(_liveMeets[index]);
-                      },
-                    ),
+                  else
+                    ...meets.map((m) => _buildLiveMeetCard(m)),
+                ],
+              ),
             ),
     );
   }
 
-  Widget _buildLiveCard(LiveMeetSummary live) {
-    final isRunning = live.status == 'ISLENIYOR';
-    return Card(
+  Widget _buildLiveMeetCard(LiveMeetSummary meet) {
+    final resTotal = meet.resultListProgress.total;
+    final resProcessed = meet.resultListProgress.processed;
+    final resRatio = resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
+    final resPercent = (resRatio * 100).toInt();
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _openLiveDetail(live),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isRunning ? Colors.green.shade50 : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.border,
+          width: 1.0,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x083D3038),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openLiveDetail(meet),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Üst Rozet Satırı: Soluk pudra gülü nokta (•) + 11px CANLI YARIŞ
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: AppColors.accent,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: isRunning ? Colors.green : Colors.grey,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          live.status,
-                          style: TextStyle(
-                            color: isRunning ? Colors.green.shade900 : Colors.grey.shade700,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 6),
+                    const Text(
+                      'CANLI YAYIN',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        letterSpacing: 0.6,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  if (live.city.isNotEmpty)
+                    const Spacer(),
                     Text(
-                      live.city,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      '${meet.totalAthletes} Sporcu',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                live.name,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              if (live.date.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    live.date,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // 2. Müsabaka Başlığı
+                Text(
+                  meet.name,
+                  style: AppTextStyles.raceTitle,
+                ),
+                const SizedBox(height: 4),
+
+                // 3. Şehir ve Tarih
+                Row(
+                  children: [
+                    Text(
+                      meet.city.isNotEmpty ? meet.city : 'Türkiye',
+                      style: AppTextStyles.categorySeries,
+                    ),
+                    if (meet.date.isNotEmpty) ...[
+                      const Text(
+                        ' • ',
+                        style: TextStyle(color: AppColors.laneNeutral),
+                      ),
+                      Text(
+                        meet.date,
+                        style: AppTextStyles.categorySeries,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // 4. İnce 1px Ayırıcı Çizgi & İlerleme
+                const Divider(height: 1, thickness: 1, color: AppColors.divider),
+                const SizedBox(height: 10),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Sonuçlanan Yarışlar',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    Text(
+                      '$resProcessed / $resTotal (%$resPercent)',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: resRatio,
+                    backgroundColor: AppColors.divider,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    minHeight: 4,
                   ),
                 ),
-              const SizedBox(height: 12),
-
-              // Start ve Sonuç İlerleme Çubukları
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Start Listesi: ${live.startListProgress.processed} / ${live.startListProgress.total}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
-                          value: live.startListProgress.total > 0
-                              ? live.startListProgress.processed / live.startListProgress.total
-                              : 0,
-                          backgroundColor: Colors.blue.shade100,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sonuç Listesi: ${live.resultListProgress.processed} / ${live.resultListProgress.total}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
-                          value: live.resultListProgress.total > 0
-                              ? live.resultListProgress.processed / live.resultListProgress.total
-                              : 0,
-                          backgroundColor: Colors.green.shade100,
-                          color: Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              const Divider(height: 1),
-              const SizedBox(height: 10),
-
-              // Tıklama Yönlendirme İpucu (Action Bar)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Yarışları ve Sonuçları Gör',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

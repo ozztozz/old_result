@@ -1,0 +1,34 @@
+[chat-app class=['mobile', 'enable-lr26-markdown-styling', 'lr26', 'enable-print-overrides', 'ng-tns-c814529945-0', 'share-route']]
+Flutter Modern Arayüz Tasarım Rehberi https://share.gemini.google/KnByQDNwCqSf 3.8 Flash ile oluşturuldu 31 Ekim 2026 07:33 Yayınlanma zamanı: 31 Ekim 2026 11:45 Oturum aç Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.Google Gizlilik PolitikasıYeni pencerede açılırGoogle Hizmet ŞartlarıYeni pencerede açılırGizliliğiniz ve Gemini UygulamalarıYeni pencerede açılırOturum aç
+==================================================
+[side-navigation-v2 class=['content', 'enable-mweb-nav-improvements', 'lr26']]
+Flutter Modern Arayüz Tasarım Rehberi https://share.gemini.google/KnByQDNwCqSf 3.8 Flash ile oluşturuldu 31 Ekim 2026 07:33 Yayınlanma zamanı: 31 Ekim 2026 11:45 Oturum aç Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.Google Gizlilik PolitikasıYeni pencerede açılırGoogle Hizmet ŞartlarıYeni pencerede açılırGizliliğiniz ve Gemini UygulamalarıYeni pencerede açılır
+==================================================
+[div class=['content-wrapper']]
+Flutter Modern Arayüz Tasarım Rehberi https://share.gemini.google/KnByQDNwCqSf 3.8 Flash ile oluşturuldu 31 Ekim 2026 07:33 Yayınlanma zamanı: 31 Ekim 2026 11:45 Oturum aç Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.Google Gizlilik PolitikasıYeni pencerede açılırGoogle Hizmet ŞartlarıYeni pencerede açılırGizliliğiniz ve Gemini UygulamalarıYeni pencerede açılır
+==================================================
+[div class=['main-content', 'ng-trigger', 'ng-trigger-routeChangeAnimation']]
+Flutter Modern Arayüz Tasarım Rehberi https://share.gemini.google/KnByQDNwCqSf 3.8 Flash ile oluşturuldu 31 Ekim 2026 07:33 Yayınlanma zamanı: 31 Ekim 2026 11:45 Oturum aç Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.Google Gizlilik PolitikasıYeni pencerede açılırGoogle Hizmet ŞartlarıYeni pencerede açılırGizliliğiniz ve Gemini UygulamalarıYeni pencerede açılır
+==================================================
+[div class=['content-container']]
+Flutter Modern Arayüz Tasarım Rehberi https://share.gemini.google/KnByQDNwCqSf 3.8 Flash ile oluşturuldu 31 Ekim 2026 07:33 Yayınlanma zamanı: 31 Ekim 2026 11:45 Oturum aç Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.Google Gizlilik PolitikasıYeni pencerede açılırGoogle Hizmet ŞartlarıYeni pencerede açılırGizliliğiniz ve Gemini UygulamalarıYeni pencerede açılır
+==================================================
+[section class=['share-landing-page_content', 'ng-star-inserted']]
+Flutter Modern Arayüz Tasarım Rehberi https://share.gemini.google/KnByQDNwCqSf 3.8 Flash ile oluşturuldu 31 Ekim 2026 07:33 Yayınlanma zamanı: 31 Ekim 2026 11:45 Oturum aç Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.Google Gizlilik PolitikasıYeni pencerede açılırGoogle Hizmet ŞartlarıYeni pencerede açılırGizliliğiniz ve Gemini UygulamalarıYeni pencerede açılır
+==================================================
+[span class=['link-content', 'ng-star-inserted']]
+Gizliliğiniz ve Gemini Uygulamaları
+==================================================
+[div class=['cdk-describedby-message-container', 'cdk-visually-hidden']]
+Herkese açık bağlantıyı kopyalaBildir
+==================================================
+
+
+>>> ALL PARAGRAPHS & HEADINGS & CODE <<<
+
+<h1>
+Flutter Modern Arayüz Tasarım Rehberi
+
+<p>
+Gemini, kişiler de dahil olmak üzere farklı konular hakkında yanlış bilgiler gösterebilir. Bu nedenle, verdiği yanıtları doğrulayın.
+
