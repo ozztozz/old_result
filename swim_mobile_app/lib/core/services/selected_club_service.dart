@@ -71,21 +71,28 @@ class SelectedClubService extends ChangeNotifier {
 
     final a = _normalize(_clubName!);
     final b = _normalize(otherClubName);
-    return a == b || a.contains(b) || b.contains(a);
+    if (a.isEmpty || b.isEmpty) return false;
+    return a == b || (a.length >= 3 && b.contains(a)) || (b.length >= 3 && a.contains(b));
   }
 
   static String _normalize(String text) {
     return text
+        .replaceAll('İ', 'i')
+        .replaceAll('I', 'i')
+        .replaceAll('ı', 'i')
         .toLowerCase()
+        .replaceAll('\u0307', '')
         .replaceAll('spor kulübü', '')
         .replaceAll('spor kulubu', '')
         .replaceAll('yüzme kulübü', '')
         .replaceAll('yuzme kulubu', '')
+        .replaceAll('kulübü', '')
+        .replaceAll('kulubu', '')
+        .replaceAll('derneği', '')
+        .replaceAll('dernegi', '')
         .replaceAll('s.k.', '')
         .replaceAll('s.k', '')
         .replaceAll('sk', '')
-        .replaceAll('ı', 'i')
-        .replaceAll('İ', 'i')
         .replaceAll('ö', 'o')
         .replaceAll('ü', 'u')
         .replaceAll('ş', 's')

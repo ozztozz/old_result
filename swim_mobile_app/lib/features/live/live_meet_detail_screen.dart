@@ -115,16 +115,41 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
           e.status.toLowerCase().contains('tamam') ||
           e.status.toLowerCase().contains('sonuc');
 
+      bool isMatchEvent(String resEventNo, String progEventNo) {
+        final rTrim = resEventNo.trim();
+        final eTrim = progEventNo.trim();
+        if (rTrim == eTrim) return true;
+        final rInt = int.tryParse(rTrim);
+        final eInt = int.tryParse(eTrim);
+        if (rInt != null && eInt != null && rInt == eInt) return true;
+        return false;
+      }
+
       // Kazanan özeti (Tamamlanmışsa)
       String? winner;
       if (isFinished) {
-        final matched = results.where((r) => r.eventNo == e.eventNo).toList();
+        final matched = results.where((r) => isMatchEvent(r.eventNo, e.eventNo)).toList();
         if (matched.isNotEmpty) {
-          matched.sort((a, b) => (a.timeCs ?? 999999).compareTo(b.timeCs ?? 999999));
+          int parseRank(String rankStr) {
+            final m = RegExp(r'\d+').firstMatch(rankStr);
+            return m != null ? (int.tryParse(m.group(0)!) ?? 999999) : 999999;
+          }
+          matched.sort((a, b) {
+            final isDqA = a.resultStatus == 'DQ' || a.resultStatus == 'DNS' || a.resultStatus == 'DNF';
+            final isDqB = b.resultStatus == 'DQ' || b.resultStatus == 'DNS' || b.resultStatus == 'DNF';
+            if (isDqA && !isDqB) return 1;
+            if (!isDqA && isDqB) return -1;
+            final rankA = parseRank(a.rank);
+            final rankB = parseRank(b.rank);
+            if (rankA != 999999 && rankB != 999999 && rankA != rankB) {
+              return rankA.compareTo(rankB);
+            }
+            return (a.timeCs ?? 999999).compareTo(b.timeCs ?? 999999);
+          });
           final top = matched.first;
           final topTime = top.time ??
               (top.timeCs != null ? (top.timeCs! / 100).toStringAsFixed(2) : '');
-          if (topTime.isNotEmpty) {
+          if (topTime.isNotEmpty && top.resultStatus != 'DQ' && top.resultStatus != 'DNS' && top.resultStatus != 'DNF') {
             winner = '🥇 1. ${_toTitleCase(top.athleteName)} • $topTime';
           }
         }
@@ -134,7 +159,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
       int myTeamCount = 0;
       if (SelectedClubService.instance.hasSelectedClub) {
         myTeamCount = results.where((r) {
-          return r.eventNo == e.eventNo &&
+          return isMatchEvent(r.eventNo, e.eventNo) &&
               SelectedClubService.instance.matches(r.clubName, r.clubId);
         }).length;
       }

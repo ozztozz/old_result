@@ -78,6 +78,79 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     }
   }
 
+  int _parseLeadingInt(dynamic val) {
+    if (val == null) return 999999;
+    final m = RegExp(r'\d+').firstMatch(val.toString());
+    if (m != null) return int.tryParse(m.group(0)!) ?? 999999;
+    return 999999;
+  }
+
+  void _sortResults(List<RaceResult> list) {
+    final bool hasFinishedResults = list.any((r) {
+      final isDq = r.resultStatus == 'DQ' ||
+          r.resultStatus == 'DNS' ||
+          r.resultStatus == 'DNF' ||
+          r.rank.toUpperCase().startsWith('DQ');
+      final hasTime = (r.timeCs != null && r.timeCs! > 0) ||
+          (r.time != null && r.time!.isNotEmpty && r.time != 'Bekleniyor');
+      return !isDq && hasTime;
+    });
+
+    list.sort((a, b) {
+      final isDqA = a.resultStatus == 'DQ' ||
+          a.resultStatus == 'DNS' ||
+          a.resultStatus == 'DNF' ||
+          a.rank.toUpperCase().startsWith('DQ') ||
+          a.rank.toUpperCase().startsWith('DSQ');
+      final isDqB = b.resultStatus == 'DQ' ||
+          b.resultStatus == 'DNS' ||
+          b.resultStatus == 'DNF' ||
+          b.rank.toUpperCase().startsWith('DQ') ||
+          b.rank.toUpperCase().startsWith('DSQ');
+
+      // 1. Diskalifiyeler / Terk edenler en sonda
+      if (isDqA && !isDqB) return 1;
+      if (!isDqA && isDqB) return -1;
+      if (isDqA && isDqB) {
+        final heatA = _parseLeadingInt(a.heat);
+        final heatB = _parseLeadingInt(b.heat);
+        if (heatA != heatB) return heatA.compareTo(heatB);
+        return (a.lane ?? 999).compareTo(b.lane ?? 999);
+      }
+
+      // 2. Eğer yarışta sonuçlar varsa:
+      if (hasFinishedResults) {
+        final hasTimeA = (a.timeCs != null && a.timeCs! > 0) ||
+            (a.time != null && a.time!.isNotEmpty && a.time != 'Bekleniyor');
+        final hasTimeB = (b.timeCs != null && b.timeCs! > 0) ||
+            (b.time != null && b.time!.isNotEmpty && b.time != 'Bekleniyor');
+
+        // Sonucu olanlar, henüz yüzmemiş bekleyenlerin önünde
+        if (hasTimeA && !hasTimeB) return -1;
+        if (!hasTimeA && hasTimeB) return 1;
+
+        if (hasTimeA && hasTimeB) {
+          // Önce resmi sıra (rank / sira) varsa ona göre
+          final rankA = _parseLeadingInt(a.rank);
+          final rankB = _parseLeadingInt(b.rank);
+          if (rankA != 999999 && rankB != 999999 && rankA != rankB) {
+            return rankA.compareTo(rankB);
+          }
+          // Sonra derece (timeCs)
+          final timeA = a.timeCs ?? 99999999;
+          final timeB = b.timeCs ?? 99999999;
+          if (timeA != timeB) return timeA.compareTo(timeB);
+        }
+      }
+
+      // 3. Sonuç yoksa (veya her ikisi de bekliyorsa): Önce seri (sayısal), sonra kulvar
+      final heatA = _parseLeadingInt(a.heat);
+      final heatB = _parseLeadingInt(b.heat);
+      if (heatA != heatB) return heatA.compareTo(heatB);
+      return (a.lane ?? 999).compareTo(b.lane ?? 999);
+    });
+  }
+
   Future<void> _loadResults({bool silent = false}) async {
     if (!silent) setState(() => _isLoading = true);
 
@@ -88,6 +161,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       );
 
       final list = feed.results;
+      _sortResults(list);
 
       if (mounted) {
         setState(() {

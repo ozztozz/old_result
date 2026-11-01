@@ -146,32 +146,60 @@ def get_live_feed(request, live_id: int):
     except Exception:
         events_prog.sort(key=lambda x: x['name'])
 
-    # Sonuçları sırala:
-    # Eğer sonuçlar varsa dereceye göre (DQ en sonda),
-    # henüz sonuç yoksa (start listesi) seri ve kulvara göre sıralanır
-    has_results = qs.filter(derece_saniye__gt=0).exists()
-    if has_results:
-        results_raw = list(qs[:500])
-        def sort_key(r):
-            is_dq = (r.sira or '').strip().upper() in ('DQ', 'DNS', 'DNF') or (r.derece or '').strip().upper() in ('DQ', 'DNS', 'DNF')
-            is_waiting = (r.derece or '').strip() == 'Bekleniyor'
-            sec = r.derece_saniye if (r.derece_saniye and r.derece_saniye > 0) else 999999.0
-            seri_val = int(r.seri) if (r.seri and r.seri.isdigit()) else 999
-            kulvar_val = r.kulvar or 999
-            # Sıralama önceliği:
-            # 0: Geçerli dereceye sahip olanlar (en hızlı derece en üstte)
-            # 1: Bekleyenler (seri ve kulvara göre)
-            # 2: Diskalifiye / Terk (en sonda)
-            if is_dq:
-                return (2, 0, seri_val, kulvar_val)
-            elif is_waiting or sec >= 999999.0:
-                return (1, 0, seri_val, kulvar_val)
-            else:
-                return (0, sec, seri_val, kulvar_val)
+    import re
 
-        results_raw.sort(key=sort_key)
+    def parse_leading_int(val, default=999999):
+        if val is None:
+            return default
+        if isinstance(val, int):
+            return val
+        m = re.search(r'\d+', str(val))
+        if m:
+            try:
+                return int(m.group(0))
+            except ValueError:
+                return default
+        return default
+
+    # Sonuçları sırala:
+    # Kural: Sonuç yoksa önce seriye sonra kulvara göre (seri sayısal olarak sıralanır).
+    # Sonuç varsa sonuç sıralamasına / derecesine göre (DQ en sonda).
+    has_results = qs.filter(derece_saniye__gt=0).exists()
+
+    def sort_entry(r):
+        is_dq = (r.sira or '').strip().upper() in ('DQ', 'DNS', 'DNF') or (r.derece or '').strip().upper() in ('DQ', 'DNS', 'DNF')
+        is_waiting = (r.derece or '').strip() == 'Bekleniyor'
+        sec = r.derece_saniye if (r.derece_saniye and r.derece_saniye > 0) else 999999.0
+        seri_val = parse_leading_int(r.seri, default=999)
+        kulvar_val = parse_leading_int(r.kulvar, default=999)
+        rank_val = parse_leading_int(r.sira, default=999999)
+
+        if is_dq:
+            return (2, seri_val, kulvar_val)
+        elif is_waiting or sec >= 999999.0:
+            return (1, seri_val, kulvar_val)
+        else:
+            rank_score = rank_val if rank_val < 999999 else sec
+            return (0, rank_score, sec, seri_val, kulvar_val)
+
+    def sort_no_result(r):
+        return (parse_leading_int(r.seri, default=999), parse_leading_int(r.kulvar, default=999))
+
+    results_raw = list(qs)
+    if event_no:
+        if has_results:
+            results_raw.sort(key=sort_entry)
+        else:
+            results_raw.sort(key=sort_no_result)
     else:
-        results_raw = list(qs.order_by('seri', 'kulvar')[:500])
+        # Tüm müsabaka akışı: Önce yarış numarası (sayısal), sonra yarış içi sıralama
+        def sort_full_meet(r):
+            eno_val = parse_leading_int(r.yaris_no, default=999999)
+            sub_sort = sort_entry(r) if has_results else sort_no_result(r)
+            return (eno_val, sub_sort)
+
+        results_raw.sort(key=sort_full_meet)
+
     feed_data = []
 
     for r in results_raw:
@@ -181,7 +209,7 @@ def get_live_feed(request, live_id: int):
 
         feed_data.append({
             'id': r.id,
-            'event_no': str(r.yaris_no or ''),
+            'event_no': str(r.yaris_no or '').strip(),
             'distance': r.mesafe,
             'stroke': map_stroke(r.stil),
             'stroke_label': (r.stil or '').strip(),
