@@ -42,18 +42,26 @@ except ImportError:
     genai = None
     types = None
 
-try:
-    from dotenv import load_dotenv
-    env_paths = [
-        os.path.join(os.path.dirname(__file__), ".env"),
-        os.path.join(os.path.dirname(__file__), "..", ".env"),
-    ]
-    for ep in env_paths:
-        if os.path.exists(ep):
+env_paths = [
+    os.path.join(os.path.dirname(__file__), ".env"),
+    os.path.join(os.path.dirname(__file__), "..", ".env"),
+]
+for ep in env_paths:
+    if os.path.exists(ep):
+        try:
+            from dotenv import load_dotenv
             load_dotenv(ep)
-            break
-except ImportError:
-    pass
+        except ImportError:
+            try:
+                with open(ep, "r", encoding="utf-8") as _ef:
+                    for _line in _ef:
+                        _line = _line.strip()
+                        if _line and not _line.startswith("#") and "=" in _line:
+                            _k, _v = _line.split("=", 1)
+                            os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
+            except Exception:
+                pass
+        break
 
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
@@ -64,10 +72,88 @@ _USE_FALLBACK_KEY: bool = False
 # Aynı tarama çalışmasında start ve sonuç PDF'leri arasında kaynak maskeli adı korur.
 
 
+GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or "").strip().strip("'\"")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+
+
+class GroqFallbackResponse:
+    """Gemini response nesnesiyle uyumlu (.text özniteliği sağlayan) Groq yanıt sarmalayıcısı."""
+    def __init__(self, text: str):
+        self.text = text
+
+
+def call_groq_fallback(contents: List[Any], model: str = GROQ_MODEL) -> GroqFallbackResponse:
+    """
+    Gemini anahtarlarının ikisi de kota/kredi sınırına ulaştığında PDF metnini
+    ve istemi Groq API'ye göndererek yapılandırılmış JSON yanıtı üretir.
+    """
+    api_key = (os.environ.get("GROQ_API_KEY") or GROQ_API_KEY or "").strip().strip("'\"")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY ortam değişkeni tanımlı değil.")
+
+    pdf_bytes = None
+    prompt_parts = []
+    for item in contents:
+        if isinstance(item, str):
+            prompt_parts.append(item)
+        elif hasattr(item, "inline_data") and getattr(item.inline_data, "data", None):
+            pdf_bytes = item.inline_data.data
+        elif isinstance(item, bytes):
+            pdf_bytes = item
+
+    doc_text = ""
+    if pdf_bytes and fitz is not None:
+        try:
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            doc_text = "\n".join(page.get_text("text") for page in doc).strip()
+            doc.close()
+        except Exception:
+            doc_text = ""
+
+    full_prompt = "\n\n".join(prompt_parts)
+    if doc_text:
+        user_content = f"{full_prompt}\n\n[BELGE METNİ]:\n{doc_text}"
+    else:
+        user_content = full_prompt
+
+    import urllib.request
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Sen TYF yüzme yarış listelerini ve sonuçlarını yapılandıran uzman bir veri çıkarıcısısın. "
+                    "Verilen metinden başlık ve tüm seri/kulvar sporcu kayıtlarını eksiksiz çıkar. "
+                    "SADECE istenen şemada geçerli bir JSON nesnesi döndür."
+                ),
+            },
+            {"role": "user", "content": user_content},
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.1,
+    }
+
+    req = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        data=json.dumps(payload).encode("utf-8"),
+    )
+    with urllib.request.urlopen(req, timeout=35) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+        res_text = data["choices"][0]["message"]["content"]
+        return GroqFallbackResponse(text=res_text)
+
+
 def _is_quota_error(exc: Exception) -> bool:
-    """Hatanın Gemini API kota / rate limit (429 / RESOURCE_EXHAUSTED) kaynaklı olup olmadığını kontrol eder."""
+    """Hatanın Gemini API kota / rate limit (429 / RESOURCE_EXHAUSTED / 402) kaynaklı olup olmadığını kontrol eder."""
     msg = str(exc).lower()
-    return any(tok in msg for tok in ("429", "resource_exhausted", "quota", "rate limit", "ratelimit", "too many requests", "exhausted"))
+    return any(tok in msg for tok in ("429", "402", "resource_exhausted", "quota", "rate limit", "ratelimit", "too many requests", "exhausted", "depleted"))
 
 
 def get_fallback_gemini_client() -> Optional[genai.Client]:
@@ -87,37 +173,49 @@ def generate_content_with_fallback(
     config: types.GenerateContentConfig
 ):
     """
-    ?nce birincil GEMINI_API_KEY ile istek atar; kota/limit hatas? (429) al?n?rsa
-    GEMINI_API_KEY_2'ye ge?er. ?kisi de dolmu?sa veya kota a??m? varsa k?sa bir bekleme (backoff) ile yeniden dener.
+    3 Kademeli Hiyerarşik Yedekleme:
+    1. Birincil GEMINI_API_KEY ile istek atar.
+    2. Kota/limit/kredi hatasında (429 / 402) GEMINI_API_KEY_2'ye geçer.
+    3. İki Gemini anahtarı da sınırda ise veya hata verirse Groq API (openai/gpt-oss-120b) devreye girer.
     """
     global _USE_FALLBACK_KEY
     fallback_client = get_fallback_gemini_client()
+    groq_key = (os.environ.get("GROQ_API_KEY") or GROQ_API_KEY or "").strip().strip("'\"")
 
-    for attempt in range(4):
+    for attempt in range(3):
         use_fallback = (_USE_FALLBACK_KEY and fallback_client is not None)
         client = fallback_client if use_fallback else primary_client
         try:
             return client.models.generate_content(model=model, contents=contents, config=config)
         except Exception as e:
             if _is_quota_error(e):
-                if '402' in str(e) or 'prepayment' in str(e).lower() or 'depleted' in str(e).lower():
-                    _USE_FALLBACK_KEY = False
-                elif not _USE_FALLBACK_KEY and fallback_client is not None:
-                    print('  [!] Birincil API kota doldu, GEMINI_API_KEY_2 deneniyor...')
+                # 1. Aşama: Key 1 -> Key 2 geçişi
+                if not _USE_FALLBACK_KEY and fallback_client is not None:
+                    print('  [!] Birincil Gemini API kota/kredi doldu, GEMINI_API_KEY_2 deneniyor...')
                     try:
                         res = fallback_client.models.generate_content(model=model, contents=contents, config=config)
                         _USE_FALLBACK_KEY = True
                         return res
                     except Exception as fb_err:
-                        print(f'  [!] GEMINI_API_KEY_2 de kota/kredi hatas? verdi: {fb_err}')
+                        print(f'  [!] GEMINI_API_KEY_2 de kota/kredi hatası verdi: {fb_err}')
                         _USE_FALLBACK_KEY = False
 
-                if attempt < 3:
-                    wait_sec = 25 + (attempt * 10)
-                    print(f'  [*] Gemini 429/RPM limiti a??ld?. {wait_sec} sn beklenip tekrar deneniyor ({attempt + 1}/3)...')
+                # 2. Aşama: İki Gemini anahtarı da tükendiyse Groq API fallback'i
+                if groq_key:
+                    print('  [!] İki Gemini anahtarı da kota/kredi sınırında. 3. aşama olarak Groq API devreye giriyor...')
+                    try:
+                        groq_res = call_groq_fallback(contents)
+                        return groq_res
+                    except Exception as groq_err:
+                        print(f'  [!] Groq API yedek çağrısı da hata verdi: {groq_err}')
+
+                if attempt < 2:
+                    wait_sec = 20 + (attempt * 10)
+                    print(f'  [*] Gemini 429/RPM limiti aşıldı. {wait_sec} sn beklenip tekrar deneniyor ({attempt + 1}/2)...')
                     time.sleep(wait_sec)
                     continue
             raise
+
 
 def get_http_session() -> requests.Session:
     global _HTTP_SESSION
