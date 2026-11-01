@@ -62,21 +62,19 @@ def run_backfill(event_id=None, dry_run=False):
         if yb:
             c_qs = c_qs.filter(dogum_yili=yb)
 
-        # SQL LIKE / Wildcard ile 40.000 sporcuyu birkaç adaya indir
+        # SQL LIKE / Wildcard: En belirgin kelime üzerinden toleranslı filtrele
         if norm_masked:
             m_tokens = norm_masked.split()
             if m_tokens:
-                q_like = Q()
-                first_tok = m_tokens[0].rstrip('.').replace('*', '')
-                if len(first_tok) >= 2:
-                    q_like &= Q(sporcu_adi__icontains=first_tok)
-                elif len(first_tok) == 1:
-                    q_like &= (Q(sporcu_adi__istartswith=first_tok) | Q(sporcu_adi__icontains=f" {first_tok}"))
-
-                last_tok = m_tokens[-1].rstrip('.').replace('*', '')
-                if last_tok:
-                    q_like &= Q(sporcu_adi__icontains=last_tok[0])
-                c_qs = c_qs.filter(q_like)
+                clean_words = [t.rstrip('.') for t in m_tokens if '*' not in t and len(t) >= 3]
+                if clean_words:
+                    # En belirgin temiz kelime üzerinden filtrele (örn: 'BEREN')
+                    best_word = max(clean_words, key=len)
+                    c_qs = c_qs.filter(sporcu_adi__icontains=best_word)
+                else:
+                    first_ch = m_tokens[0][0]
+                    if first_ch != '*':
+                        c_qs = c_qs.filter(Q(sporcu_adi__istartswith=first_ch) | Q(sporcu_adi__icontains=f" {first_ch}"))
 
         cand_list = []
         for sp in c_qs:

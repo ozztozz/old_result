@@ -501,23 +501,19 @@ def _process_single_race_payload(payload: dict) -> dict:
         if birth_year:
             candidate_qs = candidate_qs.filter(dogum_yili=birth_year)
 
-        # SQL LIKE / Wildcard filtreleme: Tüm yaş grubunu değil yalnızca isim deseni uyanları çek
+        # SQL LIKE / Wildcard filtreleme: En belirgin temiz kelime üzerinden filtrele
         if norm_masked:
             m_tokens = norm_masked.split()
             if m_tokens:
                 from django.db.models import Q
-                q_like = Q()
-                first_tok = m_tokens[0].rstrip('.').replace('*', '')
-                if len(first_tok) >= 2:
-                    q_like &= Q(sporcu_adi__icontains=first_tok)
-                elif len(first_tok) == 1:
-                    q_like &= (Q(sporcu_adi__istartswith=first_tok) | Q(sporcu_adi__icontains=f" {first_tok}"))
-
-                last_tok = m_tokens[-1].rstrip('.').replace('*', '')
-                if last_tok:
-                    q_like &= Q(sporcu_adi__icontains=last_tok[0])
-
-                candidate_qs = candidate_qs.filter(q_like)
+                clean_words = [t.rstrip('.') for t in m_tokens if '*' not in t and len(t) >= 3]
+                if clean_words:
+                    best_word = max(clean_words, key=len)
+                    candidate_qs = candidate_qs.filter(sporcu_adi__icontains=best_word)
+                else:
+                    first_ch = m_tokens[0][0]
+                    if first_ch != '*':
+                        candidate_qs = candidate_qs.filter(Q(sporcu_adi__istartswith=first_ch) | Q(sporcu_adi__icontains=f" {first_ch}"))
 
         candidates = []
         for candidate in candidate_qs:

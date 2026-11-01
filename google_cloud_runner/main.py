@@ -445,9 +445,7 @@ def build_masked_like_pattern(masked_name: str) -> str:
 def build_masked_wildcard_regex(masked_name: str) -> Optional[re.Pattern]:
     """
     Maskeli isimden toleranslı wildcard regex deseni üretir.
-    İki isimli veya kısaltmalı adları destekler.
-    Örn: 'MEHMET Y****' -> r'\bMEHMET.*?\bY.*?'
-    Örn: 'M. ALI K***' -> r'\bM[A-Z0-9]*.*?\bALI.*?\bK.*?'
+    OCR harf düşmeleri, aradaki gizli harfler ve kök uyumunu destekler.
     """
     norm = normalize_masked_name(masked_name)
     tokens = norm.split()
@@ -459,17 +457,28 @@ def build_masked_wildcard_regex(masked_name: str) -> Optional[re.Pattern]:
         t_clean = t.rstrip('.')
         if '*' not in t_clean:
             if len(t_clean) == 1:
-                parts.append(re.escape(t_clean) + r'[A-Z0-9]*')
+                parts.append(r'\b' + re.escape(t_clean) + r'[A-Z0-9]*')
+            elif len(t_clean) <= 4:
+                # OCR 1 harf toleransı ('EIF' -> 'E.?I.?F')
+                parts.append(r'\b' + r'.?'.join(re.escape(ch) for ch in t_clean))
             else:
-                parts.append(re.escape(t_clean))
+                parts.append(r'\b' + re.escape(t_clean))
         else:
-            clean_stars = re.sub(r'\*+', '*', t_clean)
-            sub_parts = [re.escape(p) for p in clean_stars.split('*')]
-            parts.append(r'.*?'.join(sub_parts))
+            # Yıldızlı tokenlarda görünen harfleri sırayla ara
+            vis = re.sub(r'[^A-Z0-9]', '', t_clean)
+            if vis:
+                first_ch = re.escape(vis[0])
+                first_p = (r'\b' + first_ch) if not t_clean.startswith('*') else first_ch
+                if len(vis) > 1:
+                    # Son tekil harf kök/ek farklılığı olabileceğinden tolerans tanı
+                    core = r'.*?'.join([first_p] + [re.escape(ch) for ch in vis[1:-1]])
+                    tail = r'(?:.*?' + re.escape(vis[-1]) + r')?'
+                    parts.append(core + tail if len(vis) > 2 else first_p + tail)
+                else:
+                    parts.append(first_p)
 
-    regex_str = r'\b' + r'.*?\b'.join(parts)
+    regex_str = r'.*?'.join(parts)
     return re.compile(regex_str, re.IGNORECASE)
-
 
 
 def is_subsequence(sub: str, string: str) -> bool:
@@ -480,13 +489,27 @@ def is_subsequence(sub: str, string: str) -> bool:
     return all(c in it for c in sub)
 
 
+def _lcs_length(s1: str, s2: str) -> int:
+    """İki string arasındaki en uzun ortak alt dizi uzunluğu."""
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i - 1] == s2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[m][n]
+
+
 def _token_matches(masked_tok: str, cand_tok: str) -> Tuple[bool, float]:
     """
     İki tokenı karşılaştırır:
     - Birebir eşitlik: 1.0
     - Baş harf kısaltması ('M.' veya 'M' vs 'MEHMET'): 0.88
     - Maskeli eşleşme ('A***' vs 'AHMET'): 0.80 - 1.0
-    - Subsequence: 0.72 - 0.85
+    - Kök / Ek toleransı ('O**EM*R' vs 'OZDEM'): 0.75 - 0.90
+    - Harf düşmesi / OCR toleransı ('EIF' vs 'ELIF', 'ALA' vs 'ALYA'): 0.75 - 0.85
     """
     m = masked_tok.strip().rstrip('.')
     c = cand_tok.strip().rstrip('.')
@@ -494,7 +517,7 @@ def _token_matches(masked_tok: str, cand_tok: str) -> Tuple[bool, float]:
         return False, 0.0
     if m == c:
         return True, 1.0
-    
+
     # Baş harf kısaltması kontrolü: 'M' vs 'MEHMET'
     if len(m) == 1 and '*' not in m:
         if c.startswith(m):
@@ -505,7 +528,7 @@ def _token_matches(masked_tok: str, cand_tok: str) -> Tuple[bool, float]:
             return True, 0.88
         return False, 0.0
 
-    # Maskeli wildcard kontrolü
+    # 1. Maskeli wildcard kontrolü
     if '*' in m:
         clean_pat = re.sub(r'\*+', '*', m)
         regex = "^" + re.escape(clean_pat).replace(r"\*", ".*") + "$"
@@ -513,13 +536,35 @@ def _token_matches(masked_tok: str, cand_tok: str) -> Tuple[bool, float]:
             vis_len = len(m.replace('*', ''))
             ratio = vis_len / max(len(c), 1)
             return True, 0.78 + min(ratio * 0.22, 0.22)
-            
-    # Subsequence kontrolü
+
+        # 1b. Kök / Ek toleransı (Örn: 'O**EM*R' vs 'OZDEM' kök uyumu)
+        prefix_pat = re.sub(r'\*[A-Z0-9]+$', '', clean_pat)
+        if prefix_pat and '*' in prefix_pat:
+            pre_regex = "^" + re.escape(prefix_pat).replace(r"\*", ".*")
+            if re.match(pre_regex, c):
+                vis_len = len(prefix_pat.replace('*', ''))
+                if vis_len >= 2:
+                    return True, 0.75 + min((vis_len / max(len(c), 1)) * 0.15, 0.15)
+
+    # 2. Subsequence kontrolü (tam alt dizi)
     vis_m = re.sub(r'[^A-Z0-9]', '', m)
-    if vis_m and len(vis_m) >= 2 and is_subsequence(vis_m, c):
-        if vis_m[0] == c[0]:
+    if vis_m and len(vis_m) >= 2:
+        first_char_ok = m.startswith('*') or vis_m[0] == c[0]
+        if is_subsequence(vis_m, c) and first_char_ok:
             ratio = len(vis_m) / max(len(c), 1)
             return True, 0.72 + min(ratio * 0.20, 0.20)
+
+        # 3. OCR Harf Düşmesi / LCS Toleransı (Örn: 'EIF' vs 'ELIF', 'ALA' vs 'ALYA', 'O**EM*R' vs 'OZDEM')
+        if first_char_ok:
+            common_len = _lcs_length(vis_m, c)
+            if common_len >= 2 and (common_len / max(len(vis_m), len(c))) >= 0.65:
+                ratio = common_len / max(len(c), 1)
+                return True, 0.70 + min(ratio * 0.18, 0.18)
+
+    # 4. Maskesiz tokenlarda 1 harf eksik/fazla OCR toleransı ('EIF' vs 'ELIF', 'ASI' vs 'ASLI')
+    if '*' not in m and len(m) >= 3 and len(c) >= 3 and abs(len(m) - len(c)) <= 1:
+        if m[0] == c[0] and _lcs_length(m, c) >= max(len(m), len(c)) - 1:
+            return True, 0.82
 
     return False, 0.0
 
@@ -730,7 +775,8 @@ def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[f
         if not vis_sur:
             surname_ok, surname_score = True, 0.75
         elif is_subsequence(vis_sur, c_sur_str):
-            if vis_sur[0] == c_sur_str[0]:
+            sur_first_ok = m_sur_str.startswith('*') or (vis_sur and vis_sur[0] == c_sur_str[0])
+            if sur_first_ok:
                 ratio = len(vis_sur) / max(len(c_sur_str), 1)
                 surname_ok, surname_score = True, 0.75 + min(ratio * 0.20, 0.20)
 
