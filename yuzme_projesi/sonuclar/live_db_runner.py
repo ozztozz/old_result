@@ -625,7 +625,13 @@ def _process_single_race_payload(payload: dict) -> dict:
                 m_age = re.search(r'\b(\d{1,2})\s*YAŞ', str(yas_grubu).upper())
                 if m_age:
                     age = int(m_age.group(1))
-                    ref_y = yaris_tarihi_baslangic.year if yaris_tarihi_baslangic else 2026
+                    if hasattr(yaris_tarihi_baslangic, "year"):
+                        ref_y = yaris_tarihi_baslangic.year
+                    elif isinstance(yaris_tarihi_baslangic, str) and yaris_tarihi_baslangic:
+                        m_y = re.search(r'\b(19\d{2}|20\d{2})\b', yaris_tarihi_baslangic)
+                        ref_y = int(m_y.group(1)) if m_y else 2026
+                    else:
+                        ref_y = 2026
                     dogum_yili = ref_y - age
 
         if not dogum_yili and musabaka_adi:

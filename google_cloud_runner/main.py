@@ -440,7 +440,7 @@ SADECE geçerli bir JSON nesnesi döndür."""
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)
-        parsed = json.loads(raw)
+        parsed = safe_json_loads(raw)
         if isinstance(parsed, dict) and parsed.get("barajlar_var_mi") and parsed.get("barajlar"):
             for b in parsed["barajlar"]:
                 if "baraj_derecesi" in b and isinstance(b["baraj_derecesi"], str):
@@ -1167,6 +1167,39 @@ def find_matching_baraj(barajlar: List[Dict[str, Any]], cinsiyet: str, mesafe: A
     return None
 
 
+def safe_json_loads(raw: str) -> Any:
+    """JSON ayrıştırırken fazladan metin veya markdown artıkları (Extra data) varsa güvenle temizler."""
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+    raw = raw.strip()
+
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+
+    decoder = json.JSONDecoder()
+    for start_char in ('{', '['):
+        idx = raw.find(start_char)
+        if idx != -1:
+            try:
+                obj, _ = decoder.raw_decode(raw[idx:])
+                return obj
+            except Exception:
+                pass
+
+    m = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', raw)
+    if m:
+        try:
+            return json.loads(m.group(0))
+        except Exception:
+            pass
+
+    return json.loads(raw)
+
+
 def parse_meet_pdf(
     pdf_bytes: bytes,
     client: genai.Client,
@@ -1340,7 +1373,7 @@ SADECE JSON nesnesi (object) döndür."""
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)
-        parsed_json = json.loads(raw)
+        parsed_json = safe_json_loads(raw)
         if isinstance(parsed_json, list):
             if len(parsed_json) == 1 and isinstance(parsed_json[0], dict) and (
                 "kayitlar" in parsed_json[0] or "yeni_sporcular" in parsed_json[0]
