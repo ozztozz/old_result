@@ -15,17 +15,32 @@ from urllib.parse import urljoin
 from typing import Dict, List, Any, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
 
-import requests
-from requests.adapters import HTTPAdapter
-
+try:
+    import requests
+    from requests.adapters import HTTPAdapter
+except ImportError:
+    requests = None
+    HTTPAdapter = None
 
 try:
     import pymupdf as fitz
 except ImportError:
-    import fitz
-from bs4 import BeautifulSoup
-from google import genai
-from google.genai import types
+    try:
+        import fitz
+    except ImportError:
+        fitz = None
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None
+    types = None
 
 try:
     from dotenv import load_dotenv
@@ -365,19 +380,96 @@ def normalize_gender(cinsiyet: str) -> str:
 
 
 def normalize_masked_name(value: Any) -> str:
-    """Türkçe isimleri karşılaştırılabilir hale getirir; yıldızları wildcard olarak korur."""
+    """
+    Türkçe isimleri karşılaştırılabilir standart formata getirir.
+    Maskeleme varyasyonlarını tek tip '*' yapar.
+    'Maskeli sporcu (...)' gibi sarmalayıcıları temizler.
+    """
     if not value:
         return ""
-    text = unicodedata.normalize("NFKC", str(value)).strip().upper()
+    text = unicodedata.normalize("NFKC", str(value)).strip()
+    
+    # Sarmalayıcı ön ekleri temizle: "Maskeli sporcu (CAN K***)" -> "CAN K***"
+    text = re.sub(r'^(?:maskeli\s+sporcu\s*[\(\[]?|\(f\d+\)\s*|[\(\[])', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'[\)\]]$', '', text).strip()
+    
+    # Türkçe küçük i/ı dönüşümü ve büyük harfe çevirme
+    text = text.replace("i", "İ").replace("ı", "I").upper()
     mapping = str.maketrans({
         "İ": "I", "Ş": "S", "Ğ": "G", "Ü": "U", "Ö": "O", "Ç": "C",
         "|": "L",
     })
     text = text.translate(mapping)
-    # OCR ve baskı düzeltmesi: Kelime sonundaki 'OGU' genellikle 'OGLU' (oğlu)dur
-    text = re.sub(r'OGU\b', 'OGLU', text)
-    text = re.sub(r"[^A-Z0-9*]+", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
+    
+    # OCR düzeltmesi: Kelime sonundaki 'OGU' -> 'OGLU'
+    text = re.sub(r'\bOGU\b', 'OGLU', text)
+    
+    # Maskeleme karakterlerini '*' yap:
+    # 1. Unicode yıldızlar, mermi simgeleri ve orta noktalar
+    text = re.sub(r'[\u2731-\u2739\u2605\u2606\u2022\u00B7\u2026]+', '*', text)
+    # 2. İki veya daha fazla nokta (.. veya ...)
+    text = re.sub(r'\.{2,}', '*', text)
+    # 3. İki veya daha fazla alt tire (__)
+    text = re.sub(r'_+', '*', text)
+    # 4. KVKK amaçlı ardışık X'ler (örn: KXXXX -> K****)
+    text = re.sub(r'([A-Z0-9])X{2,}', lambda m: m.group(1) + '*' * (len(m.group(0)) - 1), text)
+    # 5. Tekil X'lerden oluşan soyadlar (örn: 'A*** X')
+    text = re.sub(r'\bX+\b', '*', text)
+    
+    # Harf, rakam ve '*' dışındakileri boşluğa çevir (tekil noktayı kısaltma olarak tanı)
+    text = re.sub(r'[^A-Z0-9*.]+', ' ', text)
+    # Noktalı kısaltmaları ayır (örn: 'M.ALI' -> 'M. ALI')
+    text = re.sub(r'\.([A-Z0-9*])', r'. \1', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def build_masked_like_pattern(masked_name: str) -> str:
+    """
+    Maskeli isimden SQL LIKE sorgusu deseni üretir.
+    Kelimelerin arasına ve yıldızların yerine '%' yerleştirir.
+    Örn: 'MEHMET Y****' -> '%MEHMET%Y%'
+    Örn: 'CAN K***' -> '%CAN%K%'
+    """
+    norm = normalize_masked_name(masked_name)
+    tokens = norm.split()
+    if not tokens:
+        return "%"
+    parts = []
+    for t in tokens:
+        t_clean = t.rstrip('.')
+        part = re.sub(r'\*+', '%', t_clean)
+        parts.append(part)
+    return "%" + "%".join(parts) + "%"
+
+
+def build_masked_wildcard_regex(masked_name: str) -> Optional[re.Pattern]:
+    """
+    Maskeli isimden toleranslı wildcard regex deseni üretir.
+    İki isimli veya kısaltmalı adları destekler.
+    Örn: 'MEHMET Y****' -> r'\bMEHMET.*?\bY.*?'
+    Örn: 'M. ALI K***' -> r'\bM[A-Z0-9]*.*?\bALI.*?\bK.*?'
+    """
+    norm = normalize_masked_name(masked_name)
+    tokens = norm.split()
+    if not tokens:
+        return None
+
+    parts = []
+    for t in tokens:
+        t_clean = t.rstrip('.')
+        if '*' not in t_clean:
+            if len(t_clean) == 1:
+                parts.append(re.escape(t_clean) + r'[A-Z0-9]*')
+            else:
+                parts.append(re.escape(t_clean))
+        else:
+            clean_stars = re.sub(r'\*+', '*', t_clean)
+            sub_parts = [re.escape(p) for p in clean_stars.split('*')]
+            parts.append(r'.*?'.join(sub_parts))
+
+    regex_str = r'\b' + r'.*?\b'.join(parts)
+    return re.compile(regex_str, re.IGNORECASE)
+
 
 
 def is_subsequence(sub: str, string: str) -> bool:
@@ -388,62 +480,170 @@ def is_subsequence(sub: str, string: str) -> bool:
     return all(c in it for c in sub)
 
 
+def _token_matches(masked_tok: str, cand_tok: str) -> Tuple[bool, float]:
+    """
+    İki tokenı karşılaştırır:
+    - Birebir eşitlik: 1.0
+    - Baş harf kısaltması ('M.' veya 'M' vs 'MEHMET'): 0.88
+    - Maskeli eşleşme ('A***' vs 'AHMET'): 0.80 - 1.0
+    - Subsequence: 0.72 - 0.85
+    """
+    m = masked_tok.strip().rstrip('.')
+    c = cand_tok.strip().rstrip('.')
+    if not m or not c:
+        return False, 0.0
+    if m == c:
+        return True, 1.0
+    
+    # Baş harf kısaltması kontrolü: 'M' vs 'MEHMET'
+    if len(m) == 1 and '*' not in m:
+        if c.startswith(m):
+            return True, 0.88
+        return False, 0.0
+    if len(c) == 1 and '*' not in c:
+        if m.startswith(c):
+            return True, 0.88
+        return False, 0.0
+
+    # Maskeli wildcard kontrolü
+    if '*' in m:
+        clean_pat = re.sub(r'\*+', '*', m)
+        regex = "^" + re.escape(clean_pat).replace(r"\*", ".*") + "$"
+        if re.match(regex, c):
+            vis_len = len(m.replace('*', ''))
+            ratio = vis_len / max(len(c), 1)
+            return True, 0.78 + min(ratio * 0.22, 0.22)
+            
+    # Subsequence kontrolü
+    vis_m = re.sub(r'[^A-Z0-9]', '', m)
+    if vis_m and len(vis_m) >= 2 and is_subsequence(vis_m, c):
+        if vis_m[0] == c[0]:
+            ratio = len(vis_m) / max(len(c), 1)
+            return True, 0.72 + min(ratio * 0.20, 0.20)
+
+    return False, 0.0
+
+
+def _match_name_tokens(masked_tokens: List[str], cand_tokens: List[str]) -> Tuple[bool, float]:
+    """
+    İsim token listelerini esnek olarak eşleştirir.
+    Alt küme, bileşik ad ve kısaltma toleranslıdır.
+    """
+    if not masked_tokens or not cand_tokens:
+        return False, 0.0
+
+    # 1. Birebir uzunluk eşleşmesi
+    if len(masked_tokens) == len(cand_tokens):
+        all_ok = True
+        scores = []
+        for mt, ct in zip(masked_tokens, cand_tokens):
+            ok, sc = _token_matches(mt, ct)
+            if not ok:
+                all_ok = False
+                break
+            scores.append(sc)
+        if all_ok:
+            return True, sum(scores) / len(scores)
+
+    # 2. Bileşik isim kontrolü (örn: 'MEHMETCAN' vs ['MEHMET', 'CAN'])
+    m_joined = "".join(t.replace('*', '') for t in masked_tokens)
+    c_joined = "".join(cand_tokens)
+    if m_joined and c_joined:
+        if m_joined == c_joined:
+            return True, 0.95
+        if is_subsequence(m_joined, c_joined) and m_joined[0] == c_joined[0]:
+            return True, 0.85
+
+    # 3. Alt küme kontrolü: Maskeli tokenların adayın tokenları içinde bulunması
+    matched_scores = []
+    used_cands = set()
+    for mt in masked_tokens:
+        best_sc = 0.0
+        best_idx = -1
+        for idx, ct in enumerate(cand_tokens):
+            if idx in used_cands:
+                continue
+            ok, sc = _token_matches(mt, ct)
+            if ok and sc > best_sc:
+                best_sc = sc
+                best_idx = idx
+        if best_idx != -1:
+            used_cands.add(best_idx)
+            matched_scores.append(best_sc)
+
+    if len(matched_scores) == len(masked_tokens) and matched_scores:
+        coverage_penalty = len(masked_tokens) / len(cand_tokens)
+        base = sum(matched_scores) / len(matched_scores)
+        return True, base * (0.88 + 0.12 * coverage_penalty)
+
+    if len(matched_scores) == len(cand_tokens) and matched_scores:
+        base = sum(matched_scores) / len(matched_scores)
+        return True, base * 0.90
+
+    return False, 0.0
+
+
+def split_athlete_tokens(tokens: List[str]) -> Tuple[List[str], List[str]]:
+    """
+    Token listesini ön ad(lar) ve soyad(lar) olarak böler.
+    Maske işaretinin başladığı noktayı soyadı başlangıcı kabul eder.
+    """
+    if not tokens:
+        return [], []
+    if len(tokens) == 1:
+        return tokens, tokens
+    
+    firsts = []
+    surnames = []
+    mask_started = False
+    for t in tokens:
+        if '*' in t:
+            mask_started = True
+        if not mask_started:
+            firsts.append(t)
+        else:
+            surnames.append(t)
+            
+    if not firsts:
+        firsts = tokens[:-1]
+        surnames = [tokens[-1]]
+    elif not surnames:
+        firsts = tokens[:-1]
+        surnames = [tokens[-1]]
+
+    return firsts, surnames
+
+
 def split_masked_name(masked_name: str) -> Tuple[List[str], str]:
     """
-    Maskeli adı ad(lar) ve maskeli soyad olarak ikiye ayırır.
-    KVKK/TYF kurallarında ön adlar maskelenmez; maskeleme soyadda başlar.
-    Örn: 'Mehmet Aras **|*ıç' -> (['MEHMET', 'ARAS'], '**L*IC')
+    Maskeli adı ön ad(lar) ve maskeli soyad olarak ikiye ayırır.
+    Geriye dönük uyumluluk için korunmuştur.
     """
     norm = normalize_masked_name(masked_name)
     tokens = norm.split()
-    if not tokens:
-        return [], ""
-    if "*" not in norm:
-        if len(tokens) > 1:
-            return tokens[:-1], tokens[-1]
-        return tokens, ""
-    first_tokens = []
-    surname_tokens = []
-    found_mask = False
-    for t in tokens:
-        if "*" in t:
-            found_mask = True
-        if not found_mask:
-            first_tokens.append(t)
-        else:
-            surname_tokens.append(t)
-    if not first_tokens and len(tokens) > 1:
-        first_tokens = tokens[:-1]
-        surname_tokens = [tokens[-1]]
-    return first_tokens, " ".join(surname_tokens)
+    firsts, surnames = split_athlete_tokens(tokens)
+    return firsts, " ".join(surnames)
 
 
 def _masked_token_match(masked: str, candidate: str) -> Tuple[bool, float]:
-    """Bir isim token'ını yıldızları tek veya çok karakterlik wildcard kabul ederek eşleştirir."""
-    pattern = normalize_masked_name(masked)
-    value = normalize_masked_name(candidate)
-    if not pattern or not value:
-        return False, 0.0
-    if "*" not in pattern:
-        return pattern == value, 1.0 if pattern == value else 0.0
-    # Kaynak sistem bazı durumlarda yıldızları karakter sayısı olarak değil,
-    # yalnızca "bu bölüm maskeli" işareti olarak üretir; bu yüzden boş eşleşmeye de izin ver.
-    regex = "^" + re.escape(pattern).replace(r"\*", ".*") + "$"
-    if not re.match(regex, value):
-        return False, 0.0
-    visible = len(pattern.replace("*", ""))
-    return True, visible / max(len(pattern), 1)
+    """Bir isim token'ını yıldızları wildcard kabul ederek eşleştirir (geriye dönük uyumluluk)."""
+    return _token_matches(masked, candidate)
 
 
 def normalize_club_name(club_name: Any) -> str:
-    """Kulüp isimlerini normalize eder ve 'S.K.', 'GSK' gibi kısaltmaları açar."""
+    """Kulüp isimlerini normalize eder ve kısaltmaları standartlaştırır."""
     if not club_name:
         return ""
     text = unicodedata.normalize("NFKC", str(club_name)).strip().upper()
+    text = text.replace("i", "İ").replace("ı", "I")
     mapping = str.maketrans({"İ": "I", "Ş": "S", "Ğ": "G", "Ü": "U", "Ö": "O", "Ç": "C"})
     text = text.translate(mapping)
-    text = re.sub(r'\bS[\.\s]*K[\.\s]*\b', ' SPOR KULUBU ', text)
+    text = re.sub(r'\bB[\.\s]*B[\.\s]*S[\.\s]*K[\.\s]*\b', ' BUYUKSEHIR BELEDIYESI SPOR KULUBU ', text)
+    text = re.sub(r'\bB[\.\s]*S[\.\s]*B[\.\s]*\b', ' BUYUKSEHIR BELEDIYESI ', text)
+    text = re.sub(r'\bI[\.\s]*B[\.\s]*B[\.\s]*\b', ' ISTANBUL BUYUKSEHIR BELEDIYESI ', text)
     text = re.sub(r'\bG[\.\s]*S[\.\s]*K[\.\s]*\b', ' GENCLIK SPOR KULUBU ', text)
+    text = re.sub(r'\bS[\.\s]*K[\.\s]*\b', ' SPOR KULUBU ', text)
+    text = re.sub(r'\bY[\.\s]*I[\.\s]*K[\.\s]*\b', ' YUZME IHTISAS KULUBU ', text)
     text = re.sub(r'[^A-Z0-9]+', ' ', text)
     return re.sub(r'\s+', ' ', text).strip()
 
@@ -458,7 +658,7 @@ def clubs_match(c1: Optional[str], c2: Optional[str]) -> bool:
         return True
     ignore_words = {
         'SPOR', 'KULUBU', 'DERNEGI', 'ILKOKULU', 'ORTAOKULU', 'KOLEJI',
-        'BELEDIYESI', 'BELEDIYE', 'GENCLIK', 'IL', 'MUDURLUGU', 'YUZME', 'IHTISAS'
+        'BELEDIYESI', 'BELEDIYE', 'GENCLIK', 'IL', 'MUDURLUGU', 'YUZME', 'IHTISAS', 'VE'
     }
     w1 = set(n1.split()) - ignore_words
     w2 = set(n2.split()) - ignore_words
@@ -467,79 +667,78 @@ def clubs_match(c1: Optional[str], c2: Optional[str]) -> bool:
 
 def masked_name_match_score(masked_name: str, candidate_name: str) -> Optional[float]:
     """
-    Maskeli adı tam ad yapısını koruyarak puanlar.
-    Önce birebir token kontrolü yapar; uymazsa 'Ön Ad + Soyadı Alt Dizi (Subsequence)'
-    mantığıyla harf düşmesi / OCR bozulmalarına toleranslı eşleştirir.
-    Sonuç 0-100 arasındadır; eşleşmeyen token veya farklı ad yapısı None döner.
+    Maskeli adı adayın adıyla puanlar.
+    Sonuç 0-100 arasında döner; uyumsuzluk durumunda None döner.
     """
-    norm_masked = normalize_masked_name(masked_name)
-    norm_cand = normalize_masked_name(candidate_name)
-    if not norm_masked or not norm_cand:
+    norm_m = normalize_masked_name(masked_name)
+    norm_c = normalize_masked_name(candidate_name)
+    if not norm_m or not norm_c:
         return None
-
-    if norm_masked == norm_cand:
+    if norm_m == norm_c:
         return 100.0
 
-    if "*" in norm_cand and "*" not in norm_masked:
-        # Maske adayın içindeyse simetrik olarak eşleştir
+    if "*" in norm_c and "*" not in norm_m:
         return masked_name_match_score(candidate_name, masked_name)
 
-    masked_tokens = norm_masked.split()
-    candidate_tokens = norm_cand.split()
+    m_tokens = norm_m.split()
+    c_tokens = norm_c.split()
+    if not m_tokens or not c_tokens:
+        return None
 
-    # 1. Aşama: Birebir token eşleşmesi (aynı token sayısında)
-    if len(masked_tokens) == len(candidate_tokens):
-        scores = []
+    # Hızlı ilk harf kontrolü
+    if m_tokens[0] and c_tokens[0] and m_tokens[0][0] != '*' and c_tokens[0][0] != '*':
+        if not any(ct.startswith(m_tokens[0][0]) for ct in c_tokens):
+            return None
+
+    # 1. Bütünsel Token Eşleştirmesi (Aynı token sayısında)
+    if len(m_tokens) == len(c_tokens):
         all_matched = True
-        for masked_token, candidate_token in zip(masked_tokens, candidate_tokens):
-            if masked_token == candidate_token:
-                scores.append(1.0)
-                continue
-            matched, visible_ratio = _masked_token_match(masked_token, candidate_token)
-            if not matched:
+        token_scores = []
+        for mt, ct in zip(m_tokens, c_tokens):
+            ok, sc = _token_matches(mt, ct)
+            if not ok:
                 all_matched = False
                 break
-            token_score = 0.75 + min(visible_ratio * 0.25, 0.25)
-            scores.append(token_score)
+            token_scores.append(sc)
         if all_matched:
-            return round(sum(scores) / len(scores) * 100, 1)
+            return round(sum(token_scores) / len(token_scores) * 100.0, 1)
 
-    # 2. Aşama: Ön Ad Çekirdeği + Soyadı Alt Dizi (Subsequence) Eşleşmesi
-    m_firsts, m_surname = split_masked_name(masked_name)
-    if not m_firsts or not candidate_tokens:
+    # 2. Ön Ad(lar) ve Soyad(lar) Parçalı Eşleştirmesi
+    m_firsts, m_surnames = split_athlete_tokens(m_tokens)
+    c_firsts, c_surnames = c_tokens[:-1] if len(c_tokens) > 1 else c_tokens, [c_tokens[-1]]
+
+    first_ok, first_score = _match_name_tokens(m_firsts, c_firsts)
+    if not first_ok:
+        ok, sc = _token_matches(m_firsts[0], c_firsts[0]) if (m_firsts and c_firsts) else (False, 0.0)
+        if ok:
+            first_ok, first_score = True, sc * 0.85
+        else:
+            return None
+
+    surname_ok, surname_score = _match_name_tokens(m_surnames, c_surnames)
+    if not surname_ok:
+        if len(c_tokens) >= 2:
+            alt_c_surnames = c_tokens[len(m_firsts):] if len(m_firsts) < len(c_tokens) else [c_tokens[-1]]
+            s_ok, s_sc = _match_name_tokens(m_surnames, alt_c_surnames)
+            if s_ok:
+                surname_ok, surname_score = True, s_sc * 0.90
+
+    if not surname_ok:
+        m_sur_str = "".join(m_surnames)
+        c_sur_str = "".join(c_surnames)
+        vis_sur = re.sub(r'[^A-Z0-9]', '', m_sur_str)
+        if not vis_sur:
+            surname_ok, surname_score = True, 0.75
+        elif is_subsequence(vis_sur, c_sur_str):
+            if vis_sur[0] == c_sur_str[0]:
+                ratio = len(vis_sur) / max(len(c_sur_str), 1)
+                surname_ok, surname_score = True, 0.75 + min(ratio * 0.20, 0.20)
+
+    if not surname_ok:
         return None
 
-    c_firsts = candidate_tokens[:-1] if len(candidate_tokens) > 1 else candidate_tokens
-    c_surname = candidate_tokens[-1] if len(candidate_tokens) > 1 else ""
-
-    # Ön adlar birebir eşit olmalıdır (TYF isimleri maskelemez; Kaan != Ahmet Kaan)
-    if m_firsts != c_firsts:
-        return None
-
-    # Soyadı kontrolü
-    if not m_surname:
-        return 70.0
-
-    clean_m = m_surname.strip()
-    # Maskeli soyad bir harfle başlıyorsa adayın soyadı da o harfle başlamalı
-    if clean_m and clean_m[0] != "*" and c_surname and clean_m[0] != c_surname[0]:
-        return None
-    # Maskeli soyad bir harfle bitiyorsa adayın soyadı da o harfle bitmeli
-    if clean_m and clean_m[-1] != "*" and c_surname and clean_m[-1] != c_surname[-1]:
-        return None
-
-    vis_surname = re.sub(r"[^A-Z0-9]", "", m_surname)
-    if not vis_surname:
-        # Soyad sadece yıldızlardan oluşuyor (örn: "**")
-        return 75.0
-
-    # Görünen harfler aday soyadı içinde aynı sırada var mı?
-    if is_subsequence(vis_surname, c_surname):
-        vis_ratio = len(vis_surname) / max(len(c_surname), 1)
-        score = 75.0 + min(vis_ratio * 20.0, 20.0)
-        return round(score, 1)
-
-    return None
+    total_score = (first_score * 0.52 + surname_score * 0.48) * 100.0
+    return round(total_score, 1)
 
 
 def resolve_masked_athlete(
@@ -549,54 +748,106 @@ def resolve_masked_athlete(
     club: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Maskeli start-list adını mevcut aday kayıtlarla eşleştirir.
-    Tek ve güçlü aday yoksa zorla seçim yapmaz; durum 'belirsiz' döner.
+    Maskeli start-list adını mevcut aday kayıtlarla yüksek doğruluk ve hızla eşleştirir.
+    Puanlama:
+    - Temel isim skoru: 0 - 70 arası (name_score * 0.70)
+    - Doğum yılı tam eşleşmesi: +15 puan (1 yaş fark toleransı: +5 puan)
+    - Kulüp eşleşmesi: +15 puan
+    Böylece toplam skor 0-100 arasında dengeli dağılır; adaylar arasındaki kulüp veya doğum yılı
+    farkı tavan kırpılmasına takılmadan belirleyici rol oynar.
     """
+    if not masked_name or not candidates:
+        return {"durum": "bulunamadi", "adaylar": []}
+
     target_year = None
     try:
-        target_year = int(str(birth_year).strip()) if birth_year else None
-        if target_year is not None and target_year < 100:
-            target_year += 2000 if target_year <= 35 else 1900
+        if birth_year:
+            target_year = int(str(birth_year).strip())
+            if target_year < 100:
+                target_year += 2000 if target_year <= 35 else 1900
     except (TypeError, ValueError):
         target_year = None
+
+    norm_masked = normalize_masked_name(masked_name)
+    wildcard_rx = build_masked_wildcard_regex(norm_masked)
+
     scored = []
     for candidate in candidates:
-        score = masked_name_match_score(masked_name, candidate.get("sporcu") or candidate.get("sporcu_adi"))
-        if score is None:
+        cand_name = candidate.get("sporcu") or candidate.get("sporcu_adi") or ""
+        if not cand_name:
             continue
+
+        cand_norm = normalize_masked_name(cand_name)
+        # Hızlı Wildcard Elemesi: Adayın normalize adı wildcard desenine uymuyorsa atla
+        if wildcard_rx and not wildcard_rx.search(cand_norm):
+            continue
+
+        name_score = masked_name_match_score(norm_masked, cand_name)
+        if name_score is None:
+            continue
+
         candidate_year = candidate.get("dogum_yili")
         try:
-            candidate_year = int(str(candidate_year).strip()) if candidate_year else None
-            if candidate_year is not None and candidate_year < 100:
-                candidate_year += 2000 if candidate_year <= 35 else 1900
+            if candidate_year:
+                candidate_year = int(str(candidate_year).strip())
+                if candidate_year < 100:
+                    candidate_year += 2000 if candidate_year <= 35 else 1900
         except (TypeError, ValueError):
             candidate_year = None
-        adjusted = score
+
+        # Doğum yılı kontrolü
+        year_bonus = 0.0
         if target_year and candidate_year:
             if target_year == candidate_year:
-                adjusted += 12
+                year_bonus = 15.0
             elif abs(target_year - candidate_year) == 1:
-                adjusted += 4
+                year_bonus = 5.0
             else:
+                # 2 veya daha fazla yaş farkı varsa elenir
                 continue
+        elif not target_year or not candidate_year:
+            year_bonus = 5.0
+
+        # Kulüp kontrolü
+        club_bonus = 0.0
         candidate_club = candidate.get("kulup") or candidate.get("kulup_adi")
         if club and candidate_club:
             if clubs_match(club, candidate_club):
-                adjusted += 15
-        scored.append((min(adjusted, 100.0), candidate))
+                club_bonus = 15.0
+        elif not club or not candidate_club:
+            club_bonus = 5.0
+
+        final_score = (name_score * 0.70) + year_bonus + club_bonus
+        final_score = min(round(final_score, 1), 100.0)
+
+        scored.append((final_score, candidate))
+
     scored.sort(key=lambda item: item[0], reverse=True)
     if not scored:
         return {"durum": "bulunamadi", "adaylar": []}
+
     top_score, top_candidate = scored[0]
     second_score = scored[1][0] if len(scored) > 1 else None
-    confident = top_score >= 78 and (second_score is None or top_score - second_score >= 8)
+
+    # Eşleşme kararı
+    if second_score is None:
+        confident = top_score >= 62.0
+    else:
+        gap = top_score - second_score
+        if top_score >= 82.0 and gap >= 5.0:
+            confident = True
+        elif top_score >= 70.0 and gap >= 8.0:
+            confident = True
+        else:
+            confident = False
+
     return {
         "durum": "eslesti" if confident else "belirsiz",
         "aday": top_candidate if confident else None,
-        "skor": round(top_score, 1),
+        "skor": top_score,
         "adaylar": [
-            {"skor": round(score, 1), **candidate}
-            for score, candidate in scored[:5]
+            {"skor": s, **cand}
+            for s, cand in scored[:5]
         ],
     }
 

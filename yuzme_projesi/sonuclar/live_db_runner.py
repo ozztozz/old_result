@@ -43,6 +43,7 @@ from google_cloud_runner.main import (
     download_file_with_meta,
     fetch_meet_pdf_urls,
     fetch_remote_headers_map,
+    normalize_masked_name,
     resolve_masked_athlete,
     parse_meet_pdf,
     parse_reglaman_pdf,
@@ -491,13 +492,33 @@ def _process_single_race_payload(payload: dict) -> dict:
         sporcu_exact_cache.setdefault(tr_fold(sp.sporcu_adi), []).append(sp)
     masked_candidate_cache = {}
 
-    def get_masked_candidates(birth_year, gender):
-        cache_key = (birth_year, (gender or '').strip().upper()[:1])
+    def get_masked_candidates(birth_year, gender, masked_name=None):
+        norm_masked = normalize_masked_name(masked_name) if masked_name else ""
+        cache_key = (birth_year, (gender or '').strip().upper()[:1], norm_masked)
         if cache_key in masked_candidate_cache:
             return masked_candidate_cache[cache_key]
         candidate_qs = Sporcu.objects.all().select_related('birincil_kulup')
         if birth_year:
             candidate_qs = candidate_qs.filter(dogum_yili=birth_year)
+
+        # SQL LIKE / Wildcard filtreleme: Tüm yaş grubunu değil yalnızca isim deseni uyanları çek
+        if norm_masked:
+            m_tokens = norm_masked.split()
+            if m_tokens:
+                from django.db.models import Q
+                q_like = Q()
+                first_tok = m_tokens[0].rstrip('.').replace('*', '')
+                if len(first_tok) >= 2:
+                    q_like &= Q(sporcu_adi__icontains=first_tok)
+                elif len(first_tok) == 1:
+                    q_like &= (Q(sporcu_adi__istartswith=first_tok) | Q(sporcu_adi__icontains=f" {first_tok}"))
+
+                last_tok = m_tokens[-1].rstrip('.').replace('*', '')
+                if last_tok:
+                    q_like &= Q(sporcu_adi__icontains=last_tok[0])
+
+                candidate_qs = candidate_qs.filter(q_like)
+
         candidates = []
         for candidate in candidate_qs:
             candidate_gender = (candidate.cinsiyet or '').strip().upper()
@@ -641,7 +662,7 @@ def _process_single_race_payload(payload: dict) -> dict:
         sporcu = None
         masked_resolution = resolve_masked_athlete(
             sporcu_maskeli,
-            get_masked_candidates(dogum_yili, cinsiyet),
+            get_masked_candidates(dogum_yili, cinsiyet, masked_name=sporcu_maskeli),
             birth_year=dogum_yili,
             club=kulup_adi,
         )
