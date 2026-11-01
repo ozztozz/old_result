@@ -1,16 +1,28 @@
 # -*- coding: utf-8 -*-
 from django.views.decorators.http import require_GET
 from django.db.models import Q
-from sonuclar.models import Sporcu, Kulup, Event
+from sonuclar.models import Sporcu, Kulup, Event, MobilUygulamaSurumu
 from .utils import api_response, api_error
 
 
 @require_GET
 def get_config(request):
     """Mobil uygulama yapılandırma ve sürüm kontrol uç noktası."""
+    latest_release = MobilUygulamaSurumu.objects.filter(aktif=True).order_by('-surum_kodu', '-olusturulma_tarihi').first()
+    
+    latest_version = latest_release.surum_adi if latest_release else '1.0.0'
+    build_number = latest_release.surum_kodu if latest_release else 1
+    force_update = latest_release.zorunlu_guncelleme if latest_release else False
+    notes = latest_release.degisiklik_notlari if latest_release else ''
+    download_url = request.build_absolute_uri('/mobil-uygulama/indir/')
+
     data = {
         'min_version': '1.0.0',
-        'latest_version': '1.0.0',
+        'latest_version': latest_version,
+        'build_number': build_number,
+        'force_update': force_update,
+        'release_notes': notes,
+        'download_url': download_url,
         'maintenance': False,
         'maintenance_message': '',
         'features': {

@@ -12,9 +12,12 @@ urlpatterns = [
     path('', include('sonuclar.urls')),
 ]
 
-# Development / WSGI altında statik dosyaların doğrudan sunulabilmesi için fallback:
+# Development / WSGI altında statik ve medya dosyalarının doğrudan sunulabilmesi için fallback:
 urlpatterns += [
     re_path(r'^static/(?P<path>.*)$', serve, {
         'document_root': settings.STATIC_ROOT if (hasattr(settings, 'STATIC_ROOT') and settings.STATIC_ROOT and settings.STATIC_ROOT.exists()) else settings.STATICFILES_DIRS[0]
+    }),
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
     }),
 ]

@@ -439,3 +439,34 @@ class CanliYarisDosya(models.Model):
 
     def __str__(self):
         return f"{self.dosya_adi} ({self.get_dosya_turu_display()} - {self.durum})"
+
+
+class MobilUygulamaSurumu(models.Model):
+    surum_adi = models.CharField(max_length=50, verbose_name="Sürüm Adı (örn: 1.0.0)")
+    surum_kodu = models.PositiveIntegerField(default=1, verbose_name="Sürüm Kodu (Build)")
+    dosya = models.FileField(upload_to="apk/", verbose_name="APK Dosyası")
+    dosya_boyutu_mb = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, verbose_name="Dosya Boyutu (MB)")
+    degisiklik_notlari = models.TextField(blank=True, verbose_name="Yenilikler / Değişiklik Notları")
+    zorunlu_guncelleme = models.BooleanField(default=False, verbose_name="Zorunlu Güncelleme")
+    aktif = models.BooleanField(default=True, verbose_name="İndirmeye Açık")
+    indirme_sayisi = models.PositiveIntegerField(default=0, verbose_name="Toplam İndirme Sayısı")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Yüklenme Tarihi")
+    guncellenme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Son Güncelleme")
+
+    class Meta:
+        db_table = 'mobil_uygulama_surumleri'
+        verbose_name = "Mobil Uygulama Sürümü"
+        verbose_name_plural = "Mobil Uygulama Sürümleri"
+        ordering = ['-surum_kodu', '-olusturulma_tarihi']
+
+    def __str__(self):
+        return f"Yüzme Sonuçları v{self.surum_adi} (Build {self.surum_kodu})"
+
+    def save(self, *args, **kwargs):
+        if self.dosya:
+            try:
+                size_mb = self.dosya.size / (1024 * 1024)
+                self.dosya_boyutu_mb = round(size_mb, 2)
+            except Exception:
+                pass
+        super().save(*args, **kwargs)

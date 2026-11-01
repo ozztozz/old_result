@@ -29,4 +29,11 @@ urlpatterns = [
     path('canli/<int:pk>/sil/', views.canli_yaris_sil, name='canli_yaris_sil'),
     path('api/canli-yarislar-durum/', views.api_canli_yarislar_durum, name='api_canli_yarislar_durum'),
     path('api/canli/<int:pk>/detay/', views.api_canli_yaris_detay, name='api_canli_yaris_detay'),
+    # Mobil Uygulama & APK Dağıtımı
+    path('mobil-uygulama/', views.mobil_uygulama, name='mobil_uygulama'),
+    path('mobil-uygulama/indir/', views.mobil_uygulama_indir, name='mobil_uygulama_indir'),
+    path('mobil-uygulama/indir/<int:surum_id>/', views.mobil_uygulama_indir, name='mobil_uygulama_indir_surum'),
+    path('mobil-uygulama/yukle/', views.mobil_uygulama_yukle, name='mobil_uygulama_yukle'),
+    path('mobil-uygulama/surum/<int:surum_id>/durum/', views.mobil_uygulama_durum_degistir, name='mobil_uygulama_durum_degistir'),
+    path('mobil-uygulama/surum/<int:surum_id>/sil/', views.mobil_uygulama_sil, name='mobil_uygulama_sil'),
 ]

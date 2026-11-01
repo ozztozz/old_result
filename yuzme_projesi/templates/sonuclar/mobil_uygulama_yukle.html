@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}APK Yönetimi & Yükleme - Yüzme Sonuçları{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-2 sm:py-6 space-y-6">
+
+    <!-- Başlık & Navigasyon -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                <i class="bi bi-shield-lock-fill"></i> Yönetici Paneli
+            </div>
+            <h1 class="text-2xl font-black swim-text-main mt-0.5">Mobil Uygulama APK Yükleme & Yönetim</h1>
+            <p class="text-xs swim-text-muted mt-0.5">Android APK dosyalarını yükleyin, sürüm notlarını belirleyin ve yayına alın.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'sonuclar:mobil_uygulama' %}" target="_blank" class="swim-btn-secondary swim-btn-sm inline-flex items-center gap-1.5">
+                <i class="bi bi-eye"></i> İndirme Sayfasını Gör
+            </a>
+            <a href="/admin/sonuclar/mobiluygulamasurumu/" class="swim-btn-primary swim-btn-sm inline-flex items-center gap-1.5">
+                <i class="bi bi-gear"></i> Django Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Bildirim Mesajları -->
+    {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+                <div class="p-4 rounded-xl text-sm font-medium flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border border-rose-200{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %}">
+                    <div class="flex items-center gap-2">
+                        <i class="bi {% if message.tags == 'error' %}bi-exclamation-triangle-fill text-rose-600{% else %}bi-check-circle-fill text-emerald-600{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- APK Yükleme Formu -->
+    <div class="swim-card p-6 sm:p-8 border border-slate-200 dark:border-slate-800">
+        <h2 class="text-base font-bold swim-text-main flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <i class="bi bi-cloud-arrow-up text-blue-600 text-lg"></i> Yeni Sürüm APK Yükle
+        </h2>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-5" id="apkUploadForm">
+            {% csrf_token %}
+            <input type="hidden" name="upload_apk" value="1">
+
+            <!-- Drag & Drop / Dosya Seçme Alanı -->
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider swim-text-muted mb-2">
+                    APK Dosyası <span class="text-rose-500">*</span>
+                </label>
+                <div 
+                    id="dropZone"
+                    class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all bg-slate-50/50 dark:bg-slate-850/50"
+                    onclick="document.getElementById('apkFileInput').click();"
+                >
+                    <input 
+                        type="file" 
+                        name="dosya" 
+                        id="apkFileInput" 
+                        accept=".apk,application/vnd.android.package-archive" 
+                        class="hidden" 
+                        required
+                    >
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl mb-3">
+                        <i class="bi bi-android2"></i>
+                    </div>
+                    <div id="dropZoneText" class="space-y-1">
+                        <p class="text-sm font-semibold swim-text-main">
+                            APK dosyasını buraya sürükleyin veya <span class="text-blue-600 dark:text-blue-400 underline">dosya seçin</span>
+                        </p>
+                        <p class="text-xs swim-text-subtle">
+                            Sadece <strong>.apk</strong> uzantılı Android paketleri kabul edilir (Maks: 200 MB)
+                        </p>
+                    </div>
+                    <div id="fileSelectedInfo" class="hidden mt-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-200 font-semibold inline-flex items-center gap-2">
+                        <i class="bi bi-file-earmark-check text-base"></i>
+                        <span id="selectedFileName">dosya.apk</span>
+                        <span id="selectedFileSize" class="text-blue-600 dark:text-blue-400 font-normal">(0 MB)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sürüm Bilgileri Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider swim-text-muted mb-1.5" for="id_surum_adi">
+                        Sürüm Adı (Version Name) <span class="text-rose-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="surum_adi" 
+                        id="id_surum_adi" 
+                        class="swim-input text-sm" 
+                        placeholder="Örn: 1.0.0 veya 1.1.2" 
+                        required
+                    >
+                    <p class="text-[11px] swim-text-subtle mt-1">Kullanıcıların göreceği versiyon numarası.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider swim-text-muted mb-1.5" for="id_surum_kodu">
+                        Sürüm Kodu (Build Number) <span class="text-rose-500">*</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        name="surum_kodu" 
+                        id="id_surum_kodu" 
+                        class="swim-input text-sm" 
+                        value="1" 
+                        min="1" 
+                        required
+                    >
+                    <p class="text-[11px] swim-text-subtle mt-1">Her yeni güncellemede bir artıran tamsayı kod (örn: 1, 2, 3).</p>
+                </div>
+            </div>
+
+            <!-- Değişiklik Notları -->
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider swim-text-muted mb-1.5" for="id_degisiklik_notlari">
+                    Sürüm Notları / Yenilikler (Release Notes)
+                </label>
+                <textarea 
+                    name="degisiklik_notlari" 
+                    id="id_degisiklik_notlari" 
+                    rows="3" 
+                    class="swim-input text-sm" 
+                    placeholder="Bu sürümde neler değişti?&#10;- Canlı yarış ekranı eklendi&#10;- Hata düzeltmeleri ve performans iyileştirmeleri yapıldı"
+                ></textarea>
+            </div>
+
+            <!-- Ayar Onay Kutuları -->
+            <div class="flex flex-wrap items-center gap-6 pt-2">
+                <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-semibold swim-text-main">
+                    <input type="checkbox" name="aktif" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300">
+                    <span>Hemen Yayına Al (Aktif İndirme)</span>
+                </label>
+                <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-semibold swim-text-main">
+                    <input type="checkbox" name="zorunlu_guncelleme" class="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300">
+                    <span>Eski Sürümler İçin Zorunlu Güncelleme Olarak İşaretle</span>
+                </label>
+            </div>
+
+            <!-- Gönder Butonu & İlerleme Çubuğu -->
+            <div class="pt-2">
+                <button type="submit" id="submitBtn" class="swim-btn-primary px-6 py-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold shadow-md">
+                    <i class="bi bi-cloud-arrow-up-fill"></i> APK Paketini Yükle ve Kaydet
+                </button>
+            </div>
+
+            <!-- Yükleme Göstergesi (Büyük dosyalar için) -->
+            <div id="uploadProgress" class="hidden space-y-2 pt-2">
+                <div class="flex items-center justify-between text-xs font-medium swim-text-muted">
+                    <span>APK Dosyası Yükleniyor... Lütfen bekleyin.</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Mevcut Yüklü Sürümler Tablosu -->
+    <div class="swim-card p-6 border border-slate-200 dark:border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-bold swim-text-main flex items-center gap-2">
+                <i class="bi bi-collection-fill text-slate-500"></i> Yüklü APK Sürümleri
+                <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                    {{ surumler|length }}
+                </span>
+            </h2>
+        </div>
+
+        {% if surumler %}
+            <div class="overflow-x-auto">
+                <table class="swim-table">
+                    <thead class="swim-thead">
+                        <tr>
+                            <th class="swim-th">Sürüm</th>
+                            <th class="swim-th">Build No</th>
+                            <th class="swim-th">Dosya Boyutu</th>
+                            <th class="swim-th">İndirilme</th>
+                            <th class="swim-th">Yüklenme Tarihi</th>
+                            <th class="swim-th">Durum</th>
+                            <th class="swim-th text-right">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="swim-tbody">
+                        {% for s in surumler %}
+                            <tr class="swim-tr">
+                                <td class="swim-td font-bold swim-text-main">
+                                    <div class="flex items-center gap-2">
+                                        <i class="bi bi-android2 text-emerald-500 text-base"></i>
+                                        <span>v{{ s.surum_adi }}</span>
+                                        {% if forloop.first and s.aktif %}
+                                            <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                                                GÜNCEL
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="swim-td text-xs font-mono">{{ s.surum_kodu }}</td>
+                                <td class="swim-td text-xs">{{ s.dosya_boyutu_mb }} MB</td>
+                                <td class="swim-td text-xs font-semibold">{{ s.indirme_sayisi|intcomma }}</td>
+                                <td class="swim-td text-xs">{{ s.olusturulma_tarihi|date:"d.m.Y H:i" }}</td>
+                                <td class="swim-td text-xs">
+                                    {% if s.aktif %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Aktif
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                            Pasif
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="swim-td text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <!-- Doğrudan İndir -->
+                                        <a href="{% url 'sonuclar:mobil_uygulama_indir_surum' s.id %}" class="swim-btn-outline-primary swim-btn-sm" title="APK İndir">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+
+                                        <!-- Aktif / Pasif Toggle -->
+                                        <form method="post" action="{% url 'sonuclar:mobil_uygulama_durum_degistir' s.id %}" class="inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="swim-btn-secondary swim-btn-sm" title="{% if s.aktif %}Pasife Al{% else %}Aktif Et{% endif %}">
+                                                <i class="bi {% if s.aktif %}bi-toggle-on text-emerald-500{% else %}bi-toggle-off text-slate-400{% endif %}"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Sil -->
+                                        <form method="post" action="{% url 'sonuclar:mobil_uygulama_sil' s.id %}" class="inline" onsubmit="return confirm('v{{ s.surum_adi }} sürümünü ve APK dosyasını kalıcı olarak silmek istediğinizden emin misiniz?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="swim-btn-sm p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-lg transition" title="Sil">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-8 text-slate-400">
+                <i class="bi bi-inbox text-3xl block mb-2"></i>
+                <p class="text-xs">Henüz yüklenmiş bir APK sürümü bulunmuyor. İlk APK'yı yukarıdaki formdan yükleyebilirsiniz.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Dosya Sürükle Bırak ve Form Kontrolü Script'i -->
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('apkFileInput');
+    const selectedInfo = document.getElementById('fileSelectedInfo');
+    const fileNameSpan = document.getElementById('selectedFileName');
+    const fileSizeSpan = document.getElementById('selectedFileSize');
+    const form = document.getElementById('apkUploadForm');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    const submitBtn = document.getElementById('submitBtn');
+
+    ['dragenter', 'dragover'].forEach(name => {
+        dropZone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('border-blue-500', 'bg-blue-50/50');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+        dropZone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50/50');
+        });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length) {
+            fileInput.files = files;
+            updateFileDisplay();
+        }
+    });
+
+    fileInput.addEventListener('change', updateFileDisplay);
+
+    function updateFileDisplay() {
+        if (fileInput.files.length) {
+            const file = fileInput.files[0];
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+            fileNameSpan.textContent = file.name;
+            fileSizeSpan.textContent = `(${sizeMb} MB)`;
+            selectedInfo.classList.remove('hidden');
+
+            // Eğer sürüm adı boşsa dosya adından sürüm tahmin etmeye çalış
+            const surumAdiInput = document.getElementById('id_surum_adi');
+            if (!surumAdiInput.value) {
+                const match = file.name.match(/v?(\d+\.\d+\.\d+)/i) || file.name.match(/v?(\d+\.\d+)/i);
+                if (match) {
+                    surumAdiInput.value = match[1];
+                }
+            }
+        } else {
+            selectedInfo.classList.add('hidden');
+        }
+    }
+
+    form.addEventListener('submit', function() {
+        if (fileInput.files.length) {
+            uploadProgress.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2"><i class="bi bi-arrow-repeat"></i></span> Yükleniyor... Lütfen Bekleyin';
+            
+            // Simüle edilmiş ilerleme (büyük dosyalar için görsel tatmin)
+            let p = 15;
+            const timer = setInterval(() => {
+                if (p < 90) {
+                    p += Math.floor(Math.random() * 15) + 5;
+                    if (p > 90) p = 90;
+                    progressBar.style.width = p + '%';
+                    progressPercent.textContent = p + '%';
+                } else {
+                    clearInterval(timer);
+                }
+            }, 300);
+        }
+    });
+</script>
+{% endblock %}
+

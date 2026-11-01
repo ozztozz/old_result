@@ -2186,3 +2186,138 @@ def musabaka_analiz(request, pk):
         return render(request, 'sonuclar/partials/musabaka_analiz_content.html', context)
 
     return render(request, 'sonuclar/musabaka_analiz.html', context)
+
+
+# ==============================================================================
+# Mobil Uygulama APK İndirme ve Yönetim Arayüzü View'ları
+# ==============================================================================
+from django.http import FileResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.db.models import F
+from .models import MobilUygulamaSurumu
+
+
+def mobil_uygulama(request):
+    """Mobil uygulama tanıtım ve doğrudan indirme sayfası."""
+    en_son_surum = MobilUygulamaSurumu.objects.filter(aktif=True).order_by('-surum_kodu', '-olusturulma_tarihi').first()
+    onceki_surumler = (
+        MobilUygulamaSurumu.objects.filter(aktif=True)
+        .exclude(id=en_son_surum.id if en_son_surum else None)
+        .order_by('-surum_kodu')[:5]
+    ) if en_son_surum else []
+
+    context = {
+        'en_son_surum': en_son_surum,
+        'onceki_surumler': onceki_surumler,
+    }
+    return render(request, 'sonuclar/mobil_uygulama.html', context)
+
+
+def mobil_uygulama_indir(request, surum_id=None):
+    """APK dosyasını güvenli ve sayaçlı biçimde indirir."""
+    if surum_id:
+        surum = get_object_or_404(MobilUygulamaSurumu, id=surum_id, aktif=True)
+    else:
+        surum = MobilUygulamaSurumu.objects.filter(aktif=True).order_by('-surum_kodu', '-olusturulma_tarihi').first()
+        if not surum:
+            messages.error(request, "Henüz yayınlanmış bir mobil uygulama APK sürümü bulunmuyor.")
+            return redirect('sonuclar:mobil_uygulama')
+
+    if not surum.dosya or not surum.dosya.storage.exists(surum.dosya.name):
+        messages.error(request, "İstenen APK dosyası sunucu diskinde bulunamadı.")
+        return redirect('sonuclar:mobil_uygulama')
+
+    # İndirme sayacını artır
+    MobilUygulamaSurumu.objects.filter(id=surum.id).update(indirme_sayisi=F('indirme_sayisi') + 1)
+
+    filename = f"yuzme_takip_v{surum.surum_adi}.apk"
+    return FileResponse(surum.dosya.open('rb'), as_attachment=True, filename=filename)
+
+
+def mobil_uygulama_yukle(request):
+    """
+    Mobil uygulama APK dosyası yükleme ve basit yönetim paneli.
+    Staff/Admin kontrolü içerir.
+    """
+    if not (request.user.is_authenticated and request.user.is_staff):
+        if request.method == 'POST' and 'login_action' in request.POST:
+            u_name = request.POST.get('username', '').strip()
+            u_pass = request.POST.get('password', '').strip()
+            user = authenticate(request, username=u_name, password=u_pass)
+            if user is not None and user.is_staff:
+                login(request, user)
+                messages.success(request, f"Hoş geldiniz, {user.username}!")
+                return redirect('sonuclar:mobil_uygulama_yukle')
+            else:
+                messages.error(request, "Geçersiz kullanıcı adı, şifre veya yetkisiz hesap.")
+        return render(request, 'sonuclar/mobil_uygulama_login.html')
+
+    if request.method == 'POST' and 'upload_apk' in request.POST:
+        surum_adi = request.POST.get('surum_adi', '').strip()
+        surum_kodu = request.POST.get('surum_kodu', '').strip()
+        degisiklik_notlari = request.POST.get('degisiklik_notlari', '').strip()
+        zorunlu = request.POST.get('zorunlu_guncelleme') == 'on'
+        aktif = request.POST.get('aktif', 'on') == 'on'
+        apk_file = request.FILES.get('dosya')
+
+        if not surum_adi:
+            messages.error(request, "Lütfen bir sürüm adı girin (örn: 1.0.0).")
+        elif not apk_file:
+            messages.error(request, "Lütfen bir APK dosyası seçin.")
+        elif not apk_file.name.lower().endswith('.apk'):
+            messages.error(request, "Yüklenen dosya geçerli bir .apk paketi olmalıdır.")
+        else:
+            try:
+                kodu_int = int(surum_kodu) if surum_kodu else 1
+            except ValueError:
+                kodu_int = 1
+
+            surum = MobilUygulamaSurumu(
+                surum_adi=surum_adi,
+                surum_kodu=kodu_int,
+                dosya=apk_file,
+                degisiklik_notlari=degisiklik_notlari,
+                zorunlu_guncelleme=zorunlu,
+                aktif=aktif
+            )
+            surum.save()
+            messages.success(request, f"v{surum.surum_adi} APK sürümü başarıyla yüklendi ve yayına alındı!")
+            return redirect('sonuclar:mobil_uygulama_yukle')
+
+    surumler = MobilUygulamaSurumu.objects.all().order_by('-surum_kodu', '-olusturulma_tarihi')
+    context = {
+        'surumler': surumler,
+    }
+    return render(request, 'sonuclar/mobil_uygulama_yukle.html', context)
+
+
+def mobil_uygulama_durum_degistir(request, surum_id):
+    """APK sürümünün aktif/pasif durumunu değiştirir."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return HttpResponseForbidden("Yetkisiz işlem.")
+    if request.method == 'POST':
+        surum = get_object_or_404(MobilUygulamaSurumu, id=surum_id)
+        surum.aktif = not surum.aktif
+        surum.save(update_fields=['aktif'])
+        durum_str = "Yayına alındı (Aktif)" if surum.aktif else "Yayından kaldırıldı (Pasif)"
+        messages.success(request, f"v{surum.surum_adi} durumu güncellendi: {durum_str}")
+    return redirect('sonuclar:mobil_uygulama_yukle')
+
+
+def mobil_uygulama_sil(request, surum_id):
+    """APK sürümünü ve diskteki dosyasını siler."""
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return HttpResponseForbidden("Yetkisiz işlem.")
+    if request.method == 'POST':
+        surum = get_object_or_404(MobilUygulamaSurumu, id=surum_id)
+        v_name = surum.surum_adi
+        if surum.dosya:
+            try:
+                surum.dosya.delete(save=False)
+            except Exception:
+                pass
+        surum.delete()
+        messages.success(request, f"v{v_name} sürümü ve APK dosyası başarıyla silindi.")
+    return redirect('sonuclar:mobil_uygulama_yukle')

@@ -102,6 +102,9 @@
                     <a class="swim-nav-link {% if 'eslestir' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}">
                         <i class="bi bi-person-check swim-text-primary"></i> Eşleştirme
                     </a>
+                    <a class="swim-nav-link {% if 'mobil-uygulama' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:mobil_uygulama' %}">
+                        <i class="bi bi-phone text-emerald-500"></i> Mobil Uygulama
+                    </a>
                 </nav>
 
                 <!-- Right Side: Search, Theme Selector & Mobile Toggle -->
@@ -174,6 +177,9 @@
                         </div>
                     </div>
 
+                    <a href="{% url 'sonuclar:mobil_uygulama' %}" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 transition" title="Android APK İndir">
+                        <i class="bi bi-android2 text-sm"></i> <span>APK İndir</span>
+                    </a>
                     <a href="/admin/" class="swim-nav-btn">
                         <i class="bi bi-person-lock"></i> Yönetim
                     </a>
@@ -264,6 +270,9 @@
                     </a>
                     <a class="swim-nav-link {% if 'eslestir' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:sporcu_eslestir_sayfasi' %}">
                         <i class="bi bi-person-check swim-text-primary"></i> Sporcu Eşleştirme
+                    </a>
+                    <a class="swim-nav-link {% if 'mobil-uygulama' in request.path %}swim-nav-link-active{% endif %}" href="{% url 'sonuclar:mobil_uygulama' %}">
+                        <i class="bi bi-android2 text-emerald-500"></i> Mobil Uygulama İndir (APK)
                     </a>
                     <a class="swim-nav-link" href="/admin/">
                         <i class="bi bi-person-lock"></i> Yönetim Portalı

@@ -24,6 +24,9 @@
                 <a href="{% url 'sonuclar:kulup_listesi' %}" class="swim-btn-secondary">
                     <i class="bi bi-shield"></i> Kulüpleri Keşfet
                 </a>
+                <a href="{% url 'sonuclar:mobil_uygulama' %}" class="swim-btn-secondary text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                    <i class="bi bi-android2 text-emerald-600"></i> Mobil Uygulama
+                </a>
             </div>
         </div>
 
@@ -46,6 +49,32 @@
                 </form>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Mobil Uygulama Tanıtım Banner'ı -->
+<div class="swim-card p-4 sm:p-5 mb-6 border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-blue-500/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center text-2xl shrink-0 shadow-sm">
+            <i class="bi bi-phone-vibrate"></i>
+        </div>
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-bold swim-text-main">Android Uygulamamız Yayında!</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 uppercase">YENİ</span>
+            </div>
+            <p class="text-xs swim-text-muted mt-0.5">
+                Canlı yarış takibi ve sporcu analizlerine mobilden anında erişmek için APK dosyasını indirin.
+            </p>
+        </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+        <a href="{% url 'sonuclar:mobil_uygulama_indir' %}" class="swim-btn-primary swim-btn-sm w-full sm:w-auto justify-center inline-flex items-center gap-1.5 shadow-sm">
+            <i class="bi bi-download"></i> APK İndir
+        </a>
+        <a href="{% url 'sonuclar:mobil_uygulama' %}" class="swim-btn-secondary swim-btn-sm w-full sm:w-auto justify-center inline-flex items-center gap-1">
+            <span>İncele</span> <i class="bi bi-chevron-right text-xs"></i>
+        </a>
     </div>
 </div>
 

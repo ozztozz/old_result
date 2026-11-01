@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Yönetici Girişi - APK Yükleme{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-10">
+    <div class="swim-card p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-xl">
+        <div class="text-center mb-6">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl mb-3 shadow-inner">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+            <h1 class="text-xl font-black swim-text-main">Yönetici Girişi</h1>
+            <p class="text-xs swim-text-muted mt-1">Mobil APK yükleme arayüzüne erişmek için lütfen yetkili hesabınızla giriş yapın.</p>
+        </div>
+
+        {% if messages %}
+            <div class="space-y-2 mb-4">
+                {% for message in messages %}
+                    <div class="p-3 rounded-xl text-xs font-semibold flex items-center gap-2 bg-rose-50 text-rose-800 border border-rose-200">
+                        <i class="bi bi-exclamation-circle-fill text-rose-600"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="login_action" value="1">
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider swim-text-muted mb-1.5" for="username">
+                    Kullanıcı Adı
+                </label>
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        name="username" 
+                        id="username" 
+                        class="swim-input text-sm pl-9" 
+                        placeholder="Admin kullanıcı adınız" 
+                        required 
+                        autofocus
+                    >
+                    <i class="bi bi-person absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider swim-text-muted mb-1.5" for="password">
+                    Şifre
+                </label>
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="password" 
+                        class="swim-input text-sm pl-9" 
+                        placeholder="••••••••" 
+                        required
+                    >
+                    <i class="bi bi-key absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="swim-btn-primary w-full py-2.5 text-sm font-bold justify-center flex items-center gap-2">
+                    <i class="bi bi-box-arrow-in-right"></i> Giriş Yap & Devam Et
+                </button>
+            </div>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+            <a href="{% url 'sonuclar:mobil_uygulama' %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                &larr; Mobil Uygulama İndirme Sayfasına Dön
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Mobil Uygulama İndir - Yüzme Sonuçları Android APK{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-2 sm:py-6 space-y-6">
+
+    <!-- Messages / Bildirimler -->
+    {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+                <div class="p-4 rounded-xl text-sm font-medium flex items-center justify-between {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border border-rose-200{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %}">
+                    <div class="flex items-center gap-2">
+                        <i class="bi {% if message.tags == 'error' %}bi-exclamation-triangle-fill text-rose-600{% else %}bi-check-circle-fill text-emerald-600{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Hero Card (Uygulama İndirme Kartı) -->
+    <div class="swim-card p-6 sm:p-10 relative overflow-hidden border border-slate-200 dark:border-slate-800">
+        <!-- Arka Plan Dekoratif Işık Efekti -->
+        <div class="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div class="lg:col-span-8 space-y-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                    <i class="bi bi-android2 text-sm"></i> Android APK Dağıtımı
+                    {% if en_son_surum %}
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>v{{ en_son_surum.surum_adi }}</span>
+                    {% endif %}
+                </div>
+
+                <h1 class="text-2xl sm:text-4xl font-extrabold swim-text-main tracking-tight leading-tight">
+                    Yüzme Sonuçları & Analiz<br>
+                    <span class="text-blue-600 dark:text-blue-400">Mobil Uygulaması</span> Cebinizde!
+                </h1>
+
+                <p class="swim-text-muted text-sm sm:text-base leading-relaxed max-w-2xl">
+                    Türkiye genelindeki tüm yarışları, anlık canlı sonuç akışlarını, kulüp ve sporcu analizlerini akıllı telefonunuzdan hızlı ve kesintisiz takip edin.
+                </p>
+
+                <!-- İndirme ve Yönetim Butonları -->
+                <div class="pt-2 flex flex-wrap items-center gap-3">
+                    {% if en_son_surum %}
+                        <a href="{% url 'sonuclar:mobil_uygulama_indir' %}" class="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl text-base font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                            <i class="bi bi-download text-xl"></i>
+                            <div class="text-left">
+                                <div class="text-xs uppercase tracking-wider text-emerald-100 font-medium">Doğrudan İndir</div>
+                                <div>Android APK (v{{ en_son_surum.surum_adi }})</div>
+                            </div>
+                        </a>
+                    {% else %}
+                        <button disabled class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-bold bg-slate-200 text-slate-500 cursor-not-allowed">
+                            <i class="bi bi-clock-history"></i> Yakında Yayınlanacak
+                        </button>
+                    {% endif %}
+
+                    {% if request.user.is_staff %}
+                        <a href="{% url 'sonuclar:mobil_uygulama_yukle' %}" class="inline-flex items-center gap-2 px-4 py-3.5 rounded-xl text-sm font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <i class="bi bi-cloud-arrow-up-fill text-blue-500"></i> Yeni APK Yükle
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Sürüm Bilgi Rozetleri -->
+                {% if en_son_surum %}
+                    <div class="flex flex-wrap items-center gap-4 pt-2 text-xs swim-text-subtle">
+                        <span class="flex items-center gap-1.5">
+                            <i class="bi bi-hdd-network"></i> Boyut: <strong>{{ en_son_surum.dosya_boyutu_mb }} MB</strong>
+                        </span>
+                        <span>&bull;</span>
+                        <span class="flex items-center gap-1.5">
+                            <i class="bi bi-calendar3"></i> Güncelleme: {{ en_son_surum.olusturulma_tarihi|date:"d M Y" }}
+                        </span>
+                        <span>&bull;</span>
+                        <span class="flex items-center gap-1.5">
+                            <i class="bi bi-download"></i> İndirilme: {{ en_son_surum.indirme_sayisi|intcomma }} kez
+                        </span>
+                        <span>&bull;</span>
+                        <span class="flex items-center gap-1.5">
+                            <i class="bi bi-shield-check text-emerald-600"></i> Güvenli & Virüssüz
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Sağ Taraf: QR Kod & Telefon Mockup -->
+            <div class="lg:col-span-4 flex flex-col items-center justify-center text-center">
+                <div class="swim-panel p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-md space-y-3">
+                    <div class="text-xs font-bold swim-text-main uppercase tracking-wider flex items-center justify-center gap-1.5">
+                        <i class="bi bi-qr-code-scan text-blue-500"></i> Telefonla Tara & İndir
+                    </div>
+                    
+                    <!-- Dinamik QR Kod Görseli (Google Charts / QuickChart API Fallback) -->
+                    <div class="w-44 h-44 mx-auto bg-slate-50 dark:bg-slate-800 rounded-xl p-2.5 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                        <img 
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ request.scheme }}://{{ request.get_host }}{% url 'sonuclar:mobil_uygulama_indir' %}&color=1e293b" 
+                            alt="Mobil Uygulama APK İndir QR Kod" 
+                            class="w-full h-full object-contain rounded"
+                            loading="lazy"
+                        >
+                    </div>
+
+                    <p class="text-[11px] swim-text-subtle">
+                        Kameranızı QR koda tutarak APK'yı doğrudan telefonunuza indirebilirsiniz.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sürüm Notları (En Son Sürüm Varsa) -->
+    {% if en_son_surum and en_son_surum.degisiklik_notlari %}
+        <div class="swim-card p-6 border border-slate-200 dark:border-slate-800">
+            <h2 class="text-base font-bold swim-text-main flex items-center gap-2 mb-3">
+                <i class="bi bi-stars text-amber-500"></i> Sürüm Yenilikleri (v{{ en_son_surum.surum_adi }})
+            </h2>
+            <div class="text-sm swim-text-muted leading-relaxed whitespace-pre-line bg-slate-50 dark:bg-slate-850 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800">
+                {{ en_son_surum.degisiklik_notlari }}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Nasıl Yüklenir Rehberi (3 Adım) -->
+    <div class="swim-card p-6 sm:p-8 border border-slate-200 dark:border-slate-800">
+        <h2 class="text-lg font-bold swim-text-main flex items-center gap-2 mb-6">
+            <i class="bi bi-question-circle-fill text-blue-500"></i> Android Cihaza APK Nasıl Yüklenir?
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Adım 1 -->
+            <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 flex items-center justify-center font-bold text-base mb-3">
+                        1
+                    </div>
+                    <h3 class="font-bold text-sm swim-text-main mb-1.5">APK Dosyasını İndirin</h3>
+                    <p class="text-xs swim-text-muted leading-relaxed">
+                        Yukarıdaki <strong>"Android APK İndir"</strong> butonuna dokunun veya QR kodu tarayın. İndirme birkaç saniyede tamamlanır.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 text-[11px] swim-text-subtle">
+                    <i class="bi bi-info-circle me-1"></i> Tarayıcınız indirme onayı isteyebilir.
+                </div>
+            </div>
+
+            <!-- Adım 2 -->
+            <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 flex items-center justify-center font-bold text-base mb-3">
+                        2
+                    </div>
+                    <h3 class="font-bold text-sm swim-text-main mb-1.5">Bilinmeyen Kaynaklara İzin Verin</h3>
+                    <p class="text-xs swim-text-muted leading-relaxed">
+                        Google Play dışından yükleme yapıldığı için Android sistemi izin isteyebilir. Çıkan uyarıda <strong>"Ayarlar &rarr; Bu kaynaktan izin ver"</strong> seçeneğini açın.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 text-[11px] text-amber-600 dark:text-amber-400">
+                    <i class="bi bi-shield-lock me-1"></i> Dosyamız güvenli ve imzalıdır.
+                </div>
+            </div>
+
+            <!-- Adım 3 -->
+            <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 flex items-center justify-center font-bold text-base mb-3">
+                        3
+                    </div>
+                    <h3 class="font-bold text-sm swim-text-main mb-1.5">Yükleyin ve Başlatın</h3>
+                    <p class="text-xs swim-text-muted leading-relaxed">
+                        İndirilen dosyaya dokunup <strong>"Yükle"</strong> butonuna basın. Kurulum tamamlandıktan sonra uygulamayı hemen açıp kullanabilirsiniz!
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 text-[11px] text-emerald-600 dark:text-emerald-400">
+                    <i class="bi bi-check2-circle me-1"></i> Artık hazırsınız!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Uygulama Yetenekleri Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="swim-card p-5 border border-slate-200 dark:border-slate-800 text-center">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300 flex items-center justify-center text-xl mb-3">
+                <i class="bi bi-broadcast"></i>
+            </div>
+            <h3 class="font-bold text-sm swim-text-main mb-1">Canlı Yarış Takibi</h3>
+            <p class="text-xs swim-text-muted">Havuzdaki müsabakaları anlık seri ve start listeleriyle takip edin.</p>
+        </div>
+
+        <div class="swim-card p-5 border border-slate-200 dark:border-slate-800 text-center">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 flex items-center justify-center text-xl mb-3">
+                <i class="bi bi-stopwatch"></i>
+            </div>
+            <h3 class="font-bold text-sm swim-text-main mb-1">En İyi Dereceler (PB)</h3>
+            <p class="text-xs swim-text-muted">Sporcuların kariyer derecelerini, baraj ve FINA puanlarını inceleyin.</p>
+        </div>
+
+        <div class="swim-card p-5 border border-slate-200 dark:border-slate-800 text-center">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300 flex items-center justify-center text-xl mb-3">
+                <i class="bi bi-search"></i>
+            </div>
+            <h3 class="font-bold text-sm swim-text-main mb-1">Hızlı Sporcu Arama</h3>
+            <p class="text-xs swim-text-muted">Binlerce lisanslı yüzücü ve kulübe saniyeler içinde ulaşın.</p>
+        </div>
+
+        <div class="swim-card p-5 border border-slate-200 dark:border-slate-800 text-center">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300 flex items-center justify-center text-xl mb-3">
+                <i class="bi bi-star"></i>
+            </div>
+            <h3 class="font-bold text-sm swim-text-main mb-1">Favori Listesi</h3>
+            <p class="text-xs swim-text-muted">Takip ettiğiniz sporcuları favorilere ekleyip hızlıca görün.</p>
+        </div>
+    </div>
+
+    <!-- Önceki Sürümler (Arşiv) -->
+    {% if onceki_surumler %}
+        <div class="swim-card p-6 border border-slate-200 dark:border-slate-800">
+            <h2 class="text-sm font-bold swim-text-main flex items-center gap-2 mb-4">
+                <i class="bi bi-archive text-slate-500"></i> Önceki Sürümler Arşivi
+            </h2>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                {% for surum in onceki_surumler %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-sm swim-text-main">v{{ surum.surum_adi }}</span>
+                            <span class="text-xs swim-text-subtle">Build {{ surum.surum_kodu }}</span>
+                            <span class="text-xs swim-text-subtle hidden sm:inline">&bull; {{ surum.olusturulma_tarihi|date:"d M Y" }}</span>
+                            <span class="text-xs swim-text-subtle">&bull; {{ surum.dosya_boyutu_mb }} MB</span>
+                        </div>
+                        <a href="{% url 'sonuclar:mobil_uygulama_indir_surum' surum.id %}" class="swim-btn-outline-primary swim-btn-sm inline-flex items-center gap-1.5">
+                            <i class="bi bi-download"></i> İndir
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+

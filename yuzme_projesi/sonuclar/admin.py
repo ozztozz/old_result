@@ -63,3 +63,13 @@ class YarisSonucuAdmin(admin.ModelAdmin):
     ordering = ('-event__yaris_tarihi_baslangic', '-id')
     list_select_related = ('sporcu', 'kulup', 'event')
     readonly_fields = ('sporcu', 'kulup', 'event', 'sporcu_kulup_tarihce', 'derece_saniye', 'ham_satir')
+
+
+from .models import MobilUygulamaSurumu
+
+@admin.register(MobilUygulamaSurumu)
+class MobilUygulamaSurumuAdmin(admin.ModelAdmin):
+    list_display = ('surum_adi', 'surum_kodu', 'dosya_boyutu_mb', 'aktif', 'zorunlu_guncelleme', 'indirme_sayisi', 'olusturulma_tarihi')
+    list_filter = ('aktif', 'zorunlu_guncelleme')
+    search_fields = ('surum_adi', 'degisiklik_notlari')
+    readonly_fields = ('dosya_boyutu_mb', 'indirme_sayisi', 'olusturulma_tarihi', 'guncellenme_tarihi')
