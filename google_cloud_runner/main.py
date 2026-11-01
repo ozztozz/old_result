@@ -1175,29 +1175,46 @@ def safe_json_loads(raw: str) -> Any:
         raw = re.sub(r"\s*```$", "", raw)
     raw = raw.strip()
 
+    # 1. Doğrudan tam ayrıştırma dene
     try:
         return json.loads(raw)
     except Exception:
         pass
 
-    decoder = json.JSONDecoder()
-    for start_char in ('{', '['):
-        idx = raw.find(start_char)
-        if idx != -1:
-            try:
-                obj, _ = decoder.raw_decode(raw[idx:])
-                return obj
-            except Exception:
-                pass
+    # 2. raw_decode ile ilk geçerli JSON bloğunu al (Extra data hatasını önler)
+    b_brace = raw.find('{')
+    b_bracket = raw.find('[')
+    candidates = []
+    if b_brace != -1 and b_bracket != -1:
+        candidates = [min(b_brace, b_bracket), max(b_brace, b_bracket)]
+    elif b_brace != -1:
+        candidates = [b_brace]
+    elif b_bracket != -1:
+        candidates = [b_bracket]
 
-    m = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', raw)
-    if m:
+    decoder = json.JSONDecoder()
+    for start_idx in candidates:
         try:
-            return json.loads(m.group(0))
+            obj, _ = decoder.raw_decode(raw[start_idx:])
+            return obj
         except Exception:
             pass
 
-    return json.loads(raw)
+    # 3. Son kapanış karakterine kadar olan kısmı kesip dene
+    last_brace = raw.rfind('}')
+    last_bracket = raw.rfind(']')
+    last_pos = max(last_brace, last_bracket)
+    if last_pos != -1:
+        for start_idx in candidates:
+            if start_idx < last_pos:
+                try:
+                    return json.loads(raw[start_idx:last_pos+1])
+                except Exception:
+                    pass
+
+    # 4. Boş güvenli varsayılan döndür (çökme olmaması için)
+    print(f"  [!] JSON tam ayrıştırılamadı, boş kayıtla devam ediliyor. Ham çıktı: {raw[:120]}")
+    return {"kayitlar": []}
 
 
 def parse_meet_pdf(
