@@ -163,7 +163,7 @@ def evaluate_single_meet(meet: Dict[str, Any], today: Optional[date] = None) -> 
 
         # C) Yarış bitiş tarihi geçti (Geçmiş yarış)
         else:
-            if durum != "TAMAMLANDI" or toplam_sonuc == 0 or islenen_sonuc < toplam_sonuc:
+            if durum != "TAMAMLANDI" or toplam_sonuc == 0 or islenen_sonuc < toplam_sonuc or (toplam_start > 0 and islenen_sonuc < toplam_start):
                 return True, f"[{title}] Yarış tarihi bitti ({end_iso}) fakat eksik sonuç listeleri var (Sonuç: {islenen_sonuc}/{toplam_sonuc}, Start: {toplam_start}). Tamamlanması için parser çalışmalı."
             return False, f"[{title}] Yarış geçmiş tarihte bitti ({end_iso})."
 

@@ -76,11 +76,12 @@ def is_meet_truly_completed(
     Bir canlı yarışın gerçekten 'TAMAMLANDI' olup olmadığını sıkı kurallarla denetler:
     1. Bekleyen (kalan_dosya > 0) veya hata veren dosya varsa -> False
     2. Hiç start ve sonuç listesi yoksa -> False
-    3. Start listeleri henüz bitmemişse (islenen_start < toplam_start) -> False
+    3. Start listeleri henüz tamamen işlenmemişse (islenen_start < toplam_start) -> False
     4. Henüz hiç sonuç listesi yayınlanmamışsa (toplam_sonuc == 0) veya işlenmemiş sonuç varsa -> False
-    5. Sonuç listesi sayısı, start listesi sayısından azsa (örn: 30 yarışın 5'i yüzüldü):
-       - Müsabaka bitiş tarihi henüz geçmemişse (bugün <= bitis_tarihi) -> False (devam ediyor)
-       - Veritabanında hâlâ 'Bekleniyor' durumunda sporcu varsa ve müsabaka bitiş tarihi geçmemişse -> False
+    5. Start listesi varsa (toplam_start > 0) ve işlenen sonuç listesi start listesinden azsa -> False
+       (Tarih geçmiş olsa dahi start listesi verilen tüm yarışların sonuçları çıkana kadar TAMAMLANDI yapılmaz)
+    6. Start listesi hiç yoksa (toplam_start == 0):
+       Yarış takvim bitiş tarihi geçene kadar TAMAMLANDI yapılmaz.
     """
     if kalan_dosya > 0 or hatalar:
         return False
@@ -90,33 +91,31 @@ def is_meet_truly_completed(
     t_sonuc = int(yaris.toplam_sonuc_listesi or 0)
     i_sonuc = int(yaris.islenen_sonuc_listesi or 0)
 
+    # Hiç dosya yoksa tamamlandı sayılamaz
     if t_start == 0 and t_sonuc == 0:
         return False
 
+    # Start listeleri henüz tamamen işlenmemişse devam ediyor
     if t_start > 0 and i_start < t_start:
         return False
 
+    # Henüz hiç sonuç listesi yoksa veya mevcut sonuçlar tamamen işlenmemişse devam ediyor
     if t_sonuc == 0 or i_sonuc < t_sonuc:
         return False
 
-    today_str = datetime.now(TR_TIMEZONE).date().isoformat()
-    end_iso = None
-    if yaris.event_id and yaris.event:
-        end_iso = yaris.event.yaris_tarihi_bitis or yaris.event.yaris_tarihi_baslangic
-
-    # Eğer sonuç listesi sayısı start listesi sayısına ulaşmadıysa (yarışlar devam ediyor demektir)
+    # ASIL KURAL: Start listesi sayısı kadar sonuç listesi işlenmediyse yarış kesinlikle TAMAMLANDI OLAMAZ!
+    # Yüzme yarışları birden fazla gün sürer ve sonuçlar günlere yayılarak yüklenir.
     if t_start > 0 and i_sonuc < t_start:
-        # Bitiş tarihi bilinmiyorsa veya bugün henüz bitiş tarihini geçmediyse kesinlikle TAMAMLANDI yapma!
-        if not end_iso or today_str <= end_iso:
-            return False
+        return False
 
-    # Müsabaka günü devam ediyorsa ve veritabanında hâlâ 'Bekleniyor' kaydı varsa TAMAMLANDI yapma
-    if yaris.event_id and (not end_iso or today_str <= end_iso):
-        has_waiting_swimmers = YarisSonucu.objects.filter(
-            event_id=yaris.event_id,
-            derece="Bekleniyor"
-        ).exists()
-        if has_waiting_swimmers and i_sonuc < t_start:
+    # Start listesi olmayan (t_start == 0) yarışlarda, ilk sonuç dosyasında erken kapanmayı önlemek için
+    # en azından takvim bitiş tarihi kontrol edilir:
+    if t_start == 0:
+        today_str = datetime.now(TR_TIMEZONE).date().isoformat()
+        end_iso = None
+        if yaris.event_id and yaris.event:
+            end_iso = yaris.event.yaris_tarihi_bitis or yaris.event.yaris_tarihi_baslangic
+        if not end_iso or today_str <= end_iso:
             return False
 
     return True
