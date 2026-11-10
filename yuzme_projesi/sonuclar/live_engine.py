@@ -558,10 +558,9 @@ def parse_meet_pdf(
         "sonuclar": [],
     }
 
-    def process_page(args):
-        p_idx, p_bytes = args
-        p_num = p_idx + 1
-        is_first = (p_idx == 0)
+    for page_idx, p_bytes in pages_bytes:
+        p_num = page_idx + 1
+        is_first = (page_idx == 0)
 
         prompt = f"""Bu bir TYF Splash Meet Manager {'SONUÇ' if doc_type == 'sonuc_listesi' else 'START'} LİSTESİ PDF sayfasıdır.
 Sayfa {p_num}/{total_pages}.
@@ -594,25 +593,60 @@ Format:
 SADECE geçerli JSON nesnesi döndür."""
 
         part = types.Part.from_bytes(data=p_bytes, mime_type="application/pdf")
-        res = generate_content_with_fallback(
-            primary_client=client,
-            model=model,
-            contents=[part, prompt],
-            config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
-        )
-        return safe_json_loads(res.text or "")
 
-    with ThreadPoolExecutor(max_workers=min(4, total_pages)) as executor:
-        for p_data in executor.map(process_page, pages_bytes):
-            if isinstance(p_data, dict):
-                for k in ("musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"):
-                    if p_data.get(k) and not header_data[k]:
-                        header_data[k] = p_data[k]
-                records = p_data.get("sonuclar") or p_data.get("kayitlar") or []
-                for r in records:
-                    if not r.get("ad_soyad") and r.get("sporcu"):
-                        r["ad_soyad"] = r["sporcu"]
-                    header_data["sonuclar"].append(r)
+        page_data = None
+        max_page_retries = 5
+        last_page_exc = None
+
+        for attempt in range(max_page_retries):
+            try:
+                res = generate_content_with_fallback(
+                    primary_client=client,
+                    model=model,
+                    contents=[part, prompt],
+                    config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
+                )
+                raw_text = (res.text or "").strip()
+                if not raw_text:
+                    raise ValueError("Yapay zekadan boş yanıt döndü.")
+
+                parsed_json = safe_json_loads(raw_text)
+                if not isinstance(parsed_json, dict) or not parsed_json:
+                    raise ValueError(f"Geçerli bir JSON nesnesi elde edilemedi (Ham Yanıt: {raw_text[:120]}).")
+
+                # Başarılı sayfa cevabı teyit edildi
+                page_data = parsed_json
+                if attempt > 0:
+                    logger.info(f"    [+] Sayfa {p_num}/{total_pages} cevabı {attempt + 1}. denemede başarıyla alındı.")
+                break
+
+            except Exception as exc:
+                last_page_exc = exc
+                if attempt < max_page_retries - 1:
+                    wait_sec = (attempt + 1) * 3
+                    logger.warning(
+                        f"    [!] Sayfa {p_num}/{total_pages} ayrıştırılırken hata oluştu ({exc}). "
+                        f"Sayfa yanıtı bekleniyor, {wait_sec} sn sonra tekrar denenecek ({attempt + 1}/{max_page_retries})..."
+                    )
+                    time.sleep(wait_sec)
+
+        # Eğer o sayfanın cevabı tüm denemelere rağmen alınamadıysa KESİNLİKLE ilerleme!
+        if page_data is None:
+            raise RuntimeError(
+                f"PDF'in {p_num}/{total_pages}. sayfası için geçerli yanıt alınamadı ({last_page_exc}). "
+                f"Eksik veri oluşmaması için aktarım durduruldu."
+            )
+
+        # Sayfa verilerini ana başlığa ve sonuç listesine ekle
+        for k in ("musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"):
+            if page_data.get(k) and not header_data[k]:
+                header_data[k] = page_data[k]
+
+        records = page_data.get("sonuclar") or page_data.get("kayitlar") or []
+        for r in records:
+            if not r.get("ad_soyad") and r.get("sporcu"):
+                r["ad_soyad"] = r["sporcu"]
+            header_data["sonuclar"].append(r)
 
     return header_data
 

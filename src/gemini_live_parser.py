@@ -428,39 +428,41 @@ SADECE JSON döndür. Başka hiçbir açıklama yazma.
             single_page_doc.close()
         doc.close()
 
-        def _process_page(args: Tuple[int, bytes]) -> Tuple[int, Dict[str, Any]]:
-            page_idx, p_bytes = args
+        for p in pages_bytes:
+            page_idx, p_bytes = p
             page_num = page_idx + 1
             is_first = (page_idx == 0)
+
             prompt = (
                 self._get_start_list_page_prompt(page_num, total_pages, is_first)
                 if doc_type == "start_listesi"
                 else self._get_result_list_page_prompt(page_num, total_pages, is_first, startlist_swimmers=startlist_swimmers)
             )
-            t_start = time.time()
-            try:
-                page_data = self._call_gemini_api(p_bytes, prompt)
-                rec_cnt = len(page_data.get("kayitlar", []))
-                print(f"  [✓] Sayfa {page_num}/{total_pages} tamamlandı ({time.time()-t_start:.2f}s, {rec_cnt} kayıt)", flush=True)
-                return page_idx, page_data
-            except Exception as e:
-                print(f"  [!] Sayfa {page_num} hatası ({time.time()-t_start:.2f}s): {e}", file=sys.stderr, flush=True)
-                return page_idx, {}
 
-        # Sayfaları paralel olarak Gemini API'ye gönder
-        actual_workers = min(max_workers, total_pages)
-        if actual_workers > 1:
-            with ThreadPoolExecutor(max_workers=actual_workers) as executor:
-                page_results = list(executor.map(_process_page, pages_bytes))
-        else:
-            page_results = [_process_page(p) for p in pages_bytes]
+            page_data = None
+            max_page_retries = 5
+            last_err = None
 
-        # Sayfa sırasını korumak için sırala
-        page_results.sort(key=lambda x: x[0])
+            for p_att in range(max_page_retries):
+                t_start = time.time()
+                try:
+                    p_res = self._call_gemini_api(p_bytes, prompt)
+                    if not p_res or not isinstance(p_res, dict):
+                        raise ValueError("Geçerli bir JSON nesnesi elde edilemedi.")
+                    page_data = p_res
+                    rec_cnt = len(page_data.get("kayitlar", []))
+                    print(f"  [✓] Sayfa {page_num}/{total_pages} tamamlandı ({time.time()-t_start:.2f}s, {rec_cnt} kayıt)", flush=True)
+                    break
+                except Exception as e:
+                    last_err = e
+                    if p_att < max_page_retries - 1:
+                        wait_sec = (p_att + 1) * 3
+                        print(f"  [!] Sayfa {page_num} hatası ({e}). Yanıt bekleniyor, {wait_sec}s sonra tekrar denenecek ({p_att+1}/{max_page_retries})...", file=sys.stderr, flush=True)
+                        time.sleep(wait_sec)
 
-        for page_idx, page_data in page_results:
-            if not page_data:
-                continue
+            if page_data is None:
+                raise RuntimeError(f"Sayfa {page_num}/{total_pages} için geçerli yanıt alınamadı ({last_err}). Eksik sayfa ile ilerlenemez.")
+
             if page_idx == 0:
                 for k in ["musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"]:
                     if page_data.get(k):
