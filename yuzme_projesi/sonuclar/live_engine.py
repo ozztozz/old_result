@@ -211,7 +211,21 @@ def parse_tr_date_range(d_str: str) -> Tuple[str, str]:
 
 def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, str, str, str, List[str]]:
     """TYF Canlı sonuç web sayfasından başlık, şehir, tarih ve PDF URL'lerini çeker."""
-    html = download_bytes(event_url).decode("utf-8", errors="ignore")
+    if not event_url:
+        return "", "", "", "", "", []
+
+    target_url = event_url.strip()
+    if not target_url.endswith("/") and not os.path.splitext(target_url.split("?")[0])[1]:
+        target_url += "/"
+
+    resp = get_http_session().get(target_url, timeout=30)
+    resp.raise_for_status()
+
+    base_url = resp.url if resp.url else target_url
+    if not base_url.endswith("/") and not os.path.splitext(base_url.split("?")[0])[1]:
+        base_url += "/"
+
+    html = resp.text
     soup = BeautifulSoup(html, "html.parser")
     meet_title = soup.title.string.replace("- SPLASH Meet Manager 11", "").strip() if soup.title else ""
 
@@ -231,7 +245,7 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
         start_date, end_date = parse_tr_date_range(date_str)
 
     if not city:
-        m_u = re.search(r'canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/', event_url)
+        m_u = re.search(r'canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/', base_url)
         if m_u:
             c_raw = m_u.group(1).lower()
             city = c_raw.replace('i', 'İ').replace('ı', 'I').upper()
@@ -254,8 +268,8 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
         else:  # all / hepsi
             matches = ("startlist" in h_lower or "start_list" in h_lower or "resultlist" in h_lower or "result_list" in h_lower or "sonuc" in h_lower or "start" in h_lower)
 
-        if matches and h_lower.endswith(".pdf"):
-            full_url = urljoin(event_url, href)
+        if matches:
+            full_url = urljoin(base_url, href)
             if full_url not in seen:
                 seen.add(full_url)
                 pdf_urls.append(full_url)
@@ -1210,6 +1224,12 @@ def process_single_meet_db(
             f"Toplam PDF: {len(all_pdf_urls)} (Start: {len(start_urls)}, Sonuç: {len(result_urls)}) | "
             f"İşlenecek: {len(pending_queue)} (Atlanılan: {stats['atlanilan']})"
         )
+
+        if not all_pdf_urls:
+            logger.warning(
+                f"[!] #{yaris.id}: '{event_url}' sayfasında hiçbir PDF linki bulunamadı! "
+                f"Lütfen linkin doğru TYF canlı yarış adresi olduğunu kontrol edin."
+            )
 
         if not pending_queue:
             stats["kalan_dosya"] = 0
