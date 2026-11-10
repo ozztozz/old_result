@@ -268,6 +268,7 @@ Sayfa {page_num} / {total_pages}.
 GÖREVLER:
 {header_instruction}
 2. Sayfada yer alan her bir seriyi ("Seri 1 of 31", "Seri 2 of 31" vb.) ve o serideki tüm sporcuları eksiksiz çıkar.
+   ÖNEMLİ: Sayfa geçişlerinde seri tablosu bölünmüş olabilir (örneğin bir serinin 1. kulvarı önceki sayfada, 2-8 kulvarları sonraki sayfada olabilir). Seri başlığı önceki sayfada kalmış olsa bile sonraki sayfadaki devam eden kulvarları aynı seriye dahil et.
    Her sporcu için:
    - seri: Seri bilgisi (örn: "Seri 1 of 31" veya seri numarası tam sayı: 1)
    - kulvar: Kulvar numarası (1-8 arası tam sayı)
@@ -400,8 +401,14 @@ SADECE JSON döndür. Başka hiçbir açıklama yazma.
             self._post_process_records(data)
             return data
 
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        total_pages = len(doc)
+        total_pages = 1
+        if fitz:
+            try:
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                total_pages = len(doc)
+                doc.close()
+            except Exception:
+                pass
 
         header_data = {
             "tur": doc_type,
@@ -417,59 +424,44 @@ SADECE JSON döndür. Başka hiçbir açıklama yazma.
             "kayitlar": []
         }
 
-        print(f"[*] Toplam {total_pages} sayfa ayrıştırılıyor (Tür: {doc_type}, Model: {self.model}, Paralel: {min(max_workers, total_pages)} thread)...", flush=True)
+        print(f"[*] Belge ayrıştırılıyor (Sayfa: {total_pages}, Tür: {doc_type}, Model: {self.model})...", flush=True)
 
-        # Her sayfanın bağımsız PDF baytlarını hazırla
-        pages_bytes = []
-        for page_idx in range(total_pages):
-            single_page_doc = fitz.open()
-            single_page_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
-            pages_bytes.append((page_idx, single_page_doc.tobytes()))
-            single_page_doc.close()
-        doc.close()
+        prompt = (
+            self._get_start_list_page_prompt(1, total_pages, True)
+            if doc_type == "start_listesi"
+            else self._get_result_list_page_prompt(1, total_pages, True, startlist_swimmers=startlist_swimmers)
+        )
 
-        for p in pages_bytes:
-            page_idx, p_bytes = p
-            page_num = page_idx + 1
-            is_first = (page_idx == 0)
+        page_data = None
+        max_page_retries = 5
+        last_err = None
 
-            prompt = (
-                self._get_start_list_page_prompt(page_num, total_pages, is_first)
-                if doc_type == "start_listesi"
-                else self._get_result_list_page_prompt(page_num, total_pages, is_first, startlist_swimmers=startlist_swimmers)
-            )
+        for p_att in range(max_page_retries):
+            t_start = time.time()
+            try:
+                p_res = self._call_gemini_api(pdf_bytes, prompt)
+                if not p_res or not isinstance(p_res, dict):
+                    raise ValueError("Geçerli bir JSON nesnesi elde edilemedi.")
+                page_data = p_res
+                rec_cnt = len(page_data.get("kayitlar", []) or page_data.get("sonuclar", []))
+                print(f"  [✓] Belge tamamlandı ({time.time()-t_start:.2f}s, {rec_cnt} kayıt)", flush=True)
+                break
+            except Exception as e:
+                last_err = e
+                if p_att < max_page_retries - 1:
+                    wait_sec = (p_att + 1) * 3
+                    print(f"  [!] Belge ayrıştırma hatası ({e}). Yanıt bekleniyor, {wait_sec}s sonra tekrar denenecek ({p_att+1}/{max_page_retries})...", file=sys.stderr, flush=True)
+                    time.sleep(wait_sec)
 
-            page_data = None
-            max_page_retries = 5
-            last_err = None
+        if page_data is None:
+            raise RuntimeError(f"Belge için geçerli yanıt alınamadı ({last_err}). Eksik veri ile ilerlenemez.")
 
-            for p_att in range(max_page_retries):
-                t_start = time.time()
-                try:
-                    p_res = self._call_gemini_api(p_bytes, prompt)
-                    if not p_res or not isinstance(p_res, dict):
-                        raise ValueError("Geçerli bir JSON nesnesi elde edilemedi.")
-                    page_data = p_res
-                    rec_cnt = len(page_data.get("kayitlar", []))
-                    print(f"  [✓] Sayfa {page_num}/{total_pages} tamamlandı ({time.time()-t_start:.2f}s, {rec_cnt} kayıt)", flush=True)
-                    break
-                except Exception as e:
-                    last_err = e
-                    if p_att < max_page_retries - 1:
-                        wait_sec = (p_att + 1) * 3
-                        print(f"  [!] Sayfa {page_num} hatası ({e}). Yanıt bekleniyor, {wait_sec}s sonra tekrar denenecek ({p_att+1}/{max_page_retries})...", file=sys.stderr, flush=True)
-                        time.sleep(wait_sec)
+        for k in ["musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"]:
+            if page_data.get(k):
+                header_data[k] = page_data[k]
 
-            if page_data is None:
-                raise RuntimeError(f"Sayfa {page_num}/{total_pages} için geçerli yanıt alınamadı ({last_err}). Eksik sayfa ile ilerlenemez.")
-
-            if page_idx == 0:
-                for k in ["musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"]:
-                    if page_data.get(k):
-                        header_data[k] = page_data[k]
-
-            page_records = page_data.get("kayitlar", [])
-            header_data["kayitlar"].extend(page_records)
+        page_records = page_data.get("kayitlar", []) or page_data.get("sonuclar", [])
+        header_data["kayitlar"].extend(page_records)
 
         self._post_process_records(header_data)
         return header_data

@@ -509,16 +509,18 @@ def parse_meet_pdf(
     pdf_url: str = "",
     model: str = DEFAULT_MODEL,
 ) -> Dict[str, Any]:
-    """PDF sayfalarını Gemini Flash Lite ile yapılandırılmış JSON verisine dönüştürür."""
+    """
+    PDF belgesini tüm sayfalarıyla bir bütün olarak Gemini ile yapılandırılmış JSON verisine dönüştürür.
+    Sayfalar fiziksel olarak bölünmediği için sayfa geçişlerinde ikiye bölünen seriler (örn: Kulvar 1
+    önceki sayfada, Kulvar 2-8 sonraki sayfada) seri başlığını kaybetmez ve tüm sporcular eksiksiz çıkarılır.
+    """
     doc_type = detect_pdf_type(pdf_url, pdf_bytes)
     total_pages = 1
-    pages_bytes = [(0, pdf_bytes)]
     fitz_header = {}
     if fitz is not None:
         try:
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             total_pages = len(doc)
-            pages_bytes = []
             if total_pages > 0:
                 first_text = doc[0].get_text()
                 m_yno = re.search(r'(?:Yarı[şs]|Event)\s*(\d+)', first_text, re.IGNORECASE)
@@ -535,11 +537,6 @@ def parse_meet_pdf(
                     fitz_header["cinsiyet"] = 'Erkek'
                 elif re.search(r'\b(?:Kadın|Kadınlar|Bayan|Bayanlar|Women|Girls)\b', first_text, re.IGNORECASE):
                     fitz_header["cinsiyet"] = 'Kadın'
-            for page_idx in range(total_pages):
-                single_page_doc = fitz.open()
-                single_page_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
-                pages_bytes.append((page_idx, single_page_doc.tobytes()))
-                single_page_doc.close()
             doc.close()
         except Exception:
             pass
@@ -558,14 +555,12 @@ def parse_meet_pdf(
         "sonuclar": [],
     }
 
-    for page_idx, p_bytes in pages_bytes:
-        p_num = page_idx + 1
-        is_first = (page_idx == 0)
-
-        prompt = f"""Bu bir TYF Splash Meet Manager {'SONUÇ' if doc_type == 'sonuc_listesi' else 'START'} LİSTESİ PDF sayfasıdır.
-Sayfa {p_num}/{total_pages}.
-{'1. Başlıktan müsabaka_adı, şehir, tarih (YYYY-MM-DD), yarış_no, cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yaş_grubu çıkar.' if is_first else ''}
-2. Sayfadaki tüm sporcu {'sonuçlarını' if doc_type == 'sonuc_listesi' else 'seri ve kulvarlarını'} eksiksiz çıkar.
+    prompt = f"""Bu bir TYF Splash Meet Manager {'SONUÇ' if doc_type == 'sonuc_listesi' else 'START'} LİSTESİ PDF belgesidir.
+Belgenin TÜM sayfalarındaki tüm {'yarış sonuçlarını' if doc_type == 'sonuc_listesi' else 'seri ve kulvarlardaki sporcuları'} eksiksiz çıkar.
+ÖNEMLİ KURALLAR:
+1. Başlıktan müsabaka_adı, şehir, tarih (YYYY-MM-DD), yarış_no, cinsiyet (Erkek/Kadın), mesafe (m tam sayı), stil ve yaş_grubu bilgilerini çıkar.
+2. Sayfa geçişlerinde seri tablosu bölünmüş olabilir (örneğin bir serinin 1. kulvarı 1. sayfada, 2-8 kulvarları 2. sayfada olabilir). Seri başlığı önceki sayfada kalmış olsa bile sonraki sayfadaki devam eden kulvarları aynı seriye dahil et.
+3. Belgedeki hiçbir sporcuyu, seriyi veya kulvarı kesinlikle atlama.
 Format:
 {{
   "musabaka_adi": string veya null,
@@ -585,6 +580,7 @@ Format:
       "dogum_yili": string veya integer veya null,
       "kulup": string veya null,
       "derece": string veya null,
+      "giris_derecesi": string veya null,
       "puan": integer veya null,
       "durum": string veya null
     }}
@@ -592,61 +588,58 @@ Format:
 }}
 SADECE geçerli JSON nesnesi döndür."""
 
-        part = types.Part.from_bytes(data=p_bytes, mime_type="application/pdf")
+    part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
 
-        page_data = None
-        max_page_retries = 5
-        last_page_exc = None
+    page_data = None
+    max_page_retries = 5
+    last_page_exc = None
 
-        for attempt in range(max_page_retries):
-            try:
-                res = generate_content_with_fallback(
-                    primary_client=client,
-                    model=model,
-                    contents=[part, prompt],
-                    config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
-                )
-                raw_text = (res.text or "").strip()
-                if not raw_text:
-                    raise ValueError("Yapay zekadan boş yanıt döndü.")
-
-                parsed_json = safe_json_loads(raw_text)
-                if not isinstance(parsed_json, dict) or not parsed_json:
-                    raise ValueError(f"Geçerli bir JSON nesnesi elde edilemedi (Ham Yanıt: {raw_text[:120]}).")
-
-                # Başarılı sayfa cevabı teyit edildi
-                page_data = parsed_json
-                if attempt > 0:
-                    logger.info(f"    [+] Sayfa {p_num}/{total_pages} cevabı {attempt + 1}. denemede başarıyla alındı.")
-                break
-
-            except Exception as exc:
-                last_page_exc = exc
-                if attempt < max_page_retries - 1:
-                    wait_sec = (attempt + 1) * 3
-                    logger.warning(
-                        f"    [!] Sayfa {p_num}/{total_pages} ayrıştırılırken hata oluştu ({exc}). "
-                        f"Sayfa yanıtı bekleniyor, {wait_sec} sn sonra tekrar denenecek ({attempt + 1}/{max_page_retries})..."
-                    )
-                    time.sleep(wait_sec)
-
-        # Eğer o sayfanın cevabı tüm denemelere rağmen alınamadıysa KESİNLİKLE ilerleme!
-        if page_data is None:
-            raise RuntimeError(
-                f"PDF'in {p_num}/{total_pages}. sayfası için geçerli yanıt alınamadı ({last_page_exc}). "
-                f"Eksik veri oluşmaması için aktarım durduruldu."
+    for attempt in range(max_page_retries):
+        try:
+            res = generate_content_with_fallback(
+                primary_client=client,
+                model=model,
+                contents=[part, prompt],
+                config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1)
             )
+            raw_text = (res.text or "").strip()
+            if not raw_text:
+                raise ValueError("Yapay zekadan boş yanıt döndü.")
 
-        # Sayfa verilerini ana başlığa ve sonuç listesine ekle
-        for k in ("musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"):
-            if page_data.get(k) and not header_data[k]:
-                header_data[k] = page_data[k]
+            parsed_json = safe_json_loads(raw_text)
+            if not isinstance(parsed_json, dict) or not parsed_json:
+                raise ValueError(f"Geçerli bir JSON nesnesi elde edilemedi (Ham Yanıt: {raw_text[:120]}).")
 
-        records = page_data.get("sonuclar") or page_data.get("kayitlar") or []
-        for r in records:
-            if not r.get("ad_soyad") and r.get("sporcu"):
-                r["ad_soyad"] = r["sporcu"]
-            header_data["sonuclar"].append(r)
+            page_data = parsed_json
+            if attempt > 0:
+                logger.info(f"    [+] PDF cevabı {attempt + 1}. denemede başarıyla alındı.")
+            break
+
+        except Exception as exc:
+            last_page_exc = exc
+            if attempt < max_page_retries - 1:
+                wait_sec = (attempt + 1) * 3
+                logger.warning(
+                    f"    [!] PDF ayrıştırılırken hata oluştu ({exc}). "
+                    f"Yanıt bekleniyor, {wait_sec} sn sonra tekrar denenecek ({attempt + 1}/{max_page_retries})..."
+                )
+                time.sleep(wait_sec)
+
+    if page_data is None:
+        raise RuntimeError(
+            f"PDF için geçerli yanıt alınamadı ({last_page_exc}). "
+            f"Eksik veri oluşmaması için aktarım durduruldu."
+        )
+
+    for k in ("musabaka_adi", "sehir", "tarih", "yaris_no", "cinsiyet", "mesafe", "stil", "yas_grubu"):
+        if page_data.get(k) and not header_data[k]:
+            header_data[k] = page_data[k]
+
+    records = page_data.get("sonuclar") or page_data.get("kayitlar") or []
+    for r in records:
+        if not r.get("ad_soyad") and r.get("sporcu"):
+            r["ad_soyad"] = r["sporcu"]
+        header_data["sonuclar"].append(r)
 
     return header_data
 
