@@ -573,6 +573,10 @@ class SporcuApiTests(TestCase):
             ("TK CANSU DEMİR", "CANSU DEMİR"),
             ("( Metehan İŞLER", "Metehan İŞLER"),
             ("(f5) Mehmet P'lat SARI", "Mehmet P'lat SARI"),
+            ("(F) *s* ***ü ü*k", "*s* ***ü ü*k"),
+            ("(Fd) *r*r *u*a ** s**", "*r*r *u*a ** s**"),
+            ("(F) *z*r *er** *alda *ur*az", "*z*r *er** *alda *ur*az"),
+            ("F***N YILMAZ", "F***N YILMAZ"),
         ]
         for raw, expected in test_cases:
             self.assertEqual(clean_athlete_name_tags(raw), expected)
@@ -586,6 +590,9 @@ class SporcuApiTests(TestCase):
             ("ANKARA DSİ SPOR KULÜBÜ (FD)", "ANKARA DSİ SPOR KULÜBÜ"),
             ("(TK) ANKARA DSİ SPOR KULÜBÜ", "ANKARA DSİ SPOR KULÜBÜ"),
             ("(FD) ANKARA DSİ SPOR KULÜBÜ", "ANKARA DSİ SPOR KULÜBÜ"),
+            ("(Tk) Istek Ankara Okulları", "Istek Ankara Okulları"),
+            ("(F) Özel Arı Okulları", "Özel Arı Okulları"),
+            ("Özel Ankara Abc Anadolu Lisesi (A)", "Özel Ankara Abc Anadolu Lisesi"),
             ("ÖZEL ÇANKAYA FEN LİSESİ (TK)", "ÖZEL ÇANKAYA FEN LİSESİ"),
             ("TED ANKARA KOLEJLİLER [TK]", "TED ANKARA KOLEJLİLER"),
             ("GALATASARAY SPOR KULÜBÜ - TK", "GALATASARAY SPOR KULÜBÜ"),

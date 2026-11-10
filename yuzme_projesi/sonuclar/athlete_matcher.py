@@ -24,55 +24,77 @@ except ImportError:
 
 def clean_athlete_name_tags(name: Optional[str]) -> str:
     """
-    Sporcu adında bulunan (fd), (tk), (td), (f5), ferdi, tasnif dışı vb.
+    Sporcu adında bulunan (F), (FD), (TK), (TD), (f5), ferdi, tasnif dışı vb.
     parantez içi veya ek etiketleri ve baştaki/sondaki artık karakterleri temizler.
     Maskeli (* içeren) veya normal tüm isimlerde güvenle çalışır, yıldızları korur.
     """
     if not name:
         return ""
     s = str(name).strip()
-    # 1. Parantez veya köşeli parantez içindeki tipik etiketler:
-    # (fd), (tk), (td), (f1)-(f9), (t1)-(t9), (ferdi), (tasnif dışı), (okul) vb.
+
+    # 1. Parantez veya köşeli parantez içindeki etiketler:
+    # 1-4 karakterli kısa parantezler: (F), (FD), (TK), (TD), (f1), (TK-1), (A) vb.
+    # VEYA bilinen özel etiketler: (ferdi), (tasnif dışı), (okul), (kulüp), (takım) vb.
     s = re.sub(
-        r'\s*[\(\[]\s*(?:[FfTt][DdKk0-9]|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ]|OKUL|KUL[ÜU]P)[^\)\]]*[\)\]]',
+        r'\s*[\(\[]\s*(?:[^)\]]{1,4}|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ]|OKUL|KUL[ÜU]P|TAKIM)[^\)\]]*[\)\]]',
         ' ',
         s,
         flags=re.IGNORECASE
     )
+
+    # Sporcu adında bulunabilecek diğer tüm parantez içi ifadeler (sporcu adında parantez yer almaz)
+    s = re.sub(r'\s*[\(\[][^\)\]]*[\)\]]', ' ', s)
+
     # 2. Baştaki tek parantez veya artık işaretler: örn: "( Metehan İŞLER" -> "Metehan İŞLER" (yıldızlar korunur)
     s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
-    # 3. Kelime başında veya sonunda bağımsız kalan FD/TK/TD etiketleri
-    s = re.sub(r'^\s*(?:[FfTt][DdKk])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
-    s = re.sub(r'\s*\b(?:[FfTt][DdKk])[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)
-    # 4. Sondaki artık parantez veya işaretler (yıldızlar korunur)
+
+    # 3. Baştaki kapatılmamış veya artık FD/TK/TD/F etiketleri: örn: "(Fd e" -> "e", "FD Metehan" -> "Metehan"
+    s = re.sub(r'^\s*[\(\[]?\s*(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'^\s*[\(\[]\s*[FfTt]\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+
+    # 4. Sonda bağımsız kalan 2+ harfli FD/TK/TD etiketleri
+    s = re.sub(r'\s*\b(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)
+
+    # 5. Baştaki ve sondaki artık parantez veya işaretler (yıldızlar korunur)
+    s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
     s = re.sub(r'\s*[\)\]\}\>\-\+\/\\.,:;~_]\s*$', '', s)
-    # 5. Çift boşlukları temizle
+
+    # 6. Çift boşlukları temizle
     return re.sub(r'\s+', ' ', s).strip()
 
 
 def clean_club_name_tags(name: Optional[str]) -> str:
     """
-    Kulüp adında bulunabilecek (fd), (tk), (td), (f1), (tk-1), ferdi, tasnif dışı vb.
+    Kulüp adında bulunabilecek (F), (TK), (FD), (TD), (f1), (tk-1), ferdi, tasnif dışı vb.
     parantez içi etiketleri, ayraçlı son ekleri ve baştaki/sondaki artık karakterleri temizler.
     """
     if not name:
         return ""
     s = str(name).strip()
-    # 1. Parantez veya köşeli parantez içi etiketler: (fd), (tk), (td), (f1), (tk-1), ferdi, tasnif dışı, okul vb.
+
+    # 1. Parantez veya köşeli parantez içi etiketler:
+    # 1-4 karakterli parantezler: (F), (FD), (TK), (TD), (f1), (tk-1), (A), (B) vb.
+    # VEYA bilinen tüm etiketler: (ferdi), (tasnif dışı), (okul), (kulüp), (takım) vb.
     s = re.sub(
-        r'\s*[\(\[]\s*(?:[FfTt][DdKk0-9]|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ]|OKUL|KUL[ÜU]P)[^\)\]]*[\)\]]',
+        r'\s*[\(\[]\s*(?:[^)\]]{1,4}|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ]|OKUL|KUL[ÜU]P|TAKIM)[^\)\]]*[\)\]]',
         ' ',
         s,
         flags=re.IGNORECASE
     )
-    # 2. Ayraçlı son ekler: örn: ' - TK', ' / FD', ' - TD'
-    s = re.sub(r'\s*[\-\/\\]\s*(?:[FfTt][DdKk0-9]|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ])\s*$', ' ', s, flags=re.IGNORECASE)
+
+    # 2. Ayraçlı son ekler: örn: ' - TK', ' / FD', ' - TD', ' - FERDİ'
+    s = re.sub(r'\s*[\-\/\\]\s*(?:[FfTt][DdKk0-9]?|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ])\s*$', ' ', s, flags=re.IGNORECASE)
+
     # 3. Baştaki tek parantez veya artık işaretler
     s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
-    # 4. Kelime başında veya sonunda bağımsız kalan FD/TK/TD
-    s = re.sub(r'^\s*(?:[FfTt][DdKk0-9])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
-    s = re.sub(r'\s*\b(?:[FfTt][DdKk0-9])[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)
-    # 5. Sondaki artık parantez veya işaretler
+
+    # 4. Baştaki veya sondaki bağımsız FD/TK/TD etiketleri
+    s = re.sub(r'^\s*(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'^\s*[\(\[]\s*[FfTt]\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s*\b(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)
+
+    # 5. Baştaki ve sondaki artık parantez veya işaretler
+    s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
     s = re.sub(r'\s*[\)\]\}\>\-\+\/\\.,:;~_]\s*$', '', s)
     return re.sub(r'\s+', ' ', s).strip()
 
