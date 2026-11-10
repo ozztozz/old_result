@@ -952,11 +952,95 @@ def canli_yaris_tara(request, pk):
 
 
 def canli_yaris_sil(request, pk):
-    """Canlı yarış kaydını siler."""
+    """Canlı yarış kaydını ve buna bağlı dosya ile sonuçları siler."""
     if request.method == "POST":
         yaris = get_object_or_404(CanliYaris, pk=pk)
-        yaris.delete()
-        messages.success(request, "Canlı yarış kaydı silindi.")
+        yaris_adi = yaris.musabaka_adi or yaris.canli_url
+        event = yaris.event
+
+        with transaction.atomic():
+            # 1. Bu canlı yarışa bağlı dosyaları belirle
+            q_dosya = Q(canli_yaris=yaris)
+            if event:
+                q_dosya |= Q(event=event)
+            dosyalar_qs = CanliYarisDosya.objects.filter(q_dosya)
+            dosya_ids = list(dosyalar_qs.values_list('id', flat=True))
+
+            # 2. Bu canlı yarışa bağlı sonuçları belirle
+            q_sonuc = Q(canli_dosya_id__in=dosya_ids)
+            if event:
+                baska_canli_yaris = CanliYaris.objects.filter(event=event).exclude(pk=yaris.pk).exists()
+                diger_kaynak_sonucu = YarisSonucu.objects.filter(event=event).exclude(
+                    kaynak_turu__in=["CANLI_SONUC", "CANLI_START_LISTESI"]
+                ).exists()
+
+                if not baska_canli_yaris and not diger_kaynak_sonucu:
+                    q_sonuc |= Q(event=event)
+                else:
+                    q_sonuc |= Q(event=event, kaynak_turu__in=["CANLI_SONUC", "CANLI_START_LISTESI"])
+
+            sonuclar_qs = YarisSonucu.objects.filter(q_sonuc)
+
+            # İstatistikleri güncellenecek sporcu, kulüp ve tarihçeleri topla
+            affected_sporcu_ids = list(sonuclar_qs.exclude(sporcu__isnull=True).values_list('sporcu_id', flat=True).distinct())
+            affected_kulup_ids = list(sonuclar_qs.exclude(kulup__isnull=True).values_list('kulup_id', flat=True).distinct())
+            affected_tarihce_ids = list(sonuclar_qs.exclude(sporcu_kulup_tarihce__isnull=True).values_list('sporcu_kulup_tarihce_id', flat=True).distinct())
+
+            # 3. Sonuçları sil
+            silinen_sonuc_sayisi, _ = sonuclar_qs.delete()
+
+            # 4. Dosyaları sil
+            silinen_dosya_sayisi, _ = dosyalar_qs.delete()
+
+            # 5. Event kaydını kontrol et
+            if event:
+                baska_canli_yaris = CanliYaris.objects.filter(event=event).exclude(pk=yaris.pk).exists()
+                kalan_sonuc = YarisSonucu.objects.filter(event=event).exists()
+                if not baska_canli_yaris and not kalan_sonuc:
+                    event.delete()
+                else:
+                    event.toplam_yaris_sayisi = YarisSonucu.objects.filter(event=event).count()
+                    event.toplam_sporcu_sayisi = YarisSonucu.objects.filter(event=event).values('sporcu_id').distinct().count()
+                    event.save(update_fields=['toplam_yaris_sayisi', 'toplam_sporcu_sayisi'])
+
+            # 6. Canlı yarış kaydını sil
+            yaris.delete()
+
+            # 7. Etkilenen sporcu ve kulüp istatistiklerini güncelle
+            if affected_sporcu_ids:
+                sporcular = Sporcu.objects.filter(id__in=affected_sporcu_ids).annotate(
+                    toplam=Count('yaris_sonuclari')
+                )
+                for sp in sporcular:
+                    sp.toplam_yaris_sayisi = sp.toplam
+                Sporcu.objects.bulk_update(sporcular, ['toplam_yaris_sayisi'])
+
+            if affected_kulup_ids:
+                kulupler = Kulup.objects.filter(id__in=affected_kulup_ids).annotate(
+                    toplam=Count('yaris_sonuclari')
+                )
+                for kl in kulupler:
+                    kl.toplam_yaris_sayisi = kl.toplam
+                Kulup.objects.bulk_update(kulupler, ['toplam_yaris_sayisi'])
+
+            if affected_tarihce_ids:
+                tarihceler = SporcuKulupTarihce.objects.filter(id__in=affected_tarihce_ids).annotate(
+                    toplam=Count('yaris_sonuclari')
+                )
+                for th in tarihceler:
+                    th.toplam_yaris_sayisi = th.toplam
+                SporcuKulupTarihce.objects.bulk_update(tarihceler, ['toplam_yaris_sayisi'])
+
+        detaylar = []
+        if silinen_dosya_sayisi:
+            detaylar.append(f"{silinen_dosya_sayisi} dosya")
+        if silinen_sonuc_sayisi:
+            detaylar.append(f"{silinen_sonuc_sayisi} sonuç")
+
+        if detaylar:
+            messages.success(request, f"'{yaris_adi}' canlı yarış kaydı, bağlı {', '.join(detaylar)} ile birlikte silindi.")
+        else:
+            messages.success(request, f"'{yaris_adi}' canlı yarış kaydı silindi.")
     return redirect("sonuclar:canli_yaris_listesi")
 
 

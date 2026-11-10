@@ -89,6 +89,76 @@ class SporcuApiTests(TestCase):
             );
             """)
             cur.execute("""
+            CREATE TABLE IF NOT EXISTS kulupler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kulup_adi TEXT NOT NULL UNIQUE,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                okul_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcular (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_adi TEXT NOT NULL,
+                dogum_yili INTEGER,
+                yas_dogum_yili TEXT,
+                cinsiyet TEXT,
+                birincil_kulup_id INTEGER REFERENCES kulupler(id),
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcu_kulup_tarihce (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER NOT NULL REFERENCES kulupler(id),
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                donem_sirasi INTEGER DEFAULT 1,
+                aktif_kulup_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS yaris_sonuclari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_dosya_id INTEGER REFERENCES canli_yaris_dosyalari(id),
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER REFERENCES kulupler(id),
+                sporcu_kulup_tarihce_id INTEGER REFERENCES sporcu_kulup_tarihce(id),
+                kaynak_turu TEXT,
+                dosya_adi TEXT,
+                sayfa_no INTEGER,
+                satir_no INTEGER,
+                yaris_no TEXT,
+                cinsiyet TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                yas_grubu TEXT,
+                sporcu_yas TEXT,
+                hesaplanan_yas INTEGER,
+                sira TEXT,
+                derece TEXT,
+                derece_saniye REAL,
+                puan INTEGER,
+                baraj TEXT,
+                beraberlik_mi TEXT,
+                zaman_kontrolu TEXT,
+                uyari_notu TEXT,
+                ham_satir TEXT,
+                kulvar INTEGER,
+                seri TEXT,
+                giris_derecesi TEXT,
+                sporcu_maskeli TEXT
+            );
+            """)
+            cur.execute("""
             CREATE TABLE IF NOT EXISTS yaris_sonuclari (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_id INTEGER REFERENCES events(id),
@@ -168,6 +238,76 @@ class SporcuApiTests(TestCase):
                 son_islem_tarihi DATETIME,
                 olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
                 guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS kulupler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kulup_adi TEXT NOT NULL UNIQUE,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                okul_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcular (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_adi TEXT NOT NULL,
+                dogum_yili INTEGER,
+                yas_dogum_yili TEXT,
+                cinsiyet TEXT,
+                birincil_kulup_id INTEGER REFERENCES kulupler(id),
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcu_kulup_tarihce (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER NOT NULL REFERENCES kulupler(id),
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                donem_sirasi INTEGER DEFAULT 1,
+                aktif_kulup_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS yaris_sonuclari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_dosya_id INTEGER REFERENCES canli_yaris_dosyalari(id),
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER REFERENCES kulupler(id),
+                sporcu_kulup_tarihce_id INTEGER REFERENCES sporcu_kulup_tarihce(id),
+                kaynak_turu TEXT,
+                dosya_adi TEXT,
+                sayfa_no INTEGER,
+                satir_no INTEGER,
+                yaris_no TEXT,
+                cinsiyet TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                yas_grubu TEXT,
+                sporcu_yas TEXT,
+                hesaplanan_yas INTEGER,
+                sira TEXT,
+                derece TEXT,
+                derece_saniye REAL,
+                puan INTEGER,
+                baraj TEXT,
+                beraberlik_mi TEXT,
+                zaman_kontrolu TEXT,
+                uyari_notu TEXT,
+                ham_satir TEXT,
+                kulvar INTEGER,
+                seri TEXT,
+                giris_derecesi TEXT,
+                sporcu_maskeli TEXT
             );
             """)
 
@@ -735,6 +875,76 @@ class CanliYarisTests(TestCase):
                 guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS kulupler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kulup_adi TEXT NOT NULL UNIQUE,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                okul_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcular (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_adi TEXT NOT NULL,
+                dogum_yili INTEGER,
+                yas_dogum_yili TEXT,
+                cinsiyet TEXT,
+                birincil_kulup_id INTEGER REFERENCES kulupler(id),
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcu_kulup_tarihce (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER NOT NULL REFERENCES kulupler(id),
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                donem_sirasi INTEGER DEFAULT 1,
+                aktif_kulup_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS yaris_sonuclari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER REFERENCES events(id),
+                canli_dosya_id INTEGER REFERENCES canli_yaris_dosyalari(id),
+                sporcu_id INTEGER NOT NULL REFERENCES sporcular(id),
+                kulup_id INTEGER REFERENCES kulupler(id),
+                sporcu_kulup_tarihce_id INTEGER REFERENCES sporcu_kulup_tarihce(id),
+                kaynak_turu TEXT,
+                dosya_adi TEXT,
+                sayfa_no INTEGER,
+                satir_no INTEGER,
+                yaris_no TEXT,
+                cinsiyet TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                yas_grubu TEXT,
+                sporcu_yas TEXT,
+                hesaplanan_yas INTEGER,
+                sira TEXT,
+                derece TEXT,
+                derece_saniye REAL,
+                puan INTEGER,
+                baraj TEXT,
+                beraberlik_mi TEXT,
+                zaman_kontrolu TEXT,
+                uyari_notu TEXT,
+                ham_satir TEXT,
+                kulvar INTEGER,
+                seri TEXT,
+                giris_derecesi TEXT,
+                sporcu_maskeli TEXT
+            );
+            """)
 
     def setUp(self):
         self.client = Client()
@@ -761,6 +971,64 @@ class CanliYarisTests(TestCase):
         res_del = self.client.post(reverse('sonuclar:canli_yaris_sil', args=[yaris.id]), follow=True)
         self.assertEqual(res_del.status_code, 200)
         self.assertFalse(CanliYaris.objects.filter(id=yaris.id).exists())
+
+    def test_canli_yaris_sil_ile_dosya_ve_sonuclarin_silinmesi(self):
+        """Canlı yarış silindiğinde bağlı dosyalar, sonuçlar ve tekil event kaydının silinmesi testi."""
+        event = Event.objects.create(
+            musabaka_adi="Silinecek Canlı Yarış Müsabakası",
+            sehir="İzmir",
+            kaynak_turu="CANLI_TAKIP"
+        )
+        canli = CanliYaris.objects.create(
+            event=event,
+            musabaka_adi=event.musabaka_adi,
+            canli_url="https://canli.tyf.gov.tr/izmir/cs-999/",
+            durum="TAMAMLANDI"
+        )
+        dosya = CanliYarisDosya.objects.create(
+            event=event,
+            canli_yaris=canli,
+            dosya_adi="ResultList_1.pdf",
+            dosya_turu="SONUC_LISTESI"
+        )
+        kulup = Kulup.objects.create(kulup_adi="Silme Test Kulübü", toplam_yaris_sayisi=1)
+        sporcu = Sporcu.objects.create(
+            sporcu_adi="Silme Test Sporcusu",
+            birincil_kulup=kulup,
+            toplam_yaris_sayisi=1
+        )
+        sonuc = YarisSonucu.objects.create(
+            event=event,
+            canli_dosya=dosya,
+            sporcu=sporcu,
+            kulup=kulup,
+            kaynak_turu="CANLI_SONUC",
+            dosya_adi="ResultList_1.pdf",
+            mesafe=50,
+            stil="Serbest",
+            derece="25.50"
+        )
+
+        self.assertEqual(CanliYaris.objects.filter(id=canli.id).count(), 1)
+        self.assertEqual(CanliYarisDosya.objects.filter(id=dosya.id).count(), 1)
+        self.assertEqual(YarisSonucu.objects.filter(id=sonuc.id).count(), 1)
+        self.assertEqual(Event.objects.filter(id=event.id).count(), 1)
+
+        # POST ile silme çağrısı yap
+        res = self.client.post(reverse('sonuclar:canli_yaris_sil', args=[canli.id]), follow=True)
+        self.assertEqual(res.status_code, 200)
+
+        # Canlı yarış, dosya, sonuç ve ilgili tekil event silinmiş olmalı
+        self.assertFalse(CanliYaris.objects.filter(id=canli.id).exists())
+        self.assertFalse(CanliYarisDosya.objects.filter(id=dosya.id).exists())
+        self.assertFalse(YarisSonucu.objects.filter(id=sonuc.id).exists())
+        self.assertFalse(Event.objects.filter(id=event.id).exists())
+
+        # Sporcu ve kulüp sayaçları güncellenmiş olmalı
+        sporcu.refresh_from_db()
+        kulup.refresh_from_db()
+        self.assertEqual(sporcu.toplam_yaris_sayisi, 0)
+        self.assertEqual(kulup.toplam_yaris_sayisi, 0)
 
     def test_api_canli_yaris_ekle_ve_bekleyen_kontrol(self):
         """TYF tarayıcısı ile gelen yarışların API üzerinden eklenmesi ve bekleyen yarış kontrolü."""
