@@ -1196,29 +1196,25 @@ def heal_live_meet_records(event):
                 canli_dosya=dosya
             ).filter(Q(yaris_no__isnull=True) | Q(yaris_no="")).update(yaris_no=dosya.yaris_no)
 
-    # 2. Start listesi kayıtlarında derece!='Bekleniyor' olanları onar
+    # 2. Start listesi kayıtlarında derece!='Bekleniyor' olanları tek UPDATE ile hızlıca onar
     start_dosya_ids = CanliYarisDosya.objects.filter(event=event, dosya_turu="START_LISTESI").values_list("id", flat=True)
     q_start = Q(kaynak_turu="CANLI_START_LISTESI")
     if start_dosya_ids:
         q_start |= Q(canli_dosya_id__in=start_dosya_ids)
 
-    start_sonuclar = list(event.yaris_sonuclari.filter(q_start).exclude(derece="Bekleniyor"))
-    if start_sonuclar:
-        for sc in start_sonuclar:
-            if sc.derece and sc.derece != "Bekleniyor":
-                if not sc.giris_derecesi:
-                    sc.giris_derecesi = sc.derece
-                sc.derece = "Bekleniyor"
-                sc.derece_saniye = None
-                sc.sira = None
-                sc.puan = None
-                sc.kaynak_turu = "CANLI_START_LISTESI"
-        with transaction.atomic():
-            event.yaris_sonuclari.bulk_update(
-                start_sonuclar,
-                ["giris_derecesi", "derece", "derece_saniye", "sira", "puan", "kaynak_turu"],
-                batch_size=500
-            )
+    # Giriş derecesi boş olanlarda derece bilgisini giris_derecesi'ne aktar
+    event.yaris_sonuclari.filter(q_start).filter(
+        Q(giris_derecesi__isnull=True) | Q(giris_derecesi="")
+    ).exclude(derece="Bekleniyor").exclude(derece__isnull=True).update(giris_derecesi=F("derece"))
+
+    # Bekleyen start kayıtlarını normalize et
+    event.yaris_sonuclari.filter(q_start).exclude(derece="Bekleniyor").update(
+        derece="Bekleniyor",
+        derece_saniye=None,
+        sira=None,
+        puan=None,
+        kaynak_turu="CANLI_START_LISTESI"
+    )
 
     # 3. Hala yaris_no'su boş olan sonuçlar varsa (mesafe, stil, cinsiyet) kombinasyonuna göre sıra ata
     empty_combos = list(
@@ -1238,28 +1234,6 @@ def heal_live_meet_records(event):
                 stil=r_comb["stil"],
                 cinsiyet=r_comb["cinsiyet"],
             ).filter(Q(yaris_no__isnull=True) | Q(yaris_no="")).update(yaris_no=str(idx))
-
-    # 4. Daha önce eşleşememiş 'Maskeli sporcu (...)' kayıtlarını yeniden eşleştir
-    masked_results = list(
-        event.yaris_sonuclari.filter(
-            sporcu__sporcu_adi__startswith="Maskeli sporcu"
-        ).select_related("sporcu", "kulup")
-    )
-    if masked_results:
-        from .athlete_matcher import match_athlete
-        for r in masked_results:
-            raw_masked_name = r.sporcu_maskeli or r.sporcu.sporcu_adi.replace("Maskeli sporcu (", "").rstrip(")")
-            m_res = match_athlete(
-                raw_masked_name,
-                birth_year_or_date=r.sporcu.dogum_yili,
-                club=r.kulup.kulup_adi if r.kulup else None,
-                gender=r.cinsiyet or r.sporcu.cinsiyet,
-            )
-            if m_res.get("bulunan_id"):
-                found_sp = Sporcu.objects.filter(id=m_res["bulunan_id"]).first()
-                if found_sp:
-                    r.sporcu = found_sp
-                    r.save(update_fields=["sporcu"])
 
 
 def musabaka_detay(request, pk):
