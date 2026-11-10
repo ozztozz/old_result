@@ -1059,6 +1059,7 @@ def process_single_meet_db(
     client: genai.Client,
     model: str = DEFAULT_MODEL,
     limit: Optional[int] = None,
+    force: bool = False,
 ) -> Dict[str, Any]:
     """Bir canlı yarışın tüm bekleyen PDF'lerini Gemini ile ayrıştırıp veritabanına yazar."""
     event_id = yaris.id
@@ -1124,6 +1125,18 @@ def process_single_meet_db(
 
         stats["toplam_start_listesi"] = len(start_urls)
         stats["toplam_sonuc_listesi"] = len(result_urls)
+
+        # Otomatik Sıfırlama: Eğer force=True VEYA event'e bağlı yarış sonucu yoksa
+        # ama eski CanliYarisDosya kayıtları varsa, dosya önbelleğini sıfırla ki tüm PDF'ler baştan işlensin!
+        event_has_results = bool(yaris.event and YarisSonucu.objects.filter(event=yaris.event).exists())
+        if force or not event_has_results:
+            if CanliYarisDosya.objects.filter(canli_yaris=yaris).exists():
+                logger.info(f"[*] #{yaris.id} ({yaris.musabaka_adi or yaris.canli_url}): Sonuçlar boş/silinmiş veya force devrede. Tüm dosyalar baştan işlenmek üzere sıfırlanıyor...")
+                CanliYarisDosya.objects.filter(canli_yaris=yaris).delete()
+                yaris.islenen_start_listesi = 0
+                yaris.islenen_sonuc_listesi = 0
+                yaris.durum = "ISLENIYOR"
+                yaris.save(update_fields=["islenen_start_listesi", "islenen_sonuc_listesi", "durum"])
 
         known_files = fetch_known_files_db(yaris)
         remote_headers = fetch_remote_headers_map(all_pdf_urls)
@@ -1406,6 +1419,7 @@ if __name__ == "__main__":
     parser.add_argument("--durdur", action="store_true", help="Çalışan 2. Servisi (daemon) durdur")
     parser.add_argument("--durum", action="store_true", help="Canlı takipçi servisinin durumunu kontrol et")
     parser.add_argument("--id", type=int, default=None, help="Belirli bir yarış ID'sini anında tek seferlik tara")
+    parser.add_argument("--force", action="store_true", help="Eski dosya önbelleğini sıfırla ve tüm PDF'leri baştan tara")
     parser.add_argument("--aralik", type=int, default=10, help="Daemon döngü aralığı (saniye, varsayılan: 10)")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help="Gemini model adı")
 
@@ -1429,7 +1443,7 @@ if __name__ == "__main__":
             print(f"[!] ID {args.id} olan canlı yarış bulunamadı.")
             sys.exit(1)
         cl = get_gemini_client()
-        st = process_single_meet_db(y, cl, model=args.model)
+        st = process_single_meet_db(y, cl, model=args.model, force=args.force)
         print(f"[+] Sonuç: {st}")
     else:
         run_cron_orchestrator(kesfet=args.kesfet)
