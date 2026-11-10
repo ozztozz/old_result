@@ -95,22 +95,38 @@ def normalize_tr(s: Optional[str], keep_asterisks: bool = False) -> str:
     return re.sub(r'\s+', ' ', cleaned).strip()
 
 
-def token_1to1_match(m_tok: str, c_tok: str) -> bool:
+def token_1to1_match(m_tok: str, c_tok: str, strict: bool = False) -> bool:
     """
-    1-e-1 (birebir karakter) maskeli token eşleştirmesi.
-    Her '*' tam olarak 1 karaktere denk gelir.
-    Örn: 'D***Z' -> 5 harf, 'DENIZ' -> 5 harf => True
-         'D***Z' -> 'DERYA' (son harf Z değil) => False
-         'D***Z' -> 'DENIZHAN' (uzunluk 8 != 5) => False
+    Maskeli token eşleştirmesi:
+    1. Öncelikle kesin 1-e-1 karakter karşılaştırması (her '*' 1 harf).
+    2. Eğer uzunluk birebir tutmuyorsa (Türkçe 2-byte karakterlerin veya Splash masking varyasyonunun
+       neden olduğu 1-2 harf oynamalarında örn: '**O**N' vs 'DOGAN', '*U*B**' vs 'TUGBA'),
+       ardışık '*' bloklarının esnek uzunluk eşleşmesine izin verilir.
     """
-    if len(m_tok) != len(c_tok):
+    if not m_tok or not c_tok:
         return False
-    for m_c, c_c in zip(m_tok, c_tok):
-        if m_c == '*':
-            continue
-        if m_c != c_c:
-            return False
-    return True
+
+    if '*' not in m_tok:
+        return m_tok == c_tok
+
+    if len(m_tok) == len(c_tok):
+        if all(m == '*' or m == c for m, c in zip(m_tok, c_tok)):
+            return True
+
+    if strict:
+        return False
+
+    def _rep(match):
+        k = len(match.group())
+        min_c = 1
+        max_c = k + 1
+        return f'.{{{min_c},{max_c}}}'
+
+    pat = '^' + re.sub(r'\*+', _rep, m_tok) + '$'
+    try:
+        return bool(re.match(pat, c_tok))
+    except Exception:
+        return False
 
 
 def match_masked_athlete_exact(
@@ -166,7 +182,7 @@ def match_masked_athlete_exact(
             "sorgu": sorgu_info
         }
 
-    def _search_in_pool(year_filter, gender_filter):
+    def _search_in_pool(year_filter, gender_filter, strict=True):
         cand_qs = Sporcu.objects.exclude(sporcu_adi__startswith="Maskeli sporcu").select_related('birincil_kulup').prefetch_related('kulup_tarihcesi__kulup')
         if year_filter:
             cand_qs = cand_qs.filter(Q(dogum_yili=year_filter) | Q(yas_dogum_yili=str(year_filter)[-2:]))
@@ -180,27 +196,35 @@ def match_masked_athlete_exact(
             if not norm_c_tokens:
                 continue
 
-            # Senaryo 1: Token sayısı birebir aynı (Örn: 'D***Z K**T' vs 'DENIZ KURT')
+            # Senaryo 1: Token sayısı birebir aynı (Örn: 'D***Z K**T' vs 'DENIZ KURT' veya 'HANZADE **O**N' vs 'HANZADE DOGAN')
             is_match = False
             if len(norm_m_tokens) == len(norm_c_tokens):
-                if all(token_1to1_match(mt, ct) for mt, ct in zip(norm_m_tokens, norm_c_tokens)):
+                if all(token_1to1_match(mt, ct, strict=strict) for mt, ct in zip(norm_m_tokens, norm_c_tokens)):
                     is_match = True
             # Senaryo 2: Maskeli listede 2 isim varken veritabanında sporcunun birden fazla ilk adı olabilir
             # (Örn: 'M**** K**A' vs 'MEHMET CAN KAYA')
             elif len(norm_m_tokens) == 2 and len(norm_c_tokens) >= 3:
-                if token_1to1_match(norm_m_tokens[0], norm_c_tokens[0]) and token_1to1_match(norm_m_tokens[-1], norm_c_tokens[-1]):
+                if token_1to1_match(norm_m_tokens[0], norm_c_tokens[0], strict=strict) and token_1to1_match(norm_m_tokens[-1], norm_c_tokens[-1], strict=strict):
                     is_match = True
 
             if is_match:
                 matches.append(cand)
         return matches
 
-    matched_cands = _search_in_pool(target_year, target_gender)
+    # 1. Aşama: Öncelikle katı (strict=True) 1-e-1 eşleştirme dene
+    matched_cands = _search_in_pool(target_year, target_gender, strict=True)
+
+    # 2. Aşama: Katı eşleşme bulunamazsa Türkçe karakter uzunluk toleranslı (strict=False) dene
+    # (Örn: 'Hanzade **o**n' -> 'Hanzade DOĞAN' veya 'Melek Tuğba **o**n' -> 'Melek Tuğba DOĞAN')
+    if not matched_cands:
+        matched_cands = _search_in_pool(target_year, target_gender, strict=False)
 
     # Hedef yılda bulunamadıysa ve hedef yıl belirtilmişse +-1 yıl toleransı ile tekrar dene
     if not matched_cands and target_year:
         for alt_year in [target_year - 1, target_year + 1]:
-            matched_cands = _search_in_pool(alt_year, target_gender)
+            matched_cands = _search_in_pool(alt_year, target_gender, strict=True)
+            if not matched_cands:
+                matched_cands = _search_in_pool(alt_year, target_gender, strict=False)
             if matched_cands:
                 break
 

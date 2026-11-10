@@ -643,6 +643,19 @@ class SporcuApiTests(TestCase):
         self.assertEqual(res3["sonuc"], "tam_eslesme")
         self.assertEqual(res3["bulunan_id"], ali.id)
 
+        # 4. 'Hanzade **o**n' (Türkçe karakter Ğ toleransı ile) Hanzade DOĞAN ile eşleşmeli
+        hanzade = Sporcu.objects.create(
+            sporcu_adi="Hanzade DOĞAN",
+            dogum_yili=2011,
+            yas_dogum_yili="2011",
+            cinsiyet="KADIN",
+            birincil_kulup=self.kulup
+        )
+        res4 = match_athlete("Hanzade **o**n", birth_year_or_date=2011, gender="KADIN")
+        self.assertEqual(res4["durum"], "basarili")
+        self.assertEqual(res4["sonuc"], "tam_eslesme")
+        self.assertEqual(res4["bulunan_id"], hanzade.id)
+
     def test_api_canli_aktar_matching_and_deduplication(self):
         """GitHub Action start ve sonuç aktarımı, sporcu eşleştirmesi ve mükerrerlik koruması testi."""
         url = reverse('sonuclar:api_canli_aktar')

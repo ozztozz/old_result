@@ -1239,6 +1239,28 @@ def heal_live_meet_records(event):
                 cinsiyet=r_comb["cinsiyet"],
             ).filter(Q(yaris_no__isnull=True) | Q(yaris_no="")).update(yaris_no=str(idx))
 
+    # 4. Daha önce eşleşememiş 'Maskeli sporcu (...)' kayıtlarını yeniden eşleştir
+    masked_results = list(
+        event.yaris_sonuclari.filter(
+            sporcu__sporcu_adi__startswith="Maskeli sporcu"
+        ).select_related("sporcu", "kulup")
+    )
+    if masked_results:
+        from .athlete_matcher import match_athlete
+        for r in masked_results:
+            raw_masked_name = r.sporcu_maskeli or r.sporcu.sporcu_adi.replace("Maskeli sporcu (", "").rstrip(")")
+            m_res = match_athlete(
+                raw_masked_name,
+                birth_year_or_date=r.sporcu.dogum_yili,
+                club=r.kulup.kulup_adi if r.kulup else None,
+                gender=r.cinsiyet or r.sporcu.cinsiyet,
+            )
+            if m_res.get("bulunan_id"):
+                found_sp = Sporcu.objects.filter(id=m_res["bulunan_id"]).first()
+                if found_sp:
+                    r.sporcu = found_sp
+                    r.save(update_fields=["sporcu"])
+
 
 def musabaka_detay(request, pk):
     """Tekil müsabaka detay sayfası ve yarış sonuçları (PythonAnywhere Optimize Edilmiş - On-demand Lazy Query)."""
