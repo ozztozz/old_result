@@ -1177,9 +1177,69 @@ def musabaka_listesi(request):
     return render(request, 'sonuclar/musabaka_listesi.html', context)
 
 
+def heal_live_meet_records(event):
+    """
+    Canlı yarışlarda veya startlist kayıtlarında yaris_no eksik olan veya
+    start listesi olup derece!='Bekleniyor' olan YarisSonucu kayıtlarını otomatik iyileştirir.
+    """
+    needs_healing = event.yaris_sonuclari.filter(
+        Q(yaris_no__isnull=True) | Q(yaris_no='') | (Q(kaynak_turu='CANLI_START_LISTESI') & ~Q(derece='Bekleniyor'))
+    ).exists()
+    if not needs_healing:
+        return
+
+    # 1. Eksik yaris_no'ları bağlı CanliYarisDosya üzerinden doldur
+    from .models import CanliYarisDosya
+    for dosya in CanliYarisDosya.objects.filter(event=event).exclude(yaris_no__isnull=True).exclude(yaris_no=""):
+        if dosya.yaris_no:
+            event.yaris_sonuclari.filter(
+                canli_dosya=dosya
+            ).filter(Q(yaris_no__isnull=True) | Q(yaris_no="")).update(yaris_no=dosya.yaris_no)
+
+    # 2. Start listesi kayıtlarında derece!='Bekleniyor' olanları onar
+    start_dosya_ids = CanliYarisDosya.objects.filter(event=event, dosya_turu="START_LISTESI").values_list("id", flat=True)
+    q_start = Q(kaynak_turu="CANLI_START_LISTESI")
+    if start_dosya_ids:
+        q_start |= Q(canli_dosya_id__in=start_dosya_ids)
+
+    start_sonuclar = event.yaris_sonuclari.filter(q_start).exclude(derece="Bekleniyor")
+    for sc in start_sonuclar:
+        if sc.derece and sc.derece != "Bekleniyor":
+            if not sc.giris_derecesi:
+                sc.giris_derecesi = sc.derece
+            sc.derece = "Bekleniyor"
+            sc.derece_saniye = None
+            sc.sira = None
+            sc.puan = None
+            sc.kaynak_turu = "CANLI_START_LISTESI"
+            sc.save(update_fields=["giris_derecesi", "derece", "derece_saniye", "sira", "puan", "kaynak_turu"])
+
+    # 3. Hala yaris_no'su boş olan sonuçlar varsa (mesafe, stil, cinsiyet) kombinasyonuna göre sıra ata
+    empty_combos = list(
+        event.yaris_sonuclari.filter(Q(yaris_no__isnull=True) | Q(yaris_no=""))
+        .values("mesafe", "stil", "cinsiyet")
+        .distinct()
+    )
+    if empty_combos:
+        existing_max = 0
+        for y in event.yaris_sonuclari.exclude(yaris_no__isnull=True).exclude(yaris_no="").values_list("yaris_no", flat=True).distinct():
+            m = re.search(r'\d+', str(y))
+            if m:
+                existing_max = max(existing_max, int(m.group()))
+        for idx, r_comb in enumerate(empty_combos, start=existing_max + 1):
+            event.yaris_sonuclari.filter(
+                mesafe=r_comb["mesafe"],
+                stil=r_comb["stil"],
+                cinsiyet=r_comb["cinsiyet"],
+            ).filter(Q(yaris_no__isnull=True) | Q(yaris_no="")).update(yaris_no=str(idx))
+
+
 def musabaka_detay(request, pk):
     """Tekil müsabaka detay sayfası ve yarış sonuçları (PythonAnywhere Optimize Edilmiş - On-demand Lazy Query)."""
     event = get_object_or_404(Event, pk=pk)
+
+    # Canlı yarış veya startlist kayıtlarını otomatik iyileştir
+    heal_live_meet_records(event)
 
     # Filtreleme (Yarış No, Durum, Kulüp/Takım & Sporcu)
     secili_yaris_no = request.GET.get('yaris_no', '').strip()

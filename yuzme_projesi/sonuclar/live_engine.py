@@ -476,11 +476,28 @@ def parse_meet_pdf(
     doc_type = detect_pdf_type(pdf_url, pdf_bytes)
     total_pages = 1
     pages_bytes = [(0, pdf_bytes)]
+    fitz_header = {}
     if fitz is not None:
         try:
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             total_pages = len(doc)
             pages_bytes = []
+            if total_pages > 0:
+                first_text = doc[0].get_text()
+                m_yno = re.search(r'(?:Yarı[şs]|Event)\s*(\d+)', first_text, re.IGNORECASE)
+                if m_yno:
+                    fitz_header["yaris_no"] = int(m_yno.group(1))
+                m_dist = re.search(r'\b(50|100|200|400|800|1500)\s*m\b', first_text, re.IGNORECASE)
+                if m_dist:
+                    fitz_header["mesafe"] = int(m_dist.group(1))
+                for st in ['Serbest', 'Sırtüstü', 'Kurbağalama', 'Kelebek', 'Karışık']:
+                    if re.search(r'\b' + st + r'\b', first_text, re.IGNORECASE):
+                        fitz_header["stil"] = st
+                        break
+                if re.search(r'\b(?:Erkek|Erkekler|Men|Boys)\b', first_text, re.IGNORECASE):
+                    fitz_header["cinsiyet"] = 'Erkek'
+                elif re.search(r'\b(?:Kadın|Kadınlar|Bayan|Bayanlar|Women|Girls)\b', first_text, re.IGNORECASE):
+                    fitz_header["cinsiyet"] = 'Kadın'
             for page_idx in range(total_pages):
                 single_page_doc = fitz.open()
                 single_page_doc.insert_pdf(doc, from_page=page_idx, to_page=page_idx)
@@ -495,10 +512,10 @@ def parse_meet_pdf(
         "musabaka_adi": "",
         "sehir": "",
         "tarih": "",
-        "yaris_no": None,
-        "cinsiyet": "",
-        "mesafe": None,
-        "stil": "",
+        "yaris_no": fitz_header.get("yaris_no"),
+        "cinsiyet": fitz_header.get("cinsiyet", ""),
+        "mesafe": fitz_header.get("mesafe"),
+        "stil": fitz_header.get("stil", ""),
         "yas_grubu": "",
         "toplam_sayfa": total_pages,
         "sonuclar": [],
@@ -1024,10 +1041,17 @@ def _process_single_race_payload(payload: dict) -> dict:
 
     course = detect_course(event.musabaka_adi or "")
     for race in races:
-        mesafe = race.get("mesafe")
-        stil = race.get("stil")
-        cinsiyet = race.get("cinsiyet")
-        yas_grubu = race.get("yas_grubu")
+        mesafe = race.get("mesafe") or payload.get("mesafe")
+        stil = race.get("stil") or payload.get("stil")
+        cinsiyet = race.get("cinsiyet") or payload.get("cinsiyet")
+        yas_grubu = race.get("yas_grubu") or payload.get("yas_grubu")
+
+        raw_yaris_no = race.get("yaris_no") or payload.get("yaris_no") or ""
+        yaris_no_str = ""
+        if raw_yaris_no:
+            m_yno = re.search(r'\d+', str(raw_yaris_no))
+            if m_yno:
+                yaris_no_str = m_yno.group()
 
         for s in race.get("sonuclar", []):
             raw_name = (s.get("ad_soyad") or s.get("sporcu") or "").strip()
@@ -1082,17 +1106,38 @@ def _process_single_race_payload(payload: dict) -> dict:
             if (derece_sn or derece) and not fina:
                 fina = calculate_fina_points(cinsiyet, mesafe, stil, derece_sn or derece, course)
 
-            defaults = {
-                "kulup": club,
-                "derece": derece,
-                "derece_saniye": derece_sn,
-                "sira": sira,
-                "puan": fina,
-                "seri": seri,
-                "kulvar": kulvar,
-                "canli_dosya": dosya_kaydi,
-                "kaynak_turu": "CANLI_START_LISTESI" if doc_type == "start_listesi" else "CANLI_SONUC",
-            }
+            if doc_type == "start_listesi":
+                defaults = {
+                    "yaris_no": yaris_no_str,
+                    "dosya_adi": dosya_adi,
+                    "kulup": club,
+                    "giris_derecesi": derece or s.get("giris_derecesi"),
+                    "derece": "Bekleniyor",
+                    "derece_saniye": None,
+                    "sira": None,
+                    "puan": None,
+                    "seri": seri,
+                    "kulvar": kulvar,
+                    "canli_dosya": dosya_kaydi,
+                    "kaynak_turu": "CANLI_START_LISTESI",
+                }
+            else:
+                defaults = {
+                    "yaris_no": yaris_no_str,
+                    "dosya_adi": dosya_adi,
+                    "kulup": club,
+                    "derece": derece,
+                    "derece_saniye": derece_sn,
+                    "sira": sira,
+                    "puan": fina,
+                    "seri": seri,
+                    "kulvar": kulvar,
+                    "canli_dosya": dosya_kaydi,
+                    "kaynak_turu": "CANLI_SONUC",
+                }
+                if s.get("giris_derecesi"):
+                    defaults["giris_derecesi"] = s.get("giris_derecesi")
+
             if '*' in clean_name or '*' in raw_name:
                 defaults["sporcu_maskeli"] = clean_name
             if durum_str and durum_str != "NORMAL":
@@ -1105,10 +1150,16 @@ def _process_single_race_payload(payload: dict) -> dict:
                 "stil": stil,
                 "cinsiyet": cinsiyet,
             }
+            if yaris_no_str:
+                lookup["yaris_no"] = yaris_no_str
             if yas_grubu:
                 lookup["yas_grubu"] = yas_grubu
 
             sonuc_obj = YarisSonucu.objects.filter(**lookup).first()
+            if not sonuc_obj and yaris_no_str:
+                fallback_lookup = {k: v for k, v in lookup.items() if k != "yaris_no"}
+                sonuc_obj = YarisSonucu.objects.filter(**fallback_lookup).first()
+
             if sonuc_obj:
                 if doc_type == "sonuc_listesi" or sonuc_obj.kaynak_turu == "CANLI_START_LISTESI":
                     for k, v in defaults.items():
@@ -1202,9 +1253,18 @@ def process_single_meet_db(
         # Otomatik Sıfırlama: Eğer force=True VEYA event'e bağlı yarış sonucu yoksa
         # ama eski CanliYarisDosya kayıtları varsa, dosya önbelleğini sıfırla ki tüm PDF'ler baştan işlensin!
         event_has_results = bool(yaris.event and YarisSonucu.objects.filter(event=yaris.event).exists())
-        if force or not event_has_results:
+        if force:
+            logger.info(f"[*] #{yaris.id} ({yaris.musabaka_adi or yaris.canli_url}): Force devrede. Tüm dosyalar ve sonuçlar sıfırlanıyor...")
+            if yaris.event:
+                YarisSonucu.objects.filter(event=yaris.event).delete()
+            CanliYarisDosya.objects.filter(canli_yaris=yaris).delete()
+            yaris.islenen_start_listesi = 0
+            yaris.islenen_sonuc_listesi = 0
+            yaris.durum = "ISLENIYOR"
+            yaris.save(update_fields=["islenen_start_listesi", "islenen_sonuc_listesi", "durum"])
+        elif not event_has_results:
             if CanliYarisDosya.objects.filter(canli_yaris=yaris).exists():
-                logger.info(f"[*] #{yaris.id} ({yaris.musabaka_adi or yaris.canli_url}): Sonuçlar boş/silinmiş veya force devrede. Tüm dosyalar baştan işlenmek üzere sıfırlanıyor...")
+                logger.info(f"[*] #{yaris.id} ({yaris.musabaka_adi or yaris.canli_url}): Sonuçlar boş/silinmiş. Dosya önbelleği sıfırlanıyor...")
                 CanliYarisDosya.objects.filter(canli_yaris=yaris).delete()
                 yaris.islenen_start_listesi = 0
                 yaris.islenen_sonuc_listesi = 0
