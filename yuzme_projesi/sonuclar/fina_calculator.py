@@ -153,7 +153,7 @@ def calculate_fina_points(
     cinsiyet: Any,
     mesafe: Any,
     stil: Any,
-    derece_saniye: Optional[float],
+    derece_saniye: Any,
     course: str = "50m"
 ) -> Optional[int]:
     """
@@ -162,8 +162,25 @@ def calculate_fina_points(
     
     Örnek:
         calculate_fina_points('Erkek', 50, 'Serbest', 25.50, course='50m') -> 545
+        calculate_fina_points('Erkek', 50, 'Serbest', '25.50', course='50m') -> 545
     """
-    if not derece_saniye or derece_saniye <= 0:
+    if not derece_saniye:
+        return None
+
+    try:
+        if isinstance(derece_saniye, str):
+            s = derece_saniye.strip()
+            if ":" in s:
+                parts = s.split(":")
+                d_sec = float(parts[0]) * 60 + float(parts[1])
+            else:
+                d_sec = float(s)
+        else:
+            d_sec = float(derece_saniye)
+
+        if d_sec <= 0:
+            return None
+    except (TypeError, ValueError):
         return None
 
     try:
@@ -186,7 +203,7 @@ def calculate_fina_points(
             return None
 
     # FINA Formülü: 1000 * (Base / Time)^3
-    ratio = base_time / float(derece_saniye)
+    ratio = base_time / d_sec
     points = int(math.floor(1000.0 * (ratio ** 3)))
     return max(points, 0)
 

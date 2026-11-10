@@ -1076,11 +1076,11 @@ def _process_single_race_payload(payload: dict) -> dict:
             puan = s.get("puan")
             durum_str = s.get("durum") or "NORMAL"
 
-            fina = puan
-            if derece and not fina:
-                fina = calculate_fina_points(cinsiyet, mesafe, stil, derece, course)
-
             derece_sn = _time_to_seconds(derece)
+
+            fina = puan
+            if (derece_sn or derece) and not fina:
+                fina = calculate_fina_points(cinsiyet, mesafe, stil, derece_sn or derece, course)
 
             defaults = {
                 "kulup": club,
