@@ -398,9 +398,16 @@ def call_groq_fallback(contents: List[Any], model: str = GROQ_MODEL) -> GroqFall
     return GroqFallbackResponse(text=res_text)
 
 
-def _is_quota_error(exc: Exception) -> bool:
+def _is_transient_or_quota_error(exc: Exception) -> bool:
     msg = str(exc).lower()
-    return any(tok in msg for tok in ("429", "402", "resource_exhausted", "quota", "rate limit", "ratelimit", "too many requests", "exhausted", "depleted"))
+    transient_tokens = (
+        "429", "402", "503", "500", "502", "504",
+        "resource_exhausted", "quota", "rate limit", "ratelimit",
+        "too many requests", "exhausted", "depleted",
+        "unavailable", "high demand", "temporarily", "try again later",
+        "overloaded", "server error", "connection reset", "timeout"
+    )
+    return any(tok in msg for tok in transient_tokens)
 
 
 def get_fallback_gemini_client() -> Optional[genai.Client]:
@@ -419,42 +426,61 @@ def generate_content_with_fallback(
     config: types.GenerateContentConfig
 ):
     """
-    3 Kademeli Hiyerarşik Yedekleme:
-    1. Birincil GEMINI_API_KEY
-    2. GEMINI_API_KEY_2
-    3. Groq API (openai/gpt-oss-120b)
+    Kademeli ve Akıllı Hata Yönetimi:
+    1. Birincil Gemini Modeli & Anahtarı
+    2. Geçici 503 (High Demand) durumunda alternatif modeller (gemini-2.0-flash / gemini-1.5-flash) ve kısa bekleme (backoff)
+    3. GEMINI_API_KEY_2 (Yedek Anahtar)
+    4. Groq API Yedek Çağrısı
     """
     global _USE_FALLBACK_KEY
     fallback_client = get_fallback_gemini_client()
     groq_key = (os.environ.get("GROQ_API_KEY") or GROQ_API_KEY or "").strip().strip("'\"")
 
-    for attempt in range(3):
+    models_to_try = [model]
+    for m in ("gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-lite-latest"):
+        if m not in models_to_try:
+            models_to_try.append(m)
+
+    max_attempts = 4
+    for attempt in range(max_attempts):
         use_fallback = (_USE_FALLBACK_KEY and fallback_client is not None)
         client = fallback_client if use_fallback else primary_client
+        current_model = models_to_try[attempt % len(models_to_try)]
+
         try:
-            return client.models.generate_content(model=model, contents=contents, config=config)
+            return client.models.generate_content(model=current_model, contents=contents, config=config)
         except Exception as e:
-            if _is_quota_error(e):
+            if _is_transient_or_quota_error(e):
+                err_str = str(e)
+
+                # 1. Aşama: Eğer birincil anahtar kota/erişim hatası aldıysa ve yedek anahtar varsa geçiş yap
                 if not _USE_FALLBACK_KEY and fallback_client is not None:
-                    logger.warning("[!] Birincil Gemini API kotası doldu, GEMINI_API_KEY_2 devreye giriyor...")
+                    logger.warning("[!] Gemini API uyarısı, GEMINI_API_KEY_2 deneniyor...")
                     try:
-                        res = fallback_client.models.generate_content(model=model, contents=contents, config=config)
+                        res = fallback_client.models.generate_content(model=current_model, contents=contents, config=config)
                         _USE_FALLBACK_KEY = True
                         return res
                     except Exception as fb_err:
-                        logger.warning(f"[!] GEMINI_API_KEY_2 de kota hatası verdi: {fb_err}")
+                        logger.warning(f"[!] GEMINI_API_KEY_2 de yanıt vermedi: {fb_err}")
                         _USE_FALLBACK_KEY = False
 
+                # 2. Aşama: Groq API tanımlıysa devreye sok
                 if groq_key:
-                    logger.warning("[!] İki Gemini anahtarı da sınırda. 3. aşama olarak Groq API devreye giriyor...")
+                    logger.warning("[!] Gemini meşgul/sınırda. Yedek Groq API devreye giriyor...")
                     try:
                         return call_groq_fallback(contents)
                     except Exception as groq_err:
                         logger.error(f"[!] Groq API yedek çağrısı da hata verdi: {groq_err}")
 
-                if attempt < 2:
-                    wait_sec = 20 + (attempt * 10)
-                    logger.info(f"[*] API limiti nedeniyle {wait_sec} sn bekleniyor ({attempt + 1}/2)...")
+                # 3. Aşama: Geçici yüksek talep (503) veya hız limiti (429) için bekle ve alternatif modelle tekrar dene
+                if attempt < max_attempts - 1:
+                    wait_sec = (attempt + 1) * 6  # 6s, 12s, 18s
+                    next_model = models_to_try[(attempt + 1) % len(models_to_try)]
+                    logger.info(
+                        f"[*] Gemini yüksek talep / kota uyarısı ({err_str[:80]}...). "
+                        f"{wait_sec} sn beklenip alternatif modelle ({next_model}) tekrar denenecek "
+                        f"({attempt + 1}/{max_attempts})..."
+                    )
                     time.sleep(wait_sec)
                     continue
             raise
