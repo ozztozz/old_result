@@ -54,6 +54,8 @@ if "django" not in sys.modules:
 import requests
 from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 try:
     import fitz  # PyMuPDF
