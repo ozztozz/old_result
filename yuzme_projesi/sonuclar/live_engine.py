@@ -82,7 +82,7 @@ from sonuclar.models import (
     Sporcu,
     is_school_team,
 )
-from sonuclar.athlete_matcher import match_athlete, clean_athlete_name_tags
+from sonuclar.athlete_matcher import match_athlete, clean_athlete_name_tags, clean_club_name_tags
 from sonuclar.turkish_names import standardize_turkish_athlete_name, tr_fold
 from sonuclar.fina_calculator import calculate_fina_points, detect_course
 
@@ -914,6 +914,7 @@ def _time_to_seconds(time_str: Optional[str]) -> Optional[float]:
 def clean_and_expand_club_name(name: str) -> str:
     if not name:
         return ""
+    name = clean_club_name_tags(name)
     name = re.sub(r"\s+", " ", name.strip())
     expansions = [
         (r"\bB\.B\.?\s*S\.?K\.?\b", "BÜYÜKŞEHİR BELEDİYESİ SPOR KULÜBÜ"),
@@ -931,7 +932,9 @@ def clean_and_expand_club_name(name: str) -> str:
 
 
 def get_or_resolve_canonical_club(raw_club_name: str, is_school: bool = False) -> Tuple[Kulup, bool]:
-    c_name = raw_club_name.strip() if raw_club_name else "FERDİ"
+    c_name = clean_club_name_tags(raw_club_name) if raw_club_name else "FERDİ"
+    if not c_name:
+        c_name = "FERDİ"
     c_name = re.sub(r"\s+", " ", c_name)
     is_school_flag = 1 if (is_school or is_school_team(c_name)) else 0
 
@@ -945,7 +948,7 @@ def get_or_resolve_canonical_club(raw_club_name: str, is_school: bool = False) -
         return club, False
 
     club = Kulup.objects.create(
-        kulup_adi=c_name,
+        kulup_adi=clean_name or c_name,
         okul_mu=is_school_flag,
     )
     return club, True
@@ -1036,10 +1039,11 @@ def _process_single_race_payload(payload: dict) -> dict:
             birth_year = s.get("dogum_yili")
             gender = cinsiyet or s.get("cinsiyet")
             raw_club = s.get("kulup") or ""
-            club, _ = get_or_resolve_canonical_club(raw_club, is_school=is_school)
+            clean_club_str = clean_club_name_tags(raw_club)
+            club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school)
 
             # 2. Sporcuyu bul veya 1-e-1 maskeli eşleştir
-            match_res = match_athlete(clean_name, birth_year_or_date=birth_year, club=raw_club, gender=gender)
+            match_res = match_athlete(clean_name, birth_year_or_date=birth_year, club=clean_club_str or raw_club, gender=gender)
             athlete = None
             if match_res.get("bulunan_id"):
                 athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()

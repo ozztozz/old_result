@@ -577,6 +577,28 @@ class SporcuApiTests(TestCase):
         for raw, expected in test_cases:
             self.assertEqual(clean_athlete_name_tags(raw), expected)
 
+    def test_clean_club_name_tags(self):
+        """Kulüp isimlerindeki (FD), (TK), (TD), ferdi vb. etiketlerin temizlenme testi."""
+        from sonuclar.athlete_matcher import clean_club_name_tags
+
+        test_cases = [
+            ("ANKARA DSİ SPOR KULÜBÜ (TK)", "ANKARA DSİ SPOR KULÜBÜ"),
+            ("ANKARA DSİ SPOR KULÜBÜ (FD)", "ANKARA DSİ SPOR KULÜBÜ"),
+            ("(TK) ANKARA DSİ SPOR KULÜBÜ", "ANKARA DSİ SPOR KULÜBÜ"),
+            ("(FD) ANKARA DSİ SPOR KULÜBÜ", "ANKARA DSİ SPOR KULÜBÜ"),
+            ("ÖZEL ÇANKAYA FEN LİSESİ (TK)", "ÖZEL ÇANKAYA FEN LİSESİ"),
+            ("TED ANKARA KOLEJLİLER [TK]", "TED ANKARA KOLEJLİLER"),
+            ("GALATASARAY SPOR KULÜBÜ - TK", "GALATASARAY SPOR KULÜBÜ"),
+            ("FENERBAHÇE SPOR KULÜBÜ / FD", "FENERBAHÇE SPOR KULÜBÜ"),
+            ("ENKA SPOR KULÜBÜ (TD)", "ENKA SPOR KULÜBÜ"),
+            ("BURSA BÜYÜKŞEHİR BLD (FERDİ)", "BURSA BÜYÜKŞEHİR BLD"),
+            ("İZMİR YÜZME (TASNİF DIŞI)", "İZMİR YÜZME"),
+            ("ANKARA DSİ SPOR KULÜBÜ (TK-1)", "ANKARA DSİ SPOR KULÜBÜ"),
+            ("İSTANBUL ÇEVRE KULÜBÜ (OKUL)", "İSTANBUL ÇEVRE KULÜBÜ"),
+        ]
+        for raw, expected in test_cases:
+            self.assertEqual(clean_club_name_tags(raw), expected)
+
     def test_masked_athlete_exact_1to1_matching(self):
         """Her '*' tek harf olacak şekilde 1-e-1 maskeli sporcu eşleştirme testi."""
         from sonuclar.athlete_matcher import match_athlete

@@ -50,6 +50,33 @@ def clean_athlete_name_tags(name: Optional[str]) -> str:
     return re.sub(r'\s+', ' ', s).strip()
 
 
+def clean_club_name_tags(name: Optional[str]) -> str:
+    """
+    Kulüp adında bulunabilecek (fd), (tk), (td), (f1), (tk-1), ferdi, tasnif dışı vb.
+    parantez içi etiketleri, ayraçlı son ekleri ve baştaki/sondaki artık karakterleri temizler.
+    """
+    if not name:
+        return ""
+    s = str(name).strip()
+    # 1. Parantez veya köşeli parantez içi etiketler: (fd), (tk), (td), (f1), (tk-1), ferdi, tasnif dışı, okul vb.
+    s = re.sub(
+        r'\s*[\(\[]\s*(?:[FfTt][DdKk0-9]|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ]|OKUL|KUL[ÜU]P)[^\)\]]*[\)\]]',
+        ' ',
+        s,
+        flags=re.IGNORECASE
+    )
+    # 2. Ayraçlı son ekler: örn: ' - TK', ' / FD', ' - TD'
+    s = re.sub(r'\s*[\-\/\\]\s*(?:[FfTt][DdKk0-9]|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ])\s*$', ' ', s, flags=re.IGNORECASE)
+    # 3. Baştaki tek parantez veya artık işaretler
+    s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
+    # 4. Kelime başında veya sonunda bağımsız kalan FD/TK/TD
+    s = re.sub(r'^\s*(?:[FfTt][DdKk0-9])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s*\b(?:[FfTt][DdKk0-9])[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)
+    # 5. Sondaki artık parantez veya işaretler
+    s = re.sub(r'\s*[\)\]\}\>\-\+\/\\.,:;~_]\s*$', '', s)
+    return re.sub(r'\s+', ' ', s).strip()
+
+
 def normalize_tr(s: Optional[str], keep_asterisks: bool = False) -> str:
     """Türkçe karakterleri ve noktalama işaretlerini eşleştirme için normalize eder."""
     if not s:
@@ -109,7 +136,8 @@ def match_masked_athlete_exact(
         }
 
     target_year = parse_year(birth_year)
-    norm_club = normalize_tr(club) if club else None
+    clean_club = clean_club_name_tags(club)
+    norm_club = normalize_tr(clean_club) if clean_club else None
 
     target_gender = None
     if gender:
@@ -123,7 +151,7 @@ def match_masked_athlete_exact(
         "ad": masked_name.strip(),
         "temiz_ad": clean_masked,
         "dogum_yili": target_year,
-        "kulup": club.strip() if club else None,
+        "kulup": clean_club if clean_club else None,
         "cinsiyet": target_gender
     }
 
@@ -292,7 +320,8 @@ def match_athlete(
 
     norm_input = normalize_tr(clean_name)
     target_year = parse_year(birth_year_or_date)
-    norm_club = normalize_tr(club) if club else None
+    clean_club = clean_club_name_tags(club)
+    norm_club = normalize_tr(clean_club) if clean_club else None
 
     target_gender = None
     if gender:
@@ -307,7 +336,7 @@ def match_athlete(
         "temiz_ad": clean_name,
         "normalize_ad": norm_input,
         "dogum_yili": target_year,
-        "kulup": club.strip() if club else None,
+        "kulup": clean_club if clean_club else None,
         "cinsiyet": target_gender
     }
 
