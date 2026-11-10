@@ -22,21 +22,210 @@ except ImportError:
     fuzz = None
 
 
-def normalize_tr(s: Optional[str]) -> str:
+def clean_athlete_name_tags(name: Optional[str]) -> str:
+    """
+    Sporcu adında bulunan (fd), (tk), (td), (f5), ferdi, tasnif dışı vb.
+    parantez içi veya ek etiketleri ve baştaki/sondaki artık karakterleri temizler.
+    Maskeli (* içeren) veya normal tüm isimlerde güvenle çalışır, yıldızları korur.
+    """
+    if not name:
+        return ""
+    s = str(name).strip()
+    # 1. Parantez veya köşeli parantez içindeki tipik etiketler:
+    # (fd), (tk), (td), (f1)-(f9), (t1)-(t9), (ferdi), (tasnif dışı), (okul) vb.
+    s = re.sub(
+        r'\s*[\(\[]\s*(?:[FfTt][DdKk0-9]|FERD[İI]|TASN[İI]F\s*DI[ŞS][Iİ]|OKUL|KUL[ÜU]P)[^\)\]]*[\)\]]',
+        ' ',
+        s,
+        flags=re.IGNORECASE
+    )
+    # 2. Baştaki tek parantez veya artık işaretler: örn: "( Metehan İŞLER" -> "Metehan İŞLER" (yıldızlar korunur)
+    s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
+    # 3. Kelime başında veya sonunda bağımsız kalan FD/TK/TD etiketleri
+    s = re.sub(r'^\s*(?:[FfTt][DdKk])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s*\b(?:[FfTt][DdKk])[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)
+    # 4. Sondaki artık parantez veya işaretler (yıldızlar korunur)
+    s = re.sub(r'\s*[\)\]\}\>\-\+\/\\.,:;~_]\s*$', '', s)
+    # 5. Çift boşlukları temizle
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+def normalize_tr(s: Optional[str], keep_asterisks: bool = False) -> str:
     """Türkçe karakterleri ve noktalama işaretlerini eşleştirme için normalize eder."""
     if not s:
         return ""
     mapping = {
-        'İ': 'I', 'ı': 'i', 'I': 'I', 'i': 'i',
-        'Ş': 'S', 'ş': 's',
-        'Ğ': 'G', 'ğ': 'g',
-        'Ü': 'U', 'ü': 'u',
-        'Ö': 'O', 'ö': 'o',
-        'Ç': 'C', 'ç': 'c'
+        'İ': 'I', 'ı': 'I', 'I': 'I', 'i': 'I',
+        'Ş': 'S', 'ş': 'S',
+        'Ğ': 'G', 'ğ': 'G',
+        'Ü': 'U', 'ü': 'U',
+        'Ö': 'O', 'ö': 'O',
+        'Ç': 'C', 'ç': 'C'
     }
     cleaned = ''.join(mapping.get(c, c) for c in str(s).strip().upper())
-    cleaned = re.sub(r'[^A-Z0-9\s]', ' ', cleaned)
+    pattern = r'[^A-Z0-9\s\*]' if keep_asterisks else r'[^A-Z0-9\s]'
+    cleaned = re.sub(pattern, ' ', cleaned)
     return re.sub(r'\s+', ' ', cleaned).strip()
+
+
+def token_1to1_match(m_tok: str, c_tok: str) -> bool:
+    """
+    1-e-1 (birebir karakter) maskeli token eşleştirmesi.
+    Her '*' tam olarak 1 karaktere denk gelir.
+    Örn: 'D***Z' -> 5 harf, 'DENIZ' -> 5 harf => True
+         'D***Z' -> 'DERYA' (son harf Z değil) => False
+         'D***Z' -> 'DENIZHAN' (uzunluk 8 != 5) => False
+    """
+    if len(m_tok) != len(c_tok):
+        return False
+    for m_c, c_c in zip(m_tok, c_tok):
+        if m_c == '*':
+            continue
+        if m_c != c_c:
+            return False
+    return True
+
+
+def match_masked_athlete_exact(
+    masked_name: str,
+    birth_year: Any = None,
+    gender: Optional[str] = None,
+    club: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Maskeli (*'lı) sporcu adını veritabanındaki kayıtlarla '1 yıldız = 1 harf'
+    deterministik kuralıyla eşleştirir.
+    """
+    clean_masked = clean_athlete_name_tags(masked_name)
+    if not clean_masked:
+        return {
+            "durum": "gecersiz_istek",
+            "sonuc": "yok",
+            "bulunan_id": None,
+            "sporcu": None,
+            "muhtemel_eslesmeler": [],
+            "mesaj": "Geçerli bir sporcu adı belirtilmelidir.",
+            "sorgu": {"ad": masked_name, "dogum_yili": birth_year, "kulup": club, "cinsiyet": gender}
+        }
+
+    target_year = parse_year(birth_year)
+    norm_club = normalize_tr(club) if club else None
+
+    target_gender = None
+    if gender:
+        g = str(gender).strip().upper()
+        if g.startswith("E") or "BOY" in g or "MALE" in g or "MEN" in g:
+            target_gender = "ERKEK"
+        elif g.startswith("K") or "GIRL" in g or "FEMALE" in g or "WOMEN" in g:
+            target_gender = "KADIN"
+
+    sorgu_info = {
+        "ad": masked_name.strip(),
+        "temiz_ad": clean_masked,
+        "dogum_yili": target_year,
+        "kulup": club.strip() if club else None,
+        "cinsiyet": target_gender
+    }
+
+    norm_m_tokens = [normalize_tr(w, keep_asterisks=True) for w in clean_masked.split() if w]
+    if not norm_m_tokens:
+        return {
+            "durum": "bulunamadi",
+            "sonuc": "yok",
+            "bulunan_id": None,
+            "sporcu": None,
+            "muhtemel_eslesmeler": [],
+            "sorgu": sorgu_info
+        }
+
+    def _search_in_pool(year_filter, gender_filter):
+        cand_qs = Sporcu.objects.exclude(sporcu_adi__startswith="Maskeli sporcu").select_related('birincil_kulup').prefetch_related('kulup_tarihcesi__kulup')
+        if year_filter:
+            cand_qs = cand_qs.filter(Q(dogum_yili=year_filter) | Q(yas_dogum_yili=str(year_filter)[-2:]))
+        if gender_filter:
+            cand_qs = cand_qs.filter(Q(cinsiyet__iexact=gender_filter) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
+
+        matches = []
+        for cand in cand_qs:
+            cand_clean = clean_athlete_name_tags(cand.sporcu_adi)
+            norm_c_tokens = [normalize_tr(w) for w in cand_clean.split() if w]
+            if not norm_c_tokens:
+                continue
+
+            # Senaryo 1: Token sayısı birebir aynı (Örn: 'D***Z K**T' vs 'DENIZ KURT')
+            is_match = False
+            if len(norm_m_tokens) == len(norm_c_tokens):
+                if all(token_1to1_match(mt, ct) for mt, ct in zip(norm_m_tokens, norm_c_tokens)):
+                    is_match = True
+            # Senaryo 2: Maskeli listede 2 isim varken veritabanında sporcunun birden fazla ilk adı olabilir
+            # (Örn: 'M**** K**A' vs 'MEHMET CAN KAYA')
+            elif len(norm_m_tokens) == 2 and len(norm_c_tokens) >= 3:
+                if token_1to1_match(norm_m_tokens[0], norm_c_tokens[0]) and token_1to1_match(norm_m_tokens[-1], norm_c_tokens[-1]):
+                    is_match = True
+
+            if is_match:
+                matches.append(cand)
+        return matches
+
+    matched_cands = _search_in_pool(target_year, target_gender)
+
+    # Hedef yılda bulunamadıysa ve hedef yıl belirtilmişse +-1 yıl toleransı ile tekrar dene
+    if not matched_cands and target_year:
+        for alt_year in [target_year - 1, target_year + 1]:
+            matched_cands = _search_in_pool(alt_year, target_gender)
+            if matched_cands:
+                break
+
+    if len(matched_cands) == 1:
+        sp = matched_cands[0]
+        return {
+            "durum": "basarili",
+            "sonuc": "tam_eslesme",
+            "bulunan_id": sp.id,
+            "sporcu": _serialize_sporcu(sp, 100.0),
+            "muhtemel_eslesmeler": [],
+            "sorgu": sorgu_info
+        }
+    elif len(matched_cands) > 1:
+        # Birden fazla aday varsa kulüp filtresi uygula
+        if norm_club:
+            club_matched = []
+            for sp in matched_cands:
+                cand_clubs = [normalize_tr(sp.birincil_kulup.kulup_adi)] if sp.birincil_kulup else []
+                cand_clubs.extend([normalize_tr(h.kulup.kulup_adi) for h in sp.kulup_tarihcesi.all()])
+                if any(c and (norm_club in c or c in norm_club) for c in cand_clubs):
+                    club_matched.append(sp)
+            if len(club_matched) == 1:
+                sp = club_matched[0]
+                return {
+                    "durum": "basarili",
+                    "sonuc": "tam_eslesme",
+                    "bulunan_id": sp.id,
+                    "sporcu": _serialize_sporcu(sp, 100.0),
+                    "muhtemel_eslesmeler": [],
+                    "sorgu": sorgu_info
+                }
+            elif len(club_matched) > 1:
+                matched_cands = club_matched
+
+        return {
+            "durum": "basarili",
+            "sonuc": "muhtemel_eslesmeler",
+            "bulunan_id": None,
+            "sporcu": None,
+            "muhtemel_eslesmeler": [_serialize_sporcu(s, 95.0) for s in matched_cands],
+            "sorgu": sorgu_info
+        }
+
+    return {
+        "durum": "bulunamadi",
+        "sonuc": "yok",
+        "bulunan_id": None,
+        "sporcu": None,
+        "muhtemel_eslesmeler": [],
+        "mesaj": "1-e-1 maskeli desen ile eşleşen sporcu bulunamadı.",
+        "sorgu": sorgu_info
+    }
 
 
 def parse_year(val: Any) -> Optional[int]:
@@ -79,7 +268,9 @@ def match_athlete(
         "sorgu": { "ad": ..., "dogum_yili": ..., "kulup": ..., "cinsiyet": ... }
     }
     """
-    if not name or len(name.strip()) < 2:
+    # 0. Aşama: İsimdeki (FD), (TK), (TD), ferdi vb. etiketleri temizle
+    clean_name = clean_athlete_name_tags(name)
+    if not clean_name or len(clean_name.strip()) < 2:
         return {
             "durum": "gecersiz_istek",
             "sonuc": "yok",
@@ -87,10 +278,19 @@ def match_athlete(
             "sporcu": None,
             "muhtemel_eslesmeler": [],
             "mesaj": "Geçerli bir sporcu adı belirtilmelidir.",
-            "sorgu": {"ad": name, "dogum_yili": birth_year_or_date, "kulup": club, "cinsiyet": gender}
+            "sorgu": {"ad": name, "temiz_ad": clean_name, "dogum_yili": birth_year_or_date, "kulup": club, "cinsiyet": gender}
         }
 
-    norm_input = normalize_tr(name)
+    # Eğer isimde '*' maskesi varsa 1-e-1 deterministik eşleştiriciye yönlendir
+    if '*' in clean_name:
+        return match_masked_athlete_exact(
+            masked_name=clean_name,
+            birth_year=birth_year_or_date,
+            gender=gender,
+            club=club,
+        )
+
+    norm_input = normalize_tr(clean_name)
     target_year = parse_year(birth_year_or_date)
     norm_club = normalize_tr(club) if club else None
 
@@ -104,6 +304,7 @@ def match_athlete(
 
     sorgu_info = {
         "ad": name.strip(),
+        "temiz_ad": clean_name,
         "normalize_ad": norm_input,
         "dogum_yili": target_year,
         "kulup": club.strip() if club else None,
@@ -122,7 +323,7 @@ def match_athlete(
         )
 
     # İsim birebir aynı mı? (Büyük/küçük harf ve Türkçe harf duyarsız)
-    exact_matches = list(exact_qs.filter(sporcu_adi__iexact=name.strip()))
+    exact_matches = list(exact_qs.filter(Q(sporcu_adi__iexact=clean_name) | Q(sporcu_adi__iexact=name.strip())))
     if not exact_matches:
         # Türkçe normalize isim veya kelime sırası bağımsız tam eşleşme kontrolü
         tokens = [t for t in norm_input.split() if len(t) >= 2]
@@ -131,7 +332,8 @@ def match_athlete(
             for tok in tokens:
                 cand_token_filter |= Q(sporcu_adi__icontains=tok)
             for sp in exact_qs.filter(cand_token_filter)[:100]:
-                sp_norm = normalize_tr(sp.sporcu_adi)
+                sp_clean = clean_athlete_name_tags(sp.sporcu_adi)
+                sp_norm = normalize_tr(sp_clean)
                 if sp_norm == norm_input or sorted(sp_norm.split()) == sorted(tokens):
                     if sp not in exact_matches:
                         exact_matches.append(sp)
@@ -141,7 +343,7 @@ def match_athlete(
         tol_filter = Q(dogum_yili__in=[target_year, target_year - 1, target_year + 1]) | Q(yas_dogum_yili=str(target_year)[-2:])
         if target_gender:
             tol_filter &= (Q(cinsiyet__iexact=target_gender) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
-        cand_tol = list(Sporcu.objects.filter(tol_filter, sporcu_adi__iexact=name.strip()).select_related('birincil_kulup'))
+        cand_tol = list(Sporcu.objects.filter(tol_filter, Q(sporcu_adi__iexact=clean_name) | Q(sporcu_adi__iexact=name.strip())).select_related('birincil_kulup'))
         if not cand_tol and tokens:
             cand_tol = list(Sporcu.objects.filter(tol_filter, sporcu_adi__iexact=" ".join(tokens)).select_related('birincil_kulup'))
         for sp in cand_tol:

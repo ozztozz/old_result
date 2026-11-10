@@ -555,6 +555,72 @@ class SporcuApiTests(TestCase):
         # Kulübü ve adı tutan Ömer KAYA bulunmalı
         self.assertEqual(res.get("bulunan_id"), omer.id)
 
+    def test_clean_athlete_name_tags(self):
+        """(FD), (TK), (TD), ferdi vb. etiketlerin ve artık karakterlerin temizlenme testi."""
+        from sonuclar.athlete_matcher import clean_athlete_name_tags
+
+        test_cases = [
+            ("ALİ VELİ (FD)", "ALİ VELİ"),
+            ("(TK) AYŞE YILMAZ", "AYŞE YILMAZ"),
+            ("D***Z K**T (fd)", "D***Z K**T"),
+            ("M*** K*** (TK)", "M*** K***"),
+            ("CAN ÖZ (FD.)", "CAN ÖZ"),
+            ("BERK YILMAZ [TK]", "BERK YILMAZ"),
+            ("EMİR ASLAN (ferdi)", "EMİR ASLAN"),
+            ("DENİZ KAYA (TD)", "DENİZ KAYA"),
+            ("D***Z K**T", "D***Z K**T"),
+            ("ÖMER KAYA FD", "ÖMER KAYA"),
+            ("TK CANSU DEMİR", "CANSU DEMİR"),
+            ("( Metehan İŞLER", "Metehan İŞLER"),
+            ("(f5) Mehmet P'lat SARI", "Mehmet P'lat SARI"),
+        ]
+        for raw, expected in test_cases:
+            self.assertEqual(clean_athlete_name_tags(raw), expected)
+
+    def test_masked_athlete_exact_1to1_matching(self):
+        """Her '*' tek harf olacak şekilde 1-e-1 maskeli sporcu eşleştirme testi."""
+        from sonuclar.athlete_matcher import match_athlete
+
+        deniz = Sporcu.objects.create(
+            sporcu_adi="Deniz KURT",
+            dogum_yili=2012,
+            yas_dogum_yili="2012",
+            cinsiyet="ERKEK",
+            birincil_kulup=self.kulup
+        )
+        denizhan = Sporcu.objects.create(
+            sporcu_adi="Denizhan KURT",
+            dogum_yili=2012,
+            yas_dogum_yili="2012",
+            cinsiyet="ERKEK",
+            birincil_kulup=self.kulup
+        )
+        ali = Sporcu.objects.create(
+            sporcu_adi="Ali KAYA",
+            dogum_yili=2012,
+            yas_dogum_yili="2012",
+            cinsiyet="ERKEK",
+            birincil_kulup=self.kulup
+        )
+
+        # 1. 'D***Z K**T (FD)' (5 harf + 4 harf) Deniz KURT ile eşleşmeli, Denizhan (8 harf) ile eşleşmemeli!
+        res1 = match_athlete("D***Z K**T (FD)", birth_year_or_date=2012, gender="ERKEK")
+        self.assertEqual(res1["durum"], "basarili")
+        self.assertEqual(res1["sonuc"], "tam_eslesme")
+        self.assertEqual(res1["bulunan_id"], deniz.id)
+
+        # 2. 'D******N K**T' (8 harf + 4 harf) Denizhan KURT ile eşleşmeli!
+        res2 = match_athlete("D******N K**T", birth_year_or_date=2012, gender="ERKEK")
+        self.assertEqual(res2["durum"], "basarili")
+        self.assertEqual(res2["sonuc"], "tam_eslesme")
+        self.assertEqual(res2["bulunan_id"], denizhan.id)
+
+        # 3. '(TK) A** K**A' Ali KAYA ile eşleşmeli
+        res3 = match_athlete("(TK) A** K**A", birth_year_or_date=2012, gender="ERKEK")
+        self.assertEqual(res3["durum"], "basarili")
+        self.assertEqual(res3["sonuc"], "tam_eslesme")
+        self.assertEqual(res3["bulunan_id"], ali.id)
+
     def test_api_canli_aktar_matching_and_deduplication(self):
         """GitHub Action start ve sonuç aktarımı, sporcu eşleştirmesi ve mükerrerlik koruması testi."""
         url = reverse('sonuclar:api_canli_aktar')

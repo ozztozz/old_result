@@ -77,9 +77,10 @@ from sonuclar.models import (
     Event,
     YarisSonucu,
     Kulup,
+    Sporcu,
     is_school_team,
 )
-from sonuclar.athlete_matcher import match_athlete
+from sonuclar.athlete_matcher import match_athlete, clean_athlete_name_tags
 from sonuclar.turkish_names import standardize_turkish_athlete_name, tr_fold
 from sonuclar.fina_calculator import calculate_fina_points, detect_course
 
@@ -961,17 +962,39 @@ def _process_single_race_payload(payload: dict) -> dict:
             if not raw_name:
                 continue
 
-            clean_name = standardize_turkish_athlete_name(raw_name)
+            # 1. (FD), (TK), (TD), ferdi vb. etiketleri temizle
+            clean_name = clean_athlete_name_tags(raw_name)
             birth_year = s.get("dogum_yili")
             gender = cinsiyet or s.get("cinsiyet")
-
-            athlete, _ = match_athlete(clean_name, birth_year, gender, create_if_missing=True)
             raw_club = s.get("kulup") or ""
             club, _ = get_or_resolve_canonical_club(raw_club, is_school=is_school)
 
-            if athlete and club and not athlete.kulup:
-                athlete.kulup = club
-                athlete.save(update_fields=["kulup"])
+            # 2. Sporcuyu bul veya 1-e-1 maskeli eşleştir
+            match_res = match_athlete(clean_name, birth_year_or_date=birth_year, club=raw_club, gender=gender)
+            athlete = None
+            if match_res.get("bulunan_id"):
+                athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
+
+            if not athlete:
+                if '*' in clean_name:
+                    athlete, _ = Sporcu.objects.get_or_create(
+                        sporcu_adi=f"Maskeli sporcu ({clean_name})",
+                        dogum_yili=birth_year,
+                        cinsiyet=gender,
+                        defaults={"birincil_kulup": club}
+                    )
+                else:
+                    std_name = standardize_turkish_athlete_name(clean_name)
+                    athlete, _ = Sporcu.objects.get_or_create(
+                        sporcu_adi=std_name or clean_name,
+                        dogum_yili=birth_year,
+                        cinsiyet=gender,
+                        defaults={"birincil_kulup": club}
+                    )
+
+            if athlete and club and not athlete.birincil_kulup:
+                athlete.birincil_kulup = club
+                athlete.save(update_fields=["birincil_kulup"])
 
             seri = s.get("seri")
             kulvar = s.get("kulvar")
@@ -989,15 +1012,18 @@ def _process_single_race_payload(payload: dict) -> dict:
             defaults = {
                 "kulup": club,
                 "derece": derece,
-                "derece_sn": derece_sn,
+                "derece_saniye": derece_sn,
                 "sira": sira,
                 "puan": fina,
                 "seri": seri,
                 "kulvar": kulvar,
-                "durum": durum_str,
                 "canli_dosya": dosya_kaydi,
-                "is_startlist": (doc_type == "start_listesi"),
+                "kaynak_turu": "CANLI_START_LISTESI" if doc_type == "start_listesi" else "CANLI_SONUC",
             }
+            if '*' in clean_name or '*' in raw_name:
+                defaults["sporcu_maskeli"] = clean_name
+            if durum_str and durum_str != "NORMAL":
+                defaults["uyari_notu"] = durum_str
 
             lookup = {
                 "event": event,
@@ -1011,7 +1037,7 @@ def _process_single_race_payload(payload: dict) -> dict:
 
             sonuc_obj = YarisSonucu.objects.filter(**lookup).first()
             if sonuc_obj:
-                if doc_type == "sonuc_listesi" or sonuc_obj.is_startlist:
+                if doc_type == "sonuc_listesi" or sonuc_obj.kaynak_turu == "CANLI_START_LISTESI":
                     for k, v in defaults.items():
                         setattr(sonuc_obj, k, v)
                     sonuc_obj.save()
