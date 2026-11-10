@@ -69,7 +69,7 @@ except ImportError:
     genai = None
     types = None
 
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import Q
 from django.utils import timezone
 
@@ -88,6 +88,17 @@ from sonuclar.fina_calculator import calculate_fina_points, detect_course
 
 # Türkiye Zaman Dilimi (UTC+3)
 TR_TIMEZONE = dt_timezone(timedelta(hours=3))
+
+def configure_sqlite_pragmas():
+    try:
+        with connection.cursor() as cur:
+            cur.execute("PRAGMA journal_mode=WAL;")
+            cur.execute("PRAGMA synchronous=NORMAL;")
+            cur.execute("PRAGMA busy_timeout=60000;")
+    except Exception:
+        pass
+
+configure_sqlite_pragmas()
 
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or "").strip().strip("'\"")
@@ -1354,8 +1365,23 @@ def process_single_meet_db(
                 parsed["last_modified"] = meta.get("last_modified")
                 parsed["dosya_boyutu"] = meta.get("dosya_boyutu")
 
-                with transaction.atomic():
-                    db_stats = _process_single_race_payload(parsed)
+                max_retries = 5
+                db_stats = {}
+                for attempt in range(max_retries):
+                    try:
+                        with transaction.atomic():
+                            db_stats = _process_single_race_payload(parsed)
+                        break
+                    except Exception as db_exc:
+                        if "locked" in str(db_exc).lower() and attempt < max_retries - 1:
+                            wait_time = (attempt + 1) * 2
+                            logger.warning(
+                                f"  [!] Veritabanı kilitli ({db_exc}), {wait_time}s beklenip tekrar denenecek "
+                                f"({attempt+1}/{max_retries})..."
+                            )
+                            time.sleep(wait_time)
+                        else:
+                            raise
 
                 stats["basarili"] += 1
                 if doc_type == "start_listesi":

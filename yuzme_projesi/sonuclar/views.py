@@ -1202,17 +1202,23 @@ def heal_live_meet_records(event):
     if start_dosya_ids:
         q_start |= Q(canli_dosya_id__in=start_dosya_ids)
 
-    start_sonuclar = event.yaris_sonuclari.filter(q_start).exclude(derece="Bekleniyor")
-    for sc in start_sonuclar:
-        if sc.derece and sc.derece != "Bekleniyor":
-            if not sc.giris_derecesi:
-                sc.giris_derecesi = sc.derece
-            sc.derece = "Bekleniyor"
-            sc.derece_saniye = None
-            sc.sira = None
-            sc.puan = None
-            sc.kaynak_turu = "CANLI_START_LISTESI"
-            sc.save(update_fields=["giris_derecesi", "derece", "derece_saniye", "sira", "puan", "kaynak_turu"])
+    start_sonuclar = list(event.yaris_sonuclari.filter(q_start).exclude(derece="Bekleniyor"))
+    if start_sonuclar:
+        for sc in start_sonuclar:
+            if sc.derece and sc.derece != "Bekleniyor":
+                if not sc.giris_derecesi:
+                    sc.giris_derecesi = sc.derece
+                sc.derece = "Bekleniyor"
+                sc.derece_saniye = None
+                sc.sira = None
+                sc.puan = None
+                sc.kaynak_turu = "CANLI_START_LISTESI"
+        with transaction.atomic():
+            event.yaris_sonuclari.bulk_update(
+                start_sonuclar,
+                ["giris_derecesi", "derece", "derece_saniye", "sira", "puan", "kaynak_turu"],
+                batch_size=500
+            )
 
     # 3. Hala yaris_no'su boş olan sonuçlar varsa (mesafe, stil, cinsiyet) kombinasyonuna göre sıra ata
     empty_combos = list(

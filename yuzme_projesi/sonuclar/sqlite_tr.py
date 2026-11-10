@@ -131,6 +131,7 @@ def register_sqlite_tr_functions(sender=None, connection=None, **kwargs):
             cur = conn.cursor()
             cur.execute("PRAGMA journal_mode=WAL;")
             cur.execute("PRAGMA synchronous=NORMAL;")
+            cur.execute("PRAGMA busy_timeout=60000;")
             cur.execute("PRAGMA cache_size=-64000;")
             cur.execute("PRAGMA temp_store=MEMORY;")
             cur.execute("PRAGMA mmap_size=268435456;")
