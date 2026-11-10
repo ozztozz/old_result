@@ -1074,19 +1074,27 @@ def _process_single_race_payload(payload: dict) -> dict:
 
             if not athlete:
                 if '*' in clean_name:
-                    athlete, _ = Sporcu.objects.get_or_create(
-                        sporcu_adi=f"Maskeli sporcu ({clean_name})",
-                        dogum_yili=birth_year,
-                        cinsiyet=gender,
-                        defaults={"birincil_kulup": club}
-                    )
+                    sp_target_name = f"Maskeli sporcu ({clean_name})"
                 else:
-                    std_name = standardize_turkish_athlete_name(clean_name)
-                    athlete, _ = Sporcu.objects.get_or_create(
-                        sporcu_adi=std_name or clean_name,
+                    sp_target_name = standardize_turkish_athlete_name(clean_name) or clean_name
+
+                # get_or_create yerine filter().first() kullanarak MultipleObjectsReturned hatasını önle
+                filter_kwargs = {"sporcu_adi": sp_target_name}
+                if birth_year:
+                    filter_kwargs["dogum_yili"] = birth_year
+                if gender:
+                    filter_kwargs["cinsiyet"] = gender
+
+                athlete = Sporcu.objects.filter(**filter_kwargs).first()
+                if not athlete and (birth_year or gender):
+                    athlete = Sporcu.objects.filter(sporcu_adi=sp_target_name).first()
+
+                if not athlete:
+                    athlete = Sporcu.objects.create(
+                        sporcu_adi=sp_target_name,
                         dogum_yili=birth_year,
                         cinsiyet=gender,
-                        defaults={"birincil_kulup": club}
+                        birincil_kulup=club,
                     )
 
             if athlete and club and not athlete.birincil_kulup:
