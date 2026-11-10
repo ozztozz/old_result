@@ -1067,11 +1067,11 @@ class CanliYarisTests(TestCase):
         urls = [y["canli_url"] for y in bekleyen_data["yarislar"]]
         self.assertIn(test_url, urls)
 
-        # 3. Scheduler değerlendirme testi
-        from google_cloud_runner.tyf_live_scraper import evaluate_meets_schedule
-        should_run, reasons = evaluate_meets_schedule(bekleyen_data["yarislar"])
+        # 3. Değerlendirme testi
+        from sonuclar.live_engine import evaluate_single_meet
+        should_run, reason = evaluate_single_meet(bekleyen_data["yarislar"][0])
         self.assertTrue(should_run)
-        self.assertTrue(any("Start listeleri" in r for r in reasons))
+        self.assertTrue("Start listeleri" in reason)
 
 
 class MusabakaAnalizTests(TestCase):

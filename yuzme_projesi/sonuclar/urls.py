@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/sporcu-sonuclari/', views.api_sporcu_sonuclari, name='api_sporcu_sonuclari_query'),
     path('canli/', views.canli_yaris_listesi, name='canli_yaris_listesi'),
     path('canli/<int:pk>/tara/', views.canli_yaris_tara, name='canli_yaris_tara'),
+    path('canli/<int:pk>/durdur/', views.canli_yaris_durdur, name='canli_yaris_durdur'),
     path('canli/<int:pk>/sil/', views.canli_yaris_sil, name='canli_yaris_sil'),
     path('api/canli-yarislar-durum/', views.api_canli_yarislar_durum, name='api_canli_yarislar_durum'),
     path('api/canli/<int:pk>/detay/', views.api_canli_yaris_detay, name='api_canli_yaris_detay'),

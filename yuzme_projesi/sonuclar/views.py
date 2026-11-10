@@ -929,25 +929,47 @@ def canli_yaris_listesi(request):
 
 
 def canli_yaris_tara(request, pk):
-    """Canlı yarışı tarama sırasına (BEKLIYOR) alır ve arka planda canli_tara komutunu tetikler."""
+    """Canlı yarışı takibe alır ('ISLENIYOR') ve 2. Servisi (10 sn dinleme motoru) başlatır."""
+    if request.method != "POST":
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    yaris = get_object_or_404(CanliYaris, pk=pk)
+    yaris.durum = "ISLENIYOR"
+    yaris.hata_mesaji = None
+    yaris.son_islem_tarihi = timezone.now()
+    yaris.save(update_fields=["durum", "hata_mesaji", "son_islem_tarihi"])
+
+    # 2. Servis arka planda değilse uyandır
+    try:
+        from sonuclar.live_engine import start_daemon_background
+        start_daemon_background()
+    except Exception as e:
+        messages.warning(request, f"Motor başlatılırken uyarı: {e}")
+
+    messages.success(request, f"'{yaris.musabaka_adi or yaris.canli_url}' canlı takibe alındı. Motor 10 saniyelik dinlemeye başladı.")
+    return redirect("sonuclar:canli_yaris_listesi")
+
+
+def canli_yaris_durdur(request, pk):
+    """Yarışın canlı takibini durdurur ('BEKLIYOR')."""
     if request.method != "POST":
         return redirect("sonuclar:canli_yaris_listesi")
 
     yaris = get_object_or_404(CanliYaris, pk=pk)
     yaris.durum = "BEKLIYOR"
-    yaris.hata_mesaji = None
     yaris.son_islem_tarihi = timezone.now()
-    yaris.save()
+    yaris.save(update_fields=["durum", "son_islem_tarihi"])
 
-    def _trigger_tarama(yaris_id):
+    # Başka aktif yarış kalmadıysa daemon'ı kapat
+    has_other_active = CanliYaris.objects.filter(durum="ISLENIYOR").exists()
+    if not has_other_active:
         try:
-            from django.core.management import call_command
-            call_command("canli_tara", id=yaris_id)
+            from sonuclar.live_engine import stop_daemon
+            stop_daemon()
         except Exception:
             pass
 
-    threading.Thread(target=_trigger_tarama, args=(yaris.id,), daemon=True).start()
-    messages.success(request, f"'{yaris.musabaka_adi or yaris.canli_url}' tarama sırasına alındı ve başlatıldı.")
+    messages.info(request, f"'{yaris.musabaka_adi or yaris.canli_url}' canlı takibi durduruldu.")
     return redirect("sonuclar:canli_yaris_listesi")
 
 
@@ -1047,13 +1069,20 @@ def canli_yaris_sil(request, pk):
 def api_canli_yarislar_durum(request):
     """
     Arayüzün durumları canlı yenilemesi için JSON liste döner.
+    Ayrıca çalışan 2. Servis (Daemon) durumunu ve PID'sini de bildirir.
     """
+    from sonuclar.live_engine import get_running_daemon_pid
+    daemon_pid = get_running_daemon_pid()
     yarislar = CanliYaris.objects.all().values(
         "id", "musabaka_adi", "durum", "toplam_start_listesi",
         "islenen_start_listesi", "toplam_sonuc_listesi", "islenen_sonuc_listesi",
         "eklenen_kayit_sayisi", "hata_mesaji"
     )
-    return JsonResponse({"yarislar": list(yarislar)})
+    return JsonResponse({
+        "yarislar": list(yarislar),
+        "daemon_aktif": daemon_pid is not None,
+        "daemon_pid": daemon_pid,
+    })
 
 
 def api_canli_yaris_detay(request, pk):

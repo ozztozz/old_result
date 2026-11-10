@@ -107,27 +107,59 @@ sudo systemctl restart yuzme
 
 ---
 
-## 5. TYF Canlı Yarış Takibi ve Tarama
+## 5. TYF Canlı Yarış Takibi ve Canlı Motor (live_engine)
 
-Canlı yarış taraması iki farklı yöntemle yürütülebilir:
+Tüm canlı yarış işlemleri, PDF ayrıştırmaları ve 10 saniyelik dinleme döngüsü tek bir merkezi motor üzerinden (`live_engine.py`) çalışır.
+
+### Mimari İşleyiş:
+1. **1. Servis (Saatlik Cron Orkestratörü):**
+   - Her saat başında çalışır.
+   - 08:00 - 19:00 çalışma penceresini denetler.
+   - Sizin onayladığınız veya takipte olan (`ISLENIYOR`) aktif yarış varsa ve 2. Servis çalışmıyorsa 2. Servisi arka planda başlatır.
+2. **2. Servis (10 Saniyelik Canlı Takipçi / Daemon):**
+   - 1. Servisin aktivasyonuyla veya web arayüzünden başlatılır.
+   - PID kilidi ile tekil kopya garantisi sağlar (çift çalışma veya DB kilitlenmesi yaşanmaz).
+   - Her 10 saniyede bir yeni sonuç/start listesi PDF'i arar, indirip Gemini ile veritabanına işler.
+   - **Saat 19:00 olduğunda** veya takipte yarış kalmadığında kendini otomatik ve güvenle kapatır.
+
+---
 
 ### Yöntem A: Web Arayüzünden (Önerilen)
 1. Tarayıcınızda [https://yuzme.duckdns.org/canli-yarislar/](https://yuzme.duckdns.org/canli-yarislar/) sayfasına gidin.
-2. **"Yeni Canlı Yarış Ekle"** butonuna basarak TYF canlı linkini (örn: `https://canli.tyf.gov.tr/ankara/cs-1005675/`) yapıştırın.
-3. Listede yarışın yanındaki **"Tara"** (`▶`) butonuna tıklayın.
-4. Terminal simgesine (`>_`) tıklayarak ilerlemeyi ve Gemini'nin ayrıştırdığı serileri canlı modal penceresinden takip edin.
+2. **"Yeni Canlı Yarış Ekle"** butonuna basarak TYF canlı linkini yapıştırın.
+3. Listede yarışın yanındaki **"Takip Et"** (`▶`) butonuna tıklayın. Motor anında 10 saniyelik canlı dinlemeye başlar.
+4. İstediğiniz zaman **"Durdur"** (`■`) butonuna basarak takibi kapatabilirsiniz.
 
-### Yöntem B: Terminalden Manuel Tarayıcı Çalıştırma
-Gerektiğinde veya toplu taramalarda SSH terminali üzerinden doğrudan runner'ı tetikleyebilirsiniz:
+---
+
+### Yöntem B: Sunucuda Saatlik Cron Kurulumu (Otomasyon)
+Sunucuda terminalde `crontab -e` komutunu çalıştırıp aşağıdaki satırı ekleyin:
 ```bash
-cd /home/ubuntu/app
-source venv/bin/activate
+# Her saat başında yarış kontrolü ve motor orkestrasyonu (Servis 1)
+0 * * * * cd /home/ubuntu/app/yuzme_projesi && /home/ubuntu/app/venv/bin/python sonuclar/live_engine.py --cron >> /home/ubuntu/app/live_cron.log 2>&1
+```
 
-# Bekleyen tüm canlı yarışları arka planda rutin tara
-python google_cloud_runner/main.py --base-url http://127.0.0.1
+---
 
-# Ya da doğrudan tekil bir TYF linkini test ederek tara
-python google_cloud_runner/main.py --url "https://canli.tyf.gov.tr/ankara/cs-1005675/" --base-url http://127.0.0.1
+### Yöntem C: Terminalden Yönetim Komutları (Hızlı Başvuru)
+```bash
+cd /home/ubuntu/app/yuzme_projesi
+source ../venv/bin/activate
+
+# 1. Canlı takipçi motorunun durumunu kontrol et
+python sonuclar/live_engine.py --durum
+
+# 2. 1. Servisi (Saatlik orkestratörü) elle tetikle
+python sonuclar/live_engine.py --cron
+
+# 3. 2. Servisi (10 saniyelik dinleme döngüsünü) ön planda başlat (test için)
+python sonuclar/live_engine.py --daemon
+
+# 4. Çalışan canlı takipçiyi durdur
+python sonuclar/live_engine.py --durdur
+
+# 5. Belirli bir yarış ID'sini zorla anında tara
+python sonuclar/live_engine.py --id 6
 ```
 
 > [!NOTE]

@@ -156,12 +156,21 @@
                         </td>
                                                <td class="swim-td text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}" class="inline">
+                                {% if yaris.durum == 'ISLENIYOR' %}
+                                <form method="post" action="{% url 'sonuclar:canli_yaris_durdur' yaris.id %}" class="inline">
                                     {% csrf_token %}
-                                    <button type="submit" class="swim-btn-primary swim-btn-sm text-xs py-1 px-2.5" {% if yaris.durum == 'ISLENIYOR' %}disabled{% endif %} title="Canlı Yarışı Tara / Güncelle">
-                                        <i class="bi bi-play-fill"></i> Tara
+                                    <button type="submit" class="swim-btn-warning swim-btn-sm text-xs py-1 px-2.5" title="Canlı Takibi Durdur">
+                                        <i class="bi bi-stop-fill"></i> Durdur
                                     </button>
                                 </form>
+                                {% else %}
+                                <form method="post" action="{% url 'sonuclar:canli_yaris_tara' yaris.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="swim-btn-primary swim-btn-sm text-xs py-1 px-2.5" title="Canlı Takibi Başlat (10 sn Dinleme)">
+                                        <i class="bi bi-play-fill"></i> Takip Et
+                                    </button>
+                                </form>
+                                {% endif %}
                                 <button type="button" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" onclick="openLogModal({{ yaris.id }})" title="Canlı İlerleme ve Sunucu Logu">
                                     <i class="bi bi-terminal"></i>
                                 </button>
