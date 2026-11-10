@@ -933,21 +933,20 @@ def clean_and_expand_club_name(name: str) -> str:
 def get_or_resolve_canonical_club(raw_club_name: str, is_school: bool = False) -> Tuple[Kulup, bool]:
     c_name = raw_club_name.strip() if raw_club_name else "FERDİ"
     c_name = re.sub(r"\s+", " ", c_name)
-    is_school_flag = is_school or is_school_team(c_name)
+    is_school_flag = 1 if (is_school or is_school_team(c_name)) else 0
 
-    club = Kulup.objects.filter(ad__iexact=c_name).first()
+    club = Kulup.objects.filter(kulup_adi__iexact=c_name).first()
     if club:
         return club, False
 
     clean_name = clean_and_expand_club_name(c_name)
-    club = Kulup.objects.filter(ad__iexact=clean_name).first()
+    club = Kulup.objects.filter(kulup_adi__iexact=clean_name).first()
     if club:
         return club, False
 
     club = Kulup.objects.create(
-        ad=c_name,
-        kisa_ad=c_name[:50] if len(c_name) > 50 else c_name,
-        is_school=is_school_flag,
+        kulup_adi=c_name,
+        okul_mu=is_school_flag,
     )
     return club, True
 
