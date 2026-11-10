@@ -174,6 +174,14 @@ def get_remote_file_header(url: str) -> Tuple[str, Dict[str, str]]:
     return url, {"etag": "", "last_modified": "", "dosya_boyutu": 0}
 
 
+def clean_pdf_filename(url_or_name: str) -> str:
+    """URL veya dosya adındaki '?v=...' gibi parametreleri temizleyip dosya adını döner."""
+    if not url_or_name:
+        return ""
+    base = os.path.basename(str(url_or_name).split("?")[0].split("#")[0])
+    return base.strip()
+
+
 def fetch_remote_headers_map(urls: List[str]) -> Dict[str, Dict[str, Any]]:
     """Tüm PDF URL'lerinin ETag ve Last-Modified başlıklarını paralel HTTP HEAD ile çeker (~0.2 sn)."""
     if not urls:
@@ -181,7 +189,7 @@ def fetch_remote_headers_map(urls: List[str]) -> Dict[str, Dict[str, Any]]:
     headers_map = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
         for u, h in executor.map(get_remote_file_header, urls):
-            fname = os.path.basename(u)
+            fname = clean_pdf_filename(u)
             headers_map[fname] = h
     return headers_map
 
@@ -239,6 +247,14 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
     if m_city:
         city = re.sub(r'\s+', ' ', m_city.group(1)).strip()
 
+    # Başlıktan şehir çıkarma (Örn: "ANKARA- OKUL SPORLARI...")
+    if not city and meet_title:
+        m_tcity = re.match(r'^([A-ZÇĞİÖŞÜa-zçğıöşü]+)\s*[\-\:]', meet_title)
+        if m_tcity:
+            c_cand = m_tcity.group(1).upper()
+            if len(c_cand) >= 3:
+                city = c_cand
+
     m_date = re.search(r'(\d{1,2}\.?\s*(?:-\s*\d{1,2}\.)?\s*\d{1,2}\.\d{4})', plain_text)
     if m_date:
         date_str = re.sub(r'\s+', ' ', m_date.group(1)).strip()
@@ -248,7 +264,8 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
         m_u = re.search(r'canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/', base_url)
         if m_u:
             c_raw = m_u.group(1).lower()
-            city = c_raw.replace('i', 'İ').replace('ı', 'I').upper()
+            if c_raw not in ("live", "canli", "cs", "results"):
+                city = c_raw.replace('i', 'İ').replace('ı', 'I').upper()
 
     m_lower = (mode or "").lower()
     is_sonuc = m_lower in ("sonuc_listesi", "result_list", "sonuc", "results")
@@ -258,20 +275,21 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
     pdf_urls = []
     for a in soup.find_all("a", href=True):
         href = a["href"].strip()
-        h_lower = href.lower()
+        h_clean = href.split("?")[0].split("#")[0].lower()
 
         matches = False
         if is_sonuc:
-            matches = ("resultlist" in h_lower or "result_list" in h_lower or "sonuc" in h_lower)
+            matches = ("resultlist" in h_clean or "result_list" in h_clean or "sonuc" in h_clean)
         elif is_start:
-            matches = ("startlist" in h_lower or "start_list" in h_lower or "start" in h_lower)
+            matches = ("startlist" in h_clean or "start_list" in h_clean or "start" in h_clean)
         else:  # all / hepsi
-            matches = ("startlist" in h_lower or "start_list" in h_lower or "resultlist" in h_lower or "result_list" in h_lower or "sonuc" in h_lower or "start" in h_lower)
+            matches = ("startlist" in h_clean or "start_list" in h_clean or "resultlist" in h_clean or "result_list" in h_clean or "sonuc" in h_clean or "start" in h_clean)
 
-        if matches:
+        if matches and h_clean.endswith(".pdf"):
             full_url = urljoin(base_url, href)
-            if full_url not in seen:
-                seen.add(full_url)
+            fname = clean_pdf_filename(full_url)
+            if fname not in seen:
+                seen.add(fname)
                 pdf_urls.append(full_url)
 
     return meet_title, city, date_str, start_date, end_date, pdf_urls
@@ -1207,8 +1225,8 @@ def process_single_meet_db(
                 return remote_lm == known_lm
             return True
 
-        pending_start_urls = [u for u in start_urls if not is_file_unchanged(os.path.basename(u))]
-        pending_result_urls = [u for u in result_urls if not is_file_unchanged(os.path.basename(u))]
+        pending_start_urls = [u for u in start_urls if not is_file_unchanged(clean_pdf_filename(u))]
+        pending_result_urls = [u for u in result_urls if not is_file_unchanged(clean_pdf_filename(u))]
 
         stats["islenen_start_listesi"] = len(start_urls) - len(pending_start_urls)
         stats["islenen_sonuc_listesi"] = len(result_urls) - len(pending_result_urls)
@@ -1242,7 +1260,7 @@ def process_single_meet_db(
 
         current_batch = pending_queue[:limit] if limit else pending_queue
         for doc_type, pdf_url in current_batch:
-            filename = os.path.basename(pdf_url)
+            filename = clean_pdf_filename(pdf_url)
             try:
                 pdf_bytes, meta = download_file_with_meta(pdf_url)
                 logger.info(f"  [>] {filename} ayrıştırılıyor ({doc_type})...")
