@@ -92,15 +92,22 @@ GROQ_API_KEY = (os.environ.get("GROQ_API_KEY") or "").strip().strip("'\"")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 TYF_CANLI_SONUC_URL = "https://www.tyf.gov.tr/canli-sonuc/"
 
+LOG_FILE_PATH = os.path.join(tempfile.gettempdir(), "yuzme_live_engine.log")
+PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "yuzme_live_engine.pid")
+
 logger = logging.getLogger("LiveEngine")
 if not logger.handlers:
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-    logger.addHandler(handler)
+    c_handler = logging.StreamHandler()
+    c_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    logger.addHandler(c_handler)
+    try:
+        f_handler = logging.FileHandler(LOG_FILE_PATH, encoding="utf-8")
+        f_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(f_handler)
+    except Exception:
+        pass
     logger.setLevel(logging.INFO)
 
-# PID dosya yolu (Cross-platform)
-PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "yuzme_live_engine.pid")
 SHUTDOWN_SIGNAL_RECEIVED = False
 
 _HTTP_SESSION: Optional[requests.Session] = None
@@ -618,6 +625,21 @@ def stop_daemon() -> bool:
         return False
 
 
+def get_python_executable() -> str:
+    """Ubuntu venv veya yerel Python yorumlayıcısını bulur."""
+    candidates = [
+        "/home/ubuntu/app/venv/bin/python",
+        os.path.join(PROJECT_DIR, "..", "venv", "bin", "python"),
+        os.path.join(PROJECT_DIR, "venv", "bin", "python"),
+        os.path.join(PROJECT_DIR, "my_env", "bin", "python"),
+        sys.executable
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    return sys.executable
+
+
 def start_daemon_background() -> Optional[int]:
     """2. Servisi (Canlı Takipçi) arka planda başlatır."""
     running_pid = get_running_daemon_pid()
@@ -625,29 +647,43 @@ def start_daemon_background() -> Optional[int]:
         logger.info(f"[*] Daemon zaten çalışıyor (PID: {running_pid}).")
         return running_pid
 
+    py_exe = get_python_executable()
     engine_script = os.path.abspath(__file__)
-    cmd = [sys.executable, engine_script, "--daemon"]
+    cmd = [py_exe, engine_script, "--daemon"]
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{PROJECT_DIR}:{env.get('PYTHONPATH', '')}"
 
     try:
+        log_file = open(LOG_FILE_PATH, "a", encoding="utf-8")
         if os.name == 'nt':
             DETACHED_PROCESS = 0x00000008
             CREATE_NEW_PROCESS_GROUP = 0x00000200
             proc = subprocess.Popen(
                 cmd,
+                cwd=PROJECT_DIR,
+                env=env,
                 creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=log_file,
                 close_fds=True,
             )
         else:
             proc = subprocess.Popen(
                 cmd,
+                cwd=PROJECT_DIR,
+                env=env,
                 start_new_session=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=log_file,
                 close_fds=True,
             )
-        logger.info(f"[+] 2. Servis (Canlı Takipçi) arka planda başlatıldı (PID: {proc.pid}).")
+        time.sleep(0.5)
+        if proc.poll() is not None:
+            logger.error(f"[!] Daemon hemen sonlandı (kod: {proc.returncode}). Detay: {LOG_FILE_PATH}")
+            return None
+
+        logger.info(f"[+] 2. Servis (Canlı Takipçi) arka planda başlatıldı (PID: {proc.pid}, Log: {LOG_FILE_PATH}).")
         return proc.pid
     except Exception as e:
         logger.error(f"[!] Daemon başlatılırken hata: {e}")
@@ -1169,9 +1205,18 @@ def process_single_meet_db(
             + [("sonuc_listesi", u) for u in pending_result_urls]
         )
 
+        logger.info(
+            f"[*] #{yaris.id} ({stats['musabaka_adi'] or yaris.canli_url}): "
+            f"Toplam PDF: {len(all_pdf_urls)} (Start: {len(start_urls)}, Sonuç: {len(result_urls)}) | "
+            f"İşlenecek: {len(pending_queue)} (Atlanılan: {stats['atlanilan']})"
+        )
+
         if not pending_queue:
             stats["kalan_dosya"] = 0
-            stats["durum"] = "TAMAMLANDI"
+            if is_meet_truly_completed(yaris, kalan_dosya=0, hatalar=[]):
+                stats["durum"] = "TAMAMLANDI"
+            else:
+                stats["durum"] = "ISLENIYOR"
             update_meet_status_db(yaris, stats)
             return stats
 
@@ -1237,7 +1282,10 @@ def process_single_meet_db(
     elif stats["hatali"] > 0:
         stats["durum"] = "ISLENIYOR" if (stats["basarili"] + stats["atlanilan"]) > 0 else "HATA"
     else:
-        stats["durum"] = "TAMAMLANDI"
+        if is_meet_truly_completed(yaris, kalan_dosya=0, hatalar=stats.get("hatalar")):
+            stats["durum"] = "TAMAMLANDI"
+        else:
+            stats["durum"] = "ISLENIYOR"
 
     update_meet_status_db(yaris, stats)
     return stats
