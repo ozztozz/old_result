@@ -44,7 +44,7 @@ class LocalResultListParser:
     RE_YEAR = re.compile(r"^(19\d\d|20\d\d|\d{2})$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
-        r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)",
+        r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
         re.IGNORECASE,
     )
     RE_STATUS = re.compile(r"\b(DSQ|DNS|DNF|EXH)\b", re.IGNORECASE)
@@ -132,8 +132,19 @@ class LocalResultListParser:
                 m_ev = self.RE_EVENT_INFO.search(l)
                 if m_ev:
                     info["cinsiyet"] = "Erkek" if m_ev.group(1).lower().startswith(("erkek", "men", "boy")) else "Kadın"
-                    info["mesafe"] = int(m_ev.group(2))
-                    info["stil"] = m_ev.group(3)
+                    dist_str = m_ev.group(2).replace(" ", "")
+                    if "x" in dist_str.lower():
+                        nums = [int(n) for n in re.findall(r"\d+", dist_str)]
+                        info["mesafe"] = nums[0] * nums[1] if len(nums) >= 2 else 400
+                        raw_stil = m_ev.group(3).capitalize()
+                        info["stil"] = f"{raw_stil} Bayrak" if "Bayrak" not in raw_stil else raw_stil
+                    else:
+                        info["mesafe"] = int(dist_str)
+                        raw_stil = m_ev.group(3).capitalize()
+                        if m_ev.group(4) or "bayrak" in l.lower():
+                            info["stil"] = f"{raw_stil} Bayrak" if "Bayrak" not in raw_stil else raw_stil
+                        else:
+                            info["stil"] = raw_stil
                     info["yaris"] = f"{info['cinsiyet']} {info['mesafe']}m {info['stil']}"
 
             if "Baraj" in l and not info["yas_grubu"]:
@@ -146,6 +157,7 @@ class LocalResultListParser:
         results: List[Dict[str, Any]] = []
 
         athlete_blocks = []
+        relay_blocks = []
         dsq_blocks = []
         right_blocks = [b for b in blocks if b[0] > 400]
 
@@ -164,12 +176,18 @@ class LocalResultListParser:
                 dsq_blocks.append((b, lines))
                 continue
 
+            # Relay / Bayrak Satırı (Sıra, Kulvar, Derece, Kulüp)
+            if b[0] < 100 and re.match(r"^\d+$", lines[0]) and len(lines) >= 3:
+                if lines[1].isdigit() and self.RE_TIME.match(lines[2]):
+                    relay_blocks.append((b, lines))
+                    continue
+
             # Normal Sporcu Satırı (Sol Kolon x0 < 100 ve ilk satır Sıra sayısı)
             if b[0] < 100 and re.match(r"^\d+$", lines[0]) and len(lines) >= 3:
                 if self.RE_KS.match(lines[1]) or (len(lines) > 2 and self.RE_KS.match(lines[2])):
                     athlete_blocks.append((b, lines))
 
-        # 1. Normal Derece Alan Sporcuları Ayrıştır
+        # 1a. Normal Derece Alan Sporcuları Ayrıştır
         for ab, lines in athlete_blocks:
             sira = int(lines[0])
             ks_match = None
@@ -260,6 +278,36 @@ class LocalResultListParser:
                 "sayfa": page_no,
             })
 
+        # 1b. Relay (Bayrak) Sonuçlarını Ayrıştır
+        if relay_blocks:
+            swimmer_blocks = [b for b in blocks if b[0] > 100 and not b[4].startswith("Türkiye") and not b[4].startswith("Bu dosya")]
+            for rb, lines in relay_blocks:
+                sira = int(lines[0])
+                kulvar = int(lines[1])
+                derece = lines[2]
+                club = lines[3] if len(lines) > 3 else ""
+
+                # Eşleşen takım sporcuları metnini bul
+                swimmers_text = ""
+                for sb in swimmer_blocks:
+                    if abs(sb[1] - rb[1]) < 25 and sb[1] >= rb[1] - 2:
+                        swimmers_text = " ".join(sb[4].split())
+                        break
+
+                results.append({
+                    "sira": sira,
+                    "kulvar": kulvar,
+                    "seri": 1,
+                    "dogum_yili": None,
+                    "sporcu": club,
+                    "kulup": club,
+                    "derece": derece,
+                    "puan": None,
+                    "durum": "OK",
+                    "notlar": swimmers_text,
+                    "sayfa": page_no,
+                })
+
         # 2. DSQ / DNS / DNF / EXH Ayrıştır
         for db, lines in dsq_blocks:
             full_txt = " ".join(lines)
@@ -274,11 +322,15 @@ class LocalResultListParser:
                     status = m_st.group(1).upper()
                     rest = m_st.group(2).strip()
 
-                    # Sebep / Açıklama parantezini ayır
+                    # Sebep / Açıklama parantezini güvenli şekilde ayır (iç içe parantezleri ve kuralları kapsar)
                     reason = None
-                    m_reason = re.search(r"\(([^)]+)\)$", rest)
+                    m_reason = re.search(r"\((?:\d{1,2}:\d{2}\s*-\s*)?(?:SW\b|sw\b|KURBAĞALAMA|SERBEST|KELEBEK|SIRT|Bayrak|Takım).*\)$", rest, flags=re.DOTALL | re.IGNORECASE)
+                    if not m_reason:
+                        m_reason = re.search(r"\([^)]*?(?:yaptığından|dokunmadan|ihlal|SW)[^)]*?\)$", rest, flags=re.DOTALL | re.IGNORECASE)
+                    if not m_reason:
+                        m_reason = re.search(r"\(([^)]+)\)$", rest)
                     if m_reason:
-                        reason = m_reason.group(1)
+                        reason = rest[m_reason.start():].strip("() ")
                         rest = rest[:m_reason.start()].strip()
 
                     results.append({
@@ -287,7 +339,7 @@ class LocalResultListParser:
                         "seri": None,
                         "dogum_yili": None,
                         "sporcu": rest,
-                        "kulup": None,
+                        "kulup": rest if "(Tk)" in rest else None,
                         "derece": None,
                         "puan": None,
                         "durum": status,

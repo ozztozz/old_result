@@ -88,6 +88,19 @@ PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "local_live_worker.pid")
 DEFAULT_POLL_INTERVAL = 5  # 5 saniyelik anlık takip
 
 
+def configure_sqlite_pragmas():
+    """SQLite veritabanı kilitlenmelerini önleyen WAL modu ve 60 sn bekleme süresi ayarları."""
+    try:
+        with connection.cursor() as cur:
+            cur.execute("PRAGMA journal_mode=WAL;")
+            cur.execute("PRAGMA synchronous=NORMAL;")
+            cur.execute("PRAGMA busy_timeout=60000;")
+    except Exception:
+        pass
+
+configure_sqlite_pragmas()
+
+
 def get_current_tr_time() -> datetime:
     return datetime.now(TR_TIMEZONE)
 
@@ -262,6 +275,20 @@ class LocalLiveEngine:
         pdf_items = []
         seen = set()
 
+        # Seans ve yarış programı tablolarından resmi yarış numaralarını haritalandır
+        pdf_yaris_no_map: Dict[str, str] = {}
+        for tr in soup.find_all("tr"):
+            cols = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
+            if cols and cols[0].isdigit():
+                row_yno = cols[0]
+                for a in tr.find_all("a", href=True):
+                    ch = a["href"].split("?")[0].strip()
+                    fn = os.path.basename(ch)
+                    pdf_yaris_no_map[fn] = row_yno
+                    m_id = re.search(r"\d+", fn)
+                    if m_id:
+                        pdf_yaris_no_map[m_id.group()] = row_yno
+
         for a in soup.find_all("a", href=True):
             href = a["href"]
             if not href.lower().endswith(".pdf") and ".pdf?" not in href.lower():
@@ -282,11 +309,20 @@ class LocalLiveEngine:
                 cols = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
                 hint = " | ".join([c for c in cols if c and c not in ["Start List.", "Sonuçlar"]])
 
+            m_id = re.search(r"\d+", fname)
+            file_id = m_id.group() if m_id else ""
+            yaris_no = pdf_yaris_no_map.get(fname) or pdf_yaris_no_map.get(file_id) or ""
+            if not yaris_no and hint:
+                m_yno = re.search(r"\b(?:Yarı[şs]|Event|#)\s*(\d+)\b", hint, re.IGNORECASE)
+                if m_yno:
+                    yaris_no = m_yno.group(1)
+
             pdf_items.append({
                 "filename": fname,
                 "url": full_url,
                 "doc_type": doc_type,
                 "hint": hint,
+                "yaris_no": str(yaris_no),
             })
 
         meta = {
@@ -330,6 +366,10 @@ class LocalLiveEngine:
 
             pending_starts = [p for p in pdf_items if p["doc_type"] == "start_listesi" and (force or p["filename"] not in processed_files)]
             pending_results = [p for p in pdf_items if p["doc_type"] == "sonuc_listesi" and (force or p["filename"] not in processed_files)]
+
+            # Yarış sırasına göre düzenle (Start listeleri sonuçlardan önce çözülür)
+            pending_starts.sort(key=lambda x: int(x["yaris_no"]) if x["yaris_no"].isdigit() else 9999)
+            pending_results.sort(key=lambda x: int(x["yaris_no"]) if x["yaris_no"].isdigit() else 9999)
 
             all_start_count = len([p for p in pdf_items if p["doc_type"] == "start_listesi"])
             all_result_count = len([p for p in pdf_items if p["doc_type"] == "sonuc_listesi"])
@@ -426,6 +466,8 @@ class LocalLiveEngine:
         cinsiyet = parsed.get("cinsiyet")
         mesafe = parsed.get("mesafe")
         stil = parsed.get("stil")
+        yaris_no = str(item.get("yaris_no") or parsed.get("yaris_no") or "")
+        is_bayrak = bool("bayrak" in (stil or "").lower() or "4x" in (str(parsed.get("yaris") or "")).lower())
 
         with transaction.atomic():
             dosya_turu_str = "START_LISTESI" if doc_type == "start_listesi" else "SONUC_LISTESI"
@@ -436,6 +478,7 @@ class LocalLiveEngine:
                     "event": event,
                     "dosya_url": url,
                     "dosya_turu": dosya_turu_str,
+                    "yaris_no": yaris_no,
                     "mesafe": mesafe,
                     "stil": stil,
                     "cinsiyet": cinsiyet,
@@ -449,20 +492,28 @@ class LocalLiveEngine:
 
             cross_unmasked = {}
             if doc_type == "sonuc_listesi":
-                start_dosya = CanliYarisDosya.objects.filter(
-                    canli_yaris=yaris,
-                    dosya_turu="START_LISTESI",
-                    mesafe=mesafe,
-                    stil=stil,
-                    cinsiyet=cinsiyet
-                ).first()
+                start_dosya = None
+                if yaris_no:
+                    start_dosya = CanliYarisDosya.objects.filter(
+                        canli_yaris=yaris,
+                        dosya_turu="START_LISTESI",
+                        yaris_no=yaris_no
+                    ).first()
+                if not start_dosya and mesafe and stil and cinsiyet:
+                    start_dosya = CanliYarisDosya.objects.filter(
+                        canli_yaris=yaris,
+                        dosya_turu="START_LISTESI",
+                        mesafe=mesafe,
+                        stil=stil,
+                        cinsiyet=cinsiyet
+                    ).first()
                 if start_dosya:
                     for prev_s in YarisSonucu.objects.filter(canli_dosya=start_dosya):
                         if prev_s.seri and prev_s.kulvar and prev_s.sporcu:
                             m_s = re.search(r"\d+", str(prev_s.seri))
                             s_no = int(m_s.group()) if m_s else None
                             if s_no and prev_s.kulvar:
-                                cross_unmasked[(s_no, prev_s.kulvar)] = prev_s.sporcu
+                                cross_unmasked[(s_no, prev_s.kulvar)] = (prev_s.sporcu, prev_s.sporcu_maskeli or "")
 
             records_added = 0
 
@@ -490,9 +541,26 @@ class LocalLiveEngine:
                         seri_no = int(m_s.group())
 
                 athlete = None
+                # 1. StartList Çapraz Eşleşmesi (K/S)
                 if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
-                    athlete = cross_unmasked[(seri_no, kulvar_val)]
+                    st_sp, st_mask = cross_unmasked[(seri_no, kulvar_val)]
+                    if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
+                        athlete = st_sp
+                    elif st_mask:
+                        clean_name = st_mask
 
+                # 2. Bayrak / Relay Takımı Eşleşmesi
+                if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
+                    team_name = clean_name or (club.kulup_adi if club else "Takım")
+                    athlete = Sporcu.objects.filter(sporcu_adi=team_name).first()
+                    if not athlete:
+                        athlete = Sporcu.objects.create(
+                            sporcu_adi=team_name,
+                            cinsiyet=cinsiyet,
+                            birincil_kulup=club,
+                        )
+
+                # 3. Veritabanından Unmasking (Maske Kaldırma)
                 if not athlete and clean_name:
                     match_res = match_athlete(
                         clean_name,
@@ -503,6 +571,7 @@ class LocalLiveEngine:
                     if match_res.get("bulunan_id"):
                         athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
 
+                # 4. Bulunamazsa Maskeli Sporcu Kaydı
                 if not athlete:
                     sp_target_name = f"Maskeli sporcu ({clean_name})" if "*" in clean_name else (standardize_turkish_athlete_name(clean_name) or clean_name)
                     athlete = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year).first()
@@ -516,11 +585,13 @@ class LocalLiveEngine:
 
                 derece_sn = _time_to_seconds(derece_val)
                 fina = s.get("puan")
-                if (derece_sn or derece_val) and not fina:
+                if (derece_sn or derece_val) and not fina and not is_bayrak:
                     fina = calculate_fina_points(cinsiyet, mesafe, stil, derece_sn or derece_val, course)
 
                 if doc_type == "start_listesi":
                     defaults_dict = {
+                        "yaris_no": yaris_no,
+                        "dosya_adi": filename,
                         "kulup": club,
                         "giris_derecesi": s.get("giris_derecesi") or derece_val,
                         "derece": "Bekleniyor",
@@ -535,6 +606,8 @@ class LocalLiveEngine:
                     }
                 else:
                     defaults_dict = {
+                        "yaris_no": yaris_no,
+                        "dosya_adi": filename,
                         "kulup": club,
                         "derece": derece_val or durum_val,
                         "derece_saniye": derece_sn,
@@ -548,6 +621,8 @@ class LocalLiveEngine:
                     }
                     if durum_val and durum_val != "NORMAL":
                         defaults_dict["uyari_notu"] = f"{durum_val} - {s.get('notlar') or ''}".strip(" -")
+                    elif s.get("notlar"):
+                        defaults_dict["uyari_notu"] = s.get("notlar")
 
                 lookup_dict = {
                     "event": event,
@@ -556,6 +631,8 @@ class LocalLiveEngine:
                     "stil": stil,
                     "cinsiyet": cinsiyet,
                 }
+                if yaris_no:
+                    lookup_dict["yaris_no"] = yaris_no
 
                 obj, created = YarisSonucu.objects.update_or_create(
                     **lookup_dict,

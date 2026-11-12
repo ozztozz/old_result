@@ -48,9 +48,9 @@ def clean_athlete_name_tags(name: Optional[str]) -> str:
     # 2. Baştaki tek parantez veya artık işaretler: örn: "( Metehan İŞLER" -> "Metehan İŞLER" (yıldızlar korunur)
     s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
 
-    # 3. Baştaki kapatılmamış veya artık FD/TK/TD/F etiketleri: örn: "(Fd e" -> "e", "FD Metehan" -> "Metehan"
+    # 3. Baştaki kapatılmamış veya artık FD/TK/TD/F/D etiketleri: örn: "(Fd e" -> "e", "F) Metehan" -> "Metehan", "d) can" -> "can"
     s = re.sub(r'^\s*[\(\[]?\s*(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
-    s = re.sub(r'^\s*[\(\[]\s*[FfTt]\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'^\s*[\(\[]?\s*(?:[FfTtDd])\s*[\)\]\.]?\s*', ' ', s, flags=re.IGNORECASE)
 
     # 4. Sonda bağımsız kalan 2+ harfli FD/TK/TD etiketleri
     s = re.sub(r'\s*\b(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)

@@ -51,7 +51,7 @@ class LocalStartListParser:
     RE_LANE_AND_NAME = re.compile(r"^([1-9]|10)\s+(.+)$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
-        r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)",
+        r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
         re.IGNORECASE,
     )
 
@@ -152,8 +152,19 @@ class LocalStartListParser:
                 m_ev = self.RE_EVENT_INFO.search(l)
                 if m_ev:
                     info["cinsiyet"] = "Erkek" if m_ev.group(1).lower().startswith(("erkek", "men", "boy")) else "Kadın"
-                    info["mesafe"] = int(m_ev.group(2))
-                    info["stil"] = m_ev.group(3)
+                    dist_str = m_ev.group(2).replace(" ", "")
+                    if "x" in dist_str.lower():
+                        nums = [int(n) for n in re.findall(r"\d+", dist_str)]
+                        info["mesafe"] = nums[0] * nums[1] if len(nums) >= 2 else 400
+                        raw_stil = m_ev.group(3).capitalize()
+                        info["stil"] = f"{raw_stil} Bayrak" if "Bayrak" not in raw_stil else raw_stil
+                    else:
+                        info["mesafe"] = int(dist_str)
+                        raw_stil = m_ev.group(3).capitalize()
+                        if m_ev.group(4) or "bayrak" in l.lower():
+                            info["stil"] = f"{raw_stil} Bayrak" if "Bayrak" not in raw_stil else raw_stil
+                        else:
+                            info["stil"] = raw_stil
                     info["yaris"] = f"{info['cinsiyet']} {info['mesafe']}m {info['stil']}"
 
         return info
