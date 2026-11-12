@@ -374,17 +374,17 @@ class LocalLiveEngine:
             meta, pdf_items = self.fetch_meet_pdf_catalog(yaris.canli_url)
             if meta["musabaka_adi"] and not yaris.musabaka_adi:
                 yaris.musabaka_adi = meta["musabaka_adi"]
-                yaris.save(update_fields=["musabaka_adi"])
+                db_retry(lambda: yaris.save(update_fields=["musabaka_adi"]))
 
             event = yaris.event
             if not event:
-                event = Event.objects.create(
+                event = db_retry(lambda: Event.objects.create(
                     musabaka_adi=yaris.musabaka_adi or meta["musabaka_adi"] or "TYF Canlı Yarış",
                     sehir=yaris.sehir or "",
                     kaynak_turu="CANLI_TAKIP",
-                )
+                ))
                 yaris.event = event
-                yaris.save(update_fields=["event"])
+                db_retry(lambda: yaris.save(update_fields=["event"]))
 
             processed_files = set(
                 CanliYarisDosya.objects.filter(canli_yaris=yaris, durum="ISLENDI").values_list("dosya_adi", flat=True)
@@ -447,7 +447,7 @@ class LocalLiveEngine:
             else:
                 yaris.durum = "ISLENIYOR"
 
-            yaris.save()
+            db_retry(lambda: yaris.save())
             logger.info(
                 f"  [✔] #{yaris.id} Güncellendi: +{stats['eklenen_kayit']} kayıt eklendi. "
                 f"(Start: {islenen_start}/{all_start_count}, Sonuç: {islenen_sonuc}/{all_result_count})"
@@ -458,7 +458,10 @@ class LocalLiveEngine:
             logger.error(f"[!] {err}")
             stats["hatalar"].append(err)
             yaris.hata_mesaji = str(exc)[:500]
-            yaris.save(update_fields=["hata_mesaji"])
+            try:
+                db_retry(lambda: yaris.save(update_fields=["hata_mesaji"]))
+            except Exception:
+                pass
 
         return stats
 
@@ -782,13 +785,13 @@ def run_local_live_worker(
 
     engine = LocalLiveEngine()
     if url:
-        yaris, created = CanliYaris.objects.get_or_create(
+        yaris, created = db_retry(lambda: CanliYaris.objects.get_or_create(
             canli_url=url,
             defaults={"durum": "ISLENIYOR"}
-        )
+        ))
         if not created and force:
             yaris.durum = "ISLENIYOR"
-            yaris.save(update_fields=["durum"])
+            db_retry(lambda: yaris.save(update_fields=["durum"]))
         return engine.process_meet(yaris, force=force)
 
     # Parametresiz çağrıda tüm aktif yarışları bir kez tara
