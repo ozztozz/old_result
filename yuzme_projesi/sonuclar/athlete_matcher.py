@@ -124,12 +124,14 @@ def token_1to1_match(m_tok: str, c_tok: str, strict: bool = False) -> bool:
     2. Eğer uzunluk birebir tutmuyorsa (Türkçe 2-byte karakterlerin veya Splash masking varyasyonunun
        neden olduğu 1-2 harf oynamalarında örn: '**O**N' vs 'DOGAN', '*U*B**' vs 'TUGBA'),
        ardışık '*' bloklarının esnek uzunluk eşleşmesine izin verilir.
+    3. PDF tarafından kırpılmış/kesilmiş uzun soyadlar için (örn: '*EL**O*MAN' vs 'DELIORMANLI')
+       önek (prefix) eşleşmesine izin verilir.
     """
     if not m_tok or not c_tok:
         return False
 
     if '*' not in m_tok:
-        return m_tok == c_tok
+        return m_tok == c_tok or (not strict and c_tok.startswith(m_tok) and len(m_tok) >= 4)
 
     if len(m_tok) == len(c_tok):
         if all(m == '*' or m == c for m, c in zip(m_tok, c_tok)):
@@ -144,11 +146,25 @@ def token_1to1_match(m_tok: str, c_tok: str, strict: bool = False) -> bool:
         max_c = k + 1
         return f'.{{{min_c},{max_c}}}'
 
-    pat = '^' + re.sub(r'\*+', _rep, m_tok) + '$'
+    regex_body = re.sub(r'\*+', _rep, m_tok)
+    # 1. Tam bitiş eşleşmesi
+    pat_exact = f'^{regex_body}$'
     try:
-        return bool(re.match(pat, c_tok))
+        if bool(re.match(pat_exact, c_tok)):
+            return True
     except Exception:
-        return False
+        pass
+
+    # 2. PDF tarafından kesilmiş/kırpılmış uzun soyadlar için önek (prefix) eşleşmesi (en az 4 karakter)
+    if len(c_tok) > len(m_tok) and len(m_tok) >= 4:
+        pat_prefix = f'^{regex_body}'
+        try:
+            if bool(re.match(pat_prefix, c_tok)):
+                return True
+        except Exception:
+            pass
+
+    return False
 
 
 def match_masked_athlete_exact(

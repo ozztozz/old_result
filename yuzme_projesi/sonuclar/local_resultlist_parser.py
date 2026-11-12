@@ -236,7 +236,7 @@ class LocalResultListParser:
             min_dy = 999.0
             for rb in right_blocks:
                 dy = abs(rb[1] - ab[1])
-                if dy < min_dy and dy < 15:
+                if dy < min_dy and dy < 25:
                     min_dy = dy
                     best_rb = rb
 
@@ -250,8 +250,12 @@ class LocalResultListParser:
                     if self.RE_TIME.match(l):
                         derece = l
                         break
-                if not derece and rb_lines:
-                    derece = rb_lines[0]
+                if not derece:
+                    for l in rb_lines:
+                        m_t = re.search(r"(?:(?:\d{1,2}:)?\d{2}\.\d{2})", l)
+                        if m_t:
+                            derece = m_t.group(0)
+                            break
 
                 # Fina puanı var mı (dereceden sonraki tam sayı)
                 for l in rb_lines:

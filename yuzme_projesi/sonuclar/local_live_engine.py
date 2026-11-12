@@ -605,11 +605,19 @@ class LocalLiveEngine:
                         "sporcu_maskeli": clean_name if "*" in clean_name else "",
                     }
                 else:
+                    final_derece = None
+                    if derece_val and re.search(r"\d", str(derece_val)):
+                        final_derece = str(derece_val).strip()
+                    elif durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
+                        final_derece = durum_val
+                    else:
+                        final_derece = "Bekleniyor"
+
                     defaults_dict = {
                         "yaris_no": yaris_no,
                         "dosya_adi": filename,
                         "kulup": club,
-                        "derece": derece_val or durum_val,
+                        "derece": final_derece,
                         "derece_saniye": derece_sn,
                         "sira": sira_val,
                         "puan": fina,
@@ -619,10 +627,13 @@ class LocalLiveEngine:
                         "kaynak_turu": "CANLI_SONUC",
                         "sporcu_maskeli": clean_name if "*" in clean_name else "",
                     }
-                    if durum_val and durum_val != "NORMAL":
-                        defaults_dict["uyari_notu"] = f"{durum_val} - {s.get('notlar') or ''}".strip(" -")
-                    elif s.get("notlar"):
-                        defaults_dict["uyari_notu"] = s.get("notlar")
+                    if durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
+                        reason = s.get("notlar") or ""
+                        defaults_dict["uyari_notu"] = f"{durum_val} - {reason}".strip(" -")
+                    else:
+                        defaults_dict["uyari_notu"] = ""
+                        if s.get("notlar"):
+                            defaults_dict["baraj"] = s.get("notlar")
 
                 lookup_dict = {
                     "event": event,
