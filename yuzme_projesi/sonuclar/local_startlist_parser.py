@@ -258,6 +258,11 @@ class LocalStartListParser:
                     if idx < n_lines and self.RE_TIME.match(lines[idx]):
                         entry_time = lines[idx]
                         idx += 1
+                    elif club:
+                        m_time = re.search(r"((?:(?:\d{1,2}:)?\d{2}[.,]\d{2})|NT)$", club, re.IGNORECASE)
+                        if m_time:
+                            entry_time = m_time.group(1)
+                            club = club[:m_time.start()].strip()
 
                     swimmers.append({
                         "seri": current_seri,
@@ -299,6 +304,11 @@ class LocalStartListParser:
                     if idx < n_lines and self.RE_TIME.match(lines[idx]):
                         entry_time = lines[idx]
                         idx += 1
+                    elif club:
+                        m_time = re.search(r"((?:(?:\d{1,2}:)?\d{2}[.,]\d{2})|NT)$", club, re.IGNORECASE)
+                        if m_time:
+                            entry_time = m_time.group(1)
+                            club = club[:m_time.start()].strip()
 
                     swimmers.append({
                         "seri": current_seri,
