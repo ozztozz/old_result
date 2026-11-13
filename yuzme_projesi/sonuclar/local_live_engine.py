@@ -86,7 +86,7 @@ from sonuclar.models import (
     Kulup,
     Sporcu,
 )
-from sonuclar.athlete_matcher import match_athlete, clean_athlete_name_tags, clean_club_name_tags
+from sonuclar.athlete_matcher import match_athlete, clean_athlete_name_tags, clean_club_name_tags, normalize_tr
 from sonuclar.turkish_names import standardize_turkish_athlete_name
 from sonuclar.fina_calculator import calculate_fina_points, detect_course
 from sonuclar.local_startlist_parser import LocalStartListParser
@@ -515,6 +515,8 @@ class LocalLiveEngine:
         }
 
         cross_unmasked = {}
+        cross_by_lane = {}
+        cross_by_masked = {}
         if doc_type == "sonuc_listesi":
             start_dosya = None
             if yaris_no:
@@ -531,13 +533,44 @@ class LocalLiveEngine:
                     stil=stil,
                     cinsiyet=cinsiyet
                 ).first()
-            if start_dosya:
-                for prev_s in YarisSonucu.objects.filter(canli_dosya=start_dosya):
-                    if prev_s.seri and prev_s.kulvar and prev_s.sporcu:
-                        m_s = re.search(r"\d+", str(prev_s.seri))
-                        s_no = int(m_s.group()) if m_s else None
-                        if s_no and prev_s.kulvar:
-                            cross_unmasked[(s_no, prev_s.kulvar)] = (prev_s.sporcu, prev_s.sporcu_maskeli or "")
+            prev_qs = YarisSonucu.objects.filter(canli_dosya=start_dosya).select_related("sporcu", "kulup") if start_dosya else YarisSonucu.objects.none()
+            if not prev_qs.exists() and event:
+                if yaris_no:
+                    prev_qs = YarisSonucu.objects.filter(event=event, yaris_no=yaris_no).select_related("sporcu", "kulup")
+                elif mesafe and stil and cinsiyet:
+                    prev_qs = YarisSonucu.objects.filter(event=event, mesafe=mesafe, stil=stil, cinsiyet=cinsiyet).select_related("sporcu", "kulup")
+            for prev_s in prev_qs:
+                if prev_s.sporcu:
+                    cand_tuple = (
+                        prev_s.sporcu,
+                        prev_s.sporcu_maskeli or "",
+                        prev_s.kulup_id,
+                        str(prev_s.sporcu.dogum_yili or ""),
+                    )
+                    if prev_s.sporcu_maskeli:
+                        m_key = normalize_tr(prev_s.sporcu_maskeli, keep_asterisks=True)
+                        if m_key:
+                            cross_by_masked.setdefault(m_key, []).append(cand_tuple)
+                    if prev_s.kulvar:
+                        if prev_s.seri:
+                            m_s = re.search(r"\d+", str(prev_s.seri))
+                            s_no = int(m_s.group()) if m_s else None
+                            if s_no:
+                                cross_unmasked[(s_no, prev_s.kulvar)] = (prev_s.sporcu, prev_s.sporcu_maskeli or "")
+                        cross_by_lane.setdefault(prev_s.kulvar, []).append(cand_tuple)
+
+        def _narrow_cross_cands(cands, club_id, by):
+            if not cands:
+                return None
+            if len(cands) > 1 and club_id:
+                filtered = [c for c in cands if c[2] == club_id]
+                if filtered:
+                    cands = filtered
+            if len(cands) > 1 and by:
+                filtered = [c for c in cands if c[3] == str(by)]
+                if filtered:
+                    cands = filtered
+            return cands[0] if len(cands) == 1 else None
 
         def _save_pdf_atomically() -> int:
             records_added = 0
@@ -572,13 +605,34 @@ class LocalLiveEngine:
                             seri_no = int(m_s.group())
 
                     athlete = None
-                    # 1. StartList Çapraz Eşleşmesi (K/S)
-                    if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
-                        st_sp, st_mask = cross_unmasked[(seri_no, kulvar_val)]
-                        if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
-                            athlete = st_sp
-                        elif st_mask:
-                            clean_name = st_mask
+                    # 1. StartList Çapraz Eşleşmesi:
+                    #    a) Öncelikle StartList'teki maskeli isim anahtarıyla eşleştir
+                    if "*" in clean_name and cross_by_masked:
+                        m_key = normalize_tr(clean_name, keep_asterisks=True)
+                        picked = _narrow_cross_cands(cross_by_masked.get(m_key), club.id if club else None, birth_year)
+                        if picked:
+                            st_sp, st_mask, _, _ = picked
+                            if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
+                                athlete = st_sp
+                            elif st_mask:
+                                clean_name = st_mask
+
+                    #    b) Eşleşmezse (K/S) veya seri yoksa Kulvar + Kulüp/Yıl üzerinden dene
+                    if not athlete:
+                        if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
+                            st_sp, st_mask = cross_unmasked[(seri_no, kulvar_val)]
+                            if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
+                                athlete = st_sp
+                            elif st_mask:
+                                clean_name = st_mask
+                        elif not seri_no and kulvar_val and kulvar_val in cross_by_lane:
+                            picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year)
+                            if picked:
+                                st_sp, st_mask, _, _ = picked
+                                if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
+                                    athlete = st_sp
+                                elif st_mask:
+                                    clean_name = st_mask
 
                     # 2. Bayrak / Relay Takımı Eşleşmesi
                     if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
