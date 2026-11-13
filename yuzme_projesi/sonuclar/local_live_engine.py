@@ -513,11 +513,6 @@ class LocalLiveEngine:
             "kayit_sayisi": len(raw_swimmers),
             "son_islem_tarihi": timezone.now(),
         }
-        dosya_obj, _ = db_retry(lambda: CanliYarisDosya.objects.update_or_create(
-            canli_yaris=yaris,
-            dosya_adi=filename,
-            defaults=dosya_defaults
-        ))
 
         cross_unmasked = {}
         if doc_type == "sonuc_listesi":
@@ -544,147 +539,153 @@ class LocalLiveEngine:
                         if s_no and prev_s.kulvar:
                             cross_unmasked[(s_no, prev_s.kulvar)] = (prev_s.sporcu, prev_s.sporcu_maskeli or "")
 
-        records_added = 0
-
-        for s in raw_swimmers:
-            raw_name = (s.get("sporcu") or "").strip()
-            if not raw_name:
-                continue
-
-            clean_name = clean_athlete_name_tags(raw_name)
-            birth_year = s.get("dogum_yili")
-            raw_club = s.get("kulup") or ""
-            clean_club_str = clean_club_name_tags(raw_club)
-            club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school)
-
-            seri_val = s.get("seri")
-            kulvar_val = s.get("kulvar")
-            derece_val = s.get("derece")
-            sira_val = s.get("sira")
-            durum_val = s.get("durum") or "NORMAL"
-
-            seri_no = None
-            if seri_val:
-                m_s = re.search(r"\d+", str(seri_val))
-                if m_s:
-                    seri_no = int(m_s.group())
-
-            athlete = None
-            # 1. StartList Çapraz Eşleşmesi (K/S)
-            if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
-                st_sp, st_mask = cross_unmasked[(seri_no, kulvar_val)]
-                if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
-                    athlete = st_sp
-                elif st_mask:
-                    clean_name = st_mask
-
-            # 2. Bayrak / Relay Takımı Eşleşmesi
-            if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
-                team_name = clean_name or (club.kulup_adi if club else "Takım")
-                athlete = Sporcu.objects.filter(sporcu_adi=team_name).first()
-                if not athlete:
-                    athlete = db_retry(lambda: Sporcu.objects.create(
-                        sporcu_adi=team_name,
-                        cinsiyet=cinsiyet,
-                        birincil_kulup=club,
-                    ))
-
-            # 3. Veritabanından Unmasking (Maske Kaldırma)
-            if not athlete and clean_name:
-                match_res = match_athlete(
-                    clean_name,
-                    birth_year_or_date=birth_year,
-                    club=clean_club_str or raw_club,
-                    gender=cinsiyet
-                )
-                if match_res.get("bulunan_id"):
-                    athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
-
-            # 4. Bulunamazsa Maskeli Sporcu Kaydı
-            if not athlete:
-                sp_target_name = f"Maskeli sporcu ({clean_name})" if "*" in clean_name else (standardize_turkish_athlete_name(clean_name) or clean_name)
-                athlete = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year).first()
-                if not athlete:
-                    athlete = db_retry(lambda: Sporcu.objects.create(
-                        sporcu_adi=sp_target_name,
-                        dogum_yili=birth_year,
-                        cinsiyet=cinsiyet,
-                        birincil_kulup=club,
-                    ))
-
-            derece_sn = _time_to_seconds(derece_val)
-            fina = s.get("puan")
-            if (derece_sn or derece_val) and not fina and not is_bayrak:
-                fina = calculate_fina_points(cinsiyet, mesafe, stil, derece_sn or derece_val, course)
-
-            if doc_type == "start_listesi":
-                defaults_dict = {
-                    "yaris_no": yaris_no,
-                    "dosya_adi": filename,
-                    "kulup": club,
-                    "giris_derecesi": s.get("giris_derecesi") or derece_val,
-                    "derece": "Bekleniyor",
-                    "derece_saniye": None,
-                    "sira": None,
-                    "puan": None,
-                    "seri": str(seri_val) if seri_val else None,
-                    "kulvar": kulvar_val,
-                    "canli_dosya": dosya_obj,
-                    "kaynak_turu": "CANLI_START_LISTESI",
-                    "sporcu_maskeli": clean_name if "*" in clean_name else "",
-                }
-            else:
-                final_derece = None
-                if derece_val and re.search(r"\d", str(derece_val)):
-                    final_derece = str(derece_val).strip()
-                elif durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
-                    final_derece = durum_val
-                else:
-                    final_derece = "Bekleniyor"
-
-                defaults_dict = {
-                    "yaris_no": yaris_no,
-                    "dosya_adi": filename,
-                    "kulup": club,
-                    "derece": final_derece,
-                    "derece_saniye": derece_sn,
-                    "sira": sira_val,
-                    "puan": fina,
-                    "seri": str(seri_val) if seri_val else None,
-                    "kulvar": kulvar_val,
-                    "canli_dosya": dosya_obj,
-                    "kaynak_turu": "CANLI_SONUC",
-                    "sporcu_maskeli": clean_name if "*" in clean_name else "",
-                }
-                if durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
-                    reason = s.get("notlar") or ""
-                    defaults_dict["uyari_notu"] = f"{durum_val} - {reason}".strip(" -")
-                else:
-                    defaults_dict["uyari_notu"] = ""
-                    if s.get("notlar"):
-                        defaults_dict["baraj"] = s.get("notlar")
-
-            lookup_dict = {
-                "event": event,
-                "sporcu": athlete,
-                "mesafe": mesafe,
-                "stil": stil,
-                "cinsiyet": cinsiyet,
-            }
-            if yaris_no:
-                lookup_dict["yaris_no"] = yaris_no
-
-            def _write_result():
-                return YarisSonucu.objects.update_or_create(
-                    **lookup_dict,
-                    defaults=defaults_dict
+        def _save_pdf_atomically() -> int:
+            records_added = 0
+            with transaction.atomic():
+                dosya_obj, _ = CanliYarisDosya.objects.update_or_create(
+                    canli_yaris=yaris,
+                    dosya_adi=filename,
+                    defaults=dosya_defaults
                 )
 
-            obj, created = db_retry(_write_result)
-            if created:
-                records_added += 1
+                for s in raw_swimmers:
+                    raw_name = (s.get("sporcu") or "").strip()
+                    if not raw_name:
+                        continue
 
-        return records_added
+                    clean_name = clean_athlete_name_tags(raw_name)
+                    birth_year = s.get("dogum_yili")
+                    raw_club = s.get("kulup") or ""
+                    clean_club_str = clean_club_name_tags(raw_club)
+                    club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school)
+
+                    seri_val = s.get("seri")
+                    kulvar_val = s.get("kulvar")
+                    derece_val = s.get("derece")
+                    sira_val = s.get("sira")
+                    durum_val = s.get("durum") or "NORMAL"
+
+                    seri_no = None
+                    if seri_val:
+                        m_s = re.search(r"\d+", str(seri_val))
+                        if m_s:
+                            seri_no = int(m_s.group())
+
+                    athlete = None
+                    # 1. StartList Çapraz Eşleşmesi (K/S)
+                    if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
+                        st_sp, st_mask = cross_unmasked[(seri_no, kulvar_val)]
+                        if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
+                            athlete = st_sp
+                        elif st_mask:
+                            clean_name = st_mask
+
+                    # 2. Bayrak / Relay Takımı Eşleşmesi
+                    if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
+                        team_name = clean_name or (club.kulup_adi if club else "Takım")
+                        athlete = Sporcu.objects.filter(sporcu_adi=team_name).first()
+                        if not athlete:
+                            athlete = Sporcu.objects.create(
+                                sporcu_adi=team_name,
+                                cinsiyet=cinsiyet,
+                                birincil_kulup=club,
+                            )
+
+                    # 3. Veritabanından Unmasking (Maske Kaldırma)
+                    if not athlete and clean_name:
+                        match_res = match_athlete(
+                            clean_name,
+                            birth_year_or_date=birth_year,
+                            club=clean_club_str or raw_club,
+                            gender=cinsiyet
+                        )
+                        if match_res.get("bulunan_id"):
+                            athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
+
+                    # 4. Bulunamazsa Maskeli Sporcu Kaydı
+                    if not athlete:
+                        sp_target_name = f"Maskeli sporcu ({clean_name})" if "*" in clean_name else (standardize_turkish_athlete_name(clean_name) or clean_name)
+                        athlete = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year).first()
+                        if not athlete:
+                            athlete = Sporcu.objects.create(
+                                sporcu_adi=sp_target_name,
+                                dogum_yili=birth_year,
+                                cinsiyet=cinsiyet,
+                                birincil_kulup=club,
+                            )
+
+                    derece_sn = _time_to_seconds(derece_val)
+                    fina = s.get("puan")
+                    if (derece_sn or derece_val) and not fina and not is_bayrak:
+                        fina = calculate_fina_points(cinsiyet, mesafe, stil, derece_sn or derece_val, course)
+
+                    if doc_type == "start_listesi":
+                        defaults_dict = {
+                            "yaris_no": yaris_no,
+                            "dosya_adi": filename,
+                            "kulup": club,
+                            "giris_derecesi": s.get("giris_derecesi") or derece_val,
+                            "derece": "Bekleniyor",
+                            "derece_saniye": None,
+                            "sira": None,
+                            "puan": None,
+                            "seri": str(seri_val) if seri_val else None,
+                            "kulvar": kulvar_val,
+                            "canli_dosya": dosya_obj,
+                            "kaynak_turu": "CANLI_START_LISTESI",
+                            "sporcu_maskeli": clean_name if "*" in clean_name else "",
+                        }
+                    else:
+                        final_derece = None
+                        if derece_val and re.search(r"\d", str(derece_val)):
+                            final_derece = str(derece_val).strip()
+                        elif durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
+                            final_derece = durum_val
+                        else:
+                            final_derece = "Bekleniyor"
+
+                        defaults_dict = {
+                            "yaris_no": yaris_no,
+                            "dosya_adi": filename,
+                            "kulup": club,
+                            "derece": final_derece,
+                            "derece_saniye": derece_sn,
+                            "sira": sira_val,
+                            "puan": fina,
+                            "seri": str(seri_val) if seri_val else None,
+                            "kulvar": kulvar_val,
+                            "canli_dosya": dosya_obj,
+                            "kaynak_turu": "CANLI_SONUC",
+                            "sporcu_maskeli": clean_name if "*" in clean_name else "",
+                        }
+                        if durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
+                            reason = s.get("notlar") or ""
+                            defaults_dict["uyari_notu"] = f"{durum_val} - {reason}".strip(" -")
+                        else:
+                            defaults_dict["uyari_notu"] = ""
+                            if s.get("notlar"):
+                                defaults_dict["baraj"] = s.get("notlar")
+
+                    lookup_dict = {
+                        "event": event,
+                        "sporcu": athlete,
+                        "mesafe": mesafe,
+                        "stil": stil,
+                        "cinsiyet": cinsiyet,
+                    }
+                    if yaris_no:
+                        lookup_dict["yaris_no"] = yaris_no
+
+                    _, created = YarisSonucu.objects.update_or_create(
+                        **lookup_dict,
+                        defaults=defaults_dict
+                    )
+                    if created:
+                        records_added += 1
+
+            return records_added
+
+        return db_retry(_save_pdf_atomically)
 
 
 # ==============================================================================
