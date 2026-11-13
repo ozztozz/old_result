@@ -609,15 +609,20 @@ class LocalLiveEngine:
 
                     clean_name = clean_athlete_name_tags(raw_name)
                     birth_year = s.get("dogum_yili")
-                    raw_club = s.get("kulup") or ""
-                    clean_club_str = clean_club_name_tags(raw_club)
-                    club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school)
+                    durum_val = s.get("durum") or "NORMAL"
+                    raw_club = (s.get("kulup") or "").strip()
+                    baraj_note = (s.get("notlar") or "").strip() if durum_val not in ["DSQ", "DNS", "DNF", "EXH"] else ""
+                    if raw_club and "baraj" in raw_club.lower():
+                        if not baraj_note:
+                            baraj_note = raw_club
+                        raw_club = ""
+                    clean_club_str = clean_club_name_tags(raw_club) if raw_club else ""
+                    club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school) if (clean_club_str or raw_club) else (None, False)
 
                     seri_val = s.get("seri")
                     kulvar_val = s.get("kulvar")
                     derece_val = s.get("derece")
                     sira_val = s.get("sira")
-                    durum_val = s.get("durum") or "NORMAL"
 
                     seri_no = None
                     if seri_val:
@@ -755,8 +760,8 @@ class LocalLiveEngine:
                             defaults_dict["uyari_notu"] = f"{durum_val} - {reason}".strip(" -")
                         else:
                             defaults_dict["uyari_notu"] = ""
-                            if s.get("notlar"):
-                                defaults_dict["baraj"] = s.get("notlar")
+                            if baraj_note:
+                                defaults_dict["baraj"] = baraj_note[:50]
 
                     lookup_dict = {
                         "event": event,

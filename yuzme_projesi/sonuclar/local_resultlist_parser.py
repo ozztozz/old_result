@@ -416,11 +416,22 @@ class LocalResultListParser:
                                 scan += 1
 
                             if derece is not None:
-                                baraj = None
-                                if mid_lines and "baraj" in mid_lines[-1].lower():
-                                    baraj = mid_lines.pop()
+                                baraj_parts: List[str] = []
+                                while mid_lines and "baraj" in mid_lines[-1].lower():
+                                    baraj_parts.insert(0, mid_lines.pop())
+                                    # Eğer "BARAJI" tek başına alt satıra taşmışsa üstündeki devam satırını da al
+                                    if (
+                                        baraj_parts[0].strip().lower() in ("barajı", "baraj", "baraji", "katılım barajı")
+                                        and mid_lines
+                                        and not any(k in mid_lines[-1].lower() for k in ("kulübü", "kulubu", "s.k", "sk", "belediyesi", "koleji", "derneği"))
+                                    ):
+                                        baraj_parts.insert(0, mid_lines.pop())
+                                baraj = " ".join(baraj_parts).strip() or None
 
                                 club = mid_lines.pop() if mid_lines else None
+                                if club and "baraj" in club.lower():
+                                    baraj = f"{baraj} {club}".strip() if baraj else club
+                                    club = mid_lines.pop() if mid_lines else None
                                 athlete_name = self._join_athlete_parts(mid_lines)
 
                                 # Opsiyonel FINA puanı (dereceden sonra gelen 2-4 haneli tam sayı)
