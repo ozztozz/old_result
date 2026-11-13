@@ -1,4 +1,4 @@
-/// Sporcu ve PB (Kişisel En İyi) Modelleri
+// Sporcu ve PB (Kişisel En İyi) Modelleri
 
 class PersonalBest {
   final int distance;
@@ -173,6 +173,126 @@ class AthleteRaceHistoryItem {
       resultStatus: json['result_status'] as String? ?? 'OK',
       points: json['points'] as int?,
       clubName: json['club_name'] as String? ?? '',
+    );
+  }
+}
+
+class AthleteRaceBrief {
+  final int distance;
+  final String stroke;
+  final String time;
+  final int? points;
+
+  AthleteRaceBrief({
+    required this.distance,
+    required this.stroke,
+    required this.time,
+    this.points,
+  });
+
+  factory AthleteRaceBrief.fromJson(Map<String, dynamic> json) {
+    return AthleteRaceBrief(
+      distance: json['distance'] as int? ?? 0,
+      stroke: json['stroke'] as String? ?? '',
+      time: json['time'] as String? ?? '-',
+      points: json['points'] as int?,
+    );
+  }
+}
+
+class AthleteSummaryItem {
+  final int id;
+  final String name;
+  final int? birthYear;
+  final String clubName;
+  final AthleteRaceBrief? latestRace;
+  final AthleteRaceBrief? topPerformance;
+
+  AthleteSummaryItem({
+    required this.id,
+    required this.name,
+    this.birthYear,
+    required this.clubName,
+    this.latestRace,
+    this.topPerformance,
+  });
+
+  factory AthleteSummaryItem.fromJson(Map<String, dynamic> json) {
+    final latestRaw = json['latest_race'] as Map<String, dynamic>?;
+    final topRaw = json['top_performance'] as Map<String, dynamic>?;
+    return AthleteSummaryItem(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      birthYear: json['birth_year'] as int?,
+      clubName: json['club_name'] as String? ?? 'Ferdi',
+      latestRace: latestRaw != null ? AthleteRaceBrief.fromJson(latestRaw) : null,
+      topPerformance: topRaw != null ? AthleteRaceBrief.fromJson(topRaw) : null,
+    );
+  }
+}
+
+class AthleteSearchItem {
+  final int id;
+  final String name;
+  final int? birthYear;
+  final String clubName;
+
+  AthleteSearchItem({
+    required this.id,
+    required this.name,
+    this.birthYear,
+    required this.clubName,
+  });
+
+  factory AthleteSearchItem.fromJson(Map<String, dynamic> json) {
+    return AthleteSearchItem(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      birthYear: json['birth_year'] as int?,
+      clubName: json['club_name'] as String? ?? 'Ferdi',
+    );
+  }
+}
+
+class ClubSearchItem {
+  final int? id;
+  final String name;
+  final int athleteCount;
+
+  ClubSearchItem({
+    this.id,
+    required this.name,
+    required this.athleteCount,
+  });
+
+  factory ClubSearchItem.fromJson(Map<String, dynamic> json) {
+    return ClubSearchItem(
+      id: json['id'] as int?,
+      name: json['name'] as String? ?? '',
+      athleteCount: json['athlete_count'] as int? ?? 0,
+    );
+  }
+}
+
+class GlobalSearchResult {
+  final List<AthleteSearchItem> athletes;
+  final List<ClubSearchItem> clubs;
+
+  GlobalSearchResult({
+    required this.athletes,
+    required this.clubs,
+  });
+
+  factory GlobalSearchResult.fromJson(Map<String, dynamic> json) {
+    final athletesRaw = json['athletes'] as List<dynamic>? ?? [];
+    final clubsRaw = json['clubs'] as List<dynamic>? ?? [];
+    return GlobalSearchResult(
+      athletes: athletesRaw
+          .map((e) => AthleteSearchItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      clubs: clubsRaw
+          .map((e) => ClubSearchItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
+import '../../core/components/empty_state_widget.dart';
+import '../../core/theme/tokens/tokens.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
 import 'live_meet_detail_screen.dart';
@@ -21,6 +21,7 @@ class LiveScreen extends StatefulWidget {
 
 class _LiveScreenState extends State<LiveScreen> {
   bool _isLoading = true;
+  String? _errorMessage;
   List<LiveMeetSummary> _liveMeets = [];
   String _searchQuery = '';
 
@@ -31,7 +32,10 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Future<void> _loadLiveMeets() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final list = await widget.repository.getLiveMeets();
       if (mounted) {
@@ -41,7 +45,12 @@ class _LiveScreenState extends State<LiveScreen> {
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Canlı müsabakalar yüklenirken bir sorun oluştu.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -69,30 +78,31 @@ class _LiveScreenState extends State<LiveScreen> {
   @override
   Widget build(BuildContext context) {
     final meets = _filteredMeets;
+    final palette = context.palette;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: palette.background,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'TÜRKİYE YÜZME FEDERASYONU',
-              style: AppTextStyles.appTitle,
+              style: AppTextStyles.appTitle.copyWith(color: palette.textPrimary),
             ),
             const SizedBox(height: 2),
             Text(
               '${_liveMeets.length} Canlı Müsabaka',
-              style: AppTextStyles.categorySeries,
+              style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 20),
+            icon: Icon(Icons.refresh_rounded, color: palette.textSecondary, size: 20),
             tooltip: 'Yenile',
             onPressed: _loadLiveMeets,
           ),
@@ -100,11 +110,21 @@ class _LiveScreenState extends State<LiveScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.accent),
+          ? Center(
+              child: CircularProgressIndicator(color: palette.primary),
             )
-          : RefreshIndicator(
-              color: AppColors.accent,
+          : _errorMessage != null && _liveMeets.isEmpty
+              ? Center(
+                  child: EmptyStateWidget(
+                    title: 'Bağlantı Hatası',
+                    message: _errorMessage!,
+                    icon: Icons.cloud_off_rounded,
+                    actionText: 'Tekrar Dene',
+                    onAction: _loadLiveMeets,
+                  ),
+                )
+              : RefreshIndicator(
+              color: palette.primary,
               onRefresh: _loadLiveMeets,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -114,29 +134,27 @@ class _LiveScreenState extends State<LiveScreen> {
                     margin: const EdgeInsets.only(bottom: 14),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: palette.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border, width: 1.0),
+                      border: Border.all(color: palette.border, width: 1.0),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.search_rounded,
-                            color: AppColors.textSecondary, size: 18),
+                        Icon(Icons.search_rounded,
+                            color: palette.textSecondary, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             onChanged: (val) => setState(() => _searchQuery = val),
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
+                            style: TextStyle(
                               fontSize: 14,
-                              color: AppColors.textPrimary,
+                              color: palette.textPrimary,
                             ),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Müsabaka veya şehir ara...',
                               hintStyle: TextStyle(
-                                fontFamily: 'Inter',
                                 fontSize: 13.5,
-                                color: AppColors.laneNeutral,
+                                color: palette.textMuted,
                               ),
                               border: InputBorder.none,
                               isDense: true,

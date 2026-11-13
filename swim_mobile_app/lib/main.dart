@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
 import 'core/network/api_client.dart';
+import 'core/services/favorite_athletes_service.dart';
 import 'core/services/selected_club_service.dart';
 import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
@@ -12,8 +13,11 @@ import 'shared/widgets/app_scaffold.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Global Tercihler ve Kulüp Servisi
-  await SelectedClubService.instance.init();
+  // Global Tercihler, Kulüp ve Favori Sporcular Servisi
+  await Future.wait([
+    SelectedClubService.instance.init(),
+    FavoriteAthletesService.instance.init(),
+  ]);
 
   // Merkezi HTTP ve Veri Deposu
   final apiClient = ApiClient();
@@ -34,7 +38,7 @@ class SwimApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       home: MainNavigationContainer(repository: repository),
     );
   }

@@ -4,56 +4,56 @@ import 'package:flutter/material.dart';
 /// Temel palet sabitlerini ve geriye dönük uyumluluk tanımlarını içerir.
 abstract final class AppColors {
   // 1. Zemin (Background)
-  static const Color background = Color(0xFFFAF8F7);
-  static const Color darkCanvas = Color(0xFFFAF8F7);
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color darkCanvas = Color(0xFF0B1120);
 
   // 2. Kart / Yüzey (Surface)
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceGlass = Color(0xFFFFFFFF);
-  static const Color surfaceGlassLight = Color(0xFFFAF8F7);
+  static const Color surfaceGlassLight = Color(0xFFF8FAFC);
 
   // 3. Tipografi
-  static const Color textPrimary = Color(0xFF3D3038);
-  static const Color textSecondary = Color(0xFF81777D);
-  static const Color textMuted = Color(0xFF81777D);
-  static const Color laneNeutral = Color(0xFFB3A8AE);
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
+  static const Color textMuted = Color(0xFF64748B);
+  static const Color laneNeutral = Color(0xFF64748B);
 
   // 4. Vurgu (Accent)
-  static const Color accent = Color(0xFFBC8C91);
-  static const Color accentLight = Color(0x1FBC8C91);
-  static const Color accentGlow = Color(0x26BC8C91);
+  static const Color accent = Color(0xFF0F4C81);
+  static const Color accentLight = Color(0x1A0F4C81);
+  static const Color accentGlow = Color(0x260F4C81);
 
   // 5. Ayırıcılar ve Çerçeve
-  static const Color divider = Color(0xFFEFE9E7);
-  static const Color border = Color(0xFFEFE9E7);
-  static const Color glassBorder = Color(0xFFEFE9E7);
+  static const Color divider = Color(0xFFE2E8F0);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color glassBorder = Color(0xFFE2E8F0);
 
   // 6. Durum Renkleri
-  static const Color statusLive = Color(0xFFBC8C91);
-  static const Color statusLiveBg = Color(0x1FBC8C91);
-  static const Color statusSuccess = Color(0xFF4A7C59);
-  static const Color statusSuccessBg = Color(0x144A7C59);
+  static const Color statusLive = Color(0xFFE11D48);
+  static const Color statusLiveBg = Color(0x1AE11D48);
+  static const Color statusSuccess = Color(0xFF15803D);
+  static const Color statusSuccessBg = Color(0x1415803D);
 
   // 7. Spor & Madalya
-  static const Color gold = Color(0xFFB8860B);
-  static const Color goldBg = Color(0x14B8860B);
-  static const Color starGold = Color(0xFFD4A373);
-  static const Color heroAccentYellow = Color(0xFFD4A373);
+  static const Color gold = Color(0xFFB45309);
+  static const Color goldBg = Color(0x14B45309);
+  static const Color starGold = Color(0xFFD97706);
+  static const Color heroAccentYellow = Color(0xFFD97706);
 
   // Marka & Başlık Renkleri
   static const Color brandPrimary = accent;
-  static const Color brandPrimaryDark = Color(0xFF3D3038);
-  static const Color brandDeep = Color(0xFF3D3038);
+  static const Color brandPrimaryDark = Color(0xFF0F172A);
+  static const Color brandDeep = Color(0xFF0F172A);
 
   // Durum / Uyarı
   static const Color liveGreen = statusLive;
   static const Color success = statusSuccess;
   static const Color successBg = statusSuccessBg;
-  static const Color warning = Color(0xFFB8860B);
-  static const Color warningBg = Color(0x14B8860B);
-  static const Color danger = Color(0xFFB91C1C);
-  static const Color dangerBg = Color(0x14B91C1C);
-  static const Color tabContainerBg = Color(0xFFF2ECE9);
+  static const Color warning = Color(0xFFD97706);
+  static const Color warningBg = Color(0x1AD97706);
+  static const Color danger = Color(0xFFDC2626);
+  static const Color dangerBg = Color(0x1ADC2626);
+  static const Color tabContainerBg = Color(0xFFF1F5F9);
 
   // Nötr Renk Takma Adları
   static const Color slate50 = background;

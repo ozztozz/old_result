@@ -222,6 +222,7 @@ def get_live_feed(request, live_id: int):
             'seed_time_cs': seed_cs,
             'result_status': res_status,
             'points': r.puan if (r.puan and r.puan > 0) else None,
+            'split_times': r.ara_dereceler if isinstance(r.ara_dereceler, dict) and r.ara_dereceler else None,
             'athlete': {
                 'id': r.sporcu_id,
                 'name': r.sporcu.sporcu_adi if r.sporcu else '',

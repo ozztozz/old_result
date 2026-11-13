@@ -1,4 +1,4 @@
-/// Müsabaka Modelleri
+// Müsabaka Modelleri
 
 class MeetSummary {
   final int id;

@@ -1,4 +1,4 @@
-/// Yarış Sonucu ve Baraj Modelleri
+// Yarış Sonucu ve Baraj Modelleri
 
 class QualifyingStandard {
   final bool passed;
@@ -37,6 +37,7 @@ class RaceResult {
   final int? age;
   final int? clubId;
   final String clubName;
+  final Map<String, String>? splitTimes;
 
   RaceResult({
     required this.id,
@@ -61,12 +62,20 @@ class RaceResult {
     this.age,
     this.clubId,
     required this.clubName,
+    this.splitTimes,
   });
 
   factory RaceResult.fromJson(Map<String, dynamic> json) {
     final athleteObj = json['athlete'] as Map<String, dynamic>? ?? {};
     final clubObj = json['club'] as Map<String, dynamic>?;
     final standardObj = json['qualifying_standard'] as Map<String, dynamic>?;
+    final splitsRaw = json['split_times'] ?? json['ara_dereceler'];
+    Map<String, String>? parsedSplits;
+    if (splitsRaw is Map && splitsRaw.isNotEmpty) {
+      parsedSplits = splitsRaw.map(
+        (k, v) => MapEntry(k.toString(), v.toString()),
+      );
+    }
 
     return RaceResult(
       id: json['id'] as int,
@@ -91,6 +100,7 @@ class RaceResult {
       age: athleteObj['age'] as int?,
       clubId: clubObj?['id'] as int?,
       clubName: clubObj?['name'] as String? ?? 'Ferdi',
+      splitTimes: parsedSplits,
     );
   }
 }

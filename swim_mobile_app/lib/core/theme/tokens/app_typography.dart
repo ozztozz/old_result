@@ -58,12 +58,13 @@ abstract final class AppTextStyles {
     fontFeatures: [FontFeature.tabularFigures()],
   );
 
-  // 7. Sıra ve Kulvar Numaraları
+  // 7. Sıra ve Kulvar Numaraları (Tabular Figures)
   static const TextStyle laneRank = TextStyle(
     fontFamily: fontFamily,
     fontSize: 14.0,
-    fontWeight: FontWeight.w400,
+    fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
+    fontFeatures: [FontFeature.tabularFigures()],
   );
 
   // Metrik ve Özel Gösterimler

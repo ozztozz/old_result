@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 export 'app_colors.dart';
 
 /// TYF Yüzme Mobil Uygulaması Özel Renk Uzantısı (ThemeExtension)
-/// Widget'lar sabit renkler yerine Theme.of(context).extension<SwimColors>()! kullanır.
+/// Widget'lar sabit renkler yerine `Theme.of(context).extension<SwimColors>()!` kullanır.
 @immutable
 class SwimColors extends ThemeExtension<SwimColors> {
   final Color success;

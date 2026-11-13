@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'tokens/tokens.dart';
 
 export 'tokens/tokens.dart';
@@ -44,7 +45,7 @@ abstract final class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      fontFamily: AppTextStyles.fontFamily,
+      fontFamily: GoogleFonts.inter().fontFamily,
       brightness: palette.isDark ? Brightness.dark : Brightness.light,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: palette.background,
@@ -155,7 +156,7 @@ abstract final class AppTheme {
       ),
 
       // Tipografi
-      textTheme: AppTextStyles.textTheme.apply(
+      textTheme: GoogleFonts.interTextTheme(AppTextStyles.textTheme).apply(
         bodyColor: palette.textPrimary,
         displayColor: palette.textPrimary,
       ),

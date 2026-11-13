@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/swim_theme.dart';
+import '../../core/components/empty_state_widget.dart';
+import '../../core/theme/tokens/tokens.dart';
+import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
@@ -19,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
+  String? _errorMessage;
   List<MeetSummary> _recentMeets = [];
   List<LiveMeetSummary> _liveMeets = [];
 
@@ -29,7 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final results = await Future.wait([
         widget.repository.getMeets(page: 1),
@@ -42,8 +49,13 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Müsabakalar yüklenirken bir bağlantı sorunu oluştu.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -62,23 +74,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.swimColors;
+    final palette = context.palette;
 
     return Scaffold(
+      backgroundColor: palette.background,
       appBar: AppBar(
-        title: Row(
+        backgroundColor: palette.background,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.pool, color: Theme.of(context).colorScheme.primary, size: 26),
-            const SizedBox(width: 8),
-            const Text('TYF Yüzme Sonuçları'),
+            Text(
+              'TÜRKİYE YÜZME FEDERASYONU',
+              style: AppTextStyles.appTitle.copyWith(color: palette.textPrimary),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Güncel & Canlı Müsabakalar',
+              style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
+            ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.palette_outlined),
-            onPressed: _openGallery,
-            tooltip: 'SwimDesign Galerisi',
-          ),
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.palette_outlined),
+              onPressed: _openGallery,
+              tooltip: 'SwimDesign Galerisi',
+            ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: _openSearchModal,
@@ -88,7 +112,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
+          : _errorMessage != null && _recentMeets.isEmpty && _liveMeets.isEmpty
+              ? Center(
+                  child: EmptyStateWidget(
+                    title: 'Veriler Yüklenemedi',
+                    message: _errorMessage!,
+                    icon: Icons.cloud_off_rounded,
+                    actionText: 'Tekrar Dene',
+                    onAction: _loadData,
+                  ),
+                )
+              : RefreshIndicator(
               onRefresh: _loadData,
               child: ListView(
                 padding: const EdgeInsets.all(16),
@@ -123,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Aktif Canlı Yarış Varsa Canlı Banner
                   if (_liveMeets.isNotEmpty) ...[
-                    _buildLiveBanner(_liveMeets.first, colors),
+                    _buildLiveBanner(_liveMeets.first, palette),
                     const SizedBox(height: 24),
                   ],
 
@@ -154,13 +188,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildLiveBanner(LiveMeetSummary live, colors) {
+  Widget _buildLiveBanner(LiveMeetSummary live, AppColorPalette palette) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.danger, width: 1.5),
+        border: Border.all(color: palette.statusLive, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colors.danger.withOpacity(0.12),
+                  color: palette.statusLiveBg,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -180,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: colors.danger,
+                        color: palette.statusLive,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -188,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'CANLI YARIŞ',
                       style: TextStyle(
-                        color: colors.danger,
+                        color: palette.statusLive,
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
                       ),
@@ -224,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMeetCard(MeetSummary meet) {
     final is25m = meet.course == 'SC';
-    final colors = context.swimColors;
+    final palette = context.palette;
     final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Card(
@@ -260,16 +294,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: is25m ? colors.accent.withValues(alpha: 0.12) : primaryColor.withValues(alpha: 0.12),
+                      color: is25m ? palette.secondary.withValues(alpha: 0.12) : primaryColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: is25m ? colors.accent.withValues(alpha: 0.4) : primaryColor.withValues(alpha: 0.4),
+                        color: is25m ? palette.secondary.withValues(alpha: 0.4) : primaryColor.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Text(
                       is25m ? '25m (Kısa)' : '50m (Uzun)',
                       style: TextStyle(
-                        color: is25m ? colors.accent : primaryColor,
+                        color: is25m ? palette.secondary : primaryColor,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -303,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Text(' · ', style: TextStyle(color: Colors.grey)),
                   Text(
                     '${meet.totalAthletes} Sporcu',
-                    style: TextStyle(color: colors.success, fontWeight: FontWeight.w600, fontSize: 12),
+                    style: TextStyle(color: palette.statusSuccess, fontWeight: FontWeight.w600, fontSize: 12),
                   ),
                 ],
               ),
@@ -351,7 +385,7 @@ class _SwimSearchDelegate extends SearchDelegate {
       return const Center(child: Text('Aramak için en az 2 harf girin.'));
     }
 
-    return FutureBuilder<Map<String, dynamic>>(
+    return FutureBuilder<GlobalSearchResult>(
       future: repository.searchGlobal(query.trim()),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -362,8 +396,8 @@ class _SwimSearchDelegate extends SearchDelegate {
         }
 
         final data = snapshot.data!;
-        final athletes = (data['athletes'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
-        final clubs = (data['clubs'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+        final athletes = data.athletes;
+        final clubs = data.clubs;
 
         if (athletes.isEmpty && clubs.isEmpty) {
           return const Center(child: Text('Eşleşen sonuç bulunamadı.'));
@@ -381,17 +415,17 @@ class _SwimSearchDelegate extends SearchDelegate {
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       child: const Icon(Icons.person, color: Colors.white, size: 20),
                     ),
-                    title: Text(a['name'] as String? ?? ''),
+                    title: Text(a.name),
                     subtitle: Text(
-                      '${a['birth_year'] ?? '-'} · ${a['club_name'] ?? 'Ferdi'}',
+                      '${a.birthYear ?? '-'} · ${a.clubName}',
                     ),
                     onTap: () {
                       close(context, null);
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => AthleteProfileScreen(
-                            athleteId: a['id'] as int,
-                            athleteName: a['name'] as String? ?? '',
+                            athleteId: a.id,
+                            athleteName: a.name,
                             repository: repository,
                           ),
                         ),
@@ -405,12 +439,12 @@ class _SwimSearchDelegate extends SearchDelegate {
                 child: Text('Kulüpler', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               ),
               ...clubs.map((c) => ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.teal,
-                      child: Icon(Icons.shield_outlined, color: Colors.white, size: 20),
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      child: const Icon(Icons.shield_outlined, color: Colors.white, size: 20),
                     ),
-                    title: Text(c['name'] as String? ?? ''),
-                    subtitle: Text('${c['athlete_count'] ?? 0} Kayıtlı Sporcu'),
+                    title: Text(c.name),
+                    subtitle: Text('${c.athleteCount} Kayıtlı Sporcu'),
                     onTap: () {
                       // Kulüp detay Faz 4
                     },

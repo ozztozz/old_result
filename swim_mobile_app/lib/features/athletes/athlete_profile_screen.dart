@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/components/app_card.dart';
 import '../../core/components/empty_state_widget.dart';
+import '../../core/services/favorite_athletes_service.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/athlete.dart';
@@ -35,13 +36,23 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _isFavorite = FavoriteAthletesService.instance.isFavorite(widget.athleteId);
+    FavoriteAthletesService.instance.addListener(_onFavoritesChanged);
     _loadAthleteData();
   }
 
   @override
   void dispose() {
+    FavoriteAthletesService.instance.removeListener(_onFavoritesChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onFavoritesChanged() {
+    final fav = FavoriteAthletesService.instance.isFavorite(widget.athleteId);
+    if (mounted && fav != _isFavorite) {
+      setState(() => _isFavorite = fav);
+    }
   }
 
   Future<void> _loadAthleteData() async {
@@ -59,12 +70,15 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     }
   }
 
-  void _toggleFavorite() {
-    setState(() => _isFavorite = !_isFavorite);
+  Future<void> _toggleFavorite() async {
+    final added =
+        await FavoriteAthletesService.instance.toggleFavorite(widget.athleteId);
+    if (!mounted) return;
+    setState(() => _isFavorite = added);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _isFavorite
+          added
               ? 'Sporcu favorilere eklendi.'
               : 'Sporcu favorilerden çıkarıldı.',
         ),

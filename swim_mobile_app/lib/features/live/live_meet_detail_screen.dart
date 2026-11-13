@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../core/components/empty_state_widget.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/services/selected_club_service.dart';
+import '../../core/utils/race_result_sorter.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_model.dart';
 import '../../data/repositories/swim_repository.dart';
@@ -10,15 +13,6 @@ import '../../shared/widgets/modern_race_card.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
 import '../../shared/widgets/club_selection_sheet.dart';
 import 'live_race_results_screen.dart';
-
-String _toTitleCase(String text) {
-  if (text.isEmpty) return text;
-  return text.split(' ').map((word) {
-    if (word.isEmpty) return word;
-    final lower = word.toLowerCase();
-    return lower[0].toUpperCase() + lower.substring(1);
-  }).join(' ');
-}
 
 /// TYF Yüzme Sonuçları — Canlı Müsabaka Detayı: Yarışlar Ekranı (v2.0)
 /// Apple Esintili 2 Sekmeli Tasarım & Global Takım Takip Desteği
@@ -40,6 +34,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   bool _isLoading = true;
+  String? _errorMessage;
   String _selectedFilter = 'Tümü';
   List<RaceModel> _races = [];
   LiveFeedResponse? _lastFeedResponse;
@@ -67,7 +62,10 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
   }
 
   Future<void> _loadFeedData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final feed = await widget.repository.getLiveFeedResponse(widget.live.id);
       _lastFeedResponse = feed;
@@ -82,7 +80,12 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
 
       _rebuildRacesFromFeed(feed);
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Canlı yarış akışı yüklenirken bir sorun oluştu.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -100,7 +103,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
           : (e.stroke.isNotEmpty ? e.stroke : 'Serbest');
 
       final gender = e.gender != null && e.gender!.isNotEmpty
-          ? _toTitleCase(e.gender!)
+          ? StringUtils.toTitleCase(e.gender!)
           : (e.name.toLowerCase().contains('bayan') ||
                   e.name.toLowerCase().contains('kadin') ||
                   e.name.toLowerCase().contains('kız')
@@ -130,27 +133,12 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
       if (isFinished) {
         final matched = results.where((r) => isMatchEvent(r.eventNo, e.eventNo)).toList();
         if (matched.isNotEmpty) {
-          int parseRank(String rankStr) {
-            final m = RegExp(r'\d+').firstMatch(rankStr);
-            return m != null ? (int.tryParse(m.group(0)!) ?? 999999) : 999999;
-          }
-          matched.sort((a, b) {
-            final isDqA = a.resultStatus == 'DQ' || a.resultStatus == 'DNS' || a.resultStatus == 'DNF';
-            final isDqB = b.resultStatus == 'DQ' || b.resultStatus == 'DNS' || b.resultStatus == 'DNF';
-            if (isDqA && !isDqB) return 1;
-            if (!isDqA && isDqB) return -1;
-            final rankA = parseRank(a.rank);
-            final rankB = parseRank(b.rank);
-            if (rankA != 999999 && rankB != 999999 && rankA != rankB) {
-              return rankA.compareTo(rankB);
-            }
-            return (a.timeCs ?? 999999).compareTo(b.timeCs ?? 999999);
-          });
+          RaceResultSorter.sort(matched);
           final top = matched.first;
           final topTime = top.time ??
               (top.timeCs != null ? (top.timeCs! / 100).toStringAsFixed(2) : '');
-          if (topTime.isNotEmpty && top.resultStatus != 'DQ' && top.resultStatus != 'DNS' && top.resultStatus != 'DNF') {
-            winner = '🥇 1. ${_toTitleCase(top.athleteName)} • $topTime';
+          if (topTime.isNotEmpty && !RaceResultSorter.isDisqualified(top)) {
+            winner = '🥇 1. ${StringUtils.toTitleCase(top.athleteName)} • $topTime';
           }
         }
       }
@@ -167,7 +155,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
       return RaceModel(
         id: e.eventNo,
         distance: dist,
-        strokeName: _toTitleCase(stroke),
+        strokeName: StringUtils.toTitleCase(stroke),
         gender: gender,
         ageCategory: ageGroup,
         status: isFinished
@@ -296,7 +284,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _toTitleCase(widget.live.name),
+              StringUtils.toTitleCase(widget.live.name),
               style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -321,7 +309,17 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
           ? Center(
               child: CircularProgressIndicator(color: palette.primary),
             )
-          : RefreshIndicator(
+          : _errorMessage != null && _races.isEmpty
+              ? Center(
+                  child: EmptyStateWidget(
+                    title: 'Bağlantı Hatası',
+                    message: _errorMessage!,
+                    icon: Icons.cloud_off_rounded,
+                    actionText: 'Tekrar Dene',
+                    onAction: _loadFeedData,
+                  ),
+                )
+              : RefreshIndicator(
               color: palette.primary,
               onRefresh: _loadFeedData,
               child: NestedScrollView(
@@ -471,7 +469,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasClub ? _toTitleCase(clubName!) : 'Takımını Seç',
+                          hasClub ? StringUtils.toTitleCase(clubName!) : 'Takımını Seç',
                           style: TextStyle(
                             fontFamily: AppTextStyles.fontFamily,
                             fontSize: 13.5,

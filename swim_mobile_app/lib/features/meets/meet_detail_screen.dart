@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/components/empty_state_widget.dart';
 import '../../core/theme/swim_colors.dart';
+import '../../core/utils/race_result_sorter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
@@ -27,6 +29,7 @@ class MeetDetailScreen extends StatefulWidget {
 class _MeetDetailScreenState extends State<MeetDetailScreen> {
   bool _isLoading = true;
   bool _isLoadingResults = false;
+  String? _errorMessage;
 
   MeetDetail? _meetDetail;
   MeetParticipants? _participants;
@@ -45,7 +48,10 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final results = await Future.wait([
         widget.repository.getMeetDetail(widget.meetId),
@@ -55,7 +61,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
 
       if (mounted) {
         final list = results[2] as List<RaceResult>;
-        _sortResults(list);
+        RaceResultSorter.sort(list, preferRankFirst: false);
         setState(() {
           _meetDetail = results[0] as MeetDetail;
           _participants = results[1] as MeetParticipants;
@@ -63,59 +69,14 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Müsabaka detayları yüklenirken bir sorun oluştu.';
+          _isLoading = false;
+        });
+      }
     }
-  }
-
-  void _sortResults(List<RaceResult> list) {
-    final bool hasFinishedResults = list.any((r) => r.timeCs != null && r.timeCs! > 0);
-
-    list.sort((a, b) {
-      final bool isDqA = a.resultStatus == 'DQ' ||
-          a.resultStatus == 'DNS' ||
-          a.resultStatus == 'DNF' ||
-          a.rank.toUpperCase().startsWith('DQ') ||
-          a.rank.toUpperCase().startsWith('DSQ');
-      final bool isDqB = b.resultStatus == 'DQ' ||
-          b.resultStatus == 'DNS' ||
-          b.resultStatus == 'DNF' ||
-          b.rank.toUpperCase().startsWith('DQ') ||
-          b.rank.toUpperCase().startsWith('DSQ');
-
-      // 1. Diskalifiyeler EN SONDA
-      if (isDqA && !isDqB) return 1;
-      if (!isDqA && isDqB) return -1;
-      if (isDqA && isDqB) {
-        final heatA = int.tryParse(a.heat) ?? 999;
-        final heatB = int.tryParse(b.heat) ?? 999;
-        if (heatA != heatB) return heatA.compareTo(heatB);
-        return (a.lane ?? 999).compareTo(b.lane ?? 999);
-      }
-
-      // 2. Sonuçlar varsa: Dereceye göre sırala (küçükten büyüğe)
-      if (hasFinishedResults) {
-        final bool hasTimeA = a.timeCs != null && a.timeCs! > 0;
-        final bool hasTimeB = b.timeCs != null && b.timeCs! > 0;
-
-        if (hasTimeA && !hasTimeB) return -1;
-        if (!hasTimeA && hasTimeB) return 1;
-
-        if (hasTimeA && hasTimeB) {
-          final cmp = a.timeCs!.compareTo(b.timeCs!);
-          if (cmp != 0) return cmp;
-          final rankA = int.tryParse(a.rank) ?? 999;
-          final rankB = int.tryParse(b.rank) ?? 999;
-          if (rankA != rankB) return rankA.compareTo(rankB);
-        }
-      }
-
-      // 3. Sonuç yoksa: Seri ve kulvara göre sırala
-      final heatA = int.tryParse(a.heat) ?? 999;
-      final heatB = int.tryParse(b.heat) ?? 999;
-      if (heatA != heatB) return heatA.compareTo(heatB);
-      return (a.lane ?? 999).compareTo(b.lane ?? 999);
-    });
   }
 
   Future<void> _filterResults() async {
@@ -130,7 +91,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
         page: 1,
       );
       if (mounted) {
-        _sortResults(res);
+        RaceResultSorter.sort(res, preferRankFirst: false);
         setState(() {
           _results = res;
           _isLoadingResults = false;
@@ -148,7 +109,17 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Column(
+            : _errorMessage != null && _meetDetail == null
+                ? Center(
+                    child: EmptyStateWidget(
+                      title: 'Bağlantı Hatası',
+                      message: _errorMessage!,
+                      icon: Icons.cloud_off_rounded,
+                      actionText: 'Tekrar Dene',
+                      onAction: _loadInitialData,
+                    ),
+                  )
+                : Column(
                 children: [
                   // 1. Üst Bar (RoundIconButton ile Geri Dön Butonu ve Başlık)
                   Padding(
@@ -259,7 +230,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.035),
+            color: Colors.black.withValues(alpha: 0.035),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),

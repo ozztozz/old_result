@@ -84,13 +84,15 @@ class SwimRepository {
   }
 
   /// Favori sporcular için toplu özet
-  Future<List<Map<String, dynamic>>> getAthletesSummary(List<int> ids) async {
+  Future<List<AthleteSummaryItem>> getAthletesSummary(List<int> ids) async {
     if (ids.isEmpty) return [];
     final res = await apiClient.get('/athletes/summary/', queryParameters: {
       'ids': ids.join(','),
     });
     final list = res.data['data'] as List<dynamic>? ?? [];
-    return list.cast<Map<String, dynamic>>();
+    return list
+        .map((e) => AthleteSummaryItem.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Canlı yarış oturumları listesi
@@ -125,9 +127,9 @@ class SwimRepository {
   }
 
   /// Genel arama (Autocomplete)
-  Future<Map<String, dynamic>> searchGlobal(String q) async {
+  Future<GlobalSearchResult> searchGlobal(String q) async {
     final res = await apiClient.get('/search/', queryParameters: {'q': q});
-    return res.data as Map<String, dynamic>;
+    return GlobalSearchResult.fromJson(res.data as Map<String, dynamic>);
   }
 }
 

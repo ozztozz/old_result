@@ -1,22 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/components/empty_state_widget.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/services/selected_club_service.dart';
+import '../../core/utils/race_result_sorter.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/swim_result_card.dart';
 import '../athletes/athlete_profile_screen.dart';
-
-String _toTitleCase(String text) {
-  if (text.isEmpty) return text;
-  return text.split(' ').map((word) {
-    if (word.isEmpty) return word;
-    final lower = word.toLowerCase();
-    return lower[0].toUpperCase() + lower.substring(1);
-  }).join(' ');
-}
 
 /// TYF Yüzme Sonuçları — Canlı Yarış Sonuçları Ekranı (v2.0)
 /// Apple Esintili Spor Gösterge Paneli
@@ -39,6 +33,7 @@ class LiveRaceResultsScreen extends StatefulWidget {
 
 class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
   bool _isLoading = true;
+  String? _errorMessage;
   bool _isAutoRefresh = false;
   Timer? _refreshTimer;
 
@@ -78,81 +73,13 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     }
   }
 
-  int _parseLeadingInt(dynamic val) {
-    if (val == null) return 999999;
-    final m = RegExp(r'\d+').firstMatch(val.toString());
-    if (m != null) return int.tryParse(m.group(0)!) ?? 999999;
-    return 999999;
-  }
-
-  void _sortResults(List<RaceResult> list) {
-    final bool hasFinishedResults = list.any((r) {
-      final isDq = r.resultStatus == 'DQ' ||
-          r.resultStatus == 'DNS' ||
-          r.resultStatus == 'DNF' ||
-          r.rank.toUpperCase().startsWith('DQ');
-      final hasTime = (r.timeCs != null && r.timeCs! > 0) ||
-          (r.time != null && r.time!.isNotEmpty && r.time != 'Bekleniyor');
-      return !isDq && hasTime;
-    });
-
-    list.sort((a, b) {
-      final isDqA = a.resultStatus == 'DQ' ||
-          a.resultStatus == 'DNS' ||
-          a.resultStatus == 'DNF' ||
-          a.rank.toUpperCase().startsWith('DQ') ||
-          a.rank.toUpperCase().startsWith('DSQ');
-      final isDqB = b.resultStatus == 'DQ' ||
-          b.resultStatus == 'DNS' ||
-          b.resultStatus == 'DNF' ||
-          b.rank.toUpperCase().startsWith('DQ') ||
-          b.rank.toUpperCase().startsWith('DSQ');
-
-      // 1. Diskalifiyeler / Terk edenler en sonda
-      if (isDqA && !isDqB) return 1;
-      if (!isDqA && isDqB) return -1;
-      if (isDqA && isDqB) {
-        final heatA = _parseLeadingInt(a.heat);
-        final heatB = _parseLeadingInt(b.heat);
-        if (heatA != heatB) return heatA.compareTo(heatB);
-        return (a.lane ?? 999).compareTo(b.lane ?? 999);
-      }
-
-      // 2. Eğer yarışta sonuçlar varsa:
-      if (hasFinishedResults) {
-        final hasTimeA = (a.timeCs != null && a.timeCs! > 0) ||
-            (a.time != null && a.time!.isNotEmpty && a.time != 'Bekleniyor');
-        final hasTimeB = (b.timeCs != null && b.timeCs! > 0) ||
-            (b.time != null && b.time!.isNotEmpty && b.time != 'Bekleniyor');
-
-        // Sonucu olanlar, henüz yüzmemiş bekleyenlerin önünde
-        if (hasTimeA && !hasTimeB) return -1;
-        if (!hasTimeA && hasTimeB) return 1;
-
-        if (hasTimeA && hasTimeB) {
-          // Önce resmi sıra (rank / sira) varsa ona göre
-          final rankA = _parseLeadingInt(a.rank);
-          final rankB = _parseLeadingInt(b.rank);
-          if (rankA != 999999 && rankB != 999999 && rankA != rankB) {
-            return rankA.compareTo(rankB);
-          }
-          // Sonra derece (timeCs)
-          final timeA = a.timeCs ?? 99999999;
-          final timeB = b.timeCs ?? 99999999;
-          if (timeA != timeB) return timeA.compareTo(timeB);
-        }
-      }
-
-      // 3. Sonuç yoksa (veya her ikisi de bekliyorsa): Önce seri (sayısal), sonra kulvar
-      final heatA = _parseLeadingInt(a.heat);
-      final heatB = _parseLeadingInt(b.heat);
-      if (heatA != heatB) return heatA.compareTo(heatB);
-      return (a.lane ?? 999).compareTo(b.lane ?? 999);
-    });
-  }
-
   Future<void> _loadResults({bool silent = false}) async {
-    if (!silent) setState(() => _isLoading = true);
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final feed = await widget.repository.getLiveFeedResponse(
@@ -161,17 +88,23 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       );
 
       final list = feed.results;
-      _sortResults(list);
+      RaceResultSorter.sort(list);
 
       if (mounted) {
         setState(() {
           _allResults = list;
+          _errorMessage = null;
           _isLoading = false;
         });
         _applyFilter();
       }
     } catch (_) {
-      if (mounted && !silent) setState(() => _isLoading = false);
+      if (mounted && !silent) {
+        setState(() {
+          _errorMessage = 'Yarış sonuçları yüklenirken bir sorun oluştu.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -272,14 +205,14 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _toTitleCase(title),
+              StringUtils.toTitleCase(title),
               style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(
-              _toTitleCase(widget.live.name),
+              StringUtils.toTitleCase(widget.live.name),
               style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -304,7 +237,17 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: RefreshIndicator(
+      body: _errorMessage != null && _allResults.isEmpty
+          ? Center(
+              child: EmptyStateWidget(
+                title: 'Bağlantı Hatası',
+                message: _errorMessage!,
+                icon: Icons.cloud_off_rounded,
+                actionText: 'Tekrar Dene',
+                onAction: () => _loadResults(),
+              ),
+            )
+          : RefreshIndicator(
         color: palette.primary,
         onRefresh: () => _loadResults(),
         child: SingleChildScrollView(
@@ -334,7 +277,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            _toTitleCase(title),
+                            StringUtils.toTitleCase(title),
                             style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
                           ),
                         ),
@@ -593,7 +536,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${_toTitleCase(clubName)} (${clubResults.length} Sporcu)',
+                    '${StringUtils.toTitleCase(clubName)} (${clubResults.length} Sporcu)',
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
                       fontSize: 12.5,

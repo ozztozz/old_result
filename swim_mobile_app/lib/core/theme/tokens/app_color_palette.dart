@@ -41,51 +41,51 @@ abstract class AppColorPalette {
   bool get isDark;
 }
 
-/// Standart Açık Tema Renk Paleti (TYF Yüzme Minimalist & Zarif Stil)
+/// Standart Açık Tema Renk Paleti (TYF Su Sporları — Yüksek Kontrastlı & Modern)
 class LightColorPalette implements AppColorPalette {
   const LightColorPalette();
 
   @override
-  Color get background => const Color(0xFFFAF8F7);
+  Color get background => const Color(0xFFF8FAFC);
 
   @override
   Color get surface => const Color(0xFFFFFFFF);
 
   @override
-  Color get surfaceSecondary => const Color(0xFFF5F0EE);
+  Color get surfaceSecondary => const Color(0xFFF1F5F9);
 
   @override
   Color get surfaceElevated => const Color(0xFFFFFFFF);
 
   @override
-  Color get textPrimary => const Color(0xFF3D3038);
+  Color get textPrimary => const Color(0xFF0F172A);
 
   @override
-  Color get textSecondary => const Color(0xFF81777D);
+  Color get textSecondary => const Color(0xFF475569);
 
   @override
-  Color get textMuted => const Color(0xFFB3A8AE);
+  Color get textMuted => const Color(0xFF64748B);
 
   @override
-  Color get primary => const Color(0xFFBC8C91);
+  Color get primary => const Color(0xFF0F4C81);
 
   @override
-  Color get primaryContainer => const Color(0x1FBC8C91);
+  Color get primaryContainer => const Color(0x1A0F4C81);
 
   @override
-  Color get secondary => const Color(0xFF7D6B7D);
+  Color get secondary => const Color(0xFF0D9488);
 
   @override
-  Color get border => const Color(0xFFEFE9E7);
+  Color get border => const Color(0xFFE2E8F0);
 
   @override
-  Color get divider => const Color(0xFFEFE9E7);
+  Color get divider => const Color(0xFFE2E8F0);
 
   @override
-  Color get statusSuccess => const Color(0xFF4A7C59);
+  Color get statusSuccess => const Color(0xFF15803D);
 
   @override
-  Color get statusSuccessBg => const Color(0x144A7C59);
+  Color get statusSuccessBg => const Color(0x1415803D);
 
   @override
   Color get statusWarning => const Color(0xFFD97706);
@@ -100,16 +100,16 @@ class LightColorPalette implements AppColorPalette {
   Color get statusDangerBg => const Color(0x1ADC2626);
 
   @override
-  Color get statusLive => const Color(0xFFBC8C91);
+  Color get statusLive => const Color(0xFFE11D48);
 
   @override
-  Color get statusLiveBg => const Color(0x1FBC8C91);
+  Color get statusLiveBg => const Color(0x1AE11D48);
 
   @override
-  Color get gold => const Color(0xFFB8860B);
+  Color get gold => const Color(0xFFB45309);
 
   @override
-  Color get goldBg => const Color(0x14B8860B);
+  Color get goldBg => const Color(0x14B45309);
 
   @override
   bool get isDark => false;
@@ -120,70 +120,70 @@ class DarkColorPalette implements AppColorPalette {
   const DarkColorPalette();
 
   @override
-  Color get background => const Color(0xFF141214);
+  Color get background => const Color(0xFF0B1120);
 
   @override
-  Color get surface => const Color(0xFF1F1C1E);
+  Color get surface => const Color(0xFF111827);
 
   @override
-  Color get surfaceSecondary => const Color(0xFF2B272A);
+  Color get surfaceSecondary => const Color(0xFF1E293B);
 
   @override
-  Color get surfaceElevated => const Color(0xFF262325);
+  Color get surfaceElevated => const Color(0xFF1E293B);
 
   @override
-  Color get textPrimary => const Color(0xFFF5F0EE);
+  Color get textPrimary => const Color(0xFFF8FAFC);
 
   @override
-  Color get textSecondary => const Color(0xFFA89CA3);
+  Color get textSecondary => const Color(0xFF94A3B8);
 
   @override
-  Color get textMuted => const Color(0xFF6B6167);
+  Color get textMuted => const Color(0xFF64748B);
 
   @override
-  Color get primary => const Color(0xFFD4A3A8);
+  Color get primary => const Color(0xFF38BDF8);
 
   @override
-  Color get primaryContainer => const Color(0x33D4A3A8);
+  Color get primaryContainer => const Color(0x2638BDF8);
 
   @override
-  Color get secondary => const Color(0xFFA592A5);
+  Color get secondary => const Color(0xFF2DD4BF);
 
   @override
-  Color get border => const Color(0xFF2E292C);
+  Color get border => const Color(0xFF1E293B);
 
   @override
-  Color get divider => const Color(0xFF2E292C);
+  Color get divider => const Color(0xFF1E293B);
 
   @override
-  Color get statusSuccess => const Color(0xFF68A67B);
+  Color get statusSuccess => const Color(0xFF4ADE80);
 
   @override
-  Color get statusSuccessBg => const Color(0x2668A67B);
+  Color get statusSuccessBg => const Color(0x264ADE80);
 
   @override
-  Color get statusWarning => const Color(0xFFF59E0B);
+  Color get statusWarning => const Color(0xFFFBBF24);
 
   @override
-  Color get statusWarningBg => const Color(0x26F59E0B);
+  Color get statusWarningBg => const Color(0x26FBBF24);
 
   @override
-  Color get statusDanger => const Color(0xFFEF4444);
+  Color get statusDanger => const Color(0xFFF87171);
 
   @override
-  Color get statusDangerBg => const Color(0x26EF4444);
+  Color get statusDangerBg => const Color(0x26F87171);
 
   @override
-  Color get statusLive => const Color(0xFFE8B4B8);
+  Color get statusLive => const Color(0xFFFB7185);
 
   @override
-  Color get statusLiveBg => const Color(0x33E8B4B8);
+  Color get statusLiveBg => const Color(0x26FB7185);
 
   @override
-  Color get gold => const Color(0xFFE5A93C);
+  Color get gold => const Color(0xFFFBBF24);
 
   @override
-  Color get goldBg => const Color(0x26E5A93C);
+  Color get goldBg => const Color(0x26FBBF24);
 
   @override
   bool get isDark => true;

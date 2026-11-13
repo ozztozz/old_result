@@ -80,6 +80,16 @@ class SwimResultCard extends StatelessWidget {
     return null;
   }
 
+  List<MapEntry<String, String>> _sortedSplits() {
+    final splits = result.splitTimes;
+    if (splits == null || splits.isEmpty) return const [];
+    final entries = splits.entries.toList();
+    int parseDist(String key) =>
+        int.tryParse(key.replaceAll(RegExp(r'[^\d]'), '')) ?? 999999;
+    entries.sort((a, b) => parseDist(a.key).compareTo(parseDist(b.key)));
+    return entries;
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
@@ -211,6 +221,7 @@ class SwimResultCard extends StatelessWidget {
         : 'Ferdi Sporcu';
 
     final isMyTeam = SelectedClubService.instance.matches(result.clubName, result.clubId);
+    final splits = _sortedSplits();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -284,6 +295,33 @@ class SwimResultCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (splits.isNotEmpty) ...[
+                          const SizedBox(height: 5),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: splits.map((e) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: palette.background,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: palette.border, width: 0.8),
+                                ),
+                                child: Text(
+                                  '${e.key} ${e.value}',
+                                  style: TextStyle(
+                                    fontFamily: AppTextStyles.fontFamily,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: palette.textSecondary,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ],
                     ),
                   ),
