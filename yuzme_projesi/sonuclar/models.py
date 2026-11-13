@@ -286,6 +286,11 @@ class YarisSonucu(models.Model):
         null=True,
         verbose_name="PDF Maskeli Sporcu Adı",
     )
+    ara_dereceler = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name="Ara Dereceler",
+    )
 
     class Meta:
         managed = False

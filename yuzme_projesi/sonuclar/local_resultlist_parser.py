@@ -161,7 +161,7 @@ class LocalResultListParser:
                             info["stil"] = raw_stil
                     info["yaris"] = f"{info['cinsiyet']} {info['mesafe']}m {info['stil']}"
 
-            if "Baraj" in l and not info["yas_grubu"] and not self.RE_TABLE_HEADER.match(l):
+            if "baraj" in l.lower() and not info["yas_grubu"] and not self.RE_TABLE_HEADER.match(l):
                 info["yas_grubu"] = l
 
         return info
@@ -417,7 +417,7 @@ class LocalResultListParser:
 
                             if derece is not None:
                                 baraj = None
-                                if mid_lines and ("Baraj" in mid_lines[-1] or "Barajı" in mid_lines[-1]):
+                                if mid_lines and "baraj" in mid_lines[-1].lower():
                                     baraj = mid_lines.pop()
 
                                 club = mid_lines.pop() if mid_lines else None

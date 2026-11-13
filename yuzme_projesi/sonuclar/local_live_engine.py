@@ -559,7 +559,10 @@ class LocalLiveEngine:
                                 cross_unmasked[(s_no, prev_s.kulvar)] = (prev_s.sporcu, prev_s.sporcu_maskeli or "")
                         cross_by_lane.setdefault(prev_s.kulvar, []).append(cand_tuple)
 
-        def _narrow_cross_cands(cands, club_id, by):
+        def _vis_chars(txt: str) -> str:
+            return re.sub(r"[\*\s]+", "", normalize_tr(txt, keep_asterisks=True))
+
+        def _narrow_cross_cands(cands, club_id, by, result_name: str = ""):
             if not cands:
                 return None
             if len(cands) > 1 and club_id:
@@ -570,6 +573,20 @@ class LocalLiveEngine:
                 filtered = [c for c in cands if c[3] == str(by)]
                 if filtered:
                     cands = filtered
+            if len(cands) > 1 and result_name:
+                from difflib import SequenceMatcher
+                rv = _vis_chars(result_name)
+                if rv:
+                    scored = sorted(
+                        [
+                            (SequenceMatcher(None, rv, _vis_chars(c[1] or c[0].sporcu_adi)).ratio(), c)
+                            for c in cands
+                        ],
+                        key=lambda x: x[0],
+                        reverse=True,
+                    )
+                    if scored[0][0] >= 0.55 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.12):
+                        return scored[0][1]
             return cands[0] if len(cands) == 1 else None
 
         def _save_pdf_atomically() -> int:
@@ -609,7 +626,7 @@ class LocalLiveEngine:
                     #    a) Öncelikle StartList'teki maskeli isim anahtarıyla eşleştir
                     if "*" in clean_name and cross_by_masked:
                         m_key = normalize_tr(clean_name, keep_asterisks=True)
-                        picked = _narrow_cross_cands(cross_by_masked.get(m_key), club.id if club else None, birth_year)
+                        picked = _narrow_cross_cands(cross_by_masked.get(m_key), club.id if club else None, birth_year, clean_name)
                         if picked:
                             st_sp, st_mask, _, _ = picked
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
@@ -626,7 +643,7 @@ class LocalLiveEngine:
                             elif st_mask:
                                 clean_name = st_mask
                         elif not seri_no and kulvar_val and kulvar_val in cross_by_lane:
-                            picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year)
+                            picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year, clean_name)
                             if picked:
                                 st_sp, st_mask, _, _ = picked
                                 if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
@@ -711,6 +728,7 @@ class LocalLiveEngine:
                             "canli_dosya": dosya_obj,
                             "kaynak_turu": "CANLI_SONUC",
                             "sporcu_maskeli": clean_name if "*" in clean_name else "",
+                            "ara_dereceler": s.get("ara_dereceler"),
                         }
                         if durum_val in ["DSQ", "DNS", "DNF", "EXH"]:
                             reason = s.get("notlar") or ""
