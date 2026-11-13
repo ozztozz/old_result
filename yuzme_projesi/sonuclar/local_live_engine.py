@@ -517,6 +517,7 @@ class LocalLiveEngine:
         cross_unmasked = {}
         cross_by_lane = {}
         cross_by_masked = {}
+        all_start_cands = []
         if doc_type == "sonuc_listesi":
             start_dosya = None
             if yaris_no:
@@ -547,6 +548,7 @@ class LocalLiveEngine:
                         prev_s.kulup_id,
                         str(prev_s.sporcu.dogum_yili or ""),
                     )
+                    all_start_cands.append(cand_tuple)
                     if prev_s.sporcu_maskeli:
                         m_key = normalize_tr(prev_s.sporcu_maskeli, keep_asterisks=True)
                         if m_key:
@@ -562,7 +564,7 @@ class LocalLiveEngine:
         def _vis_chars(txt: str) -> str:
             return re.sub(r"[\*\s]+", "", normalize_tr(txt, keep_asterisks=True))
 
-        def _narrow_cross_cands(cands, club_id, by, result_name: str = ""):
+        def _narrow_cross_cands(cands, club_id, by, result_name: str = "", require_name_match: bool = False):
             if not cands:
                 return None
             if len(cands) > 1 and club_id:
@@ -573,7 +575,7 @@ class LocalLiveEngine:
                 filtered = [c for c in cands if c[3] == str(by)]
                 if filtered:
                     cands = filtered
-            if len(cands) > 1 and result_name:
+            if result_name and (len(cands) > 1 or require_name_match):
                 from difflib import SequenceMatcher
                 rv = _vis_chars(result_name)
                 if rv:
@@ -587,6 +589,8 @@ class LocalLiveEngine:
                     )
                     if scored[0][0] >= 0.55 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.12):
                         return scored[0][1]
+                    if require_name_match:
+                        return None
             return cands[0] if len(cands) == 1 else None
 
         def _save_pdf_atomically() -> int:
@@ -650,6 +654,22 @@ class LocalLiveEngine:
                                     athlete = st_sp
                                 elif st_mask:
                                     clean_name = st_mask
+
+                    #    c) Hâlâ eşleşmediyse (ör. DSQ/kulvar yok veya maske harfi kırpılmışsa) tüm StartList havuzunda ara
+                    if not athlete and all_start_cands:
+                        picked = _narrow_cross_cands(
+                            all_start_cands,
+                            club.id if club else None,
+                            birth_year,
+                            clean_name,
+                            require_name_match=True,
+                        )
+                        if picked:
+                            st_sp, st_mask, _, _ = picked
+                            if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
+                                athlete = st_sp
+                            elif st_mask:
+                                clean_name = st_mask
 
                     # 2. Bayrak / Relay Takımı Eşleşmesi
                     if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
