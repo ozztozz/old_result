@@ -12,9 +12,14 @@ veritabanındaki Sporcu kayıtlarıyla eşleştirme yapar.
 
 from __future__ import annotations
 import re
-from typing import Dict, Any, List, Optional
+import time
+from typing import Dict, Any, List, Optional, Tuple
 from django.db.models import Q
 from .models import Sporcu
+
+_MASKED_POOL_CACHE: Dict[Tuple[Any, Any], Tuple[float, List[Tuple[int, List[str]]]]] = {}
+_MASKED_POOL_TTL = 300.0
+_MASKED_POOL_MAX_KEYS = 32
 
 try:
     from rapidfuzz import fuzz
@@ -220,20 +225,36 @@ def match_masked_athlete_exact(
             "sorgu": sorgu_info
         }
 
-    def _search_in_pool(year_filter, gender_filter, strict=True):
-        cand_qs = Sporcu.objects.exclude(sporcu_adi__startswith="Maskeli sporcu").select_related('birincil_kulup').prefetch_related('kulup_tarihcesi__kulup')
+    def _get_masked_pool(year_filter, gender_filter) -> List[Tuple[int, List[str]]]:
+        cache_key = (year_filter, (gender_filter or "").lower())
+        now_ts = time.monotonic()
+        cached = _MASKED_POOL_CACHE.get(cache_key)
+        if cached and (now_ts - cached[0]) < _MASKED_POOL_TTL:
+            return cached[1]
+
+        cand_qs = Sporcu.objects.exclude(sporcu_adi__startswith="Maskeli sporcu")
         if year_filter:
             cand_qs = cand_qs.filter(Q(dogum_yili=year_filter) | Q(yas_dogum_yili=str(year_filter)[-2:]))
         if gender_filter:
             cand_qs = cand_qs.filter(Q(cinsiyet__iexact=gender_filter) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
 
-        matches = []
-        for cand in cand_qs:
-            cand_clean = clean_athlete_name_tags(cand.sporcu_adi)
+        pool: List[Tuple[int, List[str]]] = []
+        for cand_id, sporcu_adi in cand_qs.values_list("id", "sporcu_adi"):
+            cand_clean = clean_athlete_name_tags(sporcu_adi)
             norm_c_tokens = [normalize_tr(w) for w in cand_clean.split() if w]
-            if not norm_c_tokens:
-                continue
+            if norm_c_tokens:
+                pool.append((cand_id, norm_c_tokens))
 
+        if len(_MASKED_POOL_CACHE) >= _MASKED_POOL_MAX_KEYS:
+            _MASKED_POOL_CACHE.clear()
+        _MASKED_POOL_CACHE[cache_key] = (now_ts, pool)
+        return pool
+
+    def _search_in_pool(year_filter, gender_filter, strict=True):
+        pool = _get_masked_pool(year_filter, gender_filter)
+        matched_ids: List[int] = []
+
+        for cand_id, norm_c_tokens in pool:
             # Senaryo 1: Token sayısı birebir aynı (Örn: 'D***Z K**T' vs 'DENIZ KURT' veya 'HANZADE **O**N' vs 'HANZADE DOGAN')
             is_match = False
             if len(norm_m_tokens) == len(norm_c_tokens):
@@ -246,8 +267,15 @@ def match_masked_athlete_exact(
                     is_match = True
 
             if is_match:
-                matches.append(cand)
-        return matches
+                matched_ids.append(cand_id)
+
+        if not matched_ids:
+            return []
+        return list(
+            Sporcu.objects.filter(id__in=matched_ids)
+            .select_related("birincil_kulup")
+            .prefetch_related("kulup_tarihcesi__kulup")
+        )
 
     # 1. Aşama: Öncelikle katı (strict=True) 1-e-1 eşleştirme dene
     matched_cands = _search_in_pool(target_year, target_gender, strict=True)
