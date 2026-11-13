@@ -4,7 +4,7 @@ local_resultlist_parser.py
 ==========================
 Yerel (Local) PDF Sonuç Listesi (ResultList) Ayrıştırıcı.
 Gemini veya harici yapay zeka API'si kullanmadan tamamen yerel PyMuPDF (fitz)
-ve koordinat-blok kurallarıyla TYF ve Okul Sporları Sonuç Listesi PDF'lerini parse eder.
+ve regex tabanlı kurallarla TYF ve Okul Sporları Sonuç Listesi PDF'lerini parse eder.
 
 Özellikler:
 - Okul Sporları ve TYF Sonuç Listesi formatlarını tam destekler.
@@ -36,18 +36,32 @@ if not logger.handlers:
 
 class LocalResultListParser:
     """
-    Yerel Sonuç Listesi (ResultList) PDF Ayrıştırıcı.
+    Yerel Sonuç Listesi (ResultList) PDF Ayrıştırıcı (Regex Tabanlı).
     """
 
     RE_TIME = re.compile(r"^(?:(\d{1,2}):)?(\d{2})[.,](\d{2})$")
     RE_KS = re.compile(r"^(\d+)/(\d+)$")
+    RE_INT = re.compile(r"^\d+$")
     RE_YEAR = re.compile(r"^(19\d\d|20\d\d|\d{2})$")
+    RE_YEAR_PREFIX = re.compile(r"^(19\d\d|20\d\d)([A-Za-zçğıöşüÇĞİÖŞÜ*].*)$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
         r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
         re.IGNORECASE,
     )
-    RE_STATUS = re.compile(r"\b(DSQ|DNS|DNF|EXH)\b", re.IGNORECASE)
+    RE_TABLE_HEADER = re.compile(
+        r"^(Sıra|Kulvar|K/S|Sporcu|D\.Yılı|Kulüp|Derece|Fina|Rank|Lane|Heat|Time|Pts)$",
+        re.IGNORECASE,
+    )
+    RE_PAGE_FOOTER = re.compile(
+        r"^(Sayfa\s+\d+/\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
+        re.IGNORECASE,
+    )
+    RE_SPLIT_LINE = re.compile(
+        r"^\d+\s*m\s+(?:(?:\d{1,2}:)?\d{2}[.,]\d{2})\b",
+        re.IGNORECASE,
+    )
+    RE_STATUS_START = re.compile(r"^(DSQ|DNS|DNF|EXH)\s+(.+)$", re.IGNORECASE)
 
     def __init__(self):
         if fitz is None:
@@ -55,7 +69,7 @@ class LocalResultListParser:
 
     def parse(self, pdf_source: Union[str, bytes], unmask: bool = False) -> Dict[str, Any]:
         """
-        Sonuç listesi PDF'ini yerel olarak ayrıştırır.
+        Sonuç listesi PDF'ini yerel olarak düz metin + regex ile ayrıştırır.
         """
         if isinstance(pdf_source, bytes):
             doc = fitz.open(stream=pdf_source, filetype="pdf")
@@ -66,15 +80,16 @@ class LocalResultListParser:
 
         try:
             total_pages = len(doc)
-            header_info = self._extract_header(doc)
+            page_lines_list: List[List[str]] = []
+            for pno in range(total_pages):
+                raw_text = doc[pno].get_text("text")
+                lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
+                page_lines_list.append(lines)
+
+            header_info = self._extract_header(page_lines_list)
             header_info["toplam_sayfa"] = total_pages
 
-            sonuclar: List[Dict[str, Any]] = []
-
-            for pno in range(total_pages):
-                page = doc[pno]
-                page_results = self._parse_page_results(page, pno + 1)
-                sonuclar.extend(page_results)
+            sonuclar = self._extract_results(page_lines_list, header_info)
 
             # Sıralamaya göre düzenle (önce derece alanlar, sonra DSQ/DNS/DNF/EXH)
             sonuclar.sort(key=lambda x: (0 if x["sira"] is not None else 1, x["sira"] or 9999))
@@ -101,7 +116,7 @@ class LocalResultListParser:
         finally:
             doc.close()
 
-    def _extract_header(self, doc: fitz.Document) -> Dict[str, Any]:
+    def _extract_header(self, page_lines_list: List[List[str]]) -> Dict[str, Any]:
         info: Dict[str, Any] = {
             "musabaka_adi": None,
             "tarih": None,
@@ -112,16 +127,15 @@ class LocalResultListParser:
             "yas_grubu": None,
         }
 
-        if len(doc) == 0:
+        if not page_lines_list:
             return info
 
-        p1 = doc[0]
-        blocks = p1.get_text("blocks")
-        lines = [b[4].strip() for b in blocks[:10] if b[4].strip()]
+        for l in page_lines_list[0][:15]:
+            if "Splash Meet Manager" in l or "Registered to" in l:
+                continue
 
-        for l in lines:
             if not info["musabaka_adi"] and len(l) > 5 and not self.RE_DATE.search(l) and "Sonuçlar" not in l:
-                info["musabaka_adi"] = l.replace("\n", " ").strip()
+                info["musabaka_adi"] = l
 
             if not info["tarih"]:
                 m_dt = self.RE_DATE.search(l)
@@ -147,209 +161,304 @@ class LocalResultListParser:
                             info["stil"] = raw_stil
                     info["yaris"] = f"{info['cinsiyet']} {info['mesafe']}m {info['stil']}"
 
-            if "Baraj" in l and not info["yas_grubu"]:
-                info["yas_grubu"] = l.replace("\n", " ").strip()
+            if "Baraj" in l and not info["yas_grubu"] and not self.RE_TABLE_HEADER.match(l):
+                info["yas_grubu"] = l
 
         return info
 
-    def _parse_page_results(self, page: fitz.Page, page_no: int) -> List[Dict[str, Any]]:
-        blocks = page.get_text("blocks")
+    def _is_header_or_noise(self, line: str, header_info: Dict[str, Any]) -> bool:
+        return (
+            line == header_info.get("musabaka_adi")
+            or line == header_info.get("yas_grubu")
+            or line == header_info.get("yaris")
+            or "Sonuçlar" in line
+            or bool(self.RE_EVENT_INFO.search(line))
+        )
+
+    @staticmethod
+    def _join_athlete_parts(parts: List[str]) -> str:
+        athlete_parts: List[str] = []
+        for rl in parts:
+            rl = rl.strip()
+            if not rl:
+                continue
+            if not athlete_parts:
+                athlete_parts.append(rl)
+            elif rl.startswith("*") and athlete_parts[-1].endswith("*"):
+                athlete_parts[-1] += rl
+            elif rl == "*":
+                athlete_parts[-1] += rl
+            else:
+                athlete_parts.append(rl)
+        return re.sub(r"\s+", " ", " ".join(athlete_parts)).strip()
+
+    def _parse_dsq_block(self, full_txt: str, page_no: int) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
-
-        athlete_blocks = []
-        relay_blocks = []
-        dsq_blocks = []
-        right_blocks = [b for b in blocks if b[0] > 400]
-
-        for b in blocks:
-            txt = b[4].strip()
-            lines = [l.strip() for l in txt.split("\n") if l.strip()]
-            if not lines:
+        tokens = re.split(
+            r"(?<=\))\s*(?=(?:DSQ|DNS|DNF|EXH)\b)|(?<=[a-zçğıöşü])\s+(?=(?:DSQ|DNS|DNF|EXH)\b)",
+            full_txt,
+            flags=re.IGNORECASE,
+        )
+        for token in tokens:
+            token = token.strip()
+            if not token:
                 continue
-
-            # Alt bilgi kontrolü
-            if "Türkiye Yüzme Federasyonu" in txt or re.match(r"^Sayfa\s+\d+/\d+$", txt):
+            m_st = re.match(r"^(DSQ|DNS|DNF|EXH)\s+(.*)", token, re.IGNORECASE)
+            if not m_st:
                 continue
+            status = m_st.group(1).upper()
+            rest = m_st.group(2).strip()
 
-            # DSQ / DNS / DNF / EXH blokları
-            if any(txt.startswith(k) or f"\n{k}" in txt for k in ["DSQ", "DNS", "DNF", "EXH"]):
-                dsq_blocks.append((b, lines))
-                continue
-
-            # Relay / Bayrak Satırı (Sıra, Kulvar, Derece, Kulüp)
-            if b[0] < 100 and re.match(r"^\d+$", lines[0]) and len(lines) >= 3:
-                if lines[1].isdigit() and self.RE_TIME.match(lines[2]):
-                    relay_blocks.append((b, lines))
-                    continue
-
-            # Normal Sporcu Satırı (Sol Kolon x0 < 100 ve ilk satır Sıra sayısı)
-            if b[0] < 100 and re.match(r"^\d+$", lines[0]) and len(lines) >= 3:
-                if self.RE_KS.match(lines[1]) or (len(lines) > 2 and self.RE_KS.match(lines[2])):
-                    athlete_blocks.append((b, lines))
-
-        # 1a. Normal Derece Alan Sporcuları Ayrıştır
-        for ab, lines in athlete_blocks:
-            sira = int(lines[0])
-            ks_match = None
-            d_yili = None
-            rem_start = 1
-
-            if self.RE_KS.match(lines[1]):
-                ks_match = lines[1]
-                rem_start = 2
-                if len(lines) > 2 and self.RE_YEAR.match(lines[2]):
-                    d_yili = lines[2]
-                    rem_start = 3
-            elif len(lines) > 2 and self.RE_KS.match(lines[2]):
-                d_yili = lines[1]
-                ks_match = lines[2]
-                rem_start = 3
-
-            rem_lines = lines[rem_start:]
-
-            # Baraj notu ayıkla
-            baraj = None
-            if rem_lines and ("Baraj" in rem_lines[-1] or "Barajı" in rem_lines[-1]):
-                baraj = rem_lines.pop()
-
-            # Kulüp adı genellikle son satırdır
-            club = rem_lines.pop() if rem_lines else None
-
-            # Kalan parçalar sporcu adıdır (satır kırılmalarını düzgün bağla)
-            athlete_parts = []
-            for rl in rem_lines:
-                rl = rl.strip()
-                if not athlete_parts:
-                    athlete_parts.append(rl)
-                elif rl.startswith("*") and athlete_parts[-1].endswith("*"):
-                    athlete_parts[-1] += rl
-                elif len(rl) == 1 and rl == "*":
-                    athlete_parts[-1] += rl
-                else:
-                    athlete_parts.append(rl)
-
-            athlete_name = " ".join(athlete_parts).strip()
-            athlete_name = re.sub(r"\s+", " ", athlete_name)
-
-            # Eşleşen Dereceyi Sağ Kolondan Bul (Aynı y0 koordinatına en yakın blok)
-            best_rb = None
-            min_dy = 999.0
-            for rb in right_blocks:
-                dy = abs(rb[1] - ab[1])
-                if dy < min_dy and dy < 25:
-                    min_dy = dy
-                    best_rb = rb
-
-            derece = None
-            fina_puan = None
-
-            if best_rb:
-                rb_lines = [l.strip() for l in best_rb[4].split("\n") if l.strip()]
-                for l in rb_lines:
-                    # '50m 23.84' gibi ara zamanları atla, saf dereceyi yakala
-                    if self.RE_TIME.match(l):
-                        derece = l
-                        break
-                if not derece:
-                    for l in rb_lines:
-                        m_t = re.search(r"(?:(?:\d{1,2}:)?\d{2}\.\d{2})", l)
-                        if m_t:
-                            derece = m_t.group(0)
-                            break
-
-                # Fina puanı var mı (dereceden sonraki tam sayı)
-                for l in rb_lines:
-                    if re.match(r"^\d{2,4}$", l) and l != d_yili:
-                        try:
-                            fina_puan = int(l)
-                            break
-                        except ValueError:
-                            pass
-
-            kulvar, seri = ks_match.split("/") if ks_match else (None, None)
+            reason = None
+            m_reason = re.search(
+                r"\((?:\d{1,2}:\d{2}\s*-\s*)?(?:SW\b|sw\b|KURBAĞALAMA|SERBEST|KELEBEK|SIRT|Bayrak|Takım).*\)$",
+                rest,
+                flags=re.DOTALL | re.IGNORECASE,
+            )
+            if not m_reason:
+                m_reason = re.search(
+                    r"\([^)]*?(?:yaptığından|dokunmadan|ihlal|SW)[^)]*?\)$",
+                    rest,
+                    flags=re.DOTALL | re.IGNORECASE,
+                )
+            if not m_reason:
+                m_reason = re.search(r"\(([^)]+)\)$", rest)
+            if m_reason:
+                reason = rest[m_reason.start():].strip("() ")
+                rest = rest[:m_reason.start()].strip()
 
             results.append({
-                "sira": sira,
-                "kulvar": int(kulvar) if kulvar else None,
-                "seri": int(seri) if seri else None,
-                "dogum_yili": d_yili,
-                "sporcu": athlete_name,
-                "kulup": club,
-                "derece": derece,
-                "puan": fina_puan,
-                "durum": "OK",
-                "notlar": baraj,
+                "sira": None,
+                "kulvar": None,
+                "seri": None,
+                "dogum_yili": None,
+                "sporcu": rest,
+                "kulup": rest if "(Tk)" in rest else None,
+                "derece": None,
+                "puan": None,
+                "durum": status,
+                "notlar": reason,
                 "sayfa": page_no,
             })
+        return results
 
-        # 1b. Relay (Bayrak) Sonuçlarını Ayrıştır
-        if relay_blocks:
-            swimmer_blocks = [b for b in blocks if b[0] > 100 and not b[4].startswith("Türkiye") and not b[4].startswith("Bu dosya")]
-            for rb, lines in relay_blocks:
-                sira = int(lines[0])
-                kulvar = int(lines[1])
-                derece = lines[2]
-                club = lines[3] if len(lines) > 3 else ""
+    def _extract_results(
+        self,
+        page_lines_list: List[List[str]],
+        header_info: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        results: List[Dict[str, Any]] = []
+        stil_lower = (header_info.get("stil") or "").lower()
+        is_relay = "bayrak" in stil_lower or "relay" in stil_lower
 
-                # Eşleşen takım sporcuları metnini bul
-                swimmers_text = ""
-                for sb in swimmer_blocks:
-                    if abs(sb[1] - rb[1]) < 25 and sb[1] >= rb[1] - 2:
-                        swimmers_text = " ".join(sb[4].split())
-                        break
+        for page_idx, lines in enumerate(page_lines_list):
+            pno = page_idx + 1
+            idx = 0
+            n_lines = len(lines)
 
-                results.append({
-                    "sira": sira,
-                    "kulvar": kulvar,
-                    "seri": 1,
-                    "dogum_yili": None,
-                    "sporcu": club,
-                    "kulup": club,
-                    "derece": derece,
-                    "puan": None,
-                    "durum": "OK",
-                    "notlar": swimmers_text,
-                    "sayfa": page_no,
-                })
+            while idx < n_lines:
+                line = lines[idx]
 
-        # 2. DSQ / DNS / DNF / EXH Ayrıştır
-        for db, lines in dsq_blocks:
-            full_txt = " ".join(lines)
-            tokens = re.split(r"(?<=\))\s*(?=(?:DSQ|DNS|DNF|EXH)\b)|(?<=[a-zçğıöşü])\s+(?=(?:DSQ|DNS|DNF|EXH)\b)", full_txt, flags=re.IGNORECASE)
-
-            for token in tokens:
-                token = token.strip()
-                if not token:
+                if self.RE_PAGE_FOOTER.match(line) or self.RE_TABLE_HEADER.match(line) or self.RE_SPLIT_LINE.match(line):
+                    idx += 1
                     continue
-                m_st = re.match(r"^(DSQ|DNS|DNF|EXH)\s+(.*)", token, re.IGNORECASE)
-                if m_st:
-                    status = m_st.group(1).upper()
-                    rest = m_st.group(2).strip()
 
-                    # Sebep / Açıklama parantezini güvenli şekilde ayır (iç içe parantezleri ve kuralları kapsar)
-                    reason = None
-                    m_reason = re.search(r"\((?:\d{1,2}:\d{2}\s*-\s*)?(?:SW\b|sw\b|KURBAĞALAMA|SERBEST|KELEBEK|SIRT|Bayrak|Takım).*\)$", rest, flags=re.DOTALL | re.IGNORECASE)
-                    if not m_reason:
-                        m_reason = re.search(r"\([^)]*?(?:yaptığından|dokunmadan|ihlal|SW)[^)]*?\)$", rest, flags=re.DOTALL | re.IGNORECASE)
-                    if not m_reason:
-                        m_reason = re.search(r"\(([^)]+)\)$", rest)
-                    if m_reason:
-                        reason = rest[m_reason.start():].strip("() ")
-                        rest = rest[:m_reason.start()].strip()
+                if pno == 1 and idx < 10 and self._is_header_or_noise(line, header_info):
+                    idx += 1
+                    continue
 
-                    results.append({
-                        "sira": None,
-                        "kulvar": None,
-                        "seri": None,
-                        "dogum_yili": None,
-                        "sporcu": rest,
-                        "kulup": rest if "(Tk)" in rest else None,
-                        "derece": None,
-                        "puan": None,
-                        "durum": status,
-                        "notlar": reason,
-                        "sayfa": page_no,
-                    })
+                # 1. DSQ / DNS / DNF / EXH satırları
+                if self.RE_STATUS_START.match(line):
+                    dsq_lines = [line]
+                    idx += 1
+                    while idx < n_lines:
+                        nxt = lines[idx]
+                        if (
+                            self.RE_PAGE_FOOTER.match(nxt)
+                            or self.RE_STATUS_START.match(nxt)
+                            or self.RE_INT.match(nxt)
+                        ):
+                            break
+                        dsq_lines.append(nxt)
+                        idx += 1
+                    results.extend(self._parse_dsq_block(" ".join(dsq_lines), pno))
+                    continue
+
+                # 2. Sıra numarası ile başlayan sonuç satırı
+                if self.RE_INT.match(line):
+                    sira = int(line)
+
+                    # 2a. Bayrak (Relay) Sonucu: Sıra -> Kulvar (veya K/S) -> Derece -> Kulüp -> Takım Sporcuları
+                    if is_relay and idx + 2 < n_lines:
+                        nxt1 = lines[idx + 1]
+                        nxt2 = lines[idx + 2]
+                        if (self.RE_INT.match(nxt1) or self.RE_KS.match(nxt1)) and self.RE_TIME.match(nxt2):
+                            if self.RE_KS.match(nxt1):
+                                k_str, s_str = nxt1.split("/")
+                                kulvar = int(k_str)
+                                seri = int(s_str)
+                            else:
+                                kulvar = int(nxt1)
+                                seri = 1
+                            derece = nxt2
+                            idx += 3
+
+                            club = ""
+                            if (
+                                idx < n_lines
+                                and not self.RE_INT.match(lines[idx])
+                                and not self.RE_STATUS_START.match(lines[idx])
+                                and not self.RE_PAGE_FOOTER.match(lines[idx])
+                            ):
+                                club = lines[idx]
+                                idx += 1
+
+                            fina_puan = None
+                            if idx < n_lines and re.match(r"^\d{2,4}$", lines[idx]):
+                                fina_puan = int(lines[idx])
+                                idx += 1
+
+                            swimmer_notes: List[str] = []
+                            while idx < n_lines:
+                                nxt = lines[idx]
+                                if (
+                                    self.RE_PAGE_FOOTER.match(nxt)
+                                    or self.RE_STATUS_START.match(nxt)
+                                    or self.RE_TABLE_HEADER.match(nxt)
+                                    or self.RE_INT.match(nxt)
+                                ):
+                                    break
+                                swimmer_notes.append(nxt)
+                                idx += 1
+
+                            results.append({
+                                "sira": sira,
+                                "kulvar": kulvar,
+                                "seri": seri,
+                                "dogum_yili": None,
+                                "sporcu": club,
+                                "kulup": club,
+                                "derece": derece,
+                                "puan": fina_puan,
+                                "durum": "OK",
+                                "notlar": " ".join(swimmer_notes).strip(),
+                                "sayfa": pno,
+                            })
+                            continue
+
+                    # 2b. Bireysel Sporcu Sonucu: Sıra -> (K/S veya Kulvar) -> (D.Yılı) -> Sporcu -> Kulüp -> [Baraj] -> Derece
+                    if idx + 2 < n_lines:
+                        nxt1 = lines[idx + 1]
+                        nxt2 = lines[idx + 2]
+
+                        kulvar: Optional[int] = None
+                        seri: Optional[int] = None
+                        d_yili: Optional[str] = None
+                        prefixed_name_part: Optional[str] = None
+                        cur = idx + 1
+
+                        if self.RE_KS.match(nxt1):
+                            k_str, s_str = nxt1.split("/")
+                            kulvar, seri = int(k_str), int(s_str)
+                            cur = idx + 2
+                            if cur < n_lines:
+                                if self.RE_YEAR.match(lines[cur]):
+                                    d_yili = lines[cur]
+                                    cur += 1
+                                else:
+                                    m_yp = self.RE_YEAR_PREFIX.match(lines[cur])
+                                    if m_yp:
+                                        d_yili = m_yp.group(1)
+                                        prefixed_name_part = m_yp.group(2).strip()
+                                        cur += 1
+                        elif self.RE_YEAR.match(nxt1) and self.RE_KS.match(nxt2):
+                            d_yili = nxt1
+                            k_str, s_str = nxt2.split("/")
+                            kulvar, seri = int(k_str), int(s_str)
+                            cur = idx + 3
+                        elif self.RE_INT.match(nxt1) and 1 <= int(nxt1) <= 10:
+                            if self.RE_YEAR.match(nxt2):
+                                kulvar = int(nxt1)
+                                d_yili = nxt2
+                                cur = idx + 3
+                            else:
+                                m_yp = self.RE_YEAR_PREFIX.match(nxt2)
+                                if m_yp:
+                                    kulvar = int(nxt1)
+                                    d_yili = m_yp.group(1)
+                                    prefixed_name_part = m_yp.group(2).strip()
+                                    cur = idx + 3
+
+                        if kulvar is not None:
+                            # Derece satırına kadar olan satırları topla
+                            mid_lines: List[str] = [prefixed_name_part] if prefixed_name_part else []
+                            scan = cur
+                            derece = None
+                            while scan < n_lines:
+                                sl = lines[scan]
+                                if self.RE_TIME.match(sl):
+                                    derece = sl
+                                    scan += 1
+                                    break
+                                if (
+                                    self.RE_PAGE_FOOTER.match(sl)
+                                    or self.RE_STATUS_START.match(sl)
+                                    or self.RE_TABLE_HEADER.match(sl)
+                                ):
+                                    break
+                                # Yeni bir sporcu satırına geçildiğini fark edersek dur
+                                if self.RE_INT.match(sl) and scan + 1 < n_lines and (
+                                    self.RE_KS.match(lines[scan + 1])
+                                    or (self.RE_INT.match(lines[scan + 1]) and scan + 2 < n_lines and self.RE_YEAR.match(lines[scan + 2]))
+                                ):
+                                    break
+                                mid_lines.append(sl)
+                                scan += 1
+
+                            if derece is not None:
+                                baraj = None
+                                if mid_lines and ("Baraj" in mid_lines[-1] or "Barajı" in mid_lines[-1]):
+                                    baraj = mid_lines.pop()
+
+                                club = mid_lines.pop() if mid_lines else None
+                                athlete_name = self._join_athlete_parts(mid_lines)
+
+                                # Opsiyonel FINA puanı (dereceden sonra gelen 2-4 haneli tam sayı)
+                                fina_puan = None
+                                if scan < n_lines and re.match(r"^\d{2,4}$", lines[scan]) and lines[scan] != d_yili:
+                                    # Sonraki satır yeni bir sporcu değilse FINA puanıdır
+                                    is_next_rank = (
+                                        scan + 1 < n_lines
+                                        and (
+                                            self.RE_KS.match(lines[scan + 1])
+                                            or (self.RE_INT.match(lines[scan + 1]) and scan + 2 < n_lines and self.RE_YEAR.match(lines[scan + 2]))
+                                        )
+                                    )
+                                    if not is_next_rank:
+                                        fina_puan = int(lines[scan])
+                                        scan += 1
+
+                                # Ara zaman (split) satırlarını atla
+                                while scan < n_lines and self.RE_SPLIT_LINE.match(lines[scan]):
+                                    scan += 1
+
+                                results.append({
+                                    "sira": sira,
+                                    "kulvar": kulvar,
+                                    "seri": seri,
+                                    "dogum_yili": d_yili,
+                                    "sporcu": athlete_name,
+                                    "kulup": club,
+                                    "derece": derece,
+                                    "puan": fina_puan,
+                                    "durum": "OK",
+                                    "notlar": baraj,
+                                    "sayfa": pno,
+                                })
+                                idx = scan
+                                continue
+
+                idx += 1
 
         return results
 

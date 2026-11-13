@@ -169,6 +169,20 @@ class LocalStartListParser:
 
         return info
 
+    @classmethod
+    def _extract_entry_time(cls, lines: List[str], idx: int, n_lines: int, club: Optional[str]):
+        """Giriş derecesini sonraki satırdan veya kulüp satırının sonundan çıkarır."""
+        entry_time = None
+        if idx < n_lines and cls.RE_TIME.match(lines[idx]):
+            entry_time = lines[idx]
+            idx += 1
+        elif club:
+            m_time = re.search(r"((?:(?:\d{1,2}:)?\d{2}[.,]\d{2})|NT)$", club, re.IGNORECASE)
+            if m_time:
+                entry_time = m_time.group(1)
+                club = club[:m_time.start()].strip()
+        return entry_time, club, idx
+
     def _extract_swimmers(
         self,
         page_lines_list: List[List[str]],
@@ -182,6 +196,9 @@ class LocalStartListParser:
         current_seri: Optional[str] = None
         current_seri_no: Optional[int] = None
         toplam_seri: Optional[int] = None
+        stil_lower = (header_info.get("stil") or "").lower()
+        is_relay = "bayrak" in stil_lower or "relay" in stil_lower
+        has_seen_seri_or_lane = False
 
         for page_idx, lines in enumerate(page_lines_list):
             pno = page_idx + 1
@@ -202,7 +219,8 @@ class LocalStartListParser:
                         line == header_info.get("musabaka_adi")
                         or "Start Listesi" in line
                         or "Start listesi" in line
-                        or (header_info.get("yaris") and line in header_info.get("yaris"))
+                        or line == header_info.get("yaris")
+                        or self.RE_EVENT_INFO.search(line)
                     ):
                         idx += 1
                         continue
@@ -210,6 +228,7 @@ class LocalStartListParser:
                 # Seri Başlığı kontrolü (Örn: "Seri 1/9" veya "Seri 1 of 31")
                 m_seri = self.RE_SERI.match(line)
                 if m_seri:
+                    has_seen_seri_or_lane = True
                     current_seri_no = int(m_seri.group(1))
                     if m_seri.group(2):
                         toplam_seri = int(m_seri.group(2))
@@ -224,13 +243,28 @@ class LocalStartListParser:
                     idx += 1
                     continue
 
-                # SPORCU SATIRI KONTROLÜ
-                # Tip 1: Okul Sporları Formatı (Kulvar tek başına ayrı bir satırda: "1", "2"..)
+                # SPORCU / TAKIM SATIRI KONTROLÜ
+                # Tip 1: Okul Sporları / TYF Formatı (Kulvar tek başına ayrı bir satırda: "1", "2"..)
                 if self.RE_LANE_ONLY.match(line):
+                    has_seen_seri_or_lane = True
                     lane = int(line)
                     idx += 1
                     if idx >= n_lines:
                         break
+
+                    if is_relay:
+                        club = lines[idx]
+                        idx += 1
+                        entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
+                        swimmers.append({
+                            "seri": current_seri,
+                            "kulvar": lane,
+                            "sporcu": club,
+                            "dogum_yili": None,
+                            "kulup": club,
+                            "giris_derecesi": entry_time,
+                        })
+                        continue
 
                     athlete_name = lines[idx]
 
@@ -254,15 +288,7 @@ class LocalStartListParser:
                         idx += 1
 
                     # Giriş derecesi (opsiyonel)
-                    entry_time = None
-                    if idx < n_lines and self.RE_TIME.match(lines[idx]):
-                        entry_time = lines[idx]
-                        idx += 1
-                    elif club:
-                        m_time = re.search(r"((?:(?:\d{1,2}:)?\d{2}[.,]\d{2})|NT)$", club, re.IGNORECASE)
-                        if m_time:
-                            entry_time = m_time.group(1)
-                            club = club[:m_time.start()].strip()
+                    entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
 
                     swimmers.append({
                         "seri": current_seri,
@@ -277,8 +303,22 @@ class LocalStartListParser:
                 # Tip 2: Splash Meet Manager Formatı ("1 Arda MUTLU" -> Kulvar ve Ad aynı satırda)
                 m_lane_name = self.RE_LANE_AND_NAME.match(line)
                 if m_lane_name:
+                    has_seen_seri_or_lane = True
                     lane = int(m_lane_name.group(1))
-                    athlete_name = m_lane_name.group(2).strip()
+                    first_val = m_lane_name.group(2).strip()
+
+                    if is_relay:
+                        idx += 1
+                        entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, first_val)
+                        swimmers.append({
+                            "seri": current_seri,
+                            "kulvar": lane,
+                            "sporcu": club,
+                            "dogum_yili": None,
+                            "kulup": club,
+                            "giris_derecesi": entry_time,
+                        })
+                        continue
 
                     # Doğum Yılı satırı
                     idx += 1
@@ -300,21 +340,28 @@ class LocalStartListParser:
                         idx += 1
 
                     # Giriş derecesi
-                    entry_time = None
-                    if idx < n_lines and self.RE_TIME.match(lines[idx]):
-                        entry_time = lines[idx]
-                        idx += 1
-                    elif club:
-                        m_time = re.search(r"((?:(?:\d{1,2}:)?\d{2}[.,]\d{2})|NT)$", club, re.IGNORECASE)
-                        if m_time:
-                            entry_time = m_time.group(1)
-                            club = club[:m_time.start()].strip()
+                    entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
 
                     swimmers.append({
                         "seri": current_seri,
                         "kulvar": lane,
-                        "sporcu": athlete_name,
+                        "sporcu": first_val,
                         "dogum_yili": birth_year,
+                        "kulup": club,
+                        "giris_derecesi": entry_time,
+                    })
+                    continue
+
+                # Tip 3: Serisiz / Kulvarsız Bayrak Giriş Listesi (doğrudan Kulüp + opsiyonel Derece)
+                if is_relay and not has_seen_seri_or_lane and not self.RE_TIME.match(line):
+                    club = line
+                    idx += 1
+                    entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
+                    swimmers.append({
+                        "seri": current_seri,
+                        "kulvar": None,
+                        "sporcu": club,
+                        "dogum_yili": None,
                         "kulup": club,
                         "giris_derecesi": entry_time,
                     })
