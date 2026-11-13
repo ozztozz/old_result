@@ -941,7 +941,7 @@ def canli_yaris_tara(request, pk):
 
     # 2. Servis arka planda değilse uyandır
     try:
-        from sonuclar.live_engine import start_daemon_background
+        from sonuclar.local_live_engine import start_daemon_background
         start_daemon_background()
     except Exception as e:
         messages.warning(request, f"Motor başlatılırken uyarı: {e}")
@@ -964,7 +964,7 @@ def canli_yaris_durdur(request, pk):
     has_other_active = CanliYaris.objects.filter(durum="ISLENIYOR").exists()
     if not has_other_active:
         try:
-            from sonuclar.live_engine import stop_daemon
+            from sonuclar.local_live_engine import stop_daemon
             stop_daemon()
         except Exception:
             pass
@@ -1071,7 +1071,7 @@ def api_canli_yarislar_durum(request):
     Arayüzün durumları canlı yenilemesi için JSON liste döner.
     Ayrıca çalışan 2. Servis (Daemon) durumunu ve PID'sini de bildirir.
     """
-    from sonuclar.live_engine import get_running_daemon_pid
+    from sonuclar.local_live_engine import get_running_daemon_pid
     daemon_pid = get_running_daemon_pid()
     yarislar = CanliYaris.objects.all().values(
         "id", "musabaka_adi", "durum", "toplam_start_listesi",
