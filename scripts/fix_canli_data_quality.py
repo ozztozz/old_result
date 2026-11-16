@@ -19,7 +19,10 @@ import sqlite3
 import sys
 import unicodedata
 
-RE_BAD_CLUB = re.compile(r"^(?:\d{1,3}|(?:\d{1,2}:)?\d{2}[.,]\d{2}|NT)$", re.IGNORECASE)
+RE_BAD_CLUB = re.compile(
+    r"^(?:\d{1,3}|\d{1,2}(?:\s*[-–/]\s*\d{1,2})?\s*\+?\s*ya[sş]|a[cç][ıi]k\s*ya[sş]|(?:\d{1,2}:)?\d{2}[.,]\d{2}|NT)$",
+    re.IGNORECASE,
+)
 RE_SPORCU_PREFIX = re.compile(r"^(?:\([A-Za-z0-9]{1,4}\)\s*|\(\s+)")
 RE_TRAILING_2D_YEAR = re.compile(r"^(.+?[^\d\s])\s*(\d{2})$")
 RE_TK_CLUB = re.compile(r"^\(Tk\)\s+(.+)$", re.IGNORECASE)
@@ -377,12 +380,24 @@ def run_repair(db_path: str, apply: bool = False) -> None:
             "UPDATE sporcular SET cinsiyet = NULL WHERE cinsiyet IS NOT NULL AND cinsiyet != '' AND cinsiyet NOT IN ('ERKEK', 'KADIN', 'BELİRTİLMEMİŞ')"
         )
 
-        # 11) events.sehir & events.musabaka_adi
+        # 11) events.sehir & events.musabaka_adi & canli_yarislar.sehir
         for eid, _, ns_s, _, nm in event_updates:
             cur.execute(
                 "UPDATE events SET sehir = ?, musabaka_adi = ? WHERE id = ?",
                 (ns_s, nm, eid),
             )
+        cur.execute(
+            """
+            UPDATE canli_yarislar
+            SET sehir = (
+                SELECT e.sehir FROM events e
+                WHERE e.id = canli_yarislar.event_id
+                  AND e.sehir IS NOT NULL
+                  AND UPPER(TRIM(e.sehir)) NOT IN ('LİVE', 'LIVE', '')
+            )
+            WHERE UPPER(TRIM(COALESCE(sehir, ''))) IN ('LİVE', 'LIVE')
+            """
+        )
 
         conn.commit()
         print(
