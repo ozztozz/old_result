@@ -50,12 +50,13 @@ def clean_athlete_name_tags(name: Optional[str]) -> str:
     # Sporcu adında bulunabilecek diğer tüm parantez içi ifadeler (sporcu adında parantez yer almaz)
     s = re.sub(r'\s*[\(\[][^\)\]]*[\)\]]', ' ', s)
 
-    # 2. Baştaki tek parantez veya artık işaretler: örn: "( Metehan İŞLER" -> "Metehan İŞLER" (yıldızlar korunur)
-    s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
-
-    # 3. Baştaki kapatılmamış veya artık FD/TK/TD/F/D etiketleri: örn: "(Fd e" -> "e", "F) Metehan" -> "Metehan", "d) can" -> "can"
+    # 2. Baştaki kapatılmamış veya artık FD/TK/TD/F/D etiketleri: örn: "(F Metehan" -> "Metehan", "F) Metehan" -> "Metehan", "d) can" -> "can"
+    # DİKKAT: Tek harf (F/T/D) ancak yanında parantez/nokta varsa silinir; aksi halde "Duru", "Furkan", "Tuna" gibi isimlerin ilk harfi silinir!
     s = re.sub(r'^\s*[\(\[]?\s*(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*', ' ', s, flags=re.IGNORECASE)
-    s = re.sub(r'^\s*[\(\[]?\s*(?:[FfTtDd])\s*[\)\]\.]?\s*', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'^\s*(?:[\(\[]\s*[FfTtDd]\s*[\)\]\.]?|[FfTtDd]\s*[\)\]\.])\s*', ' ', s, flags=re.IGNORECASE)
+
+    # 3. Baştaki tek parantez veya artık işaretler: örn: "( Metehan İŞLER" -> "Metehan İŞLER" (yıldızlar korunur)
+    s = re.sub(r'^\s*[\(\[\{\<\-\+\/\\.,:;~_]\s*', '', s)
 
     # 4. Sonda bağımsız kalan 2+ harfli FD/TK/TD etiketleri
     s = re.sub(r'\s*\b(?:[FfTt][DdKk]|[FfTt][0-9]|FERD[İI])\b[\.\)]?\s*$', ' ', s, flags=re.IGNORECASE)

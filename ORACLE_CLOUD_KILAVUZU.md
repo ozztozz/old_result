@@ -167,6 +167,74 @@ python sonuclar/live_engine.py --id 6
 
 ---
 
+### Yerel Canlı Motor (`local_live_engine.py`) — 5 Saniyelik Hızlı Takip
+
+`sonuclar/local_live_engine.py`, PDF'leri Gemini API'ye göndermeden tamamen yerel parser (`LocalStartListParser` ve `LocalResultListParser`) ile çözen, **5 saniyelik** yüksek frekanslı canlı takip motorudur. Çalışma penceresi Türkiye saatiyle **08:00 - 20:00** arasıdır.
+
+#### Çalıştırma ve Yönetim Komutları
+```bash
+cd /home/ubuntu/app/yuzme_projesi
+source ../venv/bin/activate
+
+# 1. Motorun çalışıp çalışmadığını kontrol et (PID bilgisini gösterir)
+python sonuclar/local_live_engine.py --durum
+
+# 2. Canlı takipçiyi arka planda başlat (5 sn aralıkla)
+python sonuclar/local_live_engine.py --baslat
+
+# 3. Çalışan canlı takipçiyi durdur
+python sonuclar/local_live_engine.py --durdur
+
+# 4. Saatlik cron orkestratörünü elle tetikle (08:00-20:00 arası aktif yarış varsa daemon başlatır)
+python sonuclar/local_live_engine.py --cron
+
+# 5. Ön planda test amaçlı çalıştır (Ctrl+C ile durdurulur)
+python sonuclar/local_live_engine.py --daemon
+
+# 6. Tekil bir canlı yarış URL'sini zorla yeniden tara
+python sonuclar/local_live_engine.py --url "https://canli.tyf.gov.tr/live/2026/1005817/" --force
+```
+
+#### Saatlik Cron Kurulumu (İsteğe Bağlı)
+`crontab -e` ile her saat başında otomatik kontrol için:
+```bash
+0 * * * * cd /home/ubuntu/app/yuzme_projesi && /home/ubuntu/app/venv/bin/python sonuclar/local_live_engine.py --cron >> /home/ubuntu/app/local_live_cron.log 2>&1
+```
+
+#### Çalışıp Çalışmadığı Nasıl Kontrol Edilir?
+1. **Motorun kendi durum komutu ile:**
+   ```bash
+   cd /home/ubuntu/app/yuzme_projesi && /home/ubuntu/app/venv/bin/python sonuclar/local_live_engine.py --durum
+   ```
+   *(Aktifse `[+] 5 Saniyelik Canlı Takipçi AKTİF çalışıyor (PID: ...)` çıktısı verir.)*
+
+2. **Linux süreç ve PID dosyası ile:**
+   ```bash
+   # Çalışan Python sürecini listele
+   ps aux | grep local_live_engine
+
+   # PID dosyasını kontrol et
+   cat /tmp/local_live_worker.pid
+   ```
+
+#### Loglar Nasıl Kontrol Edilir?
+`--baslat` veya `--cron` ile arka planda başlatılan `local_live_engine.py` çıktıları sistem geçici dizinindeki `/tmp/local_live_worker.log` dosyasına yazılır:
+```bash
+# Canlı log akışını anlık takip et (çıkmak için Ctrl+C)
+tail -f /tmp/local_live_worker.log
+
+# Son 100 log satırını görüntüle
+tail -n 100 /tmp/local_live_worker.log
+
+# Sadece hata/uyarı satırlarını filtrele
+grep -E "\[(ERROR|WARNING)\]" /tmp/local_live_worker.log
+
+# Cron kullanıyorsanız saatlik cron tetikleme logu:
+tail -f /home/ubuntu/app/local_live_cron.log
+```
+
+---
+
 ## 6. Veritabanı Yedekleme ve Kurtarma
 
 Sunucuda otomatik yedekleme cron servisi tanımlıdır.
@@ -192,6 +260,20 @@ sudo chown ubuntu:ubuntu /home/ubuntu/database/yuzme_veritabani.db
 
 # 4. Servisi tekrar başlatın
 sudo systemctl start yuzme
+```
+
+### Sunucudaki Veritabanını Lokale İndirme (WAL-Güvenli)
+Sunucuda SQLite WAL modunda çalıştığı için `.db` dosyasını doğrudan `scp` ile çekmek yerine önce `.backup` ile tutarlı bir anlık kopya alıp sıkıştırarak indirin (Windows PowerShell, proje kök dizininden):
+```powershell
+# 1. Sunucuda tutarlı yedek al ve sıkıştır
+ssh -i .\ssh-key-2026-10-28.key ubuntu@130.61.177.72 "sqlite3 /home/ubuntu/app/database/yuzme_veritabani.db '.backup /tmp/yuzme_server_copy.db' && gzip -f /tmp/yuzme_server_copy.db && ls -lh /tmp/yuzme_server_copy.db.gz"
+
+# 2. Sıkıştırılmış yedeği lokale indir
+scp -i .\ssh-key-2026-10-28.key ubuntu@130.61.177.72:/tmp/yuzme_server_copy.db.gz .\database\yuzme_server_copy.db.gz
+
+# 3. Lokalde arşivden çıkar ve sunucudaki geçici dosyayı sil
+.\my_env\Scripts\python.exe -c "import gzip, shutil; shutil.copyfileobj(gzip.open('database/yuzme_server_copy.db.gz', 'rb'), open('database/yuzme_server_copy.db', 'wb'))"
+ssh -i .\ssh-key-2026-10-28.key ubuntu@130.61.177.72 "rm -f /tmp/yuzme_server_copy.db.gz"
 ```
 
 ---

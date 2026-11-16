@@ -895,7 +895,9 @@ def canli_yaris_listesi(request):
                 m_url_city = re.search(r'canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/', canli_url)
                 if m_url_city:
                     c_raw = m_url_city.group(1).lower()
-                    sehir_val = c_raw.replace('i', 'İ').replace('ı', 'I').upper()
+                    if c_raw not in ('live', 'canli', 'canlı', 'results', 'sonuc', 'sonuclar', 'yaris'):
+                        first_up = 'İ' if c_raw[0] == 'i' else ('I' if c_raw[0] == 'ı' else c_raw[0].upper())
+                        sehir_val = first_up + c_raw[1:]
 
             event_obj = None
             if musabaka_adi:

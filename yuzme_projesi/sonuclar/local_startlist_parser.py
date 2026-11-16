@@ -42,16 +42,17 @@ class LocalStartListParser:
     RE_SERI = re.compile(r"^\s*Seri\s+(\d+)(?:\s*(?:/|of)\s*(\d+))?", re.IGNORECASE)
     RE_TABLE_HEADER = re.compile(r"^(Kulvar|Sporcu|D\.Yılı|Kulüp|Giriş|YB|Sıra|Lane|Heat)$", re.IGNORECASE)
     RE_PAGE_FOOTER = re.compile(
-        r"^(Sayfa\s+\d+/\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
+        r"^(Sayfa\s+\d+/\d+|\d{2}[./-]\d{2}[./-]\d{4}\s+\d{2}:\d{2}\s*-\s*Sayfa\s+\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
         re.IGNORECASE,
     )
     RE_TIME = re.compile(r"^(?:(\d{1,2}):)?(\d{2})[.,](\d{2})$|^NT$", re.IGNORECASE)
-    RE_YEAR = re.compile(r"^(19\d\d|20\d\d|\d{2})$")
-    RE_LANE_ONLY = re.compile(r"^([1-9]|10)$")
-    RE_LANE_AND_NAME = re.compile(r"^([1-9]|10)\s+(.+)$")
+    RE_YEAR = re.compile(r"^(19\d\d|20[01]\d|202[0-2]|\d{2})$")
+    RE_NUMERIC_ONLY = re.compile(r"^\d{1,3}$")
+    RE_LANE_ONLY = re.compile(r"^([0-9]|10)$")
+    RE_LANE_AND_NAME = re.compile(r"^([0-9]|10)\s+(.+)$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
-        r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
+        r"(Erkekler|Kadınlar|Bayanlar|Kızlar|Karma|Mix|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
         re.IGNORECASE,
     )
 
@@ -98,6 +99,7 @@ class LocalStartListParser:
 
             return {
                 "musabaka_adi": header_info.get("musabaka_adi"),
+                "sehir": header_info.get("sehir"),
                 "tarih": header_info.get("tarih"),
                 "yaris": header_info.get("yaris"),
                 "cinsiyet": header_info.get("cinsiyet"),
@@ -118,6 +120,7 @@ class LocalStartListParser:
         """
         info: Dict[str, Any] = {
             "musabaka_adi": None,
+            "sehir": None,
             "tarih": None,
             "yaris": None,
             "cinsiyet": None,
@@ -139,8 +142,12 @@ class LocalStartListParser:
                 info["musabaka_adi"] = l
                 break
 
-        # Tarih ve Yarış tespiti (ilk 20 satırı tara)
+        # Şehir, Tarih ve Yarış tespiti (ilk 25 satırı tara)
         for l in p1_lines[:25]:
+            if not info["sehir"] and "Splash Meet Manager" not in l and "Registered to" not in l:
+                m_city = re.match(r"^([A-Za-zçğıöşüÇĞİÖŞÜ\s]{3,25}),\s*\d{1,2}\.", l)
+                if m_city:
+                    info["sehir"] = m_city.group(1).strip()
             # Tarih
             if not info["tarih"]:
                 m_dt = self.RE_DATE.search(l)
@@ -151,7 +158,13 @@ class LocalStartListParser:
             if not info["yaris"]:
                 m_ev = self.RE_EVENT_INFO.search(l)
                 if m_ev:
-                    info["cinsiyet"] = "Erkek" if m_ev.group(1).lower().startswith(("erkek", "men", "boy")) else "Kadın"
+                    g_txt = m_ev.group(1).lower()
+                    if g_txt.startswith(("erkek", "men", "boy")):
+                        info["cinsiyet"] = "Erkek"
+                    elif g_txt.startswith(("karma", "mix")):
+                        info["cinsiyet"] = "Karma"
+                    else:
+                        info["cinsiyet"] = "Kadın"
                     dist_str = m_ev.group(2).replace(" ", "")
                     if "x" in dist_str.lower():
                         nums = [int(n) for n in re.findall(r"\d+", dist_str)]
@@ -182,6 +195,44 @@ class LocalStartListParser:
                 entry_time = m_time.group(1)
                 club = club[:m_time.start()].strip()
         return entry_time, club, idx
+
+    def _is_valid_club_line(self, line: str) -> bool:
+        """Kulüp satırı olamayacak gürültü/sayı/derece/başlık satırlarını eler."""
+        if not line:
+            return False
+        if (
+            self.RE_LANE_ONLY.match(line)
+            or self.RE_SERI.match(line)
+            or self.RE_PAGE_FOOTER.match(line)
+            or self.RE_TABLE_HEADER.match(line)
+            or self.RE_TIME.match(line)
+            or self.RE_NUMERIC_ONLY.match(line)
+        ):
+            return False
+        return True
+
+    def _consume_birth_year_and_name(
+        self, lines: List[str], idx: int, n_lines: int, athlete_name: str
+    ):
+        """Doğum yılını tüketir; sporcu adı 2 satıra taşmışsa birleştirip bir sonraki satırdan yılı alır."""
+        birth_year = None
+        if idx < n_lines:
+            if self.RE_YEAR.match(lines[idx]):
+                birth_year = lines[idx]
+                idx += 1
+            elif (
+                idx + 1 < n_lines
+                and self.RE_YEAR.match(lines[idx + 1])
+                and not self.RE_LANE_ONLY.match(lines[idx])
+                and not self.RE_LANE_AND_NAME.match(lines[idx])
+                and not self.RE_SERI.match(lines[idx])
+                and not self.RE_PAGE_FOOTER.match(lines[idx])
+                and not self.RE_TIME.match(lines[idx])
+            ):
+                athlete_name = f"{athlete_name} {lines[idx]}".strip()
+                birth_year = lines[idx + 1]
+                idx += 2
+        return athlete_name, birth_year, idx
 
     def _extract_swimmers(
         self,
@@ -268,24 +319,25 @@ class LocalStartListParser:
 
                     athlete_name = lines[idx]
 
-                    # Doğum yılı satırı
+                    # Doğum yılı satırı (ve varsa 2. satıra taşan sporcu adı)
                     idx += 1
-                    birth_year = None
-                    if idx < n_lines and self.RE_YEAR.match(lines[idx]):
-                        birth_year = lines[idx]
-                        idx += 1
+                    athlete_name, birth_year, idx = self._consume_birth_year_and_name(
+                        lines, idx, n_lines, athlete_name
+                    )
 
-                    # Kulüp satırı
+                    # Kulüp satırı (saf sayı '0', '11' veya zaman/başlık ise alma)
                     club = None
-                    if (
-                        idx < n_lines
-                        and not self.RE_LANE_ONLY.match(lines[idx])
-                        and not self.RE_SERI.match(lines[idx])
-                        and not self.RE_PAGE_FOOTER.match(lines[idx])
-                        and not self.RE_TABLE_HEADER.match(lines[idx])
-                    ):
+                    if idx < n_lines and self._is_valid_club_line(lines[idx]):
                         club = lines[idx]
                         idx += 1
+                    elif idx < n_lines and self.RE_NUMERIC_ONLY.match(lines[idx]):
+                        # Bazen kulüp öncesi veya kulüp yerine tek haneli/iki haneli sayı ('0' vb.) gelir, atla
+                        if idx + 1 < n_lines and self._is_valid_club_line(lines[idx + 1]) and not self.RE_TIME.match(lines[idx + 1]):
+                            idx += 1
+                            club = lines[idx]
+                            idx += 1
+                        else:
+                            idx += 1
 
                     # Giriş derecesi (opsiyonel)
                     entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
@@ -320,24 +372,33 @@ class LocalStartListParser:
                         })
                         continue
 
-                    # Doğum Yılı satırı
+                    # Doğum Yılı satırı (ve varsa 2. satıra taşan sporcu adı)
                     idx += 1
-                    birth_year = None
-                    if idx < n_lines and self.RE_YEAR.match(lines[idx]):
-                        birth_year = lines[idx]
-                        idx += 1
+                    first_val, birth_year, idx = self._consume_birth_year_and_name(
+                        lines, idx, n_lines, first_val
+                    )
 
-                    # Kulüp satırı
+                    # Kulüp satırı (saf sayı '0', '11' veya zaman/başlık ise alma)
                     club = None
                     if (
                         idx < n_lines
-                        and not self.RE_LANE_ONLY.match(lines[idx])
+                        and self._is_valid_club_line(lines[idx])
                         and not self.RE_LANE_AND_NAME.match(lines[idx])
-                        and not self.RE_SERI.match(lines[idx])
-                        and not self.RE_PAGE_FOOTER.match(lines[idx])
                     ):
                         club = lines[idx]
                         idx += 1
+                    elif idx < n_lines and self.RE_NUMERIC_ONLY.match(lines[idx]):
+                        if (
+                            idx + 1 < n_lines
+                            and self._is_valid_club_line(lines[idx + 1])
+                            and not self.RE_LANE_AND_NAME.match(lines[idx + 1])
+                            and not self.RE_TIME.match(lines[idx + 1])
+                        ):
+                            idx += 1
+                            club = lines[idx]
+                            idx += 1
+                        else:
+                            idx += 1
 
                     # Giriş derecesi
                     entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)

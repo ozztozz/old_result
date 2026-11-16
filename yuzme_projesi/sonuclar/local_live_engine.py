@@ -114,6 +114,20 @@ PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "local_live_worker.pid")
 DEFAULT_POLL_INTERVAL = 5  # 5 saniyelik anlık takip
 
 
+def _normalize_gender(raw_gender: Optional[str]) -> Optional[str]:
+    """Cinsiyet metnini ('Erkekler', 'Kızlar', 'Bayanlar', '18 yaş...' vb.) standartlaştırır."""
+    if not raw_gender:
+        return None
+    g = str(raw_gender).strip().lower()
+    if any(k in g for k in ("erkek", "men", "boy")):
+        return "Erkek"
+    if any(k in g for k in ("kadın", "kadin", "bayan", "kız", "kiz", "women", "girl")):
+        return "Kadın"
+    if any(k in g for k in ("karma", "mix")):
+        return "Karma"
+    return None
+
+
 def configure_sqlite_pragmas():
     """SQLite veritabanı kilitlenmelerini önleyen WAL modu ve 60 sn bekleme süresi ayarları."""
     try:
@@ -297,6 +311,11 @@ class LocalLiveEngine:
 
         title = soup.title.string.strip() if soup.title else ""
         title = re.sub(r"\s+", " ", title)
+        if any(ch in title for ch in ("Ã", "Ä", "Å", "â")):
+            try:
+                title = title.encode("latin1").decode("utf-8")
+            except Exception:
+                pass
 
         pdf_items = []
         seen = set()
@@ -378,9 +397,12 @@ class LocalLiveEngine:
 
             event = yaris.event
             if not event:
+                raw_sehir = (yaris.sehir or "").strip()
+                if raw_sehir.upper() in ("LİVE", "LIVE"):
+                    raw_sehir = ""
                 event = db_retry(lambda: Event.objects.create(
                     musabaka_adi=yaris.musabaka_adi or meta["musabaka_adi"] or "TYF Canlı Yarış",
-                    sehir=yaris.sehir or "",
+                    sehir=raw_sehir,
                     kaynak_turu="CANLI_TAKIP",
                 ))
                 yaris.event = event
@@ -492,9 +514,14 @@ class LocalLiveEngine:
             parsed = self.result_parser.parse(pdf_bytes, unmask=False)
             raw_swimmers = parsed.get("sonuclar", [])
 
-        cinsiyet = parsed.get("cinsiyet")
+        cinsiyet = _normalize_gender(parsed.get("cinsiyet"))
         mesafe = parsed.get("mesafe")
         stil = parsed.get("stil")
+        if parsed.get("sehir") and (not event.sehir or event.sehir.strip().upper() in ("LİVE", "LIVE")):
+            c_raw = parsed["sehir"].strip().lower()
+            first_up = "İ" if c_raw[0] == "i" else ("I" if c_raw[0] == "ı" else c_raw[0].upper())
+            event.sehir = first_up + c_raw[1:]
+            db_retry(lambda: event.save(update_fields=["sehir"]))
         yaris_no = str(item.get("yaris_no") or parsed.get("yaris_no") or "")
         is_bayrak = bool("bayrak" in (stil or "").lower() or "4x" in (str(parsed.get("yaris") or "")).lower())
 
@@ -558,7 +585,11 @@ class LocalLiveEngine:
                             m_s = re.search(r"\d+", str(prev_s.seri))
                             s_no = int(m_s.group()) if m_s else None
                             if s_no:
-                                cross_unmasked[(s_no, prev_s.kulvar)] = (prev_s.sporcu, prev_s.sporcu_maskeli or "")
+                                cross_unmasked[(s_no, prev_s.kulvar)] = (
+                                    prev_s.sporcu,
+                                    prev_s.sporcu_maskeli or "",
+                                    prev_s.kulup_id,
+                                )
                         cross_by_lane.setdefault(prev_s.kulvar, []).append(cand_tuple)
 
         def _vis_chars(txt: str) -> str:
@@ -608,15 +639,35 @@ class LocalLiveEngine:
                         continue
 
                     clean_name = clean_athlete_name_tags(raw_name)
+                    # Kırpılmış parantez/etiket kalıntılarını temizle: "( Metehan", "(f5) Adem"
+                    clean_name = re.sub(r"^(?:\([A-Za-z0-9]{1,4}\)\s*|\(\s+)", "", clean_name).strip()
                     birth_year = s.get("dogum_yili")
-                    durum_val = s.get("durum") or "NORMAL"
+                    if birth_year is not None:
+                        try:
+                            by_int = int(str(birth_year).strip())
+                            if 0 <= by_int <= 99:
+                                by_int = (1900 + by_int) if by_int >= 30 else (2000 + by_int)
+                            birth_year = by_int if 1920 <= by_int <= 2022 else None
+                        except (TypeError, ValueError):
+                            birth_year = None
+                    durum_val = (s.get("durum") or "NORMAL").strip()
+                    if durum_val.upper() == "DQ" or durum_val.upper().startswith("SW "):
+                        durum_val = "DSQ"
                     raw_club = (s.get("kulup") or "").strip()
                     baraj_note = (s.get("notlar") or "").strip() if durum_val not in ["DSQ", "DNS", "DNF", "EXH"] else ""
                     if raw_club and "baraj" in raw_club.lower():
                         if not baraj_note:
                             baraj_note = raw_club
                         raw_club = ""
+                    # Saf sayı ('0', '11') veya derece formatındaki ('1:45.20', 'NT') değerleri kulüp olarak kabul etme
+                    if raw_club and (
+                        re.match(r"^\d{1,3}$", raw_club)
+                        or re.match(r"^(?:(?:\d{1,2}:)?\d{2}[.,]\d{2}|NT)$", raw_club, re.IGNORECASE)
+                    ):
+                        raw_club = ""
                     clean_club_str = clean_club_name_tags(raw_club) if raw_club else ""
+                    if clean_club_str and re.match(r"^\d{1,3}$", clean_club_str):
+                        clean_club_str = ""
                     club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school) if (clean_club_str or raw_club) else (None, False)
 
                     seri_val = s.get("seri")
@@ -631,13 +682,15 @@ class LocalLiveEngine:
                             seri_no = int(m_s.group())
 
                     athlete = None
+                    matched_start_club_id = None
                     # 1. StartList Çapraz Eşleşmesi:
                     #    a) Öncelikle StartList'teki maskeli isim anahtarıyla eşleştir
                     if "*" in clean_name and cross_by_masked:
                         m_key = normalize_tr(clean_name, keep_asterisks=True)
                         picked = _narrow_cross_cands(cross_by_masked.get(m_key), club.id if club else None, birth_year, clean_name)
                         if picked:
-                            st_sp, st_mask, _, _ = picked
+                            st_sp, st_mask, st_club_id, _ = picked
+                            matched_start_club_id = st_club_id
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
                             elif st_mask:
@@ -646,7 +699,8 @@ class LocalLiveEngine:
                     #    b) Eşleşmezse (K/S) veya seri yoksa Kulvar + Kulüp/Yıl üzerinden dene
                     if not athlete:
                         if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
-                            st_sp, st_mask = cross_unmasked[(seri_no, kulvar_val)]
+                            st_sp, st_mask, st_club_id = cross_unmasked[(seri_no, kulvar_val)]
+                            matched_start_club_id = matched_start_club_id or st_club_id
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
                             elif st_mask:
@@ -654,7 +708,8 @@ class LocalLiveEngine:
                         elif not seri_no and kulvar_val and kulvar_val in cross_by_lane:
                             picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year, clean_name)
                             if picked:
-                                st_sp, st_mask, _, _ = picked
+                                st_sp, st_mask, st_club_id, _ = picked
+                                matched_start_club_id = matched_start_club_id or st_club_id
                                 if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                     athlete = st_sp
                                 elif st_mask:
@@ -670,11 +725,16 @@ class LocalLiveEngine:
                             require_name_match=True,
                         )
                         if picked:
-                            st_sp, st_mask, _, _ = picked
+                            st_sp, st_mask, st_club_id, _ = picked
+                            matched_start_club_id = matched_start_club_id or st_club_id
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
                             elif st_mask:
                                 clean_name = st_mask
+
+                    # Sonuç listesinde kulüp boşsa (ör. EXH/DSQ) StartList'teki kulübü miras al
+                    if not club and matched_start_club_id:
+                        club = Kulup.objects.filter(id=matched_start_club_id).first()
 
                     # 2. Bayrak / Relay Takımı Eşleşmesi
                     if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
@@ -688,15 +748,19 @@ class LocalLiveEngine:
                             )
 
                     # 3. Veritabanından Unmasking (Maske Kaldırma)
-                    if not athlete and clean_name:
+                    if not athlete and clean_name and "," not in clean_name:
                         match_res = match_athlete(
                             clean_name,
                             birth_year_or_date=birth_year,
                             club=clean_club_str or raw_club,
-                            gender=cinsiyet
+                            gender=None if cinsiyet == "Karma" else cinsiyet,
                         )
                         if match_res.get("bulunan_id"):
                             athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
+
+                    # Sonuç listesinde kulüp hâlâ boşsa ve gerçek sporcu eşleştiyse aktif kulübünü kullan
+                    if not club and athlete and not athlete.sporcu_adi.startswith("Maskeli sporcu"):
+                        club = athlete.aktif_kulup() or athlete.birincil_kulup
 
                     # 4. Bulunamazsa Maskeli Sporcu Kaydı
                     if not athlete:
@@ -773,10 +837,27 @@ class LocalLiveEngine:
                     if yaris_no:
                         lookup_dict["yaris_no"] = yaris_no
 
-                    _, created = YarisSonucu.objects.update_or_create(
-                        **lookup_dict,
-                        defaults=defaults_dict
-                    )
+                    existing = YarisSonucu.objects.filter(**lookup_dict).order_by("-id").first()
+                    if existing:
+                        if doc_type == "start_listesi" and existing.kaynak_turu == "CANLI_SONUC":
+                            # Mevcut sonuç derecesini StartList ile ezme; sadece eksik başlangıç bilgilerini tamamla
+                            update_fields = []
+                            if defaults_dict.get("giris_derecesi") and not existing.giris_derecesi:
+                                existing.giris_derecesi = defaults_dict["giris_derecesi"]
+                                update_fields.append("giris_derecesi")
+                            if defaults_dict.get("kulup") and not existing.kulup_id:
+                                existing.kulup = defaults_dict["kulup"]
+                                update_fields.append("kulup")
+                            if update_fields:
+                                existing.save(update_fields=update_fields)
+                        else:
+                            for k_f, v_f in defaults_dict.items():
+                                setattr(existing, k_f, v_f)
+                            existing.save()
+                        created = False
+                    else:
+                        YarisSonucu.objects.create(**lookup_dict, **defaults_dict)
+                        created = True
                     if created:
                         records_added += 1
 

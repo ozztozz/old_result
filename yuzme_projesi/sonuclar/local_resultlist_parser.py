@@ -42,8 +42,8 @@ class LocalResultListParser:
     RE_TIME = re.compile(r"^(?:(\d{1,2}):)?(\d{2})[.,](\d{2})$")
     RE_KS = re.compile(r"^(\d+)/(\d+)$")
     RE_INT = re.compile(r"^\d+$")
-    RE_YEAR = re.compile(r"^(19\d\d|20\d\d|\d{2})$")
-    RE_YEAR_PREFIX = re.compile(r"^(19\d\d|20\d\d)([A-Za-zçğıöşüÇĞİÖŞÜ*].*)$")
+    RE_YEAR = re.compile(r"^(19\d\d|20[01]\d|202[0-2]|\d{2})$")
+    RE_YEAR_PREFIX = re.compile(r"^(19\d\d|20[01]\d|202[0-2])([A-Za-zçğıöşüÇĞİÖŞÜ*].*)$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
         r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
@@ -54,9 +54,11 @@ class LocalResultListParser:
         re.IGNORECASE,
     )
     RE_PAGE_FOOTER = re.compile(
-        r"^(Sayfa\s+\d+/\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
+        r"^(Sayfa\s+\d+/\d+|\d{2}[./-]\d{2}[./-]\d{4}\s+\d{2}:\d{2}\s*-\s*Sayfa\s+\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
         re.IGNORECASE,
     )
+    RE_NUMERIC_ONLY = re.compile(r"^\d{1,3}$")
+    RE_STATUS_INLINE = re.compile(r"^(DQ|DSQ|DNS|DNF|EXH|SW\s*\d+(?:\.\d+)*)$", re.IGNORECASE)
     RE_SPLIT_LINE = re.compile(
         r"^\d+\s*m\s+(?:(?:\d{1,2}:)?\d{2}[.,]\d{2})\b",
         re.IGNORECASE,
@@ -105,6 +107,7 @@ class LocalResultListParser:
             return {
                 "tur": "sonuc_listesi",
                 "musabaka_adi": header_info.get("musabaka_adi"),
+                "sehir": header_info.get("sehir"),
                 "tarih": header_info.get("tarih"),
                 "yaris": header_info.get("yaris"),
                 "cinsiyet": header_info.get("cinsiyet"),
@@ -123,6 +126,7 @@ class LocalResultListParser:
     def _extract_header(self, page_lines_list: List[List[str]]) -> Dict[str, Any]:
         info: Dict[str, Any] = {
             "musabaka_adi": None,
+            "sehir": None,
             "tarih": None,
             "yaris": None,
             "cinsiyet": None,
@@ -140,6 +144,11 @@ class LocalResultListParser:
 
             if not info["musabaka_adi"] and len(l) > 5 and not self.RE_DATE.search(l) and "Sonuçlar" not in l:
                 info["musabaka_adi"] = l
+
+            if not info["sehir"] and "Splash Meet Manager" not in l and "Registered to" not in l:
+                m_city = re.match(r"^([A-Za-zçğıöşüÇĞİÖŞÜ\s]{3,25}),\s*\d{1,2}\.", l)
+                if m_city:
+                    info["sehir"] = m_city.group(1).strip()
 
             if not info["tarih"]:
                 m_dt = self.RE_DATE.search(l)
@@ -231,11 +240,25 @@ class LocalResultListParser:
                 reason = rest[m_reason.start():].strip("() ")
                 rest = rest[:m_reason.start()].strip()
 
+            kulvar_val: Optional[int] = None
+            seri_val: Optional[int] = None
+            d_yili_val: Optional[str] = None
+
+            m_ks = re.match(r"^(\d+)/(\d+)\s+(.*)$", rest)
+            if m_ks:
+                kulvar_val, seri_val = int(m_ks.group(1)), int(m_ks.group(2))
+                rest = m_ks.group(3).strip()
+
+            m_dy = re.match(r"^(19\d\d|20\d\d)\s+(.*)$", rest)
+            if m_dy:
+                d_yili_val = m_dy.group(1)
+                rest = m_dy.group(2).strip()
+
             results.append({
                 "sira": None,
-                "kulvar": None,
-                "seri": None,
-                "dogum_yili": None,
+                "kulvar": kulvar_val,
+                "seri": seri_val,
+                "dogum_yili": d_yili_val,
                 "sporcu": rest,
                 "kulup": rest if "(Tk)" in rest else None,
                 "derece": None,
@@ -432,9 +455,15 @@ class LocalResultListParser:
                                         baraj_parts.insert(0, mid_lines.pop())
                                 baraj = " ".join(baraj_parts).strip() or None
 
+                                # Kulüp öncesi/sonrası sıkışan saf sayıları ('0', '11' vb.) kulüp olarak alma
+                                while mid_lines and self.RE_NUMERIC_ONLY.match(mid_lines[-1]):
+                                    mid_lines.pop()
+
                                 club = mid_lines.pop() if mid_lines else None
                                 if club and "baraj" in club.lower():
                                     baraj = f"{baraj} {club}".strip() if baraj else club
+                                    while mid_lines and self.RE_NUMERIC_ONLY.match(mid_lines[-1]):
+                                        mid_lines.pop()
                                     club = mid_lines.pop() if mid_lines else None
                                 athlete_name = self._join_athlete_parts(mid_lines)
 
