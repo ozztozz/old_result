@@ -295,6 +295,47 @@ class SwimResultCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (isCompleted &&
+                            result.qualifyingStandard != null &&
+                            result.qualifyingStandard!.passed &&
+                            result.qualifyingStandard!.badge.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: palette.statusSuccess.withValues(alpha: 0.12),
+                              borderRadius: AppRadius.badgeRadius,
+                              border: Border.all(
+                                color: palette.statusSuccess.withValues(alpha: 0.30),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified_rounded,
+                                  size: 11,
+                                  color: palette.statusSuccess,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    result.qualifyingStandard!.badge,
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: palette.statusSuccess,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         if (splits.isNotEmpty) ...[
                           const SizedBox(height: 5),
                           Wrap(

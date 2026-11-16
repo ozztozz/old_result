@@ -9,3 +9,5 @@
 # Drift / SQLite
 -keep class net.simonvt.schematic.** { *; }
 
+
+-dontwarn com.google.android.play.core.**
