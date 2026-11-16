@@ -91,6 +91,10 @@ from sonuclar.turkish_names import standardize_turkish_athlete_name
 from sonuclar.fina_calculator import calculate_fina_points, detect_course
 from sonuclar.local_startlist_parser import LocalStartListParser
 from sonuclar.local_resultlist_parser import LocalResultListParser
+from sonuclar.local_baraj_parser import (
+    fetch_and_parse_reglaman_barajlar,
+    evaluate_baraj_for_result,
+)
 
 from sonuclar.live_engine import (
     _time_to_seconds,
@@ -390,6 +394,23 @@ class LocalLiveEngine:
         }
 
         try:
+            if yaris.reglaman_linki and (
+                not yaris.barajlar
+                or not isinstance(yaris.barajlar, dict)
+                or not yaris.barajlar.get("barajlar")
+            ):
+                try:
+                    parsed_barajlar = fetch_and_parse_reglaman_barajlar(yaris.reglaman_linki)
+                    if parsed_barajlar and parsed_barajlar.get("barajlar"):
+                        yaris.barajlar = parsed_barajlar
+                        db_retry(lambda: yaris.save(update_fields=["barajlar"]))
+                        logger.info(
+                            f"  [+] #{yaris.id} Reglaman barajları yüklendi: "
+                            f"{len(parsed_barajlar['barajlar'])} kural."
+                        )
+                except Exception as exc:
+                    logger.warning(f"  [!] #{yaris.id} Reglaman barajları okunamadı: {exc}")
+
             meta, pdf_items = self.fetch_meet_pdf_catalog(yaris.canli_url)
             if meta["musabaka_adi"] and not yaris.musabaka_adi:
                 yaris.musabaka_adi = meta["musabaka_adi"]
@@ -826,6 +847,18 @@ class LocalLiveEngine:
                             defaults_dict["uyari_notu"] = ""
                             if baraj_note:
                                 defaults_dict["baraj"] = baraj_note[:50]
+                            elif yaris.barajlar and derece_sn and not is_bayrak:
+                                eff_birth_year = birth_year or (athlete.dogum_yili if athlete else None)
+                                passed_baraj = evaluate_baraj_for_result(
+                                    yaris.barajlar,
+                                    cinsiyet=cinsiyet,
+                                    mesafe=mesafe,
+                                    stil=stil,
+                                    derece_saniye=derece_sn,
+                                    birth_year=eff_birth_year,
+                                    course=course,
+                                )
+                                defaults_dict["baraj"] = passed_baraj[:50] if passed_baraj else None
 
                     lookup_dict = {
                         "event": event,

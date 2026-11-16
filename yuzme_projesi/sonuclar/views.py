@@ -912,16 +912,27 @@ def canli_yaris_listesi(request):
                     }
                 )
 
+            parsed_barajlar = {}
+            if reglaman_linki:
+                try:
+                    from .local_baraj_parser import fetch_and_parse_reglaman_barajlar
+                    parsed_barajlar = fetch_and_parse_reglaman_barajlar(reglaman_linki, timeout=10)
+                except Exception:
+                    parsed_barajlar = {}
+
             yaris = CanliYaris.objects.create(
                 event=event_obj,
                 canli_url=canli_url,
                 reglaman_linki=reglaman_linki or None,
+                barajlar=parsed_barajlar,
                 musabaka_adi=musabaka_adi or None,
                 sehir=sehir_val,
                 tarih=tarih_val,
                 durum="BEKLIYOR"
             )
-            messages.success(request, f"Canlı yarış linki eklendi: {yaris.canli_url}")
+            baraj_sayisi = len(parsed_barajlar.get("barajlar") or []) if isinstance(parsed_barajlar, dict) else 0
+            ek_bilgi = f" ({baraj_sayisi} baraj kuralı yüklendi)" if baraj_sayisi else ""
+            messages.success(request, f"Canlı yarış linki eklendi: {yaris.canli_url}{ek_bilgi}")
             return redirect("sonuclar:canli_yaris_listesi")
         else:
             messages.error(request, "Lütfen geçerli bir canlı yarış linki girin.")
