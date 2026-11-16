@@ -61,6 +61,10 @@ class LocalResultListParser:
         r"^\d+\s*m\s+(?:(?:\d{1,2}:)?\d{2}[.,]\d{2})\b",
         re.IGNORECASE,
     )
+    RE_SPLIT_PAIR = re.compile(
+        r"(\d+)\s*m\s*:?\s*((?:\d{1,2}:)?\d{2}[.,]\d{2})",
+        re.IGNORECASE,
+    )
     RE_STATUS_START = re.compile(r"^(DSQ|DNS|DNF|EXH)\s+(.+)$", re.IGNORECASE)
 
     def __init__(self):
@@ -449,8 +453,11 @@ class LocalResultListParser:
                                         fina_puan = int(lines[scan])
                                         scan += 1
 
-                                # Ara zaman (split) satırlarını atla
+                                # Ara zaman (split) satırlarını ayrıştır
+                                ara_dereceler: Dict[str, str] = {}
                                 while scan < n_lines and self.RE_SPLIT_LINE.match(lines[scan]):
+                                    for dist_m, split_time in self.RE_SPLIT_PAIR.findall(lines[scan]):
+                                        ara_dereceler[f"{dist_m}m"] = split_time.replace(",", ".")
                                     scan += 1
 
                                 results.append({
@@ -464,6 +471,7 @@ class LocalResultListParser:
                                     "puan": fina_puan,
                                     "durum": "OK",
                                     "notlar": baraj,
+                                    "ara_dereceler": ara_dereceler or None,
                                     "sayfa": pno,
                                 })
                                 idx = scan
