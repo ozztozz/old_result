@@ -973,7 +973,8 @@ class LocalLiveEngine:
                             existing.save()
                         created = False
                     else:
-                        YarisSonucu.objects.create(**lookup_dict, **defaults_dict)
+                        create_kwargs = {**lookup_dict, **defaults_dict}
+                        YarisSonucu.objects.create(**create_kwargs)
                         created = True
                     if created:
                         records_added += 1
