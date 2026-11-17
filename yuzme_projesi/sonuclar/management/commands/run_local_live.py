@@ -7,14 +7,22 @@ from sonuclar.local_live_engine import (
     start_daemon_background,
     stop_daemon,
     get_running_daemon_pid,
+    discover_new_live_meets,
+    compute_auto_scan_range,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_SCAN_WINDOW,
 )
 
 class Command(BaseCommand):
     help = "Yerel TYF Canlı Takip Servisi (5 Saniyede Bir Anlık Kontrol + Saatlik Cron Orkestratörü)"
 
     def add_arguments(self, parser):
-        parser.add_argument("--cron", action="store_true", help="1. Servis: Saatlik cron orkestratörünü çalıştır")
+        parser.add_argument("--cron", action="store_true", help="1. Servis: Cron orkestratörünü çalıştır (yeni yarış keşfi + daemon başlatma)")
+        parser.add_argument("--tara", action="store_true", help="TYF canlı sayfasında yeni yarış var mı diye otomatik aralıkta tara ve DB'ye ekle")
+        parser.add_argument("--scan-start", type=int, default=None, help="Tarama başlangıç ID (boşsa DB'den otomatik hesaplanır)")
+        parser.add_argument("--scan-end", type=int, default=None, help="Tarama bitiş ID (boşsa DB'den otomatik hesaplanır)")
+        parser.add_argument("--scan-window", type=int, default=DEFAULT_SCAN_WINDOW, help=f"Otomatik ileri tarama penceresi (varsayılan: {DEFAULT_SCAN_WINDOW})")
+        parser.add_argument("--no-discover", action="store_true", help="--cron çalışırken otomatik yarış keşfini atla")
         parser.add_argument("--daemon", action="store_true", help="2. Servis: 5 saniyelik anlık takipçi döngüsünü başlat")
         parser.add_argument("--baslat", action="store_true", help="Takipçiyi arka planda başlat (detatch)")
         parser.add_argument("--durdur", action="store_true", help="Çalışan canlı takipçi sürecini durdur")
@@ -35,13 +43,27 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"[+] 5 Saniyelik Canlı Takipçi AKTİF çalışıyor (PID: {pid})."))
             else:
                 self.stdout.write(self.style.WARNING("[-] Canlı Takipçi şu anda ÇALIŞMIYOR."))
+        elif options.get("tara"):
+            year, auto_s, auto_e, _ = compute_auto_scan_range(window=options.get("scan_window", DEFAULT_SCAN_WINDOW))
+            s_id = options.get("scan_start") if options.get("scan_start") is not None else auto_s
+            e_id = options.get("scan_end") if options.get("scan_end") is not None else auto_e
+            self.stdout.write(f"[*] Yeni canlı yarış keşfi ({year}): {s_id} -> {e_id}")
+            added = discover_new_live_meets(
+                start_id=s_id,
+                end_id=e_id,
+                window=options.get("scan_window", DEFAULT_SCAN_WINDOW),
+            )
+            self.stdout.write(self.style.SUCCESS(f"[+] Tamamlandı: {len(added)} yeni yarış eklendi."))
         elif options.get("baslat"):
             pid = start_daemon_background(poll_interval=options.get("interval", DEFAULT_POLL_INTERVAL))
             if pid:
                 self.stdout.write(self.style.SUCCESS(f"[+] Canlı Takipçi arka planda başlatıldı (PID: {pid})."))
         elif options.get("cron"):
-            self.stdout.write("[*] Saatlik Cron Orkestratörü çalıştırılıyor...")
-            run_cron_orchestrator(poll_interval=options.get("interval", DEFAULT_POLL_INTERVAL))
+            self.stdout.write("[*] Cron Orkestratörü çalıştırılıyor...")
+            run_cron_orchestrator(
+                poll_interval=options.get("interval", DEFAULT_POLL_INTERVAL),
+                discover=not options.get("no_discover", False),
+            )
         elif options.get("daemon"):
             self.stdout.write(f"[*] 5 Saniyelik Canlı Takipçi ön planda başlatılıyor...")
             run_daemon_worker(poll_interval=options.get("interval", DEFAULT_POLL_INTERVAL))

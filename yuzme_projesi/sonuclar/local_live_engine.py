@@ -28,6 +28,7 @@ import signal
 import tempfile
 import logging
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone as dt_timezone, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from urllib.parse import urljoin
@@ -44,6 +45,7 @@ if not apps.ready:
     django.setup()
 
 import requests
+from requests.adapters import HTTPAdapter
 import urllib3
 import time
 from bs4 import BeautifulSoup
@@ -984,13 +986,185 @@ class LocalLiveEngine:
 
 
 # ==============================================================================
+# SERVİS 0: YENİ TYF CANLI YARIŞ KEŞİF TARAYICISI
+# ==============================================================================
+
+DEFAULT_SCAN_FALLBACK_START = 1005900
+DEFAULT_SCAN_WINDOW = 80
+DEFAULT_SCAN_BACK_LOOK = 10
+
+
+def _normalize_live_url(url: str) -> str:
+    u = (url or "").strip()
+    if u and not u.endswith("/"):
+        u += "/"
+    return u.lower()
+
+
+def compute_auto_scan_range(
+    year: Optional[int] = None,
+    window: int = DEFAULT_SCAN_WINDOW,
+    back_look: int = DEFAULT_SCAN_BACK_LOOK,
+) -> Tuple[int, int, int, set]:
+    """
+    Veritabanındaki mevcut CanliYaris URL'lerinden en yüksek ID'yi bulup
+    otomatik (year, start_id, end_id, known_urls) döner.
+    """
+    target_year = year or get_current_tr_time().year
+    known_urls = set()
+    max_id: Optional[int] = None
+    id_re = re.compile(rf"canli\.tyf\.gov\.tr/live/{target_year}/(\d+)/?", re.IGNORECASE)
+
+    for raw_url in CanliYaris.objects.values_list("canli_url", flat=True):
+        if not raw_url:
+            continue
+        known_urls.add(_normalize_live_url(raw_url))
+        m = id_re.search(raw_url)
+        if m:
+            val = int(m.group(1))
+            if max_id is None or val > max_id:
+                max_id = val
+
+    if max_id is not None:
+        start_id = max(1, max_id - back_look)
+        end_id = max_id + window
+    else:
+        start_id = DEFAULT_SCAN_FALLBACK_START
+        end_id = start_id + window
+
+    return target_year, start_id, end_id, known_urls
+
+
+def discover_new_live_meets(
+    start_id: Optional[int] = None,
+    end_id: Optional[int] = None,
+    window: int = DEFAULT_SCAN_WINDOW,
+    back_look: int = DEFAULT_SCAN_BACK_LOOK,
+    workers: int = 15,
+    timeout: float = 5.0,
+    year: Optional[int] = None,
+) -> List[str]:
+    """
+    canli.tyf.gov.tr/live/<year>/<id>/ aralığında yeni açılan (status 200) canlı yarışları
+    paralel olarak tarar ve veritabanına (CanliYaris + Event) otomatik ekler.
+    start_id / end_id verilmezse DB'deki en son ID'ye göre otomatik hesaplanır.
+    """
+    target_year, auto_start, auto_end, known_urls = compute_auto_scan_range(
+        year=year, window=window, back_look=back_look
+    )
+    eff_start = start_id if start_id is not None else auto_start
+    eff_end = end_id if end_id is not None else auto_end
+    if eff_start > eff_end:
+        return []
+
+    base_tpl = f"https://canli.tyf.gov.tr/live/{target_year}/{{item_id}}/"
+    candidate_ids = [
+        item_id
+        for item_id in range(eff_start, eff_end + 1)
+        if _normalize_live_url(base_tpl.format(item_id=item_id)) not in known_urls
+    ]
+    if not candidate_ids:
+        return []
+
+    session = requests.Session()
+    adapter = HTTPAdapter(pool_connections=workers, pool_maxsize=workers)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    })
+
+    def _probe(item_id: int) -> Optional[str]:
+        url = base_tpl.format(item_id=item_id)
+        try:
+            with session.get(url, timeout=timeout, stream=True, allow_redirects=True, verify=False) as resp:
+                if resp.status_code == 200:
+                    return url
+        except requests.RequestException:
+            pass
+        return None
+
+    found_urls: List[str] = []
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_probe, iid) for iid in candidate_ids]
+            for fut in as_completed(futures):
+                u = fut.result()
+                if u:
+                    found_urls.append(u)
+    finally:
+        session.close()
+
+    if not found_urls:
+        return []
+
+    found_urls.sort()
+    engine = LocalLiveEngine()
+    added_urls: List[str] = []
+
+    for url in found_urls:
+        try:
+            meta, pdf_items = engine.fetch_meet_pdf_catalog(url)
+            title = (meta.get("musabaka_adi") or "").strip()
+            if not title and not pdf_items:
+                continue
+
+            sehir = (meta.get("sehir") or "").strip() or None
+            tarih = (meta.get("tarih") or "").strip() or None
+            start_d = meta.get("start_date") or ""
+            end_d = meta.get("end_date") or ""
+
+            event_obj = None
+            if title:
+                ev_qs = Event.objects.filter(musabaka_adi=title)
+                if sehir:
+                    ev_qs = ev_qs.filter(sehir__iexact=sehir)
+                if start_d:
+                    ev_qs = ev_qs.filter(yaris_tarihi_baslangic=start_d)
+                event_obj = ev_qs.first()
+                if not event_obj:
+                    event_obj = db_retry(lambda: Event.objects.create(
+                        musabaka_adi=title,
+                        sehir=sehir,
+                        yaris_tarihi_baslangic=start_d,
+                        yaris_tarihi_bitis=end_d,
+                        yaris_tarihi_ham=tarih or "",
+                        kaynak_turu="CANLI_TAKIP",
+                    ))
+
+            if CanliYaris.objects.filter(canli_url=url).exists():
+                continue
+
+            db_retry(lambda: CanliYaris.objects.create(
+                event=event_obj,
+                canli_url=url,
+                musabaka_adi=title or None,
+                sehir=sehir,
+                tarih=tarih,
+                durum="ISLENIYOR",
+            ))
+            added_urls.append(url)
+            logger.info(f"  [+] Yeni canlı yarış keşfedildi ve eklendi: {title} ({sehir or '-'}) -> {url}")
+        except Exception as exc:
+            logger.warning(f"  [!] Keşfedilen URL eklenemedi ({url}): {exc}")
+
+    return added_urls
+
+
+# ==============================================================================
 # SERVİS 1: SAATLİK CRON ORKESTRATÖRÜ
 # ==============================================================================
 
-def run_cron_orchestrator(start_hour: int = 8, end_hour: int = 20, poll_interval: int = DEFAULT_POLL_INTERVAL) -> None:
+def run_cron_orchestrator(
+    start_hour: int = 8,
+    end_hour: int = 20,
+    poll_interval: int = DEFAULT_POLL_INTERVAL,
+    discover: bool = True,
+) -> None:
     """
-    1. Servis: Her saat başı çalışır.
-    Çalışma saatleri (08:00 - 20:00) içinde aktif canlı yarış varsa 5 sn'lik daemon'ı başlatır.
+    1. Servis: Her 5 dakikada bir çalışır.
+    Çalışma saatleri (08:00 - 20:00) içinde önce yeni açılan TYF canlı yarışlarını keşfeder,
+    ardından aktif canlı yarış varsa 5 sn'lik daemon'ı başlatır.
     """
     now = get_current_tr_time()
     logger.info(f"=== [Servis 1: Saatlik Cron Kontrolü Başladı] (Saat: {now.strftime('%H:%M:%S')}) ===")
@@ -998,6 +1172,14 @@ def run_cron_orchestrator(start_hour: int = 8, end_hour: int = 20, poll_interval
     if not is_within_working_hours(start_hour=start_hour, end_hour=end_hour):
         logger.info(f"[*] Şu an saat {now.strftime('%H:%M')}. Çalışma saatleri dışındayız ({start_hour:02d}:00 - {end_hour:02d}:00). Çıkılıyor.")
         return
+
+    if discover:
+        try:
+            newly_added = discover_new_live_meets()
+            if newly_added:
+                logger.info(f"[+] Otomatik tarama ile {len(newly_added)} yeni canlı yarış eklendi.")
+        except Exception as exc:
+            logger.warning(f"[!] Otomatik yarış keşif taraması uyarısı: {exc}")
 
     active_qs = CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"])
     active_count = active_qs.count()
