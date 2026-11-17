@@ -882,8 +882,8 @@ def canli_yaris_listesi(request):
             tarih_val = None
             start_d, end_d = '', ''
             try:
-                from src.live_startlist_worker import fetch_event_page
-                title_scraped, city_scraped, date_scraped, start_d, end_d, _, _ = fetch_event_page(canli_url)
+                from .live_engine import fetch_meet_pdf_urls
+                title_scraped, city_scraped, date_scraped, start_d, end_d, _ = fetch_meet_pdf_urls(canli_url)
                 if not musabaka_adi and title_scraped:
                     musabaka_adi = title_scraped
                 sehir_val = city_scraped
