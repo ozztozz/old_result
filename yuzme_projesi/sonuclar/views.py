@@ -942,7 +942,30 @@ def canli_yaris_listesi(request):
         else:
             messages.error(request, "Lütfen geçerli bir canlı yarış linki girin.")
 
-    yarislar = CanliYaris.objects.all().select_related('event').order_by("-olusturulma_tarihi")
+    from .live_engine import parse_tr_date_range
+
+    def _canli_yaris_sort_key(y):
+        iso_date = ""
+        if y.event_id and y.event and y.event.yaris_tarihi_baslangic:
+            cand = str(y.event.yaris_tarihi_baslangic).strip()
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", cand):
+                iso_date = cand
+        if not iso_date:
+            raw_t = (y.gosterilen_tarih or "").strip()
+            if raw_t and raw_t != "-":
+                m_iso = re.search(r"(\d{4}-\d{2}-\d{2})", raw_t)
+                if m_iso:
+                    iso_date = m_iso.group(1)
+                else:
+                    iso_date, _ = parse_tr_date_range(raw_t)
+        ts = y.olusturulma_tarihi.timestamp() if y.olusturulma_tarihi else 0.0
+        return (iso_date or "", ts, y.id)
+
+    yarislar = sorted(
+        CanliYaris.objects.all().select_related('event'),
+        key=_canli_yaris_sort_key,
+        reverse=True,
+    )
     return render(request, "sonuclar/canli_yarislar.html", {"yarislar": yarislar})
 
 
