@@ -765,14 +765,18 @@ class LocalLiveEngine:
                         if not baraj_note:
                             baraj_note = raw_club
                         raw_club = ""
-                    # Saf sayı ('0', '11') veya derece formatındaki ('1:45.20', 'NT') değerleri kulüp olarak kabul etme
-                    if raw_club and (
-                        re.match(r"^\d{1,3}$", raw_club)
-                        or re.match(r"^(?:(?:\d{1,2}:)?\d{2}[.,]\d{2}|NT)$", raw_club, re.IGNORECASE)
-                    ):
+                    # Saf sayı ('0', '11'), yaş grubu ('11 yaş', '11-12 yaş') veya derece formatındaki ('1:45.20', 'NT') değerleri kulüp olarak kabul etme
+                    _INVALID_CLUB_RE = re.compile(
+                        r"^(?:\d{1,3}|"
+                        r"\d{1,2}(?:\s*[-–/]\s*\d{1,2})?\s*\+?\s*ya[sş]|"
+                        r"a[cç][ıi]k\s*ya[sş]|"
+                        r"(?:\d{1,2}:)?\d{2}[.,]\d{2}|NT)$",
+                        re.IGNORECASE,
+                    )
+                    if raw_club and _INVALID_CLUB_RE.match(raw_club):
                         raw_club = ""
                     clean_club_str = clean_club_name_tags(raw_club) if raw_club else ""
-                    if clean_club_str and re.match(r"^\d{1,3}$", clean_club_str):
+                    if clean_club_str and _INVALID_CLUB_RE.match(clean_club_str):
                         clean_club_str = ""
                     club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school) if (clean_club_str or raw_club) else (None, False)
 
