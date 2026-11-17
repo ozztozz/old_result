@@ -311,8 +311,7 @@ class LocalLiveEngine:
         TYF canlı sayfasını çekip başlık bilgileri ile tüm Start ve Sonuç PDF linklerini listeler.
         """
         resp = requests.get(base_url, headers=self.headers, verify=False, timeout=10)
-        resp.encoding = "utf-8"
-        soup = BeautifulSoup(resp.text, "html.parser")
+        soup = BeautifulSoup(resp.content.decode("utf-8", errors="replace"), "html.parser")
 
         title = soup.title.string.strip() if soup.title else ""
         title = re.sub(r"\s+", " ", title)

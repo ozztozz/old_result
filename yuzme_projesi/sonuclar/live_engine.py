@@ -246,9 +246,14 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
     if not base_url.endswith("/") and not os.path.splitext(base_url.split("?")[0])[1]:
         base_url += "/"
 
-    html = resp.text
+    html = resp.content.decode("utf-8", errors="replace")
     soup = BeautifulSoup(html, "html.parser")
-    meet_title = soup.title.string.replace("- SPLASH Meet Manager 11", "").strip() if soup.title else ""
+    meet_title = soup.title.string.replace("- SPLASH Meet Manager 11", "").strip() if soup.title and soup.title.string else ""
+    if any(ch in meet_title for ch in ("Ã", "Ä", "Å", "â")):
+        try:
+            meet_title = meet_title.encode("latin1").decode("utf-8")
+        except Exception:
+            pass
 
     plain_text = soup.get_text("\n")
     city = ""
