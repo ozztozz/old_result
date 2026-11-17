@@ -414,12 +414,12 @@ class LocalLiveEngine:
                     city = c_raw
 
         if city:
-            c_low = city.strip().lower()
+            c_low = city.strip().replace("\u0307", "").lower()
             if c_low in ("live", "li̇ve"):
                 city = ""
             else:
                 first_up = "İ" if c_low[0] == "i" else ("I" if c_low[0] == "ı" else c_low[0].upper())
-                city = first_up + c_low[1:]
+                city = (first_up + c_low[1:]).replace("\u0307", "")
 
         if not date_str:
             m_date = re.search(r"(\d{1,2}\.?\s*(?:-\s*\d{1,2}\.)?\s*\d{1,2}\.\d{4})", plain_text)
@@ -867,6 +867,13 @@ class LocalLiveEngine:
                         )
                         if match_res.get("bulunan_id"):
                             athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
+                        elif match_res.get("muhtemel_eslesmeler"):
+                            cands = match_res["muhtemel_eslesmeler"]
+                            norm_names = {normalize_tr(c.get("sporcu_adi") or "") for c in cands if c.get("sporcu_adi")}
+                            if len(norm_names) == 1 and float(cands[0].get("benzerlik_orani") or 0) >= 85.0:
+                                best = max(cands, key=lambda c: (int(c.get("toplam_yaris_sayisi") or 0), -int(c.get("id") or 0)))
+                                if best.get("id"):
+                                    athlete = Sporcu.objects.filter(id=best["id"]).first()
 
                     # Sonuç listesinde kulüp hâlâ boşsa ve gerçek sporcu eşleştiyse aktif kulübünü kullan
                     if not club and athlete and not athlete.sporcu_adi.startswith("Maskeli sporcu"):

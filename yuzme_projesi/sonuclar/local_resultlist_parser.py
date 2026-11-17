@@ -222,6 +222,9 @@ class LocalResultListParser:
             status = m_st.group(1).upper()
             rest = m_st.group(2).strip()
 
+            # Sondaki yaş grubu parantezini (ör. '(13 Yaş ve üzeri)') ayır
+            rest = re.sub(r"\s*\([^)]*?\bya[sş]\b[^)]*\)\s*$", "", rest, flags=re.IGNORECASE).strip()
+
             reason = None
             m_reason = re.search(
                 r"\((?:\d{1,2}:\d{2}\s*-\s*)?(?:SW\b|sw\b|KURBAĞALAMA|SERBEST|KELEBEK|SIRT|Bayrak|Takım).*\)$",
@@ -230,7 +233,7 @@ class LocalResultListParser:
             )
             if not m_reason:
                 m_reason = re.search(
-                    r"\([^)]*?(?:yaptığından|dokunmadan|ihlal|SW)[^)]*?\)$",
+                    r"\([^)]*?(?:yaptığından|atılmadığından|dokunmadan|dokunmayarak|hatalı|erken|tutarak|bekledi|ihlal|kural|SW)[^)]*?\)$",
                     rest,
                     flags=re.DOTALL | re.IGNORECASE,
                 )
@@ -239,6 +242,16 @@ class LocalResultListParser:
             if m_reason:
                 reason = rest[m_reason.start():].strip("() ")
                 rest = rest[:m_reason.start()].strip()
+            else:
+                # Parantezsiz veya açılış parantezi kırpılmış DSQ notu: '... atılmadığından - STARTTAN ...'
+                m_bare_reason = re.search(
+                    r"\s+(?:[a-zçğıöşü]+ığından|atılmadığından|hatalı\s+çıkış|erken\s+çıkış|starttan\s+sonra)\b.*$",
+                    rest,
+                    flags=re.IGNORECASE,
+                )
+                if m_bare_reason:
+                    reason = m_bare_reason.group(0).strip(" )")
+                    rest = rest[:m_bare_reason.start()].strip()
 
             kulvar_val: Optional[int] = None
             seri_val: Optional[int] = None
