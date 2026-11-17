@@ -103,6 +103,7 @@ from sonuclar.live_engine import (
     detect_pdf_type,
     clean_pdf_filename,
     download_file_with_meta,
+    parse_tr_date_range,
 )
 
 logger = logging.getLogger("local_live_engine")
@@ -374,8 +375,63 @@ class LocalLiveEngine:
                 "yaris_no": str(yaris_no),
             })
 
+        plain_text = soup.get_text("\n", strip=True)
+        city = ""
+        date_str = ""
+        start_date = ""
+        end_date = ""
+
+        # 1) Yeni TYF canlı formatı: "Konya | 14.11.2026 - 15.11.2026 | 50 Metre Havuz"
+        m_pipe = re.search(
+            r"^([A-ZÇĞİÖŞÜa-zçğıöşü\s]{2,30})\s*\|\s*(\d{1,2}\.\d{1,2}\.\d{4}(?:\s*-\s*\d{1,2}\.\d{1,2}\.\d{4})?)\s*\|",
+            plain_text,
+            re.MULTILINE,
+        )
+        if m_pipe:
+            city = re.sub(r"\s+", " ", m_pipe.group(1)).strip()
+            date_str = re.sub(r"\s+", " ", m_pipe.group(2)).strip()
+            start_date, end_date = parse_tr_date_range(date_str)
+
+        # 2) Splash Meet Manager formatı: "İSTANBUL (TUR)"
+        if not city:
+            m_city = re.search(r"([A-ZÇĞİÖŞÜa-zçğıöşü\s]{3,30})\s*\((?:TUR|TR)\)", plain_text)
+            if m_city:
+                city = re.sub(r"\s+", " ", m_city.group(1)).strip()
+
+        # 3) Başlıktan şehir: "ANKARA - ..."
+        if not city and title:
+            m_tcity = re.match(r"^([A-ZÇĞİÖŞÜa-zçğıöşü]+)\s*[\-\:]", title)
+            if m_tcity and len(m_tcity.group(1)) >= 3:
+                city = m_tcity.group(1).strip()
+
+        # 4) URL path'ten şehir: /istanbul/ (live/canli/cs/results hariç)
+        if not city:
+            m_u = re.search(r"canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/", base_url)
+            if m_u:
+                c_raw = m_u.group(1).lower()
+                if c_raw not in ("live", "canli", "canlı", "cs", "results"):
+                    city = c_raw
+
+        if city:
+            c_low = city.strip().lower()
+            if c_low in ("live", "li̇ve"):
+                city = ""
+            else:
+                first_up = "İ" if c_low[0] == "i" else ("I" if c_low[0] == "ı" else c_low[0].upper())
+                city = first_up + c_low[1:]
+
+        if not date_str:
+            m_date = re.search(r"(\d{1,2}\.?\s*(?:-\s*\d{1,2}\.)?\s*\d{1,2}\.\d{4})", plain_text)
+            if m_date:
+                date_str = re.sub(r"\s+", " ", m_date.group(1)).strip()
+                start_date, end_date = parse_tr_date_range(date_str)
+
         meta = {
             "musabaka_adi": title,
+            "sehir": city,
+            "tarih": date_str,
+            "start_date": start_date,
+            "end_date": end_date,
             "canli_url": base_url,
         }
         return meta, pdf_items
@@ -412,22 +468,50 @@ class LocalLiveEngine:
                     logger.warning(f"  [!] #{yaris.id} Reglaman barajları okunamadı: {exc}")
 
             meta, pdf_items = self.fetch_meet_pdf_catalog(yaris.canli_url)
+            yaris_update_fields = []
             if meta["musabaka_adi"] and not yaris.musabaka_adi:
                 yaris.musabaka_adi = meta["musabaka_adi"]
-                db_retry(lambda: yaris.save(update_fields=["musabaka_adi"]))
+                yaris_update_fields.append("musabaka_adi")
+            if meta.get("sehir") and (not yaris.sehir or yaris.sehir.strip().upper() in ("LİVE", "LIVE")):
+                yaris.sehir = meta["sehir"]
+                yaris_update_fields.append("sehir")
+            if meta.get("tarih") and not yaris.tarih:
+                yaris.tarih = meta["tarih"]
+                yaris_update_fields.append("tarih")
+            if yaris_update_fields:
+                db_retry(lambda: yaris.save(update_fields=yaris_update_fields))
 
             event = yaris.event
             if not event:
-                raw_sehir = (yaris.sehir or "").strip()
+                raw_sehir = (yaris.sehir or meta.get("sehir") or "").strip()
                 if raw_sehir.upper() in ("LİVE", "LIVE"):
                     raw_sehir = ""
                 event = db_retry(lambda: Event.objects.create(
                     musabaka_adi=yaris.musabaka_adi or meta["musabaka_adi"] or "TYF Canlı Yarış",
                     sehir=raw_sehir,
+                    yaris_tarihi_ham=meta.get("tarih") or (yaris.tarih or ""),
+                    yaris_tarihi_baslangic=meta.get("start_date") or "",
+                    yaris_tarihi_bitis=meta.get("end_date") or "",
                     kaynak_turu="CANLI_TAKIP",
                 ))
                 yaris.event = event
                 db_retry(lambda: yaris.save(update_fields=["event"]))
+            else:
+                ev_update_fields = []
+                if meta.get("sehir") and (not event.sehir or event.sehir.strip().upper() in ("LİVE", "LIVE")):
+                    event.sehir = meta["sehir"]
+                    ev_update_fields.append("sehir")
+                if meta.get("start_date") and not event.yaris_tarihi_baslangic:
+                    event.yaris_tarihi_baslangic = meta["start_date"]
+                    ev_update_fields.append("yaris_tarihi_baslangic")
+                if meta.get("end_date") and not event.yaris_tarihi_bitis:
+                    event.yaris_tarihi_bitis = meta["end_date"]
+                    ev_update_fields.append("yaris_tarihi_bitis")
+                if meta.get("tarih") and not event.yaris_tarihi_ham:
+                    event.yaris_tarihi_ham = meta["tarih"]
+                    ev_update_fields.append("yaris_tarihi_ham")
+                if ev_update_fields:
+                    db_retry(lambda: event.save(update_fields=ev_update_fields))
 
             processed_files = set(
                 CanliYarisDosya.objects.filter(canli_yaris=yaris, durum="ISLENDI").values_list("dosya_adi", flat=True)

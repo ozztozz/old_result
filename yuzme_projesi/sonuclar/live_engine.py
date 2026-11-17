@@ -250,15 +250,26 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
     soup = BeautifulSoup(html, "html.parser")
     meet_title = soup.title.string.replace("- SPLASH Meet Manager 11", "").strip() if soup.title else ""
 
-    plain_text = soup.get_text()
+    plain_text = soup.get_text("\n")
     city = ""
     date_str = ""
     start_date = ""
     end_date = ""
 
-    m_city = re.search(r'([A-ZÇĞİÖŞÜa-zçğıöşü\s]{3,30})\s*\((?:TUR|TR)\)', plain_text)
-    if m_city:
-        city = re.sub(r'\s+', ' ', m_city.group(1)).strip()
+    m_pipe = re.search(
+        r'^([A-ZÇĞİÖŞÜa-zçğıöşü\s]{2,30})\s*\|\s*(\d{1,2}\.\d{1,2}\.\d{4}(?:\s*-\s*\d{1,2}\.\d{1,2}\.\d{4})?)\s*\|',
+        plain_text,
+        re.MULTILINE,
+    )
+    if m_pipe:
+        city = re.sub(r'\s+', ' ', m_pipe.group(1)).strip()
+        date_str = re.sub(r'\s+', ' ', m_pipe.group(2)).strip()
+        start_date, end_date = parse_tr_date_range(date_str)
+
+    if not city:
+        m_city = re.search(r'([A-ZÇĞİÖŞÜa-zçğıöşü\s]{3,30})\s*\((?:TUR|TR)\)', plain_text)
+        if m_city:
+            city = re.sub(r'\s+', ' ', m_city.group(1)).strip()
 
     # Başlıktan şehir çıkarma (Örn: "ANKARA- OKUL SPORLARI...")
     if not city and meet_title:
@@ -268,10 +279,11 @@ def fetch_meet_pdf_urls(event_url: str, mode: str = "all") -> Tuple[str, str, st
             if len(c_cand) >= 3:
                 city = c_cand
 
-    m_date = re.search(r'(\d{1,2}\.?\s*(?:-\s*\d{1,2}\.)?\s*\d{1,2}\.\d{4})', plain_text)
-    if m_date:
-        date_str = re.sub(r'\s+', ' ', m_date.group(1)).strip()
-        start_date, end_date = parse_tr_date_range(date_str)
+    if not date_str:
+        m_date = re.search(r'(\d{1,2}\.?\s*(?:-\s*\d{1,2}\.)?\s*\d{1,2}\.\d{4})', plain_text)
+        if m_date:
+            date_str = re.sub(r'\s+', ' ', m_date.group(1)).strip()
+            start_date, end_date = parse_tr_date_range(date_str)
 
     if not city:
         m_u = re.search(r'canli\.tyf\.gov\.tr/([a-zA-ZçğıöşüÇĞİÖŞÜ]+)/', base_url)

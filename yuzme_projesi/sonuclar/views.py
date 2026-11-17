@@ -901,16 +901,21 @@ def canli_yaris_listesi(request):
 
             event_obj = None
             if musabaka_adi:
-                event_obj, _ = Event.objects.get_or_create(
-                    musabaka_adi=musabaka_adi,
-                    defaults={
-                        'sehir': sehir_val,
-                        'yaris_tarihi_baslangic': start_d,
-                        'yaris_tarihi_bitis': end_d,
-                        'yaris_tarihi_ham': tarih_val or '',
-                        'kaynak_turu': "CANLI_TAKIP"
-                    }
-                )
+                ev_qs = Event.objects.filter(musabaka_adi=musabaka_adi)
+                if sehir_val:
+                    ev_qs = ev_qs.filter(sehir__iexact=sehir_val)
+                if start_d:
+                    ev_qs = ev_qs.filter(yaris_tarihi_baslangic=start_d)
+                event_obj = ev_qs.first()
+                if not event_obj:
+                    event_obj = Event.objects.create(
+                        musabaka_adi=musabaka_adi,
+                        sehir=sehir_val,
+                        yaris_tarihi_baslangic=start_d,
+                        yaris_tarihi_bitis=end_d,
+                        yaris_tarihi_ham=tarih_val or '',
+                        kaynak_turu="CANLI_TAKIP"
+                    )
 
             parsed_barajlar = {}
             if reglaman_linki:
