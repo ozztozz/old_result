@@ -991,7 +991,7 @@ class LocalLiveEngine:
 
 DEFAULT_SCAN_FALLBACK_START = 1005900
 DEFAULT_SCAN_WINDOW = 80
-DEFAULT_SCAN_BACK_LOOK = 10
+DEFAULT_SCAN_BACK_LOOK = 20
 
 
 def _normalize_live_url(url: str) -> str:
