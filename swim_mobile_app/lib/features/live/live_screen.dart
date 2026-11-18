@@ -24,6 +24,7 @@ class _LiveScreenState extends State<LiveScreen> {
   String? _errorMessage;
   List<LiveMeetSummary> _liveMeets = [];
   String _searchQuery = '';
+  String? _selectedCity;
 
   @override
   void initState() {
@@ -66,12 +67,29 @@ class _LiveScreenState extends State<LiveScreen> {
     );
   }
 
+  List<String> get _availableCities {
+    final cities = <String>{};
+    for (final m in _liveMeets) {
+      final c = m.city.trim();
+      if (c.isNotEmpty && c != '-') {
+        cities.add(c);
+      }
+    }
+    final sorted = cities.toList()..sort();
+    return sorted;
+  }
+
   List<LiveMeetSummary> get _filteredMeets {
-    if (_searchQuery.trim().isEmpty) return _liveMeets;
-    final q = _searchQuery.toLowerCase();
     return _liveMeets.where((m) {
-      return m.name.toLowerCase().contains(q) ||
-          m.city.toLowerCase().contains(q);
+      if (_selectedCity != null && m.city.trim() != _selectedCity) {
+        return false;
+      }
+      if (_searchQuery.trim().isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        return m.name.toLowerCase().contains(q) ||
+            m.city.toLowerCase().contains(q);
+      }
+      return true;
     }).toList();
   }
 
@@ -164,6 +182,53 @@ class _LiveScreenState extends State<LiveScreen> {
                       ],
                     ),
                   ),
+
+                  // İl Filtresi
+                  if (_availableCities.isNotEmpty) ...[
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _availableCities.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, idx) {
+                          final isAll = idx == 0;
+                          final city = isAll ? null : _availableCities[idx - 1];
+                          final label = isAll ? 'Tüm İller' : city!;
+                          final isSelected = _selectedCity == city;
+
+                          return ChoiceChip(
+                            label: Text(label),
+                            selected: isSelected,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedCity = isSelected && !isAll ? null : city;
+                              });
+                            },
+                            labelStyle: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 12.5,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected ? Colors.white : palette.textSecondary,
+                            ),
+                            selectedColor: palette.primary,
+                            backgroundColor: palette.surface,
+                            side: BorderSide(
+                              color: isSelected ? palette.primary : palette.border,
+                              width: 1.0,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            showCheckmark: false,
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
 
                   // Müsabaka Listesi
                   if (meets.isEmpty)
