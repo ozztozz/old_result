@@ -130,3 +130,22 @@ def api_error(code: str, message: str, status: int = 400) -> HttpResponse:
     """Standart hata nesnesi döndürür."""
     return api_response({'error': {'code': code, 'message': message}}, status=status)
 
+
+class MobileApiCorsMiddleware:
+    """Flutter Web gibi tarayıcı istemcileri için /api/v1/ CORS ve OPTIONS preflight desteği."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith('/api/v1/'):
+            if request.method == 'OPTIONS':
+                resp = HttpResponse(status=200)
+            else:
+                resp = self.get_response(request)
+            resp['Access-Control-Allow-Origin'] = '*'
+            resp['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            resp['Access-Control-Allow-Headers'] = 'X-App-Key, Content-Type, If-None-Match, Authorization'
+            return resp
+        return self.get_response(request)
+
