@@ -148,11 +148,13 @@ def get_athlete_races(request, athlete_id: int):
     stroke = (request.GET.get('stroke') or '').strip().lower()
     if stroke:
         rev_stroke_map = {
-            'free': ['SERBEST'],
-            'back': ['SIRTUSTU', 'SIRTÜSTÜ'],
-            'breast': ['KURBAGALAMA', 'KURBAĞALAMA'],
-            'fly': ['KELEBEK'],
-            'medley': ['KARISIK', 'KARIŞIK'],
+            'free': ['Serbest', 'SERBEST', 'serbest'],
+            'freestyle': ['Serbest', 'SERBEST', 'serbest'],
+            'back': ['Sırtüstü', 'SIRTÜSTÜ', 'SIRTUSTU', 'Sirtüstü', 'sırtüstü'],
+            'breast': ['Kurbağalama', 'KURBAĞALAMA', 'KURBAGALAMA', 'kurbağalama'],
+            'fly': ['Kelebek', 'KELEBEK', 'kelebek'],
+            'medley': ['Karışık', 'KARIŞIK', 'KARISIK', 'karışık'],
+            'im': ['Karışık', 'KARIŞIK', 'KARISIK', 'karışık'],
         }
         allowed = rev_stroke_map.get(stroke)
         if allowed:
