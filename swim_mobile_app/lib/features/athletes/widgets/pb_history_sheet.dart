@@ -445,7 +445,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
   }
 
   Widget _buildKpiBox(
-    SwimPalette palette, {
+    AppColorPalette palette, {
     required String label,
     required String value,
     required Color accent,
@@ -489,7 +489,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
   }
 
   Widget _buildSelectedPointBanner(
-    SwimPalette palette,
+    AppColorPalette palette,
     AthleteRaceHistoryItem item, {
     required bool isPb,
   }) {
