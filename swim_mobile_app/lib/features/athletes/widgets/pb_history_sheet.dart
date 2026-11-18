@@ -68,9 +68,19 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
         distance: widget.pb.distance,
       );
       final targetCourse = widget.pb.course.toUpperCase();
+      final now = DateTime.now();
+      final cutoff = DateTime(now.year - 3, now.month, now.day);
+      final cutoffIso =
+          '${cutoff.year}-${cutoff.month.toString().padLeft(2, '0')}-${cutoff.day.toString().padLeft(2, '0')}';
+
       final filtered = all.where((r) {
-        if (targetCourse.isEmpty) return true;
-        return r.course.toUpperCase() == targetCourse;
+        if (targetCourse.isNotEmpty && r.course.toUpperCase() != targetCourse) {
+          return false;
+        }
+        if (r.date.isNotEmpty && r.date.compareTo(cutoffIso) < 0) {
+          return false;
+        }
+        return true;
       }).toList();
 
       if (mounted) {
@@ -172,7 +182,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '$courseText • Yarış Gelişim Geçmişi',
+                            '$courseText • Son 3 Yıl Yarış Geçmişi',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
                               fontSize: 12,
