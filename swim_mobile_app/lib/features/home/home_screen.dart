@@ -1,14 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/components/empty_state_widget.dart';
+import '../../core/services/favorite_athletes_service.dart';
+import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
+import '../clubs/relay_simulator_screen.dart';
 import '../meets/meet_detail_screen.dart';
 import '../athletes/athlete_profile_screen.dart';
+import '../rankings/rankings_screen.dart';
 
 /// 1. Ekran: Ana Sayfa & Keşfet (Home Dashboard)
 class HomeScreen extends StatefulWidget {
@@ -25,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _errorMessage;
   List<MeetSummary> _recentMeets = [];
   List<LiveMeetSummary> _liveMeets = [];
+  List<Map<String, dynamic>> _highlights = [];
 
   @override
   void initState() {
@@ -38,14 +43,29 @@ class _HomeScreenState extends State<HomeScreen> {
       _errorMessage = null;
     });
     try {
+      final favIds = FavoriteAthletesService.instance.favoriteIds;
+      final club = SelectedClubService.instance;
+      final Future<List<Map<String, dynamic>>> hlFuture =
+          (favIds.isNotEmpty || club.hasSelectedClub)
+              ? widget.repository
+                  .getHighlightsFeed(
+                    athleteIds: favIds,
+                    clubId: club.clubId,
+                    clubName: club.clubName,
+                  )
+                  .catchError((_) => <Map<String, dynamic>>[])
+              : Future.value(<Map<String, dynamic>>[]);
+
       final results = await Future.wait([
         widget.repository.getMeets(page: 1),
         widget.repository.getLiveMeets(),
+        hlFuture,
       ]);
       if (mounted) {
         setState(() {
           _recentMeets = results[0] as List<MeetSummary>;
           _liveMeets = results[1] as List<LiveMeetSummary>;
+          _highlights = results[2] as List<Map<String, dynamic>>;
           _isLoading = false;
         });
       }
@@ -153,12 +173,58 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+
+                  // Hızlı Araçlar (Bayrak Simülatörü & Top 25 Sıralamalar)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildToolCard(
+                          palette,
+                          icon: Icons.groups_rounded,
+                          title: 'Bayrak Simülatörü',
+                          subtitle: 'En hızlı 4x50 / 4x100',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RelaySimulatorScreen(repository: widget.repository),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildToolCard(
+                          palette,
+                          icon: Icons.leaderboard_rounded,
+                          title: 'Top 25 Sıralama',
+                          subtitle: 'Branş & il en iyileri',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RankingsScreen(repository: widget.repository),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
 
                   // Aktif Canlı Yarış Varsa Canlı Banner
                   if (_liveMeets.isNotEmpty) ...[
                     _buildLiveBanner(_liveMeets.first, palette),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Favori Sporcu & Kulüp Canlı Özet Akışı
+                  if (_highlights.isNotEmpty) ...[
+                    _buildHighlightsSection(palette),
+                    const SizedBox(height: 20),
                   ],
 
                   // Güncel Müsabakalar Başlığı
@@ -185,6 +251,178 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildToolCard(
+    AppColorPalette palette, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: palette.surface,
+      borderRadius: AppRadius.cardRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.cardRadius,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: palette.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: palette.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 18, color: palette.primary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 10.5, color: palette.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHighlightsSection(AppColorPalette palette) {
+    final items = _highlights.take(5).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.notifications_active_rounded, size: 17, color: palette.primary),
+            const SizedBox(width: 6),
+            Text(
+              'Favori & Kulüp Canlı Akışı',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: palette.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: palette.surface,
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: palette.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: items.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final h = entry.value;
+              final std = h['qualifying_standard'] as Map<String, dynamic>?;
+              final bool hasStd = std != null && std['passed'] == true;
+              final athId = h['athlete_id'] as int;
+
+              return Column(
+                children: [
+                  ListTile(
+                    dense: true,
+                    title: Text(
+                      h['athlete_name'] as String? ?? '',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${h['distance']}m ${h['stroke_label']} • ${h['meet_name']}',
+                            style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasStd) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: palette.statusSuccess.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              (std['badge'] as String?) ?? 'Baraj',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: palette.statusSuccess,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    trailing: Text(
+                      h['time'] as String? ?? '',
+                      style: AppTextStyles.officialTime.copyWith(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AthleteProfileScreen(
+                            athleteId: athId,
+                            athleteName: h['athlete_name'] as String? ?? '',
+                            repository: widget.repository,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  if (idx < items.length - 1) Divider(height: 1, color: palette.divider),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 

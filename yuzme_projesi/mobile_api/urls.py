@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from django.urls import path
-from . import views_config, views_meets, views_athletes, views_live
+from . import views_config, views_meets, views_athletes, views_live, views_tools
 
 app_name = 'mobile_api'
 
@@ -25,5 +25,10 @@ urlpatterns = [
     # 4. Canlı Yarış Takibi
     path('live/', views_live.get_live_meets, name='live_meets'),
     path('live/<int:live_id>/feed/', views_live.get_live_feed, name='live_feed'),
+
+    # 5. Bayrak Simülatörü, Sıralamalar & Özet Akışı
+    path('clubs/relay-simulator/', views_tools.get_relay_simulator, name='relay_simulator'),
+    path('rankings/', views_tools.get_rankings, name='rankings'),
+    path('highlights/', views_tools.get_highlights_feed, name='highlights_feed'),
 ]
 

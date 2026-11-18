@@ -154,5 +154,66 @@ class SwimRepository {
     final res = await apiClient.get('/search/', queryParameters: {'q': q});
     return GlobalSearchResult.fromJson(res.data as Map<String, dynamic>);
   }
+
+  /// Kulüp Bayrak Takımı Simülatörü
+  Future<Map<String, dynamic>> getRelaySimulator({
+    int? clubId,
+    String? clubName,
+    String relayType = '4x50_free',
+    String gender = 'Erkek',
+    String course = 'LC',
+    int? birthYear,
+  }) async {
+    final query = <String, dynamic>{
+      'relay_type': relayType,
+      'gender': gender,
+      'course': course,
+    };
+    if (clubId != null) query['club_id'] = clubId;
+    if (clubName != null && clubName.isNotEmpty) query['club_name'] = clubName;
+    if (birthYear != null) query['birth_year'] = birthYear;
+
+    final res = await apiClient.get('/clubs/relay-simulator/', queryParameters: query);
+    return (res.data['data'] as Map<String, dynamic>?) ?? {};
+  }
+
+  /// Branş / Yaş / İl Top 25 Sıralamaları
+  Future<List<Map<String, dynamic>>> getRankings({
+    String stroke = 'free',
+    int distance = 50,
+    String gender = 'Erkek',
+    String course = 'LC',
+    int? birthYear,
+    String? city,
+  }) async {
+    final query = <String, dynamic>{
+      'stroke': stroke,
+      'distance': distance,
+      'gender': gender,
+      'course': course,
+    };
+    if (birthYear != null) query['birth_year'] = birthYear;
+    if (city != null && city.isNotEmpty) query['city'] = city;
+
+    final res = await apiClient.get('/rankings/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  /// Favori Sporcu & Kulüp Canlı Özet / Baraj Akışı
+  Future<List<Map<String, dynamic>>> getHighlightsFeed({
+    List<int> athleteIds = const [],
+    int? clubId,
+    String? clubName,
+  }) async {
+    final query = <String, dynamic>{};
+    if (athleteIds.isNotEmpty) query['athlete_ids'] = athleteIds.join(',');
+    if (clubId != null) query['club_id'] = clubId;
+    if (clubName != null && clubName.isNotEmpty) query['club_name'] = clubName;
+
+    final res = await apiClient.get('/highlights/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
 }
 
