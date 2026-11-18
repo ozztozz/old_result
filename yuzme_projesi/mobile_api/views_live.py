@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import re
 from django.views.decorators.http import require_GET
 from sonuclar.models import CanliYaris, YarisSonucu
+from sonuclar.live_engine import parse_tr_date_range
 from .utils import (
     api_response,
     api_error,
@@ -11,10 +13,32 @@ from .utils import (
 )
 
 
+def _live_meet_sort_key(m: CanliYaris):
+    iso_date = ""
+    if m.event_id and m.event and m.event.yaris_tarihi_baslangic:
+        cand = str(m.event.yaris_tarihi_baslangic).strip()
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", cand):
+            iso_date = cand
+    if not iso_date:
+        raw_t = (m.gosterilen_tarih or "").strip()
+        if raw_t and raw_t != "-":
+            m_iso = re.search(r"(\d{4}-\d{2}-\d{2})", raw_t)
+            if m_iso:
+                iso_date = m_iso.group(1)
+            else:
+                iso_date, _ = parse_tr_date_range(raw_t)
+    ts = m.olusturulma_tarihi.timestamp() if m.olusturulma_tarihi else 0.0
+    return (iso_date or "", ts, m.id)
+
+
 @require_GET
 def get_live_meets(request):
-    """Aktif ve son tamamlanan canlı yarışların durum özeti."""
-    meets = CanliYaris.objects.all().order_by('-olusturulma_tarihi')[:15]
+    """Aktif ve son tamamlanan canlı yarışların durum özeti (yarış tarihine göre en yeni üstte)."""
+    meets = sorted(
+        CanliYaris.objects.select_related('event').all(),
+        key=_live_meet_sort_key,
+        reverse=True,
+    )[:15]
     data = []
 
     for m in meets:
