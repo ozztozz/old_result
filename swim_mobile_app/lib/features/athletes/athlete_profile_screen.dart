@@ -6,6 +6,7 @@ import '../../core/services/favorite_athletes_service.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/athlete.dart';
+import 'widgets/pb_history_sheet.dart';
 
 /// Sporcu Profili, Kişisel En İyi Dereceler (PB) ve Scout Analizi Ekranı
 class AthleteProfileScreen extends StatefulWidget {
@@ -606,57 +607,72 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
           physics: const BouncingScrollPhysics(),
           child: Row(
             children: strokePbs.map((pb) {
-              return Container(
-                constraints: const BoxConstraints(minWidth: 72),
-                margin: const EdgeInsets.only(right: 6),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Material(
                   color: palette.surfaceSecondary.withValues(alpha: 0.6),
                   borderRadius: AppRadius.smallRadius,
-                  border: Border.all(
-                    color: palette.border,
-                    width: 0.8,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Mesafe (50m, 100m, 400m vb.)
-                    Text(
-                      '${pb.distance}m',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textSecondary,
-                      ),
+                  child: InkWell(
+                    borderRadius: AppRadius.smallRadius,
+                    onTap: () => PbHistorySheet.show(
+                      context,
+                      athleteId: widget.athleteId,
+                      pb: pb,
+                      strokeLabel: strokeName,
+                      repository: widget.repository,
                     ),
-                    const SizedBox(height: 2),
-                    // Derece (24.95 vb.)
-                    Text(
-                      SwimTimeFormatter.formatCs(pb.timeCs),
-                      style: AppTextStyles.officialTime.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13.5,
-                        color: palette.textPrimary,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 72),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
                       ),
-                    ),
-                    if (pb.points != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${pb.points} FINA',
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: palette.gold,
+                      decoration: BoxDecoration(
+                        borderRadius: AppRadius.smallRadius,
+                        border: Border.all(
+                          color: palette.border,
+                          width: 0.8,
                         ),
                       ),
-                    ],
-                  ],
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Mesafe (50m, 100m, 400m vb.)
+                          Text(
+                            '${pb.distance}m',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          // Derece (24.95 vb.)
+                          Text(
+                            SwimTimeFormatter.formatCs(pb.timeCs),
+                            style: AppTextStyles.officialTime.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                              color: palette.textPrimary,
+                            ),
+                          ),
+                          if (pb.points != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '${pb.points} FINA',
+                              style: TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: palette.gold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               );
             }).toList(),
