@@ -243,15 +243,21 @@ class LocalResultListParser:
                 reason = rest[m_reason.start():].strip("() ")
                 rest = rest[:m_reason.start()].strip()
             else:
-                # Parantezsiz veya açılış parantezi kırpılmış DSQ notu: '... atılmadığından - STARTTAN ...'
-                m_bare_reason = re.search(
-                    r"\s+(?:[a-zçğıöşü]+ığından|atılmadığından|hatalı\s+çıkış|erken\s+çıkış|starttan\s+sonra)\b.*$",
-                    rest,
-                    flags=re.IGNORECASE,
-                )
-                if m_bare_reason:
-                    reason = m_bare_reason.group(0).strip(" )")
-                    rest = rest[:m_bare_reason.start()].strip()
+                # Kapanış parantezi satır sonunda kesilmiş DSQ notu: '...  (Dönüşte veya bitirişte...'
+                m_unclosed = re.search(r"\s+\((?!Tk\))([^()]{8,})$", rest, flags=re.IGNORECASE)
+                if m_unclosed:
+                    reason = m_unclosed.group(1).strip()
+                    rest = rest[:m_unclosed.start()].strip()
+                else:
+                    # Parantezsiz veya açılış parantezi kırpılmış DSQ notu: '... atılmadığından - STARTTAN ...'
+                    m_bare_reason = re.search(
+                        r"\s+(?:[a-zçğıöşü]+ığından|atılmadığından|hatalı\s+çıkış|erken\s+çıkış|starttan\s+sonra)\b.*$",
+                        rest,
+                        flags=re.IGNORECASE,
+                    )
+                    if m_bare_reason:
+                        reason = m_bare_reason.group(0).strip(" )")
+                        rest = rest[:m_bare_reason.start()].strip()
 
             kulvar_val: Optional[int] = None
             seri_val: Optional[int] = None
@@ -267,13 +273,21 @@ class LocalResultListParser:
                 d_yili_val = m_dy.group(1)
                 rest = m_dy.group(2).strip()
 
+            sporcu_val = rest
+            kulup_val = rest if "(Tk)" in rest else None
+            if not kulup_val and " - " in rest:
+                sp_part, cl_part = rest.split(" - ", 1)
+                if sp_part.strip() and len(cl_part.strip()) > 2:
+                    sporcu_val = sp_part.strip()
+                    kulup_val = cl_part.strip()
+
             results.append({
                 "sira": None,
                 "kulvar": kulvar_val,
                 "seri": seri_val,
                 "dogum_yili": d_yili_val,
-                "sporcu": rest,
-                "kulup": rest if "(Tk)" in rest else None,
+                "sporcu": sporcu_val,
+                "kulup": kulup_val,
                 "derece": None,
                 "puan": None,
                 "durum": status,
