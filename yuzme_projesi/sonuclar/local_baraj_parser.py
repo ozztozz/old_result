@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime, timezone as dt_timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -258,17 +259,30 @@ def _parse_baraj_pages_with_gemini(
 
     for png_bytes in image_pages:
         try:
-            resp = client.models.generate_content(
-                model=model,
-                contents=[
-                    types.Part.from_bytes(data=png_bytes, mime_type="image/png"),
-                    _GEMINI_BARAJ_PROMPT,
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.0,
-                ),
-            )
+            resp = None
+            for attempt in range(3):
+                try:
+                    resp = client.models.generate_content(
+                        model=model,
+                        contents=[
+                            types.Part.from_bytes(data=png_bytes, mime_type="image/png"),
+                            _GEMINI_BARAJ_PROMPT,
+                        ],
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            temperature=0.0,
+                        ),
+                    )
+                    break
+                except Exception as api_exc:
+                    err_str = str(api_exc)
+                    is_transient = any(tok in err_str for tok in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED"))
+                    if is_transient and attempt < 2:
+                        time.sleep(2 * (attempt + 1))
+                        continue
+                    raise
+            if resp is None:
+                continue
             raw_json = (resp.text or "").strip()
             if not raw_json:
                 continue

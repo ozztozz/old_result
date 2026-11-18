@@ -174,6 +174,14 @@
                                 <button type="button" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" onclick="openLogModal({{ yaris.id }})" title="Canlı İlerleme ve Sunucu Logu">
                                     <i class="bi bi-terminal"></i>
                                 </button>
+                                {% if yaris.reglaman_linki or yaris.barajlar.barajlar %}
+                                <form method="post" action="{% url 'sonuclar:canli_yaris_baraj_guncelle' yaris.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="swim-btn-outline swim-btn-sm text-xs py-1 px-2" title="Reglaman Barajlarını Mevcut Sonuçlara Uygula">
+                                        <i class="bi bi-award"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
                                 {% if yaris.event %}
                                 <a href="{% url 'sonuclar:musabaka_detay' yaris.event.id %}" class="swim-btn-secondary swim-btn-sm text-xs py-1 px-2" title="Müsabaka Sonuçları Sayfasına Git">
                                     <i class="bi bi-table"></i>

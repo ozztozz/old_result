@@ -1014,6 +1014,67 @@ def canli_yaris_durdur(request, pk):
     return redirect("sonuclar:canli_yaris_listesi")
 
 
+def canli_yaris_baraj_guncelle(request, pk):
+    """Reglaman linkinden barajları okuyup mevcut yarış sonuçlarına uygular (mevcut barajları korur)."""
+    if request.method != "POST":
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    yaris = get_object_or_404(CanliYaris, pk=pk)
+    from .local_baraj_parser import fetch_and_parse_reglaman_barajlar, evaluate_baraj_for_result
+    from .fina_calculator import detect_course
+
+    if yaris.reglaman_linki and (
+        not isinstance(yaris.barajlar, dict) or not yaris.barajlar.get("barajlar")
+    ):
+        try:
+            parsed = fetch_and_parse_reglaman_barajlar(yaris.reglaman_linki)
+            if parsed and parsed.get("barajlar"):
+                yaris.barajlar = parsed
+                yaris.save(update_fields=["barajlar"])
+        except Exception as exc:
+            messages.error(request, f"Reglaman barajları okunamadı: {exc}")
+            return redirect("sonuclar:canli_yaris_listesi")
+
+    if not isinstance(yaris.barajlar, dict) or not yaris.barajlar.get("barajlar"):
+        messages.warning(request, "Bu yarış için tanımlı reglaman barajı bulunamadı.")
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    if not yaris.event_id:
+        messages.info(request, f"{len(yaris.barajlar['barajlar'])} baraj kuralı yüklü; henüz bağlı müsabaka sonucu yok.")
+        return redirect("sonuclar:canli_yaris_listesi")
+
+    course = detect_course(yaris.event.musabaka_adi or yaris.musabaka_adi or "")
+    updated = 0
+    for r in YarisSonucu.objects.filter(event_id=yaris.event_id).select_related("sporcu"):
+        if not r.derece_saniye or (
+            r.uyari_notu and any(x in r.uyari_notu for x in ("DSQ", "DNS", "DNF", "EXH"))
+        ):
+            continue
+        if r.baraj and r.baraj.strip() and r.baraj.strip() != "-":
+            continue
+        by = r.sporcu.dogum_yili if r.sporcu else None
+        passed = evaluate_baraj_for_result(
+            yaris.barajlar,
+            cinsiyet=r.cinsiyet,
+            mesafe=r.mesafe,
+            stil=r.stil,
+            derece_saniye=r.derece_saniye,
+            birth_year=by,
+            yas=r.hesaplanan_yas,
+            course=course,
+        )
+        if passed:
+            r.baraj = passed[:50]
+            r.save(update_fields=["baraj"])
+            updated += 1
+
+    messages.success(
+        request,
+        f"'{yaris.musabaka_adi or yaris.canli_url}' için baraj kontrolü tamamlandı: {updated} yeni sonuca baraj işlendi.",
+    )
+    return redirect("sonuclar:canli_yaris_listesi")
+
+
 def canli_yaris_sil(request, pk):
     """Canlı yarış kaydını ve buna bağlı dosya ile sonuçları siler."""
     if request.method == "POST":
