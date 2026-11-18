@@ -48,6 +48,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
   bool _loading = true;
   String? _error;
   List<AthleteRaceHistoryItem> _races = [];
+  List<Map<String, dynamic>> _targets = [];
   int? _selectedChartIndex;
 
   @override
@@ -62,11 +63,23 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
       _error = null;
     });
     try {
-      final all = await widget.repository.getAthleteRaces(
+      final racesFuture = widget.repository.getAthleteRaces(
         widget.athleteId,
         stroke: widget.pb.stroke,
         distance: widget.pb.distance,
       );
+      final targetsFuture = widget.repository
+          .getAthleteBarajTargets(
+            widget.athleteId,
+            stroke: widget.pb.stroke,
+            distance: widget.pb.distance,
+            course: widget.pb.course,
+            pbCs: widget.pb.timeCs,
+          )
+          .catchError((_) => <Map<String, dynamic>>[]);
+
+      final all = await racesFuture;
+      final targets = await targetsFuture;
       final targetCourse = widget.pb.course.toUpperCase();
       final now = DateTime.now();
       final cutoff = DateTime(now.year - 3, now.month, now.day);
@@ -86,6 +99,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
       if (mounted) {
         setState(() {
           _races = filtered;
+          _targets = targets;
           _loading = false;
         });
       }
@@ -252,7 +266,13 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 12),
+
+                              // Hedef Reglaman Barajı Kartı
+                              if (_targets.isNotEmpty) ...[
+                                _buildTargetBarajCard(palette, _targets.first),
+                                const SizedBox(height: 14),
+                              ],
 
                               // Gelişim Grafiği Kartı
                               if (points.length >= 2) ...[
@@ -296,9 +316,13 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                                 painter: _RaceChartPainter(
                                                   points: points,
                                                   minCs: minCs!,
+                                                  targetCs: _targets.isNotEmpty
+                                                      ? _targets.first['target_cs'] as int?
+                                                      : null,
                                                   selectedIndex: activeIdx,
                                                   primaryColor: palette.primary,
                                                   pbColor: palette.statusSuccess,
+                                                  targetColor: palette.statusWarning,
                                                   gridColor: palette.divider,
                                                   labelColor: palette.textSecondary,
                                                   surfaceColor: palette.surface,
@@ -545,14 +569,90 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
       ),
     );
   }
+
+  Widget _buildTargetBarajCard(AppColorPalette palette, Map<String, dynamic> t) {
+    final bool passed = t['passed'] == true;
+    final int? diffCs = t['diff_cs'] as int?;
+    final int? targetCs = t['target_cs'] as int?;
+    final String meetName = (t['meet_name'] ?? t['baraj_adi'] ?? 'Katılım Barajı').toString();
+    final Color statusColor = passed ? palette.statusSuccess : palette.statusWarning;
+
+    String statusText;
+    if (diffCs == null) {
+      statusText = 'Baraj: ${SwimTimeFormatter.formatCs(targetCs)}';
+    } else if (passed) {
+      final margin = (diffCs.abs() / 100).toStringAsFixed(2);
+      statusText = diffCs == 0 ? 'Barajla tam eşit' : 'Barajı $margin sn farkla geçti';
+    } else {
+      final rem = (diffCs / 100).toStringAsFixed(2);
+      statusText = 'Baraja $rem sn kaldı';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.10),
+        borderRadius: AppRadius.smallRadius,
+        border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            passed ? Icons.verified_rounded : Icons.flag_rounded,
+            size: 18,
+            color: statusColor,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  meetName,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 10.5,
+                    color: palette.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            SwimTimeFormatter.formatCs(targetCs),
+            style: AppTextStyles.officialTime.copyWith(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RaceChartPainter extends CustomPainter {
   final List<AthleteRaceHistoryItem> points;
   final int minCs;
+  final int? targetCs;
   final int? selectedIndex;
   final Color primaryColor;
   final Color pbColor;
+  final Color targetColor;
   final Color gridColor;
   final Color labelColor;
   final Color surfaceColor;
@@ -560,9 +660,11 @@ class _RaceChartPainter extends CustomPainter {
   _RaceChartPainter({
     required this.points,
     required this.minCs,
+    this.targetCs,
     required this.selectedIndex,
     required this.primaryColor,
     required this.pbColor,
+    required this.targetColor,
     required this.gridColor,
     required this.labelColor,
     required this.surfaceColor,
@@ -581,8 +683,12 @@ class _RaceChartPainter extends CustomPainter {
     final chartH = math.max(1.0, size.height - topPad - bottomPad);
 
     final values = points.map((e) => e.timeCs!.toDouble()).toList();
-    final rawMin = values.reduce(math.min);
-    final rawMax = values.reduce(math.max);
+    double rawMin = values.reduce(math.min);
+    double rawMax = values.reduce(math.max);
+    if (targetCs != null && targetCs! > 0) {
+      rawMin = math.min(rawMin, targetCs!.toDouble());
+      rawMax = math.max(rawMax, targetCs!.toDouble());
+    }
     final span = math.max(10.0, rawMax - rawMin);
     final minVal = rawMin - span * 0.12;
     final maxVal = rawMax + span * 0.12;
@@ -611,6 +717,36 @@ class _RaceChartPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(leftPad - tp.width - 6, y - tp.height / 2));
+    }
+
+    // Hedef Baraj kesikli çizgisi
+    if (targetCs != null && targetCs! > 0) {
+      final yNormT = (targetCs!.toDouble() - minVal) / valSpan;
+      final yT = topPad + (1.0 - yNormT) * chartH;
+      final dashPaint = Paint()
+        ..color = targetColor.withValues(alpha: 0.85)
+        ..strokeWidth = 1.4;
+      double xDash = leftPad;
+      while (xDash < size.width - rightPad) {
+        final xEnd = math.min(xDash + 5.0, size.width - rightPad);
+        canvas.drawLine(Offset(xDash, yT), Offset(xEnd, yT), dashPaint);
+        xDash += 9.0;
+      }
+      final tLabel = TextPainter(
+        text: TextSpan(
+          text: 'Baraj ${SwimTimeFormatter.formatCs(targetCs)}',
+          style: TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+            color: targetColor,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tLabel.paint(
+        canvas,
+        Offset(size.width - rightPad - tLabel.width, math.max(topPad, yT - tLabel.height - 2)),
+      );
     }
 
     // Koordinatları hesapla

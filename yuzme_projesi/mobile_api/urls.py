@@ -18,6 +18,7 @@ urlpatterns = [
     # 3. Sporcular, PB Karnesi & Favoriler
     path('athletes/<int:athlete_id>/', views_athletes.get_athlete_detail, name='athlete_detail'),
     path('athletes/<int:athlete_id>/races/', views_athletes.get_athlete_races, name='athlete_races'),
+    path('athletes/<int:athlete_id>/baraj-targets/', views_athletes.get_athlete_baraj_targets, name='athlete_baraj_targets'),
     path('athletes/<int:athlete_id>/clubs/', views_athletes.get_athlete_clubs, name='athlete_clubs'),
     path('athletes/summary/', views_athletes.get_athletes_summary, name='athletes_summary'),
 

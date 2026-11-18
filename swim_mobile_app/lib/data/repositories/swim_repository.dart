@@ -83,6 +83,29 @@ class SwimRepository {
     return list.map((e) => AthleteRaceHistoryItem.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Sporcunun branş/mesafe bazlı hedef reglaman barajları
+  Future<List<Map<String, dynamic>>> getAthleteBarajTargets(
+    int athleteId, {
+    required String stroke,
+    required int distance,
+    required String course,
+    int? pbCs,
+  }) async {
+    final query = <String, dynamic>{
+      'stroke': stroke,
+      'distance': distance,
+      'course': course,
+    };
+    if (pbCs != null) query['pb_cs'] = pbCs;
+
+    final res = await apiClient.get(
+      '/athletes/$athleteId/baraj-targets/',
+      queryParameters: query,
+    );
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
   /// Favori sporcular için toplu özet
   Future<List<AthleteSummaryItem>> getAthletesSummary(List<int> ids) async {
     if (ids.isEmpty) return [];

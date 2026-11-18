@@ -3,7 +3,8 @@ from collections import Counter
 from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
 from django.utils import timezone
-from sonuclar.models import Sporcu, YarisSonucu
+from sonuclar.models import Sporcu, YarisSonucu, CanliYaris
+from sonuclar.local_baraj_parser import _fold_tr, _normalize_stil
 from .utils import (
     api_response,
     api_error,
@@ -289,4 +290,83 @@ def get_athletes_summary(request):
         })
 
     return api_response({'data': summary_data}, request=request, cache_seconds=30)
+
+
+@require_GET
+def get_athlete_baraj_targets(request, athlete_id: int):
+    """
+    Sporcunun cinsiyeti ve doğum yılına göre tanımlı reglaman barajlarını
+    ve sporcunun mevcut PB'sine olan farkını (diff_cs) döndürür.
+    """
+    try:
+        athlete = Sporcu.objects.get(pk=athlete_id)
+    except Sporcu.DoesNotExist:
+        return api_error('not_found', 'Sporcu bulunamadı', status=404)
+
+    stroke_param = (request.GET.get('stroke') or '').strip().lower()
+    distance_param = (request.GET.get('distance') or '').strip()
+    course_param = (request.GET.get('course') or '').strip().upper()
+    pb_cs_param = (request.GET.get('pb_cs') or '').strip()
+
+    stroke_to_tr = {
+        'free': 'Serbest',
+        'freestyle': 'Serbest',
+        'back': 'Sırtüstü',
+        'breast': 'Kurbağalama',
+        'fly': 'Kelebek',
+        'medley': 'Karışık',
+        'im': 'Karışık',
+    }
+    target_stil = stroke_to_tr.get(stroke_param) or _normalize_stil(stroke_param)
+    target_dist = int(distance_param) if distance_param.isdigit() else None
+    target_havuz = '25m' if course_param in ('SC', 'SCM', '25M', '25') else ('50m' if course_param in ('LC', 'LCM', '50M', '50') else None)
+    pb_cs = int(pb_cs_param) if pb_cs_param.isdigit() else None
+
+    g_fold = _fold_tr(athlete.cinsiyet or '')
+    target_gender = 'erkek' if 'erkek' in g_fold else ('kadin' if ('kadin' in g_fold or 'bayan' in g_fold) else None)
+    birth_year = athlete.dogum_yili
+
+    targets = []
+    seen_rules = set()
+    for cy in CanliYaris.objects.exclude(barajlar__isnull=True).order_by('-id'):
+        bdata = cy.barajlar
+        if not isinstance(bdata, dict) or not bdata.get('barajlar'):
+            continue
+        baraj_adi = bdata.get('baraj_adi') or cy.musabaka_adi or 'Reglaman Barajı'
+        for rule in bdata.get('barajlar') or []:
+            if target_havuz and rule.get('havuz') and rule.get('havuz') != target_havuz:
+                continue
+            if target_gender and _fold_tr(str(rule.get('cinsiyet') or '')) != target_gender:
+                continue
+            if target_dist and rule.get('mesafe') != target_dist:
+                continue
+            if target_stil and rule.get('stil') != target_stil:
+                continue
+            if birth_year is not None:
+                dys = rule.get('dogum_yillari') or []
+                max_dy = rule.get('max_dogum_yili')
+                if not ((dys and birth_year in dys) or (max_dy is not None and birth_year <= max_dy)):
+                    continue
+            sure_sn = rule.get('sure_saniye')
+            if not sure_sn:
+                continue
+            target_cs = int(round(float(sure_sn) * 100))
+            dedup_key = (baraj_adi, rule.get('havuz'), rule.get('yas_etiketi'), target_cs)
+            if dedup_key in seen_rules:
+                continue
+            seen_rules.add(dedup_key)
+            diff_cs = (pb_cs - target_cs) if pb_cs is not None else None
+            targets.append({
+                'meet_name': cy.musabaka_adi or baraj_adi,
+                'baraj_adi': baraj_adi,
+                'baraj_turu': rule.get('baraj_turu') or 'Katılım Barajı',
+                'age_label': rule.get('yas_etiketi') or '',
+                'havuz': rule.get('havuz') or '',
+                'target_time': rule.get('sure') or '',
+                'target_cs': target_cs,
+                'diff_cs': diff_cs,
+                'passed': (diff_cs <= 0) if diff_cs is not None else None,
+            })
+
+    return api_response({'data': targets}, request=request, cache_seconds=60)
 
