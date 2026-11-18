@@ -6,6 +6,7 @@ import '../../core/services/favorite_athletes_service.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/athlete.dart';
+import 'athlete_compare_screen.dart';
 import 'widgets/pb_history_sheet.dart';
 
 /// Sporcu Profili, Kişisel En İyi Dereceler (PB) ve Scout Analizi Ekranı
@@ -209,12 +210,36 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
           iconSize: 16,
           onTap: () => Navigator.maybePop(context),
         ),
-        _buildCircleButton(
-          palette: palette,
-          icon: _isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-          iconColor: _isFavorite ? palette.gold : palette.textPrimary,
-          iconSize: 20,
-          onTap: _toggleFavorite,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_athlete != null) ...[
+              _buildCircleButton(
+                palette: palette,
+                icon: Icons.compare_arrows_rounded,
+                iconSize: 20,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AthleteCompareScreen(
+                        athleteA: _athlete!,
+                        repository: widget.repository,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+            _buildCircleButton(
+              palette: palette,
+              icon: _isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+              iconColor: _isFavorite ? palette.gold : palette.textPrimary,
+              iconSize: 20,
+              onTap: _toggleFavorite,
+            ),
+          ],
         ),
       ],
     );
