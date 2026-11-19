@@ -104,6 +104,14 @@ class _LiveScreenState extends State<LiveScreen> {
     return sum;
   }
 
+  static String _formatTurkishInt(int value) {
+    final s = value.toString();
+    return s.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => '.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final meets = _filteredMeets;
@@ -369,11 +377,13 @@ class _LiveScreenState extends State<LiveScreen> {
     );
   }
 
-  /// Premium Frosted İstatistik Hero Paneli (SECOND DESIGN REFINEMENT — Section 4)
-  /// Rakamların üzerinde geometrik daire yok; panel arkasında yumuşak ambient ışık,
-  /// güçlü sayısal tipografi ve sakin editoryal etiketler.
+  /// Premium Frosted İstatistik Hero Paneli
   Widget _buildLiveOverviewHero(AppColorPalette palette) {
     final cityCount = _availableCities.length;
+    final primaryTextColor =
+        palette.isDark ? palette.textPrimary : const Color(0xFF273746);
+    final labelTextColor =
+        palette.isDark ? palette.textSecondary : const Color(0xFF4F677A);
 
     return SoftGlassPanel(
       level: 1,
@@ -381,38 +391,21 @@ class _LiveScreenState extends State<LiveScreen> {
       ambientGlowBehind: true,
       borderRadius: BorderRadius.circular(24),
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
-      artStyle: AmbientArtStyle.heroOrbit,
+      artStyle: AmbientArtStyle.none,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              // Ölçülü canlı akış noktası (abartılı kırmızı rozet yerine sakin nokta)
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: palette.statusLive.withValues(alpha: 0.22),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Container(
-                  width: 5.5,
-                  height: 5.5,
-                  decoration: BoxDecoration(
-                    color: palette.statusLive,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
+              _PulsingLiveDot(color: palette.statusLive),
               const SizedBox(width: 8),
               Text(
                 'Canlı akış',
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: palette.textPrimary,
+                  color: primaryTextColor,
                 ),
               ),
               const Spacer(),
@@ -422,47 +415,43 @@ class _LiveScreenState extends State<LiveScreen> {
                   fontFamily: AppTextStyles.fontFamily,
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
-                  color: palette.textSecondary,
+                  color: labelTextColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-
-          // Zarif yatay ayırıcı
-          Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  palette.divider.withValues(alpha: 0.05),
-                  palette.primary.withValues(alpha: 0.22),
-                  palette.divider.withValues(alpha: 0.05),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
 
           // Güçlü sayısal hiyerarşi ve ferah aralıklar
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildHeroMetric(
-                palette,
-                value: '${_liveMeets.length}',
-                label: 'Müsabaka',
+              Flexible(
+                child: _buildHeroMetric(
+                  value: _formatTurkishInt(_liveMeets.length),
+                  label: 'Müsabaka',
+                  numberColor: primaryTextColor,
+                  labelColor: labelTextColor,
+                ),
               ),
-              _buildHeroDivider(palette),
-              _buildHeroMetric(
-                palette,
-                value: '$_totalAthletesAcrossLive',
-                label: 'Sporcu',
+              _buildHeroDivider(),
+              Flexible(
+                child: _buildHeroMetric(
+                  value: _formatTurkishInt(_totalAthletesAcrossLive),
+                  label: 'Sporcu',
+                  numberColor: primaryTextColor,
+                  labelColor: labelTextColor,
+                ),
               ),
-              _buildHeroDivider(palette),
-              _buildHeroMetric(
-                palette,
-                value: '$cityCount',
-                label: 'Şehir',
+              _buildHeroDivider(),
+              Flexible(
+                child: _buildHeroMetric(
+                  value: _formatTurkishInt(cityCount),
+                  label: 'Şehir',
+                  numberColor: primaryTextColor,
+                  labelColor: labelTextColor,
+                ),
               ),
             ],
           ),
@@ -471,55 +460,63 @@ class _LiveScreenState extends State<LiveScreen> {
     );
   }
 
-  Widget _buildHeroMetric(
-    AppColorPalette palette, {
+  Widget _buildHeroMetric({
     required String value,
     required String label,
+    required Color numberColor,
+    required Color labelColor,
   }) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
             value,
+            maxLines: 1,
+            softWrap: false,
             style: TextStyle(
               fontFamily: AppTextStyles.fontFamily,
-              fontSize: 30,
+              fontSize: 42,
               fontWeight: FontWeight.w600,
-              letterSpacing: -0.9,
-              height: 1.05,
-              color: palette.textPrimary,
+              letterSpacing: -0.5,
+              height: 1.0,
+              color: numberColor,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: palette.textSecondary,
-            ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: labelColor,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildHeroDivider(AppColorPalette palette) {
+  Widget _buildHeroDivider() {
     return Container(
       width: 1,
-      height: 40,
-      margin: const EdgeInsets.symmetric(horizontal: 14),
+      height: 36,
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            palette.divider.withValues(alpha: 0.0),
-            palette.primary.withValues(alpha: 0.24),
-            palette.divider.withValues(alpha: 0.0),
+            Colors.white.withValues(alpha: 0.0),
+            Colors.white.withValues(alpha: 0.45),
+            Colors.white.withValues(alpha: 0.0),
           ],
         ),
       ),
@@ -713,6 +710,86 @@ class _LiveScreenState extends State<LiveScreen> {
                 ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Canlı akış için yumuşak nabız animasyonlu kırmızı gösterge noktası.
+/// Arkadaki kırmızı ışık halkası 1800ms döngüyle scale 1.0 → 1.6, opacity 0.5 → 0.0 geçişi yapar.
+class _PulsingLiveDot extends StatefulWidget {
+  final Color color;
+
+  const _PulsingLiveDot({required this.color});
+
+  @override
+  State<_PulsingLiveDot> createState() => _PulsingLiveDotState();
+}
+
+class _PulsingLiveDotState extends State<_PulsingLiveDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+    _scale = Tween<double>(begin: 1.0, end: 1.6).animate(curved);
+    _opacity = Tween<double>(begin: 0.5, end: 0.0).animate(curved);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final disableMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    return SizedBox(
+      width: 14,
+      height: 14,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (!disableMotion)
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                return Transform.scale(
+                  scale: _scale.value,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.color.withValues(alpha: _opacity.value),
+                    ),
+                  ),
+                );
+              },
+            ),
+          Container(
+            width: 6.5,
+            height: 6.5,
+            decoration: BoxDecoration(
+              color: widget.color,
+              shape: BoxShape.circle,
+            ),
           ),
         ],
       ),
