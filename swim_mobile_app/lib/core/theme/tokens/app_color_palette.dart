@@ -739,29 +739,31 @@ extension AppColorPaletteGlass on AppColorPalette {
 
   // --- Layer 1: Ambient Arka Plan Katmanı ---
 
-  /// Atmosferik arka plan üst-sol tonu (soğuk mavi-gri derinlik, asla düz beyaz değil)
+  /// Atmosferik arka plan üst tonu (#CFDAE1 — net mavi-gri, asla beyaz değil)
   Color get ambientBaseStart {
-    if (_isCoolLight) return const Color(0xFFD6E0E7);
-    if (_isCoolDark) return const Color(0xFF101A23);
+    if (_isCoolLight) return const Color(0xFFCFDAE1);
+    if (_isCoolDark) return const Color(0xFF1B2935);
     return isDark
-        ? Color.lerp(background, Colors.black, 0.18)!
-        : Color.lerp(background, primary, 0.09)!;
+        ? Color.lerp(background, const Color(0xFF223342), 0.25)!
+        : Color.lerp(background, primary, 0.14)!;
   }
 
-  /// Atmosferik arka plan orta tonu
+  /// Atmosferik arka plan orta tonu (#B4C4CF @ 0.45)
   Color get ambientBaseMid {
-    if (_isCoolLight) return const Color(0xFFE6ECF0);
-    if (_isCoolDark) return const Color(0xFF17232D);
-    return background;
+    if (_isCoolLight) return const Color(0xFFB4C4CF);
+    if (_isCoolDark) return const Color(0xFF15202A);
+    return isDark
+        ? background
+        : Color.lerp(background, primary, 0.22)!;
   }
 
-  /// Atmosferik arka plan alt-sağ tonu
+  /// Atmosferik arka plan alt tonu (#98ABB9 — alt üçte birlik kesim belirgin daha derin)
   Color get ambientBaseEnd {
-    if (_isCoolLight) return const Color(0xFFD0DCE4);
-    if (_isCoolDark) return const Color(0xFF1E2E3B);
+    if (_isCoolLight) return const Color(0xFF98ABB9);
+    if (_isCoolDark) return const Color(0xFF0E161E);
     return isDark
-        ? Color.lerp(background, primary, 0.10)!
-        : Color.lerp(background, secondary, 0.10)!;
+        ? Color.lerp(background, Colors.black, 0.28)!
+        : Color.lerp(background, secondary, 0.30)!;
   }
 
   /// Büyük organik atmosferik ışık alanı 1 (Üst-sağ: Mist / Steel difüzyonu)
