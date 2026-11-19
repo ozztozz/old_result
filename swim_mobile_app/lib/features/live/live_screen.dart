@@ -112,6 +112,43 @@ class _LiveScreenState extends State<LiveScreen> {
     );
   }
 
+  /// Türkçe karakter duyarlı Title Case dönüştürücüsü.
+  /// Küçültmeden önce 'İ' -> 'i' ve 'I' -> 'ı' eşler; kelime baş harflerini
+  /// 'i' -> 'İ', 'ı' -> 'I' dahil Türkçe kurallarına göre büyütür.
+  /// Sayı/yaş ifadelerini (ör. "11-12") olduğu gibi korur.
+  static String _toTurkishTitleCase(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    final lowered = trimmed
+        .replaceAll('İ', 'i')
+        .replaceAll('I', 'ı')
+        .toLowerCase();
+
+    const upperMap = <String, String>{
+      'i': 'İ',
+      'ı': 'I',
+      'ç': 'Ç',
+      'ğ': 'Ğ',
+      'ö': 'Ö',
+      'ş': 'Ş',
+      'ü': 'Ü',
+    };
+
+    String capitalizeWord(String word) {
+      if (word.isEmpty) return word;
+      final first = word[0];
+      final rest = word.substring(1);
+      final upperFirst = upperMap[first] ?? first.toUpperCase();
+      return '$upperFirst$rest';
+    }
+
+    return lowered
+        .split(RegExp(r'\s+'))
+        .map(capitalizeWord)
+        .join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final meets = _filteredMeets;
@@ -363,9 +400,12 @@ class _LiveScreenState extends State<LiveScreen> {
                                     ),
                                   )
                                 else
-                                  ...meets.map(
-                                    (m) => _buildLiveMeetCard(m, palette),
-                                  ),
+                                  for (int i = 0; i < meets.length; i++)
+                                    _buildLiveMeetCard(
+                                      meets[i],
+                                      palette,
+                                      isFirst: i == 0,
+                                    ),
                               ],
                             ),
                           ),
@@ -523,110 +563,150 @@ class _LiveScreenState extends State<LiveScreen> {
     );
   }
 
-  /// Rafine Frosted Glass Müsabaka Kartı (SECOND DESIGN REFINEMENT — Section 5)
-  /// Dekoratif grafik kalabalığı olmadan saf cam malzeme, tipografi ve boşluk dengesi.
-  Widget _buildLiveMeetCard(LiveMeetSummary meet, AppColorPalette palette) {
+  /// Rafine Frosted Glass Müsabaka Kartı
+  Widget _buildLiveMeetCard(
+    LiveMeetSummary meet,
+    AppColorPalette palette, {
+    bool isFirst = false,
+  }) {
     final resTotal = meet.resultListProgress.total;
     final resProcessed = meet.resultListProgress.processed;
     final resRatio =
         resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
     final resPercent = (resRatio * 100).toInt();
+    final isCompleted = resTotal > 0 && resPercent >= 100;
 
-    return SoftGlassPanel(
-      level: 2,
-      tier: GlassTier.card,
-      borderRadius: BorderRadius.circular(20),
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-      onTap: () => _openLiveDetail(meet),
+    final isDark = palette.isDark;
+    final titleColor = isDark ? palette.textPrimary : const Color(0xFF273746);
+    final chipTextColor = isDark ? palette.textPrimary : const Color(0xFF3E566A);
+    final mutedTextColor = isDark ? palette.textSecondary : const Color(0xFF4F677A);
+
+    final cardBody = Padding(
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Üst Durum & Katılım Satırı (Ölçülü canlı nokta + sade katılımcı metni)
+          // 1. Üst Durum & Katılımcı Satırı (Kırmızı yok; Steel tonlu sakin cam rozetler)
           Row(
             children: [
               Container(
-                width: 6.5,
-                height: 6.5,
+                height: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: palette.statusLive,
-                  shape: BoxShape.circle,
+                  color: const Color(0xFF657D91).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.25),
+                    width: 1.0,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 7),
-              Text(
-                'Canlı',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.statusLive,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF657D91),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Canlı',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: chipTextColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
-              Icon(
-                Icons.people_outline_rounded,
-                size: 14.5,
-                color: palette.textMuted,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                '${meet.totalAthletes} sporcu',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.textSecondary,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              Container(
+                height: 24,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: isDark ? 0.09 : 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.25),
+                    width: 1.0,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.people_outline_rounded,
+                      size: 14,
+                      color: chipTextColor,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${_formatTurkishInt(meet.totalAthletes)} sporcu',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: chipTextColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
 
-          // 2. Müsabaka Başlığı (Daha güçlü görsel öncelik)
+          // 2. Müsabaka Başlığı (Türkçe duyarlı Title Case)
           Text(
-            meet.name,
+            _toTurkishTitleCase(meet.name),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: AppTextStyles.fontFamily,
-              fontSize: 17.5,
+              fontSize: 19,
               fontWeight: FontWeight.w600,
-              height: 1.28,
-              letterSpacing: -0.3,
-              color: palette.textPrimary,
+              height: 1.3,
+              letterSpacing: -0.2,
+              color: titleColor,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
 
-          // 3. Şehir ve Tarih (Daha rahat okunabilir destekleyici metin)
+          // 3. Şehir ve Tarih Satırı
           Row(
             children: [
               Icon(
                 Icons.location_on_outlined,
-                size: 14,
-                color: palette.textMuted,
+                size: 14.5,
+                color: mutedTextColor,
               ),
               const SizedBox(width: 4),
               Text(
                 meet.city.isNotEmpty ? meet.city : 'Türkiye',
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
-                  color: palette.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
+                  color: mutedTextColor,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               if (meet.date.isNotEmpty) ...[
                 Text(
                   '  ·  ',
-                  style: TextStyle(color: palette.textMuted, fontSize: 13),
+                  style: TextStyle(color: mutedTextColor, fontSize: 13.5),
                 ),
                 Text(
                   meet.date,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
-                    color: palette.textSecondary,
-                    fontSize: 13,
+                    color: mutedTextColor,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w400,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
@@ -634,9 +714,9 @@ class _LiveScreenState extends State<LiveScreen> {
               ],
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // 4. Rafine İlerleme Bölümü
+          // 4. İlerleme Bölümü
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -644,31 +724,40 @@ class _LiveScreenState extends State<LiveScreen> {
                 'Tamamlanan yarışlar',
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
-                  color: palette.textSecondary,
-                  fontSize: 12,
+                  color: mutedTextColor,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w400,
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '$resProcessed / $resTotal',
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
-                      color: palette.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      color: mutedTextColor,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w400,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (isCompleted) ...[
+                    const Icon(
+                      Icons.check_circle,
+                      size: 14,
+                      color: Color(0xFF657D91),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Text(
                     '%$resPercent',
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
-                      color: palette.textPrimary,
+                      color: titleColor,
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
@@ -678,34 +767,37 @@ class _LiveScreenState extends State<LiveScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Sakin, rafine ilerleme çubuğu
+          // İlerleme Çubuğu (Tamamlandıysa sakin yumuşak dolgu)
           LayoutBuilder(
             builder: (context, constraints) {
-              final fillWidth =
-                  (constraints.maxWidth * resRatio).clamp(0.0, constraints.maxWidth);
+              final fillWidth = (constraints.maxWidth * resRatio)
+                  .clamp(0.0, constraints.maxWidth);
               return Container(
-                height: 4.5,
+                height: 4,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: palette.isDark
-                      ? palette.background.withValues(alpha: 0.50)
-                      : palette.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white.withValues(alpha: isDark ? 0.14 : 0.25),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 alignment: Alignment.centerLeft,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
                   width: fillWidth,
-                  height: 4.5,
+                  height: 4,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    gradient: LinearGradient(
-                      colors: [
-                        palette.primary,
-                        palette.textPrimary,
-                      ],
-                    ),
+                    borderRadius: BorderRadius.circular(999),
+                    color: isCompleted
+                        ? const Color(0xFF657D91).withValues(alpha: 0.75)
+                        : null,
+                    gradient: isCompleted
+                        ? null
+                        : const LinearGradient(
+                            colors: [
+                              Color(0xFF657D91),
+                              Color(0xFF3E566A),
+                            ],
+                          ),
                   ),
                 ),
               );
@@ -713,6 +805,42 @@ class _LiveScreenState extends State<LiveScreen> {
           ),
         ],
       ),
+    );
+
+    return SoftGlassPanel(
+      level: 2,
+      tier: GlassTier.card,
+      borderRadius: BorderRadius.circular(20),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.zero,
+      onTap: () => _openLiveDetail(meet),
+      child: isFirst
+          ? Stack(
+              children: [
+                Positioned(
+                  top: -70,
+                  right: -70,
+                  width: 220,
+                  height: 220,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFFEEF3F6)
+                                .withValues(alpha: isDark ? 0.12 : 0.35),
+                            const Color(0xFFEEF3F6).withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                cardBody,
+              ],
+            )
+          : cardBody,
     );
   }
 }
