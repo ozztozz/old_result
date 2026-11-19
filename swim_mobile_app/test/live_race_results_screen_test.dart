@@ -160,6 +160,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Ara Dereceler'), findsOneWidget);
       expect(find.textContaining('28.12'), findsOneWidget);
+      expect(find.textContaining('31.28'), findsOneWidget);
+      expect(find.textContaining('31.48'), findsOneWidget);
+      expect(find.textContaining('30.57'), findsOneWidget);
       expect(find.textContaining('59.40'), findsOneWidget);
       expect(find.textContaining('01:30.88'), findsOneWidget);
       expect(tester.takeException(), isNull);

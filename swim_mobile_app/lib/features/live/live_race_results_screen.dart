@@ -723,14 +723,65 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     return null;
   }
 
-  List<MapEntry<String, String>> _sortedSplits(RaceResult result) {
+  List<({String label, String lapTime, String? cumulativeTime})> _buildSplitLegs(
+    RaceResult result, {
+    required bool isCompleted,
+    required int? finishCs,
+    required String formattedTime,
+  }) {
     final splits = result.splitTimes;
     if (splits == null || splits.isEmpty) return const [];
     final entries = splits.entries.toList();
     int parseDist(String key) =>
         int.tryParse(key.replaceAll(RegExp(r'[^\d]'), '')) ?? 999999;
     entries.sort((a, b) => parseDist(a.key).compareTo(parseDist(b.key)));
-    return entries;
+
+    final legs = <({String label, String lapTime, String? cumulativeTime})>[];
+    int? prevCs;
+    int prevDist = 0;
+
+    for (final entry in entries) {
+      final rawVal = entry.value.trim();
+      final currCs = _parseTimeToCs(rawVal);
+      final dist = int.tryParse(entry.key.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+
+      final String lapTime;
+      final String? cumulativeTime;
+      if (prevCs == null) {
+        lapTime = currCs != null ? SwimTimeFormatter.formatCs(currCs) : rawVal;
+        cumulativeTime = null;
+      } else if (currCs != null && currCs > prevCs) {
+        lapTime = SwimTimeFormatter.formatCs(currCs - prevCs);
+        cumulativeTime = rawVal;
+      } else {
+        lapTime = rawVal;
+        cumulativeTime = null;
+      }
+
+      legs.add((
+        label: entry.key,
+        lapTime: lapTime,
+        cumulativeTime: cumulativeTime,
+      ));
+      prevCs = currCs;
+      if (dist > prevDist) prevDist = dist;
+    }
+
+    final totalDistance = result.distance ?? widget.event.distance ?? 0;
+    if (isCompleted &&
+        finishCs != null &&
+        finishCs > 0 &&
+        totalDistance > prevDist &&
+        prevCs != null &&
+        finishCs > prevCs) {
+      legs.add((
+        label: '${totalDistance}m',
+        lapTime: SwimTimeFormatter.formatCs(finishCs - prevCs),
+        cumulativeTime: formattedTime,
+      ));
+    }
+
+    return legs;
   }
 
   Widget _buildResultRow(
@@ -950,7 +1001,12 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       );
     }
 
-    final splits = _sortedSplits(result);
+    final splits = _buildSplitLegs(
+      result,
+      isCompleted: isCompleted,
+      finishCs: finishCs,
+      formattedTime: formattedTime,
+    );
     final splitKey =
         '${isPinnedClubRow ? 'pinned' : 'heat'}_${result.id}_${result.heat}_${result.lane}_${result.athleteName}';
     final isExpanded =
@@ -1173,7 +1229,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                                       TextSpan(
                                         children: [
                                           TextSpan(
-                                            text: '${e.key} ',
+                                            text: '${e.label} ',
                                             style: TextStyle(
                                               fontFamily:
                                                   AppTextStyles.fontFamily,
@@ -1183,18 +1239,32 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                                             ),
                                           ),
                                           TextSpan(
-                                            text: e.value,
+                                            text: e.lapTime,
                                             style: TextStyle(
                                               fontFamily:
                                                   AppTextStyles.fontFamily,
                                               fontSize: 12,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.w700,
                                               color: palette.textPrimary,
                                               fontFeatures: const [
                                                 FontFeature.tabularFigures(),
                                               ],
                                             ),
                                           ),
+                                          if (e.cumulativeTime != null)
+                                            TextSpan(
+                                              text: ' (${e.cumulativeTime})',
+                                              style: TextStyle(
+                                                fontFamily:
+                                                    AppTextStyles.fontFamily,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w400,
+                                                color: palette.textSecondary,
+                                                fontFeatures: const [
+                                                  FontFeature.tabularFigures(),
+                                                ],
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
