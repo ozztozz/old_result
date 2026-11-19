@@ -67,9 +67,21 @@ class AmbientBackground extends StatelessWidget {
         ? const Color(0xFF070D13).withValues(alpha: 0.48)
         : const Color(0xFF273746).withValues(alpha: 0.22);
 
+    final baseColors = isDark
+        ? [
+            palette.ambientBaseStart,
+            palette.ambientBaseMid,
+            palette.ambientBaseEnd,
+          ]
+        : const [
+            Color(0xFFCFDAE1),
+            Color(0xFFB4C4CF),
+            Color(0xFF98ABB9),
+          ];
+
     return Stack(
       children: [
-        // 1. Dikey taban gradyanı (#CFDAE1 → #B4C4CF @ 0.45 → #98ABB9)
+        // 1. Dikey taban gradyanı (#CFDAE1 @ 0.0 → #B4C4CF @ 0.45 → #98ABB9 @ 1.0)
         Positioned.fill(
           child: IgnorePointer(
             child: RepaintBoundary(
@@ -79,11 +91,7 @@ class AmbientBackground extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: const [0.0, 0.45, 1.0],
-                    colors: [
-                      palette.ambientBaseStart,
-                      palette.ambientBaseMid,
-                      palette.ambientBaseEnd,
-                    ],
+                    colors: baseColors,
                   ),
                 ),
               ),
