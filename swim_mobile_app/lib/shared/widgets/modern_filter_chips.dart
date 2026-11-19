@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/tokens/tokens.dart';
 
 /// Minimalist Filtre Çipi Tanımı
 class FilterChipItem {
@@ -12,7 +12,7 @@ class FilterChipItem {
   });
 }
 
-/// TYF Yüzme Sonuçları — Apple Esintili Filtre Çipi (v2.0)
+/// TYF Yüzme Sonuçları — Soft Glass Filtre Çipi
 class ModernFilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -29,24 +29,28 @@ class ModernFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? palette.surfaceGlassStrong : palette.surfaceSecondary.withValues(alpha: 0.55),
+          borderRadius: AppRadius.medium,
           border: Border.all(
-            color: isSelected ? AppColors.border : Colors.transparent,
+            color: isSelected ? palette.primary.withValues(alpha: 0.45) : palette.border,
             width: 1.0,
           ),
           boxShadow: isSelected
-              ? const [
+              ? [
                   BoxShadow(
-                    color: Color(0x0A3D3038),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
+                    color: palette.softShadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -58,17 +62,17 @@ class ModernFilterChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 14,
-                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isSelected ? palette.primary : palette.textSecondary,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 5),
             ],
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: AppTextStyles.fontFamily,
                 fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isSelected ? palette.textPrimary : palette.textSecondary,
               ),
             ),
           ],
@@ -112,4 +116,3 @@ class ModernFilterChipBar extends StatelessWidget {
     );
   }
 }
-

@@ -88,6 +88,7 @@ abstract final class AppTheme {
           backgroundColor: palette.primary,
           foregroundColor: onPrimary,
           elevation: 0,
+          minimumSize: const Size(0, 48),
           padding: AppSpacing.buttonPadding,
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.buttonRadius,
@@ -100,6 +101,7 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: palette.textPrimary,
+          minimumSize: const Size(0, 48),
           padding: AppSpacing.buttonPadding,
           side: BorderSide(color: palette.border),
           shape: const RoundedRectangleBorder(
@@ -162,6 +164,42 @@ abstract final class AppTheme {
         side: BorderSide(color: palette.border),
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.chipRadius),
         labelStyle: AppTextStyles.filterChip.copyWith(color: palette.textPrimary),
+      ),
+
+      // BottomSheet & Dialog & SnackBar Stilleri (Soft Glass uyumlu)
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetRadius),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: palette.surfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.rounded,
+          side: BorderSide(color: palette.border),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: palette.isDark ? palette.surfaceElevated : palette.textPrimary,
+        contentTextStyle: TextStyle(
+          fontFamily: AppTextStyles.fontFamily,
+          color: palette.isDark ? palette.textPrimary : Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+        },
       ),
 
       // Tipografi

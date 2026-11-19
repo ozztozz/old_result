@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
+import '../../core/components/section_header.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
@@ -11,6 +14,7 @@ import '../../data/models/live_meet.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../clubs/relay_simulator_screen.dart';
+import '../live/live_meet_detail_screen.dart';
 import '../meets/meet_detail_screen.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../rankings/rankings_screen.dart';
@@ -97,166 +101,225 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'TÜRKİYE YÜZME FEDERASYONU',
-              style: AppTextStyles.appTitle.copyWith(color: palette.textPrimary),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Güncel & Canlı Müsabakalar',
-              style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
-            ),
-          ],
-        ),
-        actions: [
-          if (kDebugMode)
-            IconButton(
-              icon: const Icon(Icons.design_services_outlined),
-              onPressed: _openGallery,
-              tooltip: 'SwimDesign Galerisi',
-            ),
-          IconButton(
-            icon: Icon(Icons.palette_outlined, color: palette.primary),
-            onPressed: () => ThemePickerSheet.show(context),
-            tooltip: 'Tema Seç',
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _openSearchModal,
-            tooltip: 'Sporcu / Kulüp Ara',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null && _recentMeets.isEmpty && _liveMeets.isEmpty
-              ? Center(
-                  child: EmptyStateWidget(
-                    title: 'Veriler Yüklenemedi',
-                    message: _errorMessage!,
-                    icon: Icons.cloud_off_rounded,
-                    actionText: 'Tekrar Dene',
-                    onAction: _loadData,
-                  ),
-                )
-              : RefreshIndicator(
-              onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Hızlı Arama Barı
-                  InkWell(
-                    onTap: _openSearchModal,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Theme.of(context).colorScheme.outline),
-                      ),
-                      child: Row(
+    return AmbientBackground(
+      artStyle: AmbientArtStyle.orbitalArcs,
+      artHeight: 270,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // 1. Editoryal Üst Başlık
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.search, color: Theme.of(context).textTheme.bodySmall!.color),
-                          const SizedBox(width: 12),
                           Text(
-                            'Sporcu, kulüp veya müsabaka ara...',
+                            'TÜRKİYE YÜZME FEDERASYONU',
                             style: TextStyle(
-                              color: Theme.of(context).textTheme.bodySmall!.color,
-                              fontSize: 14,
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.2,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Keşfet & Sonuçlar',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.4,
+                              height: 1.15,
+                              color: palette.textPrimary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Hızlı Araçlar (Bayrak Simülatörü & Top 25 Sıralamalar)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildToolCard(
-                          palette,
-                          icon: Icons.groups_rounded,
-                          title: 'Bayrak Simülatörü',
-                          subtitle: 'En hızlı 4x50 / 4x100',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => RelaySimulatorScreen(repository: widget.repository),
-                              ),
-                            );
-                          },
-                        ),
+                    if (kDebugMode) ...[
+                      GlassCircleButton(
+                        icon: Icons.design_services_outlined,
+                        tooltip: 'SwimDesign Galerisi',
+                        onTap: _openGallery,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _buildToolCard(
-                          palette,
-                          icon: Icons.leaderboard_rounded,
-                          title: 'Top 25 Sıralama',
-                          subtitle: 'Branş & il en iyileri',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => RankingsScreen(repository: widget.repository),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                      const SizedBox(width: 8),
                     ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Aktif Canlı Yarış Varsa Canlı Banner
-                  if (_liveMeets.isNotEmpty) ...[
-                    _buildLiveBanner(_liveMeets.first, palette),
-                    const SizedBox(height: 20),
+                    GlassCircleButton(
+                      icon: Icons.palette_outlined,
+                      iconColor: palette.primary,
+                      tooltip: 'Tema Seç',
+                      onTap: () => ThemePickerSheet.show(context),
+                    ),
+                    const SizedBox(width: 8),
+                    GlassCircleButton(
+                      icon: Icons.search_rounded,
+                      tooltip: 'Sporcu / Kulüp Ara',
+                      onTap: _openSearchModal,
+                    ),
                   ],
-
-                  // Favori Sporcu & Kulüp Canlı Özet Akışı
-                  if (_highlights.isNotEmpty) ...[
-                    _buildHighlightsSection(palette),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // Güncel Müsabakalar Başlığı
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Güncel Müsabakalar',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '${_recentMeets.length} Müsabaka',
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall!.color,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Müsabaka Kartları Listesi
-                  ..._recentMeets.take(8).map((meet) => _buildMeetCard(meet)),
-                ],
+                ),
               ),
-            ),
+
+              // 2. İçerik
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: palette.primary,
+                        ),
+                      )
+                    : _errorMessage != null &&
+                            _recentMeets.isEmpty &&
+                            _liveMeets.isEmpty
+                        ? Center(
+                            child: EmptyStateWidget(
+                              title: 'Veriler Yüklenemedi',
+                              message: _errorMessage!,
+                              icon: Icons.cloud_off_outlined,
+                              actionText: 'Tekrar Dene',
+                              onAction: _loadData,
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: palette.primary,
+                            onRefresh: _loadData,
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(20, 6, 20, 112),
+                              children: [
+                                // Hızlı Arama Çubuğu (Soft Glass yüzey)
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _openSearchModal,
+                                    borderRadius: AppRadius.inputRadius,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 13,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: palette.surfaceGlassStrong,
+                                        borderRadius: AppRadius.inputRadius,
+                                        border: Border.all(
+                                          color: palette.isDark
+                                              ? palette.border
+                                              : palette.glassBorder,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: palette.softShadow,
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                            spreadRadius: -4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.search_rounded,
+                                            size: 19,
+                                            color: palette.textSecondary,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            'Sporcu, kulüp veya müsabaka ara...',
+                                            style: TextStyle(
+                                              fontFamily: AppTextStyles.fontFamily,
+                                              color: palette.textMuted,
+                                              fontSize: 13.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Aktif Canlı Yarış Varsa Soft Glass Hero Banner
+                                if (_liveMeets.isNotEmpty) ...[
+                                  _buildLiveBanner(_liveMeets.first, palette),
+                                  const SizedBox(height: 18),
+                                ],
+
+                                // Hızlı Araçlar (Bayrak Simülatörü & Top 25 Sıralamalar)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildToolCard(
+                                        palette,
+                                        icon: Icons.groups_outlined,
+                                        title: 'Bayrak Simülatörü',
+                                        subtitle: 'En hızlı 4x50 / 4x100',
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => RelaySimulatorScreen(
+                                                repository: widget.repository,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildToolCard(
+                                        palette,
+                                        icon: Icons.leaderboard_outlined,
+                                        title: 'Top 25 Sıralama',
+                                        subtitle: 'Branş & il en iyileri',
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => RankingsScreen(
+                                                repository: widget.repository,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 22),
+
+                                // Favori Sporcu & Kulüp Canlı Özet Akışı
+                                if (_highlights.isNotEmpty) ...[
+                                  _buildHighlightsSection(palette),
+                                  const SizedBox(height: 22),
+                                ],
+
+                                // Güncel Müsabakalar Başlığı
+                                SectionHeader(
+                                  title: 'Güncel Müsabakalar',
+                                  trailingText: '${_recentMeets.length} Müsabaka',
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Müsabaka Kartları Listesi
+                                ..._recentMeets.take(8).map((meet) => _buildMeetCard(meet)),
+                              ],
+                            ),
+                          ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -267,55 +330,65 @@ class _HomeScreenState extends State<HomeScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: palette.surface,
-      borderRadius: AppRadius.cardRadius,
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surface,
         borderRadius: AppRadius.cardRadius,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: palette.border),
+        border: Border.all(color: palette.border),
+        boxShadow: [
+          BoxShadow(
+            color: palette.softShadow,
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+            spreadRadius: -4,
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: palette.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: palette.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 19, color: palette.primary),
                 ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 18, color: palette.primary),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: palette.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 10.5, color: palette.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 11,
+                    color: palette.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -433,30 +506,42 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLiveBanner(LiveMeetSummary live, AppColorPalette palette) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: palette.statusLive, width: 1.5),
-      ),
+    return SoftGlassPanel(
+      borderRadius: const BorderRadius.all(Radius.circular(24)),
+      padding: const EdgeInsets.all(18),
+      artStyle: AmbientArtStyle.flowLines,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LiveMeetDetailScreen(
+              live: live,
+              repository: widget.repository,
+            ),
+          ),
+        );
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: palette.statusLiveBg,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.full,
+                  border: Border.all(
+                    color: palette.statusLive.withValues(alpha: 0.22),
+                    width: 0.8,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 8,
-                      height: 8,
+                      width: 6,
+                      height: 6,
                       decoration: BoxDecoration(
                         color: palette.statusLive,
                         shape: BoxShape.circle,
@@ -466,9 +551,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'CANLI YARIŞ',
                       style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
                         color: palette.statusLive,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10.5,
+                        letterSpacing: 0.7,
                       ),
                     ),
                   ],
@@ -478,22 +565,56 @@ class _HomeScreenState extends State<HomeScreen> {
               if (live.city.isNotEmpty)
                 Text(
                   live.city,
-                  style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12),
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    color: palette.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             live.name,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 16.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
+              color: palette.textPrimary,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Start: ${live.startListProgress.processed}/${live.startListProgress.total} · Sonuç: ${live.resultListProgress.processed}/${live.resultListProgress.total}',
-            style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Start ${live.startListProgress.processed}/${live.startListProgress.total}  ·  Sonuç ${live.resultListProgress.processed}/${live.resultListProgress.total}',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    color: palette.textSecondary,
+                    fontSize: 12,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              Text(
+                'Aç',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  color: palette.primary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 11,
+                color: palette.primary,
+              ),
+            ],
           ),
         ],
       ),
@@ -503,89 +624,149 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMeetCard(MeetSummary meet) {
     final is25m = meet.course == 'SC';
     final palette = context.palette;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final courseColor = is25m ? palette.secondary : palette.primary;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => MeetDetailScreen(
-                meetId: meet.id,
-                meetTitle: meet.name,
-                repository: widget.repository,
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: palette.border),
+        boxShadow: [
+          BoxShadow(
+            color: palette.softShadow,
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MeetDetailScreen(
+                  meetId: meet.id,
+                  meetTitle: meet.name,
+                  repository: widget.repository,
+                ),
               ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      meet.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: is25m ? palette.secondary.withValues(alpha: 0.12) : primaryColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: is25m ? palette.secondary.withValues(alpha: 0.4) : primaryColor.withValues(alpha: 0.4),
+            );
+          },
+          borderRadius: AppRadius.cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        meet.name,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15.5,
+                          letterSpacing: -0.2,
+                          color: palette.textPrimary,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      is25m ? '25m (Kısa)' : '50m (Uzun)',
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: courseColor.withValues(alpha: 0.12),
+                        borderRadius: AppRadius.full,
+                        border: Border.all(
+                          color: courseColor.withValues(alpha: 0.25),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Text(
+                        is25m ? '25m' : '50m',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          color: courseColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (meet.city.isNotEmpty) ...[
+                      Icon(Icons.location_on_outlined, size: 13.5, color: palette.textMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        meet.city,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          color: palette.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    if (meet.startDate.isNotEmpty) ...[
+                      Icon(Icons.calendar_today_outlined, size: 13, color: palette.textMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        meet.startDate,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          color: palette.textSecondary,
+                          fontSize: 12,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Divider(height: 1, thickness: 1, color: palette.divider),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      '${meet.totalRaces} Yarış',
                       style: TextStyle(
-                        color: is25m ? palette.secondary : primaryColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  if (meet.city.isNotEmpty) ...[
-                    Icon(Icons.location_on_outlined, size: 14, color: Theme.of(context).textTheme.bodySmall!.color),
-                    const SizedBox(width: 4),
-                    Text(meet.city, style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12)),
-                    const SizedBox(width: 12),
+                    Text('  ·  ', style: TextStyle(color: palette.textMuted)),
+                    Text(
+                      '${meet.totalAthletes} Sporcu',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: palette.textMuted,
+                    ),
                   ],
-                  if (meet.startDate.isNotEmpty) ...[
-                    Icon(Icons.calendar_today_outlined, size: 14, color: Theme.of(context).textTheme.bodySmall!.color),
-                    const SizedBox(width: 4),
-                    Text(meet.startDate, style: TextStyle(color: Theme.of(context).textTheme.bodySmall!.color, fontSize: 12)),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    '${meet.totalRaces} Yarış',
-                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600, fontSize: 12),
-                  ),
-                  const Text(' · ', style: TextStyle(color: Colors.grey)),
-                  Text(
-                    '${meet.totalAthletes} Sporcu',
-                    style: TextStyle(color: palette.statusSuccess, fontWeight: FontWeight.w600, fontSize: 12),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

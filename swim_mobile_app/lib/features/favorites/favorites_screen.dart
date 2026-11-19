@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/athlete.dart';
@@ -7,7 +9,7 @@ import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../athletes/athlete_profile_screen.dart';
 
-/// 5. Ekran: Favorilerim & Hızlı Takip (Mobil Özel)
+/// 5. Ekran: Favorilerim & Hızlı Takip (Soft Glass + Ambient Glass)
 class FavoritesScreen extends StatefulWidget {
   final SwimRepository repository;
 
@@ -81,209 +83,324 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'TAKİP ETTİĞİM SPORCULAR',
-              style: AppTextStyles.appTitle.copyWith(color: palette.textPrimary),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${_favoritesData.length} Favori Sporcu',
-              style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.palette_outlined, color: palette.primary, size: 21),
-            tooltip: 'Tema Seç',
-            onPressed: () => ThemePickerSheet.show(context),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: palette.primary))
-          : _errorMessage != null
-              ? Center(
-                  child: EmptyStateWidget(
-                    title: 'Bağlantı Hatası',
-                    message: _errorMessage!,
-                    icon: Icons.error_outline_rounded,
-                    actionText: 'Tekrar Dene',
-                    onAction: _loadFavorites,
-                  ),
-                )
-              : _favoritesData.isEmpty
-                  ? Center(
+    return AmbientBackground(
+      artStyle: AmbientArtStyle.contourWaves,
+      artHeight: 240,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // 1. Editoryal Üst Başlık
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+                child: Row(
+                  children: [
+                    Expanded(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.star_border,
-                              size: 64, color: palette.textMuted),
-                          const SizedBox(height: 16),
                           Text(
-                            'Henüz favori sporcu eklemediniz.',
+                            'HIZLI TAKİP',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.2,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Favori Sporcular',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.4,
+                              height: 1.15,
                               color: palette.textPrimary,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                    if (_favoritesData.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.surfaceGlassStrong,
+                          borderRadius: AppRadius.full,
+                          border: Border.all(
+                            color: palette.isDark
+                                ? palette.border
+                                : palette.glassBorder,
+                          ),
+                        ),
+                        child: Text(
+                          '${_favoritesData.length} Sporcu',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: palette.textSecondary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    GlassCircleButton(
+                      icon: Icons.palette_outlined,
+                      iconColor: palette.primary,
+                      tooltip: 'Tema Seç',
+                      onTap: () => ThemePickerSheet.show(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 2. İçerik
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: palette.primary,
+                        ),
+                      )
+                    : _errorMessage != null
+                        ? Center(
+                            child: EmptyStateWidget(
+                              title: 'Bağlantı Hatası',
+                              message: _errorMessage!,
+                              icon: Icons.error_outline_rounded,
+                              actionText: 'Tekrar Dene',
+                              onAction: _loadFavorites,
+                            ),
+                          )
+                        : _favoritesData.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.only(bottom: 72),
+                                child: EmptyStateWidget(
+                                  title: 'Henüz favori sporcu eklemediniz',
+                                  message:
+                                      'Sporcu profilindeki yıldız simgesine dokunarak takip etmek istediğiniz sporcuları buraya ekleyebilirsiniz.',
+                                  icon: Icons.star_outline_rounded,
+                                ),
+                              )
+                            : RefreshIndicator(
+                                color: palette.primary,
+                                onRefresh: _loadFavorites,
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    8,
+                                    20,
+                                    112,
+                                  ),
+                                  itemCount: _favoritesData.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildFavoriteCard(
+                                      context,
+                                      palette,
+                                      _favoritesData[index],
+                                    );
+                                  },
+                                ),
+                              ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFavoriteCard(
+    BuildContext context,
+    AppColorPalette palette,
+    AthleteSummaryItem fav,
+  ) {
+    final latest = fav.latestRace;
+    final topPerf = fav.topPerformance;
+    final initials = fav.name
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0])
+        .take(2)
+        .join()
+        .toUpperCase();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: palette.border),
+        boxShadow: [
+          BoxShadow(
+            color: palette.softShadow,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AthleteProfileScreen(
+                  athleteId: fav.id,
+                  athleteName: fav.name,
+                  repository: widget.repository,
+                ),
+              ),
+            );
+          },
+          borderRadius: AppRadius.cardRadius,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: palette.primaryContainer,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: palette.primary.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        initials.isEmpty ? 'SP' : initials,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: palette.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            'Sporcu profilindeki yıldız simgesine dokunarak\nçocuğunuzu veya öğrencilerinizi buraya ekleyebilirsiniz.',
+                            fav.name,
                             style: TextStyle(
-                                color: palette.textSecondary, fontSize: 13),
-                            textAlign: TextAlign.center,
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15.5,
+                              color: palette.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${fav.birthYear ?? "-"}  ·  ${fav.clubName}',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              color: palette.textSecondary,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadFavorites,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _favoritesData.length,
-                        itemBuilder: (context, index) {
-                          final fav = _favoritesData[index];
-                          final latest = fav.latestRace;
-                          final topPerf = fav.topPerformance;
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => AthleteProfileScreen(
-                                      athleteId: fav.id,
-                                      athleteName: fav.name,
-                                      repository: widget.repository,
-                                    ),
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(16),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          child: const Icon(Icons.person,
-                                              color: Colors.white),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                fav.name,
-                                                style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 15),
-                                              ),
-                                              Text(
-                                                '${fav.birthYear ?? "-"} · ${fav.clubName}',
-                                                style: TextStyle(
-                                                    color: palette.textSecondary,
-                                                    fontSize: 12),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: Icon(Icons.star,
-                                              color: palette.gold, size: 22),
-                                          tooltip: 'Favorilerden çıkar',
-                                          onPressed: () =>
-                                              FavoriteAthletesService.instance
-                                                  .removeFavorite(fav.id),
-                                        ),
-                                        Icon(Icons.chevron_right,
-                                            color: palette.textMuted),
-                                      ],
-                                    ),
-                                    const Divider(height: 24),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Son Yarışı',
-                                                style: TextStyle(
-                                                    color: palette.textSecondary,
-                                                    fontSize: 11),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                latest != null
-                                                    ? '${latest.distance}m ${latest.stroke} (${latest.time})'
-                                                    : '-',
-                                                style: const TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                        FontWeight.w600),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                'En Yüksek FINA',
-                                                style: TextStyle(
-                                                    color: palette.textSecondary,
-                                                    fontSize: 11),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                topPerf?.points != null
-                                                    ? '${topPerf!.points} Puan'
-                                                    : '-',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: palette.primary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.star_rounded, color: palette.gold, size: 22),
+                      tooltip: 'Favorilerden çıkar',
+                      onPressed: () =>
+                          FavoriteAthletesService.instance.removeFavorite(fav.id),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: palette.textMuted),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: palette.divider),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Son Yarışı',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              color: palette.textSecondary,
+                              fontSize: 11,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            latest != null
+                                ? '${latest.distance}m ${latest.stroke} · ${latest.time}'
+                                : '-',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textPrimary,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'En Yüksek FINA',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              color: palette.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            topPerf?.points != null
+                                ? '${topPerf!.points} Puan'
+                                : '-',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: palette.primary,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

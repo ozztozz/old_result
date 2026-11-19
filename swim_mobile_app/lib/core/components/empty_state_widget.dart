@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/tokens/tokens.dart';
+import 'ambient_canvas.dart';
 import 'app_button.dart';
 
 /// Katman 3: Atomik UI Bileşeni — EmptyStateWidget
@@ -29,17 +30,42 @@ class EmptyStateWidget extends StatelessWidget {
     final palette = context.palette;
 
     final iconWidget = icon != null
-        ? Container(
-            width: compact ? 44.0 : 64.0,
-            height: compact ? 44.0 : 64.0,
-            decoration: BoxDecoration(
-              color: palette.surfaceSecondary,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: compact ? 22.0 : 32.0,
-              color: palette.textMuted,
+        ? SizedBox(
+            width: compact ? 64.0 : 108.0,
+            height: compact ? 64.0 : 108.0,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Positioned.fill(
+                  child: AmbientVectorArt(
+                    style: AmbientArtStyle.emptyOrbit,
+                    opacity: 1.15,
+                  ),
+                ),
+                Container(
+                  width: compact ? 44.0 : 58.0,
+                  height: compact ? 44.0 : 58.0,
+                  decoration: BoxDecoration(
+                    color: palette.surfaceGlassStrong,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: palette.isDark ? palette.border : palette.glassBorder,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: palette.softShadow,
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    icon,
+                    size: compact ? 20.0 : 26.0,
+                    color: palette.primary,
+                  ),
+                ),
+              ],
             ),
           )
         : null;

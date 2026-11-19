@@ -559,6 +559,156 @@ class FinalNightGoldPalette implements AppColorPalette {
   bool get isDark => true;
 }
 
+/// Cool Sophisticated — Açık Tema (Soft Glass + Ambient Glass)
+/// Primary family: Ice #DCE4E8, Mist #AABBC6, Steel #657D91, Deep #273746
+class CoolSophisticatedLightPalette implements AppColorPalette {
+  const CoolSophisticatedLightPalette();
+
+  @override
+  Color get background => const Color(0xFFF1F4F6);
+
+  @override
+  Color get surface => const Color(0xFFFFFFFF);
+
+  @override
+  Color get surfaceSecondary => const Color(0xFFEDF2F5);
+
+  @override
+  Color get surfaceElevated => const Color(0xFFFFFFFF);
+
+  @override
+  Color get textPrimary => const Color(0xFF273746);
+
+  @override
+  Color get textSecondary => const Color(0xFF71808C);
+
+  @override
+  Color get textMuted => const Color(0xFF8E9DA8);
+
+  @override
+  Color get primary => const Color(0xFF657D91);
+
+  @override
+  Color get primaryContainer => const Color(0x1F657D91);
+
+  @override
+  Color get secondary => const Color(0xFF4A667B);
+
+  @override
+  Color get border => const Color(0xFFD8E1E6);
+
+  @override
+  Color get divider => const Color(0xFFE3EAEF);
+
+  @override
+  Color get statusSuccess => const Color(0xFF2E7D64);
+
+  @override
+  Color get statusSuccessBg => const Color(0x172E7D64);
+
+  @override
+  Color get statusWarning => const Color(0xFFB3742B);
+
+  @override
+  Color get statusWarningBg => const Color(0x1AB3742B);
+
+  @override
+  Color get statusDanger => const Color(0xFFB94A53);
+
+  @override
+  Color get statusDangerBg => const Color(0x17B94A53);
+
+  @override
+  Color get statusLive => const Color(0xFFC24B57);
+
+  @override
+  Color get statusLiveBg => const Color(0x18C24B57);
+
+  @override
+  Color get gold => const Color(0xFFA57B36);
+
+  @override
+  Color get goldBg => const Color(0x18A57B36);
+
+  @override
+  bool get isDark => false;
+}
+
+/// Cool Sophisticated — Koyu Tema (Soft Glass + Ambient Glass)
+/// Deep atmospheric slate surfaces with Ice/Mist accents & luminous hairlines.
+class CoolSophisticatedDarkPalette implements AppColorPalette {
+  const CoolSophisticatedDarkPalette();
+
+  @override
+  Color get background => const Color(0xFF17232D);
+
+  @override
+  Color get surface => const Color(0xFF202F3B);
+
+  @override
+  Color get surfaceSecondary => const Color(0xFF273746);
+
+  @override
+  Color get surfaceElevated => const Color(0xFF2B3D4E);
+
+  @override
+  Color get textPrimary => const Color(0xFFE7EDF1);
+
+  @override
+  Color get textSecondary => const Color(0xFFAABBC6);
+
+  @override
+  Color get textMuted => const Color(0xFF7B90A0);
+
+  @override
+  Color get primary => const Color(0xFFAABBC6);
+
+  @override
+  Color get primaryContainer => const Color(0x26AABBC6);
+
+  @override
+  Color get secondary => const Color(0xFF7FA0B5);
+
+  @override
+  Color get border => const Color(0x1FE7EDF1);
+
+  @override
+  Color get divider => const Color(0x16E7EDF1);
+
+  @override
+  Color get statusSuccess => const Color(0xFF6BC2A4);
+
+  @override
+  Color get statusSuccessBg => const Color(0x246BC2A4);
+
+  @override
+  Color get statusWarning => const Color(0xFFE0AE62);
+
+  @override
+  Color get statusWarningBg => const Color(0x24E0AE62);
+
+  @override
+  Color get statusDanger => const Color(0xFFE07A82);
+
+  @override
+  Color get statusDangerBg => const Color(0x24E07A82);
+
+  @override
+  Color get statusLive => const Color(0xFFE5737D);
+
+  @override
+  Color get statusLiveBg => const Color(0x24E5737D);
+
+  @override
+  Color get gold => const Color(0xFFDFBD73);
+
+  @override
+  Color get goldBg => const Color(0x24DFBD73);
+
+  @override
+  bool get isDark => true;
+}
+
 /// Material ThemeData ile entegre olabilen ThemeExtension
 class AppPaletteExtension extends ThemeExtension<AppPaletteExtension> {
   final AppColorPalette palette;
@@ -581,11 +731,54 @@ class AppPaletteExtension extends ThemeExtension<AppPaletteExtension> {
   }
 }
 
+/// Soft Glass + Ambient Glass anlamsal yüzey ve atmosfer belirteçleri
+extension AppColorPaletteGlass on AppColorPalette {
+  /// Yarı saydam ana cam yüzey (Hero kartlar, öne çıkan paneller)
+  Color get surfaceGlass => isDark
+      ? surface.withValues(alpha: 0.72)
+      : surface.withValues(alpha: 0.74);
+
+  /// Daha yoğun cam yüzey (Navigasyon çubuğu, Modal / BottomSheet)
+  Color get surfaceGlassStrong => isDark
+      ? surface.withValues(alpha: 0.86)
+      : surface.withValues(alpha: 0.86);
+
+  /// İnce, parlak cam kenarlığı
+  Color get glassBorder => isDark
+      ? const Color(0x2BE7EDF1)
+      : Colors.white.withValues(alpha: 0.88);
+
+  /// Cam panellerin üst-sol yumuşak ışık yansıması
+  Color get glassSheen => isDark
+      ? const Color(0x16E7EDF1)
+      : Colors.white.withValues(alpha: 0.55);
+
+  /// Arka plan atmosferik ışık alanı 1 (Ice / Steel)
+  Color get ambientPrimary => isDark
+      ? primary.withValues(alpha: 0.14)
+      : const Color(0x66DCE4E8);
+
+  /// Arka plan atmosferik ışık alanı 2 (Mist / Secondary)
+  Color get ambientSecondary => isDark
+      ? secondary.withValues(alpha: 0.11)
+      : primary.withValues(alpha: 0.11);
+
+  /// Soyut vektör çizim (Flow Lines / Orbital Arcs / Contour) çizgi rengi
+  Color get vectorStroke => isDark
+      ? textPrimary.withValues(alpha: 0.11)
+      : primary.withValues(alpha: 0.14);
+
+  /// Yumuşak, zarif derinlik gölgesi
+  Color get softShadow => isDark
+      ? Colors.black.withValues(alpha: 0.28)
+      : const Color(0xFF273746).withValues(alpha: 0.06);
+}
+
 /// Context üzerinden palete hızlı ve güvenli erişim için Extension
 extension BuildContextPalette on BuildContext {
   AppColorPalette get palette {
     return Theme.of(this).extension<AppPaletteExtension>()?.palette ??
-        const LightColorPalette();
+        const CoolSophisticatedLightPalette();
   }
 }
 

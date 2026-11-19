@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/services/theme_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 
-/// Uygulama içi canlı tema seçici alt penceresi (Modal Bottom Sheet).
+/// Soft Glass canlı tema seçici alt penceresi (Modal Bottom Sheet).
 /// Kullanıcı her dokunuşta temayı anlık olarak önizler ve seçim kalıcı kaydedilir.
 class ThemePickerSheet extends StatelessWidget {
   const ThemePickerSheet({super.key});
@@ -13,6 +14,7 @@ class ThemePickerSheet extends StatelessWidget {
       isScrollControlled: true,
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.36),
       builder: (_) => const ThemePickerSheet(),
     );
   }
@@ -26,119 +28,144 @@ class ThemePickerSheet extends StatelessWidget {
         final activePreset = ThemeService.instance.preset;
         final bottomInset = MediaQuery.of(context).padding.bottom;
 
-        return Container(
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(color: palette.border, width: 1),
-            ),
-          ),
-          padding: EdgeInsets.fromLTRB(18, 10, 18, 18 + bottomInset),
-          child: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Tutamaç çizgisi
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: palette.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+        return ClipRRect(
+          borderRadius: AppRadius.sheetRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: AppRadius.sheetRadius,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.alphaBlend(palette.glassSheen, palette.surfaceGlassStrong),
+                    palette.surfaceGlassStrong,
+                  ],
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: palette.isDark ? palette.border : palette.glassBorder,
+                    width: 1.0,
                   ),
-                  const SizedBox(height: 16),
+                ),
+              ),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset),
+              child: SafeArea(
+                top: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.78,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tutamaç çizgisi
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: palette.textMuted.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
 
-                  // Başlık satırı
-                  Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: palette.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.palette_rounded,
-                          color: palette.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        // Başlık satırı
+                        Row(
                           children: [
-                            Text(
-                              'Görünüm ve Tema',
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: palette.textPrimary,
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: palette.primaryContainer,
+                                borderRadius: AppRadius.medium,
+                                border: Border.all(
+                                  color: palette.primary.withValues(alpha: 0.22),
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.palette_outlined,
+                                color: palette.primary,
+                                size: 20,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Renk paletini anında değiştir, Klasik TYF her zaman hazır.',
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 12,
-                                color: palette.textSecondary,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Görünüm ve Tema',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: -0.2,
+                                      color: palette.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Cool Glass (Açık / Koyu) ve alternatif paletler',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 12.5,
+                                      color: palette.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: Icon(
+                                Icons.close_rounded,
+                                color: palette.textSecondary,
+                                size: 20,
+                              ),
+                              tooltip: 'Kapat',
                             ),
                           ],
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: palette.textSecondary,
-                          size: 20,
-                        ),
-                        tooltip: 'Kapat',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
+                        const SizedBox(height: 18),
 
-                  // 2 Sütunlu Tema Kartları Izgarası
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossAxisCount = constraints.maxWidth >= 520 ? 3 : 2;
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: AppThemePreset.values.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.08,
+                        // Tema Kartları Izgarası
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final crossAxisCount = constraints.maxWidth >= 520 ? 3 : 2;
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: AppThemePreset.values.length,
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 1.08,
+                              ),
+                              itemBuilder: (context, index) {
+                                final preset = AppThemePreset.values[index];
+                                final isSelected = preset == activePreset;
+                                return _ThemePresetCard(
+                                  preset: preset,
+                                  isSelected: isSelected,
+                                  palette: palette,
+                                  onTap: () => ThemeService.instance.setPreset(preset),
+                                );
+                              },
+                            );
+                          },
                         ),
-                        itemBuilder: (context, index) {
-                          final preset = AppThemePreset.values[index];
-                          final isSelected = preset == activePreset;
-                          return _ThemePresetCard(
-                            preset: preset,
-                            isSelected: isSelected,
-                            palette: palette,
-                            onTap: () => ThemeService.instance.setPreset(preset),
-                          );
-                        },
-                      );
-                    },
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -169,19 +196,21 @@ class _ThemePresetCard extends StatelessWidget {
         : Colors.white;
 
     return Material(
-      color: isSelected ? palette.primaryContainer : palette.background,
-      borderRadius: BorderRadius.circular(16),
+      color: isSelected
+          ? palette.primaryContainer
+          : palette.surface.withValues(alpha: palette.isDark ? 0.55 : 0.78),
+      borderRadius: AppRadius.cardRadius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.cardRadius,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: AppRadius.cardRadius,
             border: Border.all(
               color: borderColor,
-              width: isSelected ? 2.0 : 1.0,
+              width: isSelected ? 1.8 : 1.0,
             ),
           ),
           child: Column(
@@ -194,17 +223,16 @@ class _ThemePresetCard extends StatelessWidget {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: preset.previewBackground,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: preset.isDarkOnly
                           ? Colors.white.withValues(alpha: 0.10)
-                          : Colors.black.withValues(alpha: 0.08),
+                          : Colors.black.withValues(alpha: 0.06),
                     ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Mini üst bar & seçili ikonu
                       Row(
                         children: [
                           Container(
@@ -250,7 +278,6 @@ class _ThemePresetCard extends StatelessWidget {
                         ],
                       ),
                       const Spacer(),
-                      // Mini kart önizlemesi
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
@@ -258,8 +285,8 @@ class _ThemePresetCard extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: preset.previewSurface,
-                          borderRadius: BorderRadius.circular(7),
+                          color: preset.previewSurface.withValues(alpha: 0.88),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: preset.previewPrimary.withValues(alpha: 0.25),
                             width: 0.8,
@@ -283,11 +310,11 @@ class _ThemePresetCard extends StatelessWidget {
                                 children: [
                                   Container(
                                     height: 4,
-                                    width: 48,
+                                    width: 46,
                                     decoration: BoxDecoration(
                                       color: preset.isDarkOnly
                                           ? Colors.white.withValues(alpha: 0.72)
-                                          : Colors.black.withValues(alpha: 0.65),
+                                          : Colors.black.withValues(alpha: 0.60),
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
@@ -320,8 +347,8 @@ class _ThemePresetCard extends StatelessWidget {
                       preset.title,
                       style: TextStyle(
                         fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
                         color: palette.textPrimary,
                       ),
                       maxLines: 1,

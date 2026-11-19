@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/components/ambient_canvas.dart';
 import '../../core/components/app_card.dart';
 import '../../core/components/empty_state_widget.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/repositories/swim_repository.dart';
@@ -93,9 +95,12 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      body: SafeArea(
+    return AmbientBackground(
+      artStyle: AmbientArtStyle.orbitalArcs,
+      artHeight: 260,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
         child: _isLoading
             ? Center(
                 child: CircularProgressIndicator(
@@ -195,6 +200,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                       ],
                     ),
                   ),
+        ),
       ),
     );
   }
@@ -252,33 +258,11 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     double iconSize = 18,
     Color? iconColor,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: palette.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: palette.border, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: palette.textPrimary.withValues(alpha: 0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: iconColor ?? palette.textPrimary,
-          ),
-        ),
-      ),
+    return GlassCircleButton(
+      icon: icon,
+      iconSize: iconSize,
+      iconColor: iconColor,
+      onTap: onTap,
     );
   }
 
@@ -304,7 +288,10 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     }
     final metaText = metaItems.join(' · ');
 
-    return AppCard(
+    return SoftGlassPanel(
+      borderRadius: const BorderRadius.all(Radius.circular(24)),
+      padding: const EdgeInsets.all(18),
+      artStyle: AmbientArtStyle.orbitalArcs,
       child: Column(
         children: [
           Row(

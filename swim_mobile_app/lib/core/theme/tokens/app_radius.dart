@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 /// Katman 1: Design Tokens — Köşe Yuvarlatma Sabitleri (AppRadius)
 /// Ekranlarda keyfi `BorderRadius.circular(12)` tanımları kesinlikle yasaktır.
 abstract final class AppRadius {
-  // Temel yarıçap değerleri
+  // Temel yarıçap değerleri (4-point design system + Soft Glass)
   static const double none = 0.0;
   static const double xs = 4.0;
   static const double sm = 8.0;
-  static const double md = 12.0;
-  static const double lg = 16.0;
-  static const double xl = 24.0;
+  static const double md = 14.0;
+  static const double lg = 20.0;
+  static const double xl = 26.0;
   static const double pill = 999.0;
 
   // Radius Sabitleri

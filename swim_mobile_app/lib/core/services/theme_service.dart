@@ -3,13 +3,50 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
 /// Uygulama genelinde seçilebilen tema önayarları.
-/// [AppThemePreset.classic] mevcut varsayılan TYF temasını bozmadan korur.
+/// Varsayılan olarak Soft Glass + Ambient Glass (Cool Sophisticated) tasarım dili
+/// hem Açık hem Koyu modda aktif gelir; Klasik TYF ve diğer paletler de seçilebilir.
 enum AppThemePreset {
+  coolGlassSystem(
+    id: 'cool_glass_system',
+    title: 'Cool Glass',
+    subtitle: 'Soft & Ambient Glass · Sistem (Açık / Koyu)',
+    badge: 'Önerilen',
+    isDarkOnly: false,
+    isSystemAdaptive: true,
+    previewBackground: Color(0xFFF1F4F6),
+    previewSurface: Color(0xFFFFFFFF),
+    previewPrimary: Color(0xFF657D91),
+    previewSecondary: Color(0xFFAABBC6),
+  ),
+  coolGlassLight(
+    id: 'cool_glass_light',
+    title: 'Cool Glass Açık',
+    subtitle: 'Ferah Ice & Steel cam yüzeyler',
+    badge: 'Açık',
+    isDarkOnly: false,
+    isSystemAdaptive: false,
+    previewBackground: Color(0xFFF1F4F6),
+    previewSurface: Color(0xFFFFFFFF),
+    previewPrimary: Color(0xFF657D91),
+    previewSecondary: Color(0xFFDCE4E8),
+  ),
+  coolGlassDark(
+    id: 'cool_glass_dark',
+    title: 'Cool Glass Koyu',
+    subtitle: 'Derin slate atmosfer & Mist vurgu',
+    badge: 'Koyu',
+    isDarkOnly: true,
+    isSystemAdaptive: false,
+    previewBackground: Color(0xFF17232D),
+    previewSurface: Color(0xFF202F3B),
+    previewPrimary: Color(0xFFAABBC6),
+    previewSecondary: Color(0xFF657D91),
+  ),
   classic(
     id: 'classic',
     title: 'Klasik TYF',
-    subtitle: 'Mevcut tema · Sistem (Açık / Koyu)',
-    badge: 'Varsayılan',
+    subtitle: 'Geleneksel TYF laciverti · Sistem',
+    badge: 'Klasik',
     isDarkOnly: false,
     isSystemAdaptive: true,
     previewBackground: Color(0xFFF8FAFC),
@@ -41,22 +78,10 @@ enum AppThemePreset {
     previewPrimary: Color(0xFFC8102E),
     previewSecondary: Color(0xFF1E293B),
   ),
-  mediterraneanCoral(
-    id: 'mediterranean_coral',
-    title: 'Akdeniz Mercan',
-    subtitle: 'Sıcak gün batımı mercanı & Ege yeşili',
-    badge: 'Açık',
-    isDarkOnly: false,
-    isSystemAdaptive: false,
-    previewBackground: Color(0xFFFFF9F5),
-    previewSurface: Color(0xFFFFFFFF),
-    previewPrimary: Color(0xFFEA580C),
-    previewSecondary: Color(0xFF0D9488),
-  ),
   nightArena(
     id: 'night_arena',
     title: 'Gece Arenası',
-    subtitle: 'AMOLED koyu zemin & elektrik neon cyan',
+    subtitle: 'AMOLED koyu zemin & neon cyan',
     badge: 'Koyu',
     isDarkOnly: true,
     isSystemAdaptive: false,
@@ -103,23 +128,26 @@ enum AppThemePreset {
   });
 
   static AppThemePreset fromId(String? id) {
-    if (id == null) return AppThemePreset.classic;
+    if (id == null) return AppThemePreset.coolGlassSystem;
     for (final preset in AppThemePreset.values) {
       if (preset.id == id) return preset;
     }
-    return AppThemePreset.classic;
+    return AppThemePreset.coolGlassSystem;
   }
 
   AppColorPalette? get fixedPalette {
     switch (this) {
+      case AppThemePreset.coolGlassSystem:
       case AppThemePreset.classic:
         return null;
+      case AppThemePreset.coolGlassLight:
+        return const CoolSophisticatedLightPalette();
+      case AppThemePreset.coolGlassDark:
+        return const CoolSophisticatedDarkPalette();
       case AppThemePreset.olympicPool:
         return const OlympicPoolPalette();
       case AppThemePreset.nationalTeam:
         return const NationalTeamPalette();
-      case AppThemePreset.mediterraneanCoral:
-        return const MediterraneanCoralPalette();
       case AppThemePreset.nightArena:
         return const NightArenaNeonPalette();
       case AppThemePreset.finalNightGold:
@@ -136,10 +164,10 @@ class ThemeService extends ChangeNotifier {
 
   ThemeService._internal();
 
-  static const String _keyThemePreset = 'selected_theme_preset';
+  static const String _keyThemePreset = 'selected_theme_preset_v2';
 
   SharedPreferences? _prefs;
-  AppThemePreset _preset = AppThemePreset.classic;
+  AppThemePreset _preset = AppThemePreset.coolGlassSystem;
   bool _isInitialized = false;
 
   AppThemePreset get preset => _preset;
@@ -151,6 +179,9 @@ class ThemeService extends ChangeNotifier {
   }
 
   ThemeData get lightTheme {
+    if (_preset == AppThemePreset.coolGlassSystem) {
+      return AppTheme.fromPalette(const CoolSophisticatedLightPalette());
+    }
     final palette = _preset.fixedPalette;
     if (palette != null && !palette.isDark) {
       return AppTheme.fromPalette(palette);
@@ -159,6 +190,9 @@ class ThemeService extends ChangeNotifier {
   }
 
   ThemeData get darkTheme {
+    if (_preset == AppThemePreset.coolGlassSystem) {
+      return AppTheme.fromPalette(const CoolSophisticatedDarkPalette());
+    }
     final palette = _preset.fixedPalette;
     if (palette != null && palette.isDark) {
       return AppTheme.fromPalette(palette);

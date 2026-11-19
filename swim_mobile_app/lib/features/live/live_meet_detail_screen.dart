@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/services/selected_club_service.dart';
@@ -266,10 +267,13 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
         FilterChipItem(label: '🛡️ Takımım ($_myTeamRaceCount)'),
     ];
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: palette.background,
+    return AmbientBackground(
+      artStyle: AmbientArtStyle.contourWaves,
+      artHeight: 240,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
@@ -407,6 +411,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
                 ),
               ),
             ),
+      ),
     );
   }
 
