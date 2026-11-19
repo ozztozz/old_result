@@ -97,7 +97,6 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
 
     return AmbientBackground(
       artStyle: AmbientArtStyle.orbitalArcs,
-      artHeight: 260,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
@@ -289,9 +288,11 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     final metaText = metaItems.join(' · ');
 
     return SoftGlassPanel(
+      tier: GlassTier.hero,
+      ambientGlowBehind: true,
       borderRadius: const BorderRadius.all(Radius.circular(24)),
       padding: const EdgeInsets.all(18),
-      artStyle: AmbientArtStyle.orbitalArcs,
+      artStyle: AmbientArtStyle.heroOrbit,
       child: Column(
         children: [
           Row(

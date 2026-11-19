@@ -103,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return AmbientBackground(
       artStyle: AmbientArtStyle.orbitalArcs,
-      artHeight: 270,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
@@ -196,53 +195,32 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: ListView(
                               padding: const EdgeInsets.fromLTRB(20, 6, 20, 112),
                               children: [
-                                // Hızlı Arama Çubuğu (Soft Glass yüzey)
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: _openSearchModal,
-                                    borderRadius: AppRadius.inputRadius,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 13,
+                                // Hızlı Arama Çubuğu (Frosted Glass yüzey)
+                                SoftGlassPanel(
+                                  tier: GlassTier.subtle,
+                                  borderRadius: BorderRadius.circular(16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 13,
+                                  ),
+                                  onTap: _openSearchModal,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.search_rounded,
+                                        size: 19,
+                                        color: palette.textSecondary,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: palette.surfaceGlassStrong,
-                                        borderRadius: AppRadius.inputRadius,
-                                        border: Border.all(
-                                          color: palette.isDark
-                                              ? palette.border
-                                              : palette.glassBorder,
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Sporcu, kulüp veya müsabaka ara...',
+                                        style: TextStyle(
+                                          fontFamily: AppTextStyles.fontFamily,
+                                          color: palette.textMuted,
+                                          fontSize: 13.5,
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: palette.softShadow,
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4),
-                                            spreadRadius: -4,
-                                          ),
-                                        ],
                                       ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.search_rounded,
-                                            size: 19,
-                                            color: palette.textSecondary,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Text(
-                                            'Sporcu, kulüp veya müsabaka ara...',
-                                            style: TextStyle(
-                                              fontFamily: AppTextStyles.fontFamily,
-                                              color: palette.textMuted,
-                                              fontSize: 13.5,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    ],
                                   ),
                                 ),
                                 const SizedBox(height: 14),
@@ -330,67 +308,52 @@ class _HomeScreenState extends State<HomeScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: palette.border),
-        boxShadow: [
-          BoxShadow(
-            color: palette.softShadow,
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-            spreadRadius: -4,
+    return SoftGlassPanel(
+      tier: GlassTier.card,
+      borderRadius: BorderRadius.circular(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: palette.primaryContainer,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(
+                color: palette.primary.withValues(alpha: 0.18),
+                width: 0.8,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 19, color: palette.primary),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: palette.textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 11,
+              color: palette.textSecondary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppRadius.cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: palette.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(icon, size: 19, color: palette.primary),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: palette.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 11,
-                    color: palette.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -507,9 +470,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLiveBanner(LiveMeetSummary live, AppColorPalette palette) {
     return SoftGlassPanel(
+      tier: GlassTier.hero,
+      ambientGlowBehind: true,
       borderRadius: const BorderRadius.all(Radius.circular(24)),
       padding: const EdgeInsets.all(18),
-      artStyle: AmbientArtStyle.flowLines,
+      artStyle: AmbientArtStyle.heroOrbit,
       onTap: () {
         Navigator.push(
           context,
@@ -626,149 +591,130 @@ class _HomeScreenState extends State<HomeScreen> {
     final palette = context.palette;
     final courseColor = is25m ? palette.secondary : palette.primary;
 
-    return Container(
+    return SoftGlassPanel(
+      tier: GlassTier.card,
+      borderRadius: BorderRadius.circular(20),
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: palette.border),
-        boxShadow: [
-          BoxShadow(
-            color: palette.softShadow,
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-            spreadRadius: -4,
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => MeetDetailScreen(
-                  meetId: meet.id,
-                  meetTitle: meet.name,
-                  repository: widget.repository,
-                ),
-              ),
-            );
-          },
-          borderRadius: AppRadius.cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        meet.name,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15.5,
-                          letterSpacing: -0.2,
-                          color: palette.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: courseColor.withValues(alpha: 0.12),
-                        borderRadius: AppRadius.full,
-                        border: Border.all(
-                          color: courseColor.withValues(alpha: 0.25),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: Text(
-                        is25m ? '25m' : '50m',
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          color: courseColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (meet.city.isNotEmpty) ...[
-                      Icon(Icons.location_on_outlined, size: 13.5, color: palette.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        meet.city,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          color: palette.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    if (meet.startDate.isNotEmpty) ...[
-                      Icon(Icons.calendar_today_outlined, size: 13, color: palette.textMuted),
-                      const SizedBox(width: 4),
-                      Text(
-                        meet.startDate,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          color: palette.textSecondary,
-                          fontSize: 12,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Divider(height: 1, thickness: 1, color: palette.divider),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Text(
-                      '${meet.totalRaces} Yarış',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        color: palette.primary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    Text('  ·  ', style: TextStyle(color: palette.textMuted)),
-                    Text(
-                      '${meet.totalAthletes} Sporcu',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        color: palette.textSecondary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: palette.textMuted,
-                    ),
-                  ],
-                ),
-              ],
+      padding: const EdgeInsets.all(18),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MeetDetailScreen(
+              meetId: meet.id,
+              meetTitle: meet.name,
+              repository: widget.repository,
             ),
           ),
-        ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  meet.name,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15.5,
+                    letterSpacing: -0.2,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: courseColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: courseColor.withValues(alpha: 0.25),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  is25m ? '25m' : '50m',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    color: courseColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (meet.city.isNotEmpty) ...[
+                Icon(Icons.location_on_outlined, size: 13.5, color: palette.textMuted),
+                const SizedBox(width: 4),
+                Text(
+                  meet.city,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    color: palette.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              if (meet.startDate.isNotEmpty) ...[
+                Icon(Icons.calendar_today_outlined, size: 13, color: palette.textMuted),
+                const SizedBox(width: 4),
+                Text(
+                  meet.startDate,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    color: palette.textSecondary,
+                    fontSize: 12,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, thickness: 1, color: palette.divider),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(
+                '${meet.totalRaces} Yarış',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  color: palette.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              Text('  ·  ', style: TextStyle(color: palette.textMuted)),
+              Text(
+                '${meet.totalAthletes} Sporcu',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: palette.textMuted,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

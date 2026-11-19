@@ -47,9 +47,9 @@ class SectionHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: palette.surfaceSecondary,
-              borderRadius: AppRadius.full,
-              border: Border.all(color: palette.border, width: 0.8),
+              color: palette.cardGlassTop.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: palette.glassBorder, width: 0.8),
             ),
             child: Text(
               trailingText!,

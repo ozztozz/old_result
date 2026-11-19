@@ -84,8 +84,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final palette = context.palette;
 
     return AmbientBackground(
-      artStyle: AmbientArtStyle.contourWaves,
-      artHeight: 240,
+      artStyle: AmbientArtStyle.orbitalArcs,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
@@ -236,41 +235,25 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         .join()
         .toUpperCase();
 
-    return Container(
+    return SoftGlassPanel(
+      tier: GlassTier.card,
+      borderRadius: BorderRadius.circular(20),
       margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: palette.border),
-        boxShadow: [
-          BoxShadow(
-            color: palette.softShadow,
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-            spreadRadius: -4,
+      padding: const EdgeInsets.all(18),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AthleteProfileScreen(
+              athleteId: fav.id,
+              athleteName: fav.name,
+              repository: widget.repository,
+            ),
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AthleteProfileScreen(
-                  athleteId: fav.id,
-                  athleteName: fav.name,
-                  repository: widget.repository,
-                ),
-              ),
-            );
-          },
-          borderRadius: AppRadius.cardRadius,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
                 Row(
                   children: [
                     Container(
@@ -398,9 +381,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
+          );
   }
 }

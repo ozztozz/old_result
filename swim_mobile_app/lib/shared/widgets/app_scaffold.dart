@@ -1,9 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 
-/// TYF Yüzme Sonuçları — Soft Glass Ana Kabuk ve Yüzen Navigasyon Çubuğu
-/// design.md: Minimal, yarı saydam cam yüzey, yumuşak aktif durum geçişleri.
+/// TYF Yüzme Sonuçları — Yüzen Soft Glass Navigasyon Kabuğu (DESIGN_REFINEMENT — Section 1E)
+/// Frosted yarı saydam zemin, ince parlak cam kenarlık, kompakt ve rafine aktif gösterge.
 class AppScaffold extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onNavigationChanged;
@@ -29,67 +29,42 @@ class AppScaffold extends StatelessWidget {
         children: screens,
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset > 0 ? bottomInset + 6 : 14),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            boxShadow: [
-              BoxShadow(
-                color: palette.softShadow,
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-                spreadRadius: -4,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(26),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                height: 62,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color.alphaBlend(palette.glassSheen, palette.surfaceGlassStrong),
-                      palette.surfaceGlassStrong,
-                    ],
-                  ),
-                  border: Border.all(
-                    color: palette.isDark ? palette.border : palette.glassBorder,
-                    width: 1.0,
-                  ),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          bottomInset > 0 ? bottomInset + 8 : 14,
+        ),
+        child: SoftGlassPanel(
+          tier: GlassTier.dock,
+          borderRadius: BorderRadius.circular(22),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                _buildNavItem(
+                  context,
+                  0,
+                  'Keşfet',
+                  Icons.grid_view_outlined,
+                  Icons.grid_view_rounded,
                 ),
-                child: Row(
-                  children: [
-                    _buildNavItem(
-                      context,
-                      0,
-                      'Keşfet',
-                      Icons.grid_view_outlined,
-                      Icons.grid_view_rounded,
-                    ),
-                    _buildNavItem(
-                      context,
-                      1,
-                      'Canlı Takip',
-                      Icons.sensors_outlined,
-                      Icons.sensors_rounded,
-                    ),
-                    _buildNavItem(
-                      context,
-                      2,
-                      'Favorilerim',
-                      Icons.star_outline_rounded,
-                      Icons.star_rounded,
-                    ),
-                  ],
+                _buildNavItem(
+                  context,
+                  1,
+                  'Canlı Takip',
+                  Icons.sensors_outlined,
+                  Icons.sensors_rounded,
                 ),
-              ),
+                _buildNavItem(
+                  context,
+                  2,
+                  'Favorilerim',
+                  Icons.star_outline_rounded,
+                  Icons.star_rounded,
+                ),
+              ],
             ),
           ),
         ),
@@ -113,38 +88,67 @@ class AppScaffold extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onNavigationChanged(index),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           child: AnimatedContainer(
             duration: disableMotion
                 ? Duration.zero
                 : const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
-              color: isSelected ? palette.primaryContainer : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+              color: isSelected
+                  ? (palette.isDark
+                      ? palette.primary.withValues(alpha: 0.16)
+                      : Colors.white.withValues(alpha: 0.68))
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(15),
               border: isSelected
                   ? Border.all(
-                      color: palette.primary.withValues(alpha: 0.22),
-                      width: 0.9,
+                      color: palette.isDark
+                          ? palette.primary.withValues(alpha: 0.28)
+                          : palette.glassBorderSubtle.withValues(alpha: 0.55),
+                      width: 0.85,
                     )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: palette.softShadow.withValues(alpha: palette.softShadow.a * 0.55),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                        spreadRadius: -2,
+                      ),
+                    ]
                   : null,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Zarif üst aktif ışık çizgisi
+                AnimatedContainer(
+                  duration: disableMotion
+                      ? Duration.zero
+                      : const Duration(milliseconds: 220),
+                  width: isSelected ? 18 : 0,
+                  height: 2,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? palette.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 Icon(
                   isSelected ? activeIcon : icon,
-                  size: 20,
-                  color: isSelected ? palette.primary : palette.textSecondary,
+                  size: 19,
+                  color: isSelected ? palette.textPrimary : palette.textSecondary,
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   label,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    letterSpacing: 0.1,
+                    letterSpacing: 0.15,
                     color: isSelected ? palette.textPrimary : palette.textSecondary,
                   ),
                 ),

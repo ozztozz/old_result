@@ -3,35 +3,53 @@ import 'package:flutter/material.dart';
 import '../theme/tokens/tokens.dart';
 import 'ambient_canvas.dart';
 
-/// Seçici Soft Glass yüzey bileşeni (design.md — Soft Glass + Ambient Glass).
+/// Katman 2 cam yüzey hiyerarşisi (DESIGN_REFINEMENT — Glassmorphism).
+/// Her kartı aynı şeffaflıkta yapmak yerine önem sırasına göre yüzey derinliği tanımlar.
+enum GlassTier {
+  /// Üst istatistik & öne çıkan vitrin panelleri (en belirgin frosted derinlik & ışık yansıması)
+  hero,
+
+  /// Müsabaka ve içerik kartları (ortamla bütünleşik yarı saydam buzlu cam)
+  card,
+
+  /// Arama çubuğu ve ikincil kontrol yüzeyleri (daha sakin, girintili cam yüzey)
+  subtle,
+
+  /// Yüzen alt navigasyon ve modal yüzeyler (yoğun frosted cam & güçlü blur)
+  dock,
+}
+
+/// Seçici Soft Glass yüzey bileşeni.
 ///
-/// Hero kartlar, özet panelleri, alt navigasyon ve modallar için:
-/// - Kontrollü backdrop blur (isteğe bağlı olarak kapatılabilir)
-/// - Yarı saydam katmanlı yüzey ve hafif üst-sol ışık yansıması
-/// - 1px zarif parlak kenarlık ve yumuşak atmosferik gölge
-/// - Opsiyonel soyut vektör grafik katmanı ([artStyle])
+/// - Gerçek `BackdropFilter` buzlu cam bulanıklığı
+/// - Üst-sol ışık kırılmalı gradyan cam kenarlığı (`_GlassRimPainter`)
+/// - İnce üst iç ışık yansıması (specular highlight)
+/// - Opsiyonel panel arkası ambient ışık alanı (`ambientGlowBehind`)
+/// - Opsiyonel özgün vektör çizim katmanı (`artStyle`)
 class SoftGlassPanel extends StatefulWidget {
   final Widget child;
+  final GlassTier tier;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
   final BorderRadius borderRadius;
   final bool enableBlur;
-  final double blurSigma;
-  final bool strongGlass;
+  final double? blurSigma;
   final AmbientArtStyle artStyle;
+  final bool ambientGlowBehind;
   final Color? borderColor;
   final VoidCallback? onTap;
 
   const SoftGlassPanel({
     super.key,
     required this.child,
+    this.tier = GlassTier.hero,
     this.padding = const EdgeInsets.all(18),
     this.margin = EdgeInsets.zero,
     this.borderRadius = AppRadius.cardRadius,
     this.enableBlur = true,
-    this.blurSigma = 14.0,
-    this.strongGlass = false,
+    this.blurSigma,
     this.artStyle = AmbientArtStyle.none,
+    this.ambientGlowBehind = false,
     this.borderColor,
     this.onTap,
   });
@@ -43,41 +61,144 @@ class SoftGlassPanel extends StatefulWidget {
 class _SoftGlassPanelState extends State<SoftGlassPanel> {
   bool _pressed = false;
 
+  double get _effectiveBlur {
+    if (widget.blurSigma != null) return widget.blurSigma!;
+    switch (widget.tier) {
+      case GlassTier.hero:
+        return 20.0;
+      case GlassTier.card:
+        return 12.0;
+      case GlassTier.subtle:
+        return 10.0;
+      case GlassTier.dock:
+        return 24.0;
+    }
+  }
+
+  List<Color> _surfaceGradient(AppColorPalette palette) {
+    switch (widget.tier) {
+      case GlassTier.hero:
+        return [palette.heroGlassTop, palette.heroGlassBottom];
+      case GlassTier.card:
+        return [palette.cardGlassTop, palette.cardGlassBottom];
+      case GlassTier.subtle:
+        return [
+          palette.surfaceGlass,
+          palette.surfaceGlass.withValues(alpha: palette.surfaceGlass.a * 0.85),
+        ];
+      case GlassTier.dock:
+        return [
+          Color.alphaBlend(palette.glassSheen.withValues(alpha: 0.45), palette.surfaceGlassStrong),
+          palette.surfaceGlassStrong,
+        ];
+    }
+  }
+
+  List<BoxShadow> _shadows(AppColorPalette palette) {
+    switch (widget.tier) {
+      case GlassTier.hero:
+        return [
+          BoxShadow(
+            color: palette.softShadow,
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+            spreadRadius: -6,
+          ),
+          BoxShadow(
+            color: palette.softShadow.withValues(alpha: palette.softShadow.a * 0.45),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ];
+      case GlassTier.card:
+        return [
+          BoxShadow(
+            color: palette.softShadow.withValues(alpha: palette.softShadow.a * 0.85),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+            spreadRadius: -5,
+          ),
+        ];
+      case GlassTier.subtle:
+        return [
+          BoxShadow(
+            color: palette.softShadow.withValues(alpha: palette.softShadow.a * 0.55),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: -4,
+          ),
+        ];
+      case GlassTier.dock:
+        return [
+          BoxShadow(
+            color: palette.softShadow,
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+            spreadRadius: -4,
+          ),
+        ];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     final disableMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final surfaceColor =
-        widget.strongGlass ? palette.surfaceGlassStrong : palette.surfaceGlass;
-
-    final innerDecoration = BoxDecoration(
-      borderRadius: widget.borderRadius,
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color.alphaBlend(palette.glassSheen, surfaceColor),
-          surfaceColor,
-        ],
-      ),
-      border: Border.all(
-        color: widget.borderColor ?? palette.glassBorder,
-        width: 1.0,
-      ),
-    );
+    final gradientColors = _surfaceGradient(palette);
+    final rimStart = widget.borderColor ?? palette.glassBorder;
+    final rimEnd = widget.borderColor?.withValues(alpha: 0.35) ?? palette.glassBorderSubtle;
 
     Widget content = Stack(
       children: [
+        // Özgün soyut vektör katmanı
         if (widget.artStyle != AmbientArtStyle.none)
           Positioned.fill(
             child: AmbientVectorArt(
               style: widget.artStyle,
-              opacity: 0.95,
+              opacity: widget.tier == GlassTier.hero ? 1.0 : 0.85,
             ),
           ),
+
+        // Üst kenarda ince iç ışık yansıması (soft specular highlight)
+        if (widget.tier == GlassTier.hero || widget.tier == GlassTier.dock)
+          Positioned(
+            top: 0,
+            left: 20,
+            right: 20,
+            height: 1.0,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      palette.glassSheen,
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // Asıl içerik
         Padding(
           padding: widget.padding,
           child: widget.child,
+        ),
+
+        // Üst-soldan alt-sağa ışık kırılmalı cam kenarlığı
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _GlassRimPainter(
+                borderRadius: widget.borderRadius,
+                startColor: rimStart,
+                endColor: rimEnd,
+                strokeWidth: widget.tier == GlassTier.hero ? 1.2 : 1.0,
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -99,7 +220,14 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
     }
 
     Widget surface = DecoratedBox(
-      decoration: innerDecoration,
+      decoration: BoxDecoration(
+        borderRadius: widget.borderRadius,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+      ),
       child: content,
     );
 
@@ -108,8 +236,8 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
         borderRadius: widget.borderRadius,
         child: BackdropFilter(
           filter: ImageFilter.blur(
-            sigmaX: widget.blurSigma,
-            sigmaY: widget.blurSigma,
+            sigmaX: _effectiveBlur,
+            sigmaY: _effectiveBlur,
           ),
           child: surface,
         ),
@@ -125,17 +253,62 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
       margin: widget.margin,
       decoration: BoxDecoration(
         borderRadius: widget.borderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: palette.softShadow,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: -4,
-          ),
-        ],
+        boxShadow: _shadows(palette),
       ),
       child: surface,
     );
+
+    // Hero panel arkasında yumuşak ambient ışık katmanı
+    if (widget.ambientGlowBehind) {
+      panel = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: -16,
+            right: -12,
+            width: 220,
+            height: 140,
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(100),
+                    gradient: RadialGradient(
+                      colors: [
+                        palette.heroAmbientGlow,
+                        palette.heroAmbientGlow.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -14,
+            left: -10,
+            width: 180,
+            height: 110,
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(100),
+                    gradient: RadialGradient(
+                      colors: [
+                        palette.ambientSecondary,
+                        palette.ambientSecondary.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          panel,
+        ],
+      );
+    }
 
     if (widget.onTap != null && !disableMotion) {
       panel = AnimatedScale(
@@ -150,8 +323,48 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
   }
 }
 
+/// Üst-soldan alt-sağa ışık kırılması oluşturan ince gradyan cam kenarlığı çizicisi
+class _GlassRimPainter extends CustomPainter {
+  final BorderRadius borderRadius;
+  final Color startColor;
+  final Color endColor;
+  final double strokeWidth;
+
+  const _GlassRimPainter({
+    required this.borderRadius,
+    required this.startColor,
+    required this.endColor,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = borderRadius.toRRect(rect).deflate(strokeWidth / 2);
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [startColor, endColor],
+      ).createShader(rect);
+
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlassRimPainter oldDelegate) {
+    return oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.startColor != startColor ||
+        oldDelegate.endColor != endColor ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
 /// Üst çubuk aksiyonları için zarif dairesel Soft Glass buton.
-/// İnce hatlı ikonografi ve rahat dokunma alanı (40x40) sağlar.
+/// Frosted cam yüzeyi, ince parlak kenarlık ve rahat dokunma alanı (40x40) sunar.
 class GlassCircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -172,35 +385,47 @@ class GlassCircleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    final button = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: palette.surfaceGlassStrong,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: palette.isDark ? palette.border : palette.glassBorder,
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: palette.softShadow,
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-                spreadRadius: -2,
+    final button = ClipOval(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    palette.cardGlassTop,
+                    palette.cardGlassBottom,
+                  ],
+                ),
+                border: Border.all(
+                  color: palette.glassBorder,
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.softShadow,
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                    spreadRadius: -3,
+                  ),
+                ],
               ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            icon,
-            size: iconSize,
-            color: iconColor ?? palette.textPrimary,
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                size: iconSize,
+                color: iconColor ?? palette.textPrimary,
+              ),
+            ),
           ),
         ),
       ),
