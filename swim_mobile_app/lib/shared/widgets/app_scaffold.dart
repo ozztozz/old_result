@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 
-/// TYF Yüzme Sonuçları — Yüzen Soft Glass Navigasyon Kabuğu (DESIGN_REFINEMENT — Section 1E)
-/// Frosted yarı saydam zemin, ince parlak cam kenarlık, kompakt ve rafine aktif gösterge.
+/// TYF Yüzme Sonuçları — Yüzen Frosted Glass Navigasyon Katmanı
+/// SECOND DESIGN REFINEMENT — Section 7:
+/// Çerçevesiz, hafif ve zarif aktif durum; kenarlıklı araç çubuğu yerine yüzen cam hissi.
 class AppScaffold extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onNavigationChanged;
@@ -30,17 +31,17 @@ class AppScaffold extends StatelessWidget {
       ),
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(
-          20,
+          22,
           0,
-          20,
-          bottomInset > 0 ? bottomInset + 8 : 14,
+          22,
+          bottomInset > 0 ? bottomInset + 8 : 16,
         ),
         child: SoftGlassPanel(
           tier: GlassTier.dock,
-          borderRadius: BorderRadius.circular(22),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          borderRadius: BorderRadius.circular(24),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
           child: SizedBox(
-            height: 52,
+            height: 50,
             child: Row(
               children: [
                 _buildNavItem(
@@ -88,7 +89,7 @@ class AppScaffold extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onNavigationChanged(index),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(18),
           child: AnimatedContainer(
             duration: disableMotion
                 ? Duration.zero
@@ -97,58 +98,27 @@ class AppScaffold extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? (palette.isDark
-                      ? palette.primary.withValues(alpha: 0.16)
-                      : Colors.white.withValues(alpha: 0.68))
+                      ? palette.primary.withValues(alpha: 0.14)
+                      : Colors.white.withValues(alpha: 0.52))
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(15),
-              border: isSelected
-                  ? Border.all(
-                      color: palette.isDark
-                          ? palette.primary.withValues(alpha: 0.28)
-                          : palette.glassBorderSubtle.withValues(alpha: 0.55),
-                      width: 0.85,
-                    )
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: palette.softShadow.withValues(alpha: palette.softShadow.a * 0.55),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                        spreadRadius: -2,
-                      ),
-                    ]
-                  : null,
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Zarif üst aktif ışık çizgisi
-                AnimatedContainer(
-                  duration: disableMotion
-                      ? Duration.zero
-                      : const Duration(milliseconds: 220),
-                  width: isSelected ? 18 : 0,
-                  height: 2,
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected ? palette.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
                 Icon(
                   isSelected ? activeIcon : icon,
-                  size: 19,
-                  color: isSelected ? palette.textPrimary : palette.textSecondary,
+                  size: 20,
+                  color: isSelected ? palette.textPrimary : palette.textMuted,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   label,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    letterSpacing: 0.15,
+                    letterSpacing: 0.1,
                     color: isSelected ? palette.textPrimary : palette.textSecondary,
                   ),
                 ),

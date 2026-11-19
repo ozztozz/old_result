@@ -65,13 +65,13 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
     if (widget.blurSigma != null) return widget.blurSigma!;
     switch (widget.tier) {
       case GlassTier.hero:
-        return 20.0;
+        return 18.0;
       case GlassTier.card:
         return 12.0;
       case GlassTier.subtle:
         return 10.0;
       case GlassTier.dock:
-        return 24.0;
+        return 20.0;
     }
   }
 
@@ -159,12 +159,12 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
             ),
           ),
 
-        // Üst kenarda ince iç ışık yansıması (soft specular highlight)
-        if (widget.tier == GlassTier.hero || widget.tier == GlassTier.dock)
+        // Üst kenarda ince iç ışık yansıması (soft inner specular highlight)
+        if (widget.tier != GlassTier.subtle)
           Positioned(
             top: 0,
-            left: 20,
-            right: 20,
+            left: 18,
+            right: 18,
             height: 1.0,
             child: IgnorePointer(
               child: DecoratedBox(
@@ -172,7 +172,11 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      palette.glassSheen,
+                      palette.glassSheen.withValues(
+                        alpha: widget.tier == GlassTier.card
+                            ? palette.glassSheen.a * 0.65
+                            : palette.glassSheen.a,
+                      ),
                       Colors.transparent,
                     ],
                   ),
@@ -187,7 +191,7 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
           child: widget.child,
         ),
 
-        // Üst-soldan alt-sağa ışık kırılmalı cam kenarlığı
+        // Üst-soldan alt-sağa zarif ışık kırılmalı cam kenarlığı
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
@@ -195,7 +199,7 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
                 borderRadius: widget.borderRadius,
                 startColor: rimStart,
                 endColor: rimEnd,
-                strokeWidth: widget.tier == GlassTier.hero ? 1.2 : 1.0,
+                strokeWidth: widget.tier == GlassTier.dock ? 0.8 : 1.0,
               ),
             ),
           ),

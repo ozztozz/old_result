@@ -739,137 +739,152 @@ extension AppColorPaletteGlass on AppColorPalette {
 
   // --- Layer 1: Ambient Arka Plan Katmanı ---
 
-  /// Atmosferik arka plan üst-sol tonu (düz gri/beyaz yerine derinlikli soğuk ton)
+  /// Atmosferik arka plan üst-sol tonu (soğuk mavi-gri derinlik, asla düz beyaz değil)
   Color get ambientBaseStart {
-    if (_isCoolLight) return const Color(0xFFE4ECF1);
-    if (_isCoolDark) return const Color(0xFF121C25);
+    if (_isCoolLight) return const Color(0xFFD6E0E7);
+    if (_isCoolDark) return const Color(0xFF101A23);
     return isDark
-        ? Color.lerp(background, Colors.black, 0.14)!
-        : Color.lerp(background, primary, 0.06)!;
+        ? Color.lerp(background, Colors.black, 0.18)!
+        : Color.lerp(background, primary, 0.09)!;
   }
 
   /// Atmosferik arka plan orta tonu
-  Color get ambientBaseMid => background;
+  Color get ambientBaseMid {
+    if (_isCoolLight) return const Color(0xFFE6ECF0);
+    if (_isCoolDark) return const Color(0xFF17232D);
+    return background;
+  }
 
   /// Atmosferik arka plan alt-sağ tonu
   Color get ambientBaseEnd {
-    if (_isCoolLight) return const Color(0xFFDDE7ED);
-    if (_isCoolDark) return const Color(0xFF1D2C39);
+    if (_isCoolLight) return const Color(0xFFD0DCE4);
+    if (_isCoolDark) return const Color(0xFF1E2E3B);
     return isDark
-        ? Color.lerp(background, primary, 0.08)!
-        : Color.lerp(background, secondary, 0.07)!;
+        ? Color.lerp(background, primary, 0.10)!
+        : Color.lerp(background, secondary, 0.10)!;
   }
 
-  /// Büyük organik atmosferik ışık alanı 1 (Üst-sağ: Mist / Steel)
+  /// Büyük organik atmosferik ışık alanı 1 (Üst-sağ: Mist / Steel difüzyonu)
   Color get ambientPrimary {
-    if (_isCoolLight) return const Color(0x88AABBC6);
-    if (_isCoolDark) return const Color(0x47657D91);
+    if (_isCoolLight) return const Color(0x998EA6B7);
+    if (_isCoolDark) return const Color(0x52657D91);
     return isDark
-        ? primary.withValues(alpha: 0.22)
-        : primary.withValues(alpha: 0.20);
+        ? primary.withValues(alpha: 0.24)
+        : primary.withValues(alpha: 0.22);
   }
 
-  /// Büyük organik atmosferik ışık alanı 2 (Orta-sol: Steel / Mist)
+  /// Büyük organik atmosferik ışık alanı 2 (Orta-sol: Yumuşak Steel renk alanı)
   Color get ambientSecondary {
-    if (_isCoolLight) return const Color(0x59657D91);
-    if (_isCoolDark) return const Color(0x36AABBC6);
-    return isDark
-        ? secondary.withValues(alpha: 0.18)
-        : secondary.withValues(alpha: 0.17);
-  }
-
-  /// Alt atmosferik ışık alanı 3 (Alt-sağ: Ice / Deep-Steel — navigasyon altı derinlik)
-  Color get ambientTertiary {
-    if (_isCoolLight) return const Color(0x80B7C8D3);
-    if (_isCoolDark) return const Color(0x383B556B);
-    return isDark
-        ? primary.withValues(alpha: 0.16)
-        : primary.withValues(alpha: 0.15);
-  }
-
-  /// Hero panel arkası yumuşak atmosferik aydınlatma
-  Color get heroAmbientGlow {
     if (_isCoolLight) return const Color(0x66657D91);
-    if (_isCoolDark) return const Color(0x4DAABBC6);
-    return primary.withValues(alpha: isDark ? 0.26 : 0.24);
+    if (_isCoolDark) return const Color(0x3DAABBC6);
+    return isDark
+        ? secondary.withValues(alpha: 0.20)
+        : secondary.withValues(alpha: 0.19);
   }
 
-  // --- Layer 2: Seçici Frosted Glass Yüzeyleri ---
+  /// Alt atmosferik ışık alanı 3 (Alt-sağ: Yumuşak Mist & derinlik)
+  Color get ambientTertiary {
+    if (_isCoolLight) return const Color(0x8CAABBC6);
+    if (_isCoolDark) return const Color(0x403D5870);
+    return isDark
+        ? primary.withValues(alpha: 0.18)
+        : primary.withValues(alpha: 0.17);
+  }
 
-  /// Hero Panel cam gradyanı (üst-sol & alt-sağ)
+  /// Üst-sol yumuşak atmosferik aydınlık difüzyonu (ışık kaynağı hissi)
+  Color get ambientLightBeam {
+    if (_isCoolLight) return const Color(0xB8F7FAFC);
+    if (_isCoolDark) return const Color(0x26AABBC6);
+    return isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.white.withValues(alpha: 0.65);
+  }
+
+  /// Hero panel arkası yumuşak organik renk & ışık alanı
+  Color get heroAmbientGlow {
+    if (_isCoolLight) return const Color(0x7A657D91);
+    if (_isCoolDark) return const Color(0x59AABBC6);
+    return primary.withValues(alpha: isDark ? 0.28 : 0.26);
+  }
+
+  // --- Layer 2: Gerçek Buzlu Cam (Frosted Glass) Yüzeyleri ---
+
+  /// Hero Panel cam gradyanı — belirgin yarı saydam buzlu derinlik
   Color get heroGlassTop {
-    if (_isCoolLight) return const Color(0xB8FFFFFF);
-    if (_isCoolDark) return const Color(0xBD293C4C);
-    return surface.withValues(alpha: isDark ? 0.76 : 0.76);
+    if (_isCoolLight) return const Color(0x8FFFFFFF);
+    if (_isCoolDark) return const Color(0xA62B4052);
+    return surface.withValues(alpha: isDark ? 0.66 : 0.58);
   }
 
   Color get heroGlassBottom {
-    if (_isCoolLight) return const Color(0x8ADCE4E8);
-    if (_isCoolDark) return const Color(0x991D2C39);
-    return Color.lerp(surface, primary, isDark ? 0.12 : 0.08)!
-        .withValues(alpha: isDark ? 0.62 : 0.58);
+    if (_isCoolLight) return const Color(0x5CDCE4E8);
+    if (_isCoolDark) return const Color(0x781B2A37);
+    return Color.lerp(surface, primary, isDark ? 0.14 : 0.10)!
+        .withValues(alpha: isDark ? 0.48 : 0.40);
   }
 
-  /// Yarış / İçerik Kartı frosted cam gradyanı (düz beyaz değil, ortamla bütünleşik)
+  /// Yarış / İçerik Kartı — ölçülü, okunaklı ama gerçekten yarı saydam buzlu cam
   Color get cardGlassTop {
-    if (_isCoolLight) return const Color(0xBAFFFFFF);
-    if (_isCoolDark) return const Color(0xB5233442);
-    return surface.withValues(alpha: isDark ? 0.72 : 0.74);
+    if (_isCoolLight) return const Color(0x94FFFFFF);
+    if (_isCoolDark) return const Color(0x99243544);
+    return surface.withValues(alpha: isDark ? 0.62 : 0.60);
   }
 
   Color get cardGlassBottom {
-    if (_isCoolLight) return const Color(0x91EBF0F4);
-    if (_isCoolDark) return const Color(0x941B2935);
-    return surfaceSecondary.withValues(alpha: isDark ? 0.60 : 0.58);
+    if (_isCoolLight) return const Color(0x69E4ECF1);
+    if (_isCoolDark) return const Color(0x731A2834);
+    return surfaceSecondary.withValues(alpha: isDark ? 0.48 : 0.44);
   }
 
-  /// Arama çubuğu / İkincil hafif frosted yüzey
-  Color get surfaceGlass => isDark
-      ? surface.withValues(alpha: 0.60)
-      : surface.withValues(alpha: 0.62);
+  /// Arama çubuğu / İkincil sakin frosted yüzey
+  Color get surfaceGlass {
+    if (_isCoolLight) return const Color(0x73FFFFFF);
+    if (_isCoolDark) return const Color(0x7A1E2D3A);
+    return surface.withValues(alpha: isDark ? 0.48 : 0.46);
+  }
 
-  /// Yüzen Navigasyon & Modal Sheet yoğun frosted cam yüzeyi
+  /// Yüzen Navigasyon & Modal Sheet buzlu cam yüzeyi
   Color get surfaceGlassStrong {
-    if (_isCoolLight) return const Color(0xC2F4F7F9);
-    if (_isCoolDark) return const Color(0xCC1E2D3A);
-    return surface.withValues(alpha: isDark ? 0.80 : 0.78);
+    if (_isCoolLight) return const Color(0x9EF2F6F8);
+    if (_isCoolDark) return const Color(0xB31B2A36);
+    return surface.withValues(alpha: isDark ? 0.72 : 0.64);
   }
 
-  /// Parlak üst-sol cam kenarlığı (ışık kırılması)
+  /// Parlak üst-sol ince cam kenarlığı (ışık kırılması)
   Color get glassBorder => isDark
-      ? const Color(0x38E7EDF1)
-      : const Color(0xE6FFFFFF);
+      ? const Color(0x36E7EDF1)
+      : const Color(0xCCFFFFFF);
 
-  /// Alt-sağ yumuşak cam kenarlığı (tonal geçiş)
+  /// Alt-sağ yumuşak şeffaf cam kenarlığı
   Color get glassBorderSubtle => isDark
-      ? const Color(0x14E7EDF1)
-      : const Color(0x47657D91);
+      ? const Color(0x10E7EDF1)
+      : const Color(0x2E657D91);
 
   /// Cam panellerin üst iç ışık yansıması
   Color get glassSheen => isDark
-      ? const Color(0x1EE7EDF1)
-      : const Color(0x99FFFFFF);
+      ? const Color(0x24E7EDF1)
+      : const Color(0xB8FFFFFF);
 
-  /// Soyut vektör çizim ana çizgi rengi
+  /// Fısıltı düzeyinde zarif vektör akış çizgisi rengi (duvar kağıdı değil, imza)
   Color get vectorStroke {
-    if (_isCoolLight) return const Color(0x38657D91);
-    if (_isCoolDark) return const Color(0x2EAABBC6);
+    if (_isCoolLight) return const Color(0x26657D91);
+    if (_isCoolDark) return const Color(0x1FAABBC6);
     return isDark
-        ? textPrimary.withValues(alpha: 0.16)
-        : primary.withValues(alpha: 0.20);
+        ? textPrimary.withValues(alpha: 0.11)
+        : primary.withValues(alpha: 0.14);
   }
 
-  /// Soyut vektör çizim vurgu çizgi rengi
+  /// Vektör imza vurgu çizgisi rengi
   Color get vectorAccent {
-    if (_isCoolLight) return const Color(0x61657D91);
-    if (_isCoolDark) return const Color(0x4DDCE4E8);
-    return primary.withValues(alpha: isDark ? 0.30 : 0.32);
+    if (_isCoolLight) return const Color(0x3D657D91);
+    if (_isCoolDark) return const Color(0x33DCE4E8);
+    return primary.withValues(alpha: isDark ? 0.20 : 0.22);
   }
 
-  /// Yumuşak, derinlikli atmosfer gölgesi
+  /// Yumuşak, yayvan atmosfer gölgesi (keskin gölge yok)
   Color get softShadow => isDark
-      ? Colors.black.withValues(alpha: 0.34)
-      : const Color(0xFF273746).withValues(alpha: 0.09);
+      ? Colors.black.withValues(alpha: 0.30)
+      : const Color(0xFF273746).withValues(alpha: 0.075);
 }
 
 /// Context üzerinden palete hızlı ve güvenli erişim için Extension

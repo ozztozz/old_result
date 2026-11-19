@@ -2,28 +2,30 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/tokens/tokens.dart';
 
-/// Uygulamanın özgün soyut vektör grafik dili (DESIGN_REFINEMENT — Original Graphic Language)
+/// Uygulamanın ölçülü, sakin soyut grafik imzası (SECOND DESIGN REFINEMENT).
+/// Teknik plan/duvar kağıdı yerine yalnızca seçili alanlarda fısıltı düzeyinde
+/// organik akış çizgisi ve ışık difüzyonu kullanır.
 enum AmbientArtStyle {
-  /// Organik akışkan eğriler + konsantrik yay kesişimi (Canlı Takip zemin atmosferi)
+  /// Üst başlık atmosferinde uçları eriyen 2 zarif akışkan eğri
   flowLines,
 
-  /// Asimetrik kesişen yörünge yayları ve eliptik iz (Keşfet & Sporcu Profili)
+  /// Keşfet / Profil üst alanında tek akışkan ipek eğri
   orbitalArcs,
 
-  /// İstatistik Hero paneline özel konsantrik yörünge & ince kontur detayı
+  /// Hero panel alt kenarında metinle hiç kesişmeyen tek fısıltı çizgi
   heroOrbit,
 
-  /// Kart köşelerinde zarif konsantrik kontur dalgaları (Öne çıkan yarış kartı & Favoriler)
+  /// Seçili tek bir kartta çok hafif köşe akış detayı
   contourWaves,
 
-  /// Boş durumlar için sakin eşmerkezli yörünge kompozisyonu
+  /// Boş durum ikonu arkasında sakin minimal yörünge
   emptyOrbit,
 
   none,
 }
 
-/// Hafif, yüksek performanslı özgün soyut vektör çizim katmanı.
-/// Metin ve butonlarla asla yarışmaz; katmanlı derinlik ve görsel imza oluşturur.
+/// Hafif, yüksek performanslı vektör imza katmanı.
+/// Kenarlara doğru şeffaflaşan fırça geçişleriyle içerikle asla çatışmaz.
 class AmbientVectorArt extends StatelessWidget {
   final AmbientArtStyle style;
   final Color? strokeColor;
@@ -75,22 +77,40 @@ class _AmbientVectorPainter extends CustomPainter {
     required this.accentColor,
   });
 
+  Paint _fadingLinePaint(Size size, Color color, double width) {
+    return Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        stops: const [0.0, 0.25, 0.78, 1.0],
+        colors: [
+          color.withValues(alpha: 0.0),
+          color,
+          color.withValues(alpha: color.a * 0.7),
+          color.withValues(alpha: 0.0),
+        ],
+      ).createShader(Offset.zero & size);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
 
     switch (style) {
       case AmbientArtStyle.flowLines:
-        _paintFlowLines(canvas, size);
+        _paintFlowSignature(canvas, size);
         break;
       case AmbientArtStyle.orbitalArcs:
-        _paintOrbitalArcs(canvas, size);
+        _paintSingleSilkRibbon(canvas, size);
         break;
       case AmbientArtStyle.heroOrbit:
-        _paintHeroOrbit(canvas, size);
+        _paintHeroWhisper(canvas, size);
         break;
       case AmbientArtStyle.contourWaves:
-        _paintContourWaves(canvas, size);
+        _paintSubtleCornerWave(canvas, size);
         break;
       case AmbientArtStyle.emptyOrbit:
         _paintEmptyOrbit(canvas, size);
@@ -100,296 +120,107 @@ class _AmbientVectorPainter extends CustomPainter {
     }
   }
 
-  /// Organik akışkan kontur şeritleri + üst-sağda konsantrik yay kesişimi
-  void _paintFlowLines(Canvas canvas, Size size) {
+  /// Yalnızca üst atmosfer şeridinde uçları eriyen 2 zarif akışkan çizgi
+  void _paintFlowSignature(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // 5 akışkan organik kontur eğrisi (su akışı / kulvar ritmi hissi)
-    for (int i = 0; i < 5; i++) {
-      final t = i / 4.0;
-      final paint = Paint()
-        ..color = i == 2 ? accentColor : strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = i == 2 ? 1.3 : 0.85
-        ..strokeCap = StrokeCap.round;
+    final path1 = Path()
+      ..moveTo(-w * 0.04, h * 0.52)
+      ..cubicTo(
+        w * 0.28,
+        h * 0.16,
+        w * 0.62,
+        h * 0.84,
+        w * 1.04,
+        h * 0.34,
+      );
+    canvas.drawPath(path1, _fadingLinePaint(size, accentColor, 1.15));
 
-      final startY = h * (0.14 + t * 0.11);
-      final path = Path()
-        ..moveTo(-w * 0.06, startY)
-        ..cubicTo(
-          w * (0.24 + t * 0.04),
-          h * (0.02 + t * 0.09),
-          w * (0.56 - t * 0.03),
-          h * (0.34 + t * 0.08),
-          w * 1.06,
-          h * (0.12 + t * 0.14),
-        );
-      canvas.drawPath(path, paint);
-    }
+    final path2 = Path()
+      ..moveTo(-w * 0.02, h * 0.68)
+      ..cubicTo(
+        w * 0.32,
+        h * 0.34,
+        w * 0.66,
+        h * 0.96,
+        w * 1.02,
+        h * 0.50,
+      );
+    canvas.drawPath(path2, _fadingLinePaint(size, strokeColor, 0.85));
+  }
 
-    // Alt yarıda ikinci yumuşak organik akış grubu (kartların arkasında derinlik)
-    for (int i = 0; i < 3; i++) {
-      final t = i / 2.0;
-      final paint = Paint()
-        ..color = strokeColor.withValues(alpha: strokeColor.a * 0.72)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.85;
+  /// Keşfet / Profil üst alanında tek sakin organik eğri
+  void _paintSingleSilkRibbon(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
 
-      final path = Path()
-        ..moveTo(-w * 0.08, h * (0.64 + t * 0.055))
-        ..cubicTo(
-          w * 0.30,
-          h * (0.78 + t * 0.04),
-          w * 0.66,
-          h * (0.52 + t * 0.05),
-          w * 1.08,
-          h * (0.68 + t * 0.045),
-        );
-      canvas.drawPath(path, paint);
-    }
+    final path = Path()
+      ..moveTo(w * 0.06, h * 0.72)
+      ..cubicTo(
+        w * 0.36,
+        h * 0.22,
+        w * 0.70,
+        h * 0.78,
+        w * 1.04,
+        h * 0.26,
+      );
+    canvas.drawPath(path, _fadingLinePaint(size, accentColor, 1.05));
+  }
 
-    // Üst-sağda asimetrik konsantrik yay kompozisyonu
-    final arcCenter = Offset(w * 0.90, h * 0.13);
-    final baseR = w * 0.24;
-    final subtleArc = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
-    final primaryArc = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.25
-      ..strokeCap = StrokeCap.round;
+  /// Hero istatistik paneli alt kenarında rakamlara hiç değmeyen fısıltı çizgi
+  void _paintHeroWhisper(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
 
-    canvas.drawArc(
-      Rect.fromCircle(center: arcCenter, radius: baseR * 0.72),
-      math.pi * 0.55,
-      math.pi * 0.92,
-      false,
-      primaryArc,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: arcCenter, radius: baseR * 1.05),
-      math.pi * 0.42,
-      math.pi * 1.08,
-      false,
-      subtleArc,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: arcCenter, radius: baseR * 1.38),
-      math.pi * 0.58,
-      math.pi * 0.78,
-      false,
-      subtleArc,
-    );
+    final path = Path()
+      ..moveTo(w * 0.04, h * 0.94)
+      ..cubicTo(
+        w * 0.34,
+        h * 0.86,
+        w * 0.68,
+        h * 0.98,
+        w * 0.96,
+        h * 0.88,
+      );
+    canvas.drawPath(path, _fadingLinePaint(size, strokeColor, 0.9));
+  }
 
-    // Kesişim odak noktası
-    final dotPaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.fill;
-    final node = Offset(
-      arcCenter.dx + math.cos(math.pi * 0.92) * baseR * 0.72,
-      arcCenter.dy + math.sin(math.pi * 0.92) * baseR * 0.72,
-    );
-    canvas.drawCircle(node, 2.8, dotPaint);
+  /// Seçili kartın sağ-alt köşesinde çok sakin tek akış detayı
+  void _paintSubtleCornerWave(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final path = Path()
+      ..moveTo(w * 0.56, h * 0.96)
+      ..quadraticBezierTo(w * 0.80, h * 0.76, w * 1.02, h * 0.84);
+    canvas.drawPath(path, _fadingLinePaint(size, strokeColor, 0.9));
+  }
+
+  /// Boş durum ikonu için tek sade yörünge halkası
+  void _paintEmptyOrbit(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = math.min(size.width, size.height) * 0.45;
+
     canvas.drawCircle(
-      node,
-      7.0,
+      center,
+      maxR * 0.82,
       Paint()
         ..color = strokeColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8,
+        ..strokeWidth = 0.85,
     );
-  }
-
-  /// Asimetrik konsantrik yörünge yayları & eliptik iz
-  void _paintOrbitalArcs(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w * 0.88, h * 0.14);
-    final baseRadius = w * 0.26;
-
-    final primaryStroke = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.25
-      ..strokeCap = StrokeCap.round;
-
-    final subtleStroke = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: baseRadius * 0.65),
+      Rect.fromCircle(center: center, radius: maxR * 0.82),
+      -math.pi * 0.65,
       math.pi * 0.45,
-      math.pi * 0.98,
       false,
-      primaryStroke,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: baseRadius * 1.04),
-      math.pi * 0.34,
-      math.pi * 1.12,
-      false,
-      subtleStroke,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: baseRadius * 1.44),
-      math.pi * 0.52,
-      math.pi * 0.84,
-      false,
-      subtleStroke,
-    );
-
-    // Sol alt bölgede sakin eliptik kontur halkası
-    canvas.save();
-    canvas.translate(w * 0.12, h * 0.66);
-    canvas.rotate(-0.22);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: w * 0.62, height: w * 0.30),
-      subtleStroke,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: w * 0.48, height: w * 0.22),
-      subtleStroke..color = strokeColor.withValues(alpha: strokeColor.a * 0.7),
-    );
-    canvas.restore();
-
-    // Minimal yörünge düğüm noktaları
-    final dotPaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.fill;
-    final p1 = Offset(
-      center.dx + math.cos(math.pi * 0.84) * baseRadius * 0.65,
-      center.dy + math.sin(math.pi * 0.84) * baseRadius * 0.65,
-    );
-    final p2 = Offset(
-      center.dx + math.cos(math.pi * 1.18) * baseRadius * 1.04,
-      center.dy + math.sin(math.pi * 1.18) * baseRadius * 1.04,
-    );
-    canvas.drawCircle(p1, 2.8, dotPaint);
-    canvas.drawCircle(p2, 2.2, dotPaint);
-  }
-
-  /// İstatistik Hero paneline özel zarif konsantrik yay & ince akış çizgisi
-  void _paintHeroOrbit(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w * 0.92, h * 0.16);
-    final r = math.min(w, h) * 0.62;
-
-    final subtle = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
-
-    final accent = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.25
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: r * 0.62),
-      math.pi * 0.50,
-      math.pi * 0.72,
-      false,
-      accent,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: r * 0.94),
-      math.pi * 0.42,
-      math.pi * 0.82,
-      false,
-      subtle,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: r * 1.26),
-      math.pi * 0.56,
-      math.pi * 0.64,
-      false,
-      subtle,
-    );
-
-    // Alt kenar boyunca süzülen ince organik akış eğrisi
-    final flow = Path()
-      ..moveTo(-10, h * 0.88)
-      ..cubicTo(
-        w * 0.30,
-        h * 0.72,
-        w * 0.62,
-        h * 0.98,
-        w + 10,
-        h * 0.76,
-      );
-    canvas.drawPath(flow, subtle);
-
-    // Tek bir zarif kesişim noktası
-    final dotPos = Offset(
-      center.dx + math.cos(math.pi * 0.86) * r * 0.62,
-      center.dy + math.sin(math.pi * 0.86) * r * 0.62,
-    );
-    canvas.drawCircle(dotPos, 2.4, Paint()..color = accentColor);
-  }
-
-  /// Seçili kartların sağ köşesinde konsantrik topoğrafik kontur yayları
-  void _paintContourWaves(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w * 0.96, h * 0.18);
-    final baseR = math.min(w, h) * 0.45;
-
-    for (int i = 0; i < 4; i++) {
-      final radius = baseR * (0.68 + i * 0.34);
-      final paint = Paint()
-        ..color = i == 0 ? accentColor : strokeColor
+      Paint()
+        ..color = accentColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = i == 0 ? 1.15 : 0.82
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        math.pi * 0.48,
-        math.pi * 0.72,
-        false,
-        paint,
-      );
-    }
-  }
-
-  void _paintEmptyOrbit(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxR = math.min(size.width, size.height) * 0.46;
-
-    final subtlePaint = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
-
-    final accentPaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, maxR * 0.62, subtlePaint);
-    canvas.drawCircle(center, maxR * 0.92, subtlePaint);
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: maxR * 0.92),
-      -math.pi * 0.68,
-      math.pi * 0.46,
-      false,
-      accentPaint,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: maxR * 0.62),
-      math.pi * 0.25,
-      math.pi * 0.55,
-      false,
-      accentPaint,
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round,
     );
   }
 
@@ -401,19 +232,19 @@ class _AmbientVectorPainter extends CustomPainter {
   }
 }
 
-/// Layer 1: Tam ekran Ambient Glass atmosfer katmanı.
-/// Çok duraklı soğuk tonlu zemin gradyanı, 3 geniş organik atmosferik ışık alanı
-/// ve tüm ekranla bütünleşen özgün soyut vektör kompozisyonunu birleştirir.
+/// Layer 1: Sakin, geniş ve derinlikli Ambient Glass atmosfer ortamı.
+/// Düz gri/beyaz veya yoğun çizgi kalabalığı yerine büyük organik ışık difüzyonları,
+/// yumuşak mavi-gri renk alanları ve yalnızca üst kenarda fısıltı düzeyinde imza eğrisi.
 class AmbientBackground extends StatelessWidget {
   final Widget child;
   final AmbientArtStyle artStyle;
-  final double? artHeight;
+  final double artHeight;
 
   const AmbientBackground({
     super.key,
     required this.child,
     this.artStyle = AmbientArtStyle.flowLines,
-    this.artHeight,
+    this.artHeight = 165,
   });
 
   @override
@@ -422,14 +253,14 @@ class AmbientBackground extends StatelessWidget {
 
     return Stack(
       children: [
-        // 1. Kontrollü tonal derinliğe sahip soğuk atmosferik zemin gradyanı
+        // 1. Soğuk mavi-gri kontrollü atmosferik zemin gradyanı
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                stops: const [0.0, 0.48, 1.0],
+                stops: const [0.0, 0.50, 1.0],
                 colors: [
                   palette.ambientBaseStart,
                   palette.ambientBaseMid,
@@ -440,59 +271,64 @@ class AmbientBackground extends StatelessWidget {
           ),
         ),
 
-        // 2. Üst-sağ geniş organik ışık alanı (Hero ve başlık arkası derinlik)
+        // 2. Üst-sol yumuşak atmosferik ışık difüzyonu (doğal üst ışık kaynağı)
         Positioned(
-          top: -110,
-          right: -95,
-          width: 390,
-          height: 390,
-          child: _AmbientOrb(color: palette.ambientPrimary),
+          top: -130,
+          left: -100,
+          width: 420,
+          height: 380,
+          child: _SoftLightField(color: palette.ambientLightBeam),
         ),
 
-        // 3. Orta-sol organik ışık alanı (Yarış kartları arkasında frosted kırılma)
+        // 3. Üst-sağ geniş organik Mist/Steel renk alanı (Hero panel arkasında derinlik)
         Positioned(
-          top: 210,
-          left: -135,
-          width: 360,
-          height: 360,
-          child: _AmbientOrb(color: palette.ambientSecondary),
+          top: -70,
+          right: -130,
+          width: 460,
+          height: 440,
+          child: _SoftLightField(color: palette.ambientPrimary),
         ),
 
-        // 4. Alt-sağ yumuşak ışık alanı (Yüzen cam navigasyon altında atmosferik derinlik)
+        // 4. Orta-sol yumuşak Steel renk alanı (Yarış kartları altında buzlu kırılma)
         Positioned(
-          bottom: -90,
-          right: -70,
-          width: 340,
-          height: 340,
-          child: _AmbientOrb(color: palette.ambientTertiary),
+          top: 240,
+          left: -150,
+          width: 420,
+          height: 440,
+          child: _SoftLightField(color: palette.ambientSecondary),
         ),
 
-        // 5. Özgün soyut vektör grafik katmanı
+        // 5. Alt-sağ sakin atmosfer alanı (Yüzen cam navigasyon altında ton geçişi)
+        Positioned(
+          bottom: -110,
+          right: -90,
+          width: 420,
+          height: 400,
+          child: _SoftLightField(color: palette.ambientTertiary),
+        ),
+
+        // 6. Yalnızca üst kenarda içerikle çakışmayan fısıltı düzeyinde vektör imza
         if (artStyle != AmbientArtStyle.none)
-          if (artHeight != null)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: artHeight,
-              child: AmbientVectorArt(style: artStyle),
-            )
-          else
-            Positioned.fill(
-              child: AmbientVectorArt(style: artStyle),
-            ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: artHeight,
+            child: AmbientVectorArt(style: artStyle),
+          ),
 
-        // 6. Layer 2 & 3 — Cam yüzeyler ve ekran içeriği
+        // 7. Layer 2 & 3 — Frosted cam yüzeyler ve içerik
         child,
       ],
     );
   }
 }
 
-class _AmbientOrb extends StatelessWidget {
+/// Keskin sınırı olmayan geniş organik atmosferik ışık difüzyonu
+class _SoftLightField extends StatelessWidget {
   final Color color;
 
-  const _AmbientOrb({required this.color});
+  const _SoftLightField({required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -502,11 +338,11 @@ class _AmbientOrb extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
-              stops: const [0.0, 0.45, 0.78, 1.0],
+              stops: const [0.0, 0.35, 0.68, 1.0],
               colors: [
                 color,
-                color.withValues(alpha: color.a * 0.52),
-                color.withValues(alpha: color.a * 0.14),
+                color.withValues(alpha: color.a * 0.58),
+                color.withValues(alpha: color.a * 0.18),
                 color.withValues(alpha: 0.0),
               ],
             ),

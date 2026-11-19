@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // 1. Editoryal Üst Başlık
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+                padding: const EdgeInsets.fromLTRB(22, 14, 22, 12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -120,23 +120,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'TÜRKİYE YÜZME FEDERASYONU',
+                            'Türkiye Yüzme Federasyonu',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.1,
                               color: palette.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 4),
                           Text(
                             'Keşfet & Sonuçlar',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 22,
+                              fontSize: 24,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: -0.4,
+                              letterSpacing: -0.5,
                               height: 1.15,
                               color: palette.textPrimary,
                             ),
