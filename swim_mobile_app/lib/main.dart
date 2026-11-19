@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'core/theme/app_theme.dart';
 import 'core/network/api_client.dart';
 import 'core/services/favorite_athletes_service.dart';
 import 'core/services/selected_club_service.dart';
+import 'core/services/theme_service.dart';
 import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
 import 'features/live/live_screen.dart';
@@ -13,8 +13,9 @@ import 'shared/widgets/app_scaffold.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Global Tercihler, Kulüp ve Favori Sporcular Servisi
+  // Global Tercihler, Tema, Kulüp ve Favori Sporcular Servisi
   await Future.wait([
+    ThemeService.instance.init(),
     SelectedClubService.instance.init(),
     FavoriteAthletesService.instance.init(),
   ]);
@@ -33,13 +34,19 @@ class SwimApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TYF Yüzme Sonuçları',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      home: MainNavigationContainer(repository: repository),
+    return ListenableBuilder(
+      listenable: ThemeService.instance,
+      builder: (context, _) {
+        final themeService = ThemeService.instance;
+        return MaterialApp(
+          title: 'TYF Yüzme Sonuçları',
+          debugShowCheckedModeBanner: false,
+          theme: themeService.lightTheme,
+          darkTheme: themeService.darkTheme,
+          themeMode: themeService.themeMode,
+          home: MainNavigationContainer(repository: repository),
+        );
+      },
     );
   }
 }

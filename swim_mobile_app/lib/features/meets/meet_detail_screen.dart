@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/components/empty_state_widget.dart';
-import '../../core/theme/swim_colors.dart';
+import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/race_result_sorter.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
@@ -104,11 +104,12 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: palette.background,
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: CircularProgressIndicator(color: palette.primary))
             : _errorMessage != null && _meetDetail == null
                 ? Center(
                     child: EmptyStateWidget(
@@ -136,10 +137,10 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                             widget.meetTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.ink,
+                              color: palette.textPrimary,
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -149,12 +150,12 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                   ),
 
                   // 2. Üst Filtre Paneli (Yarış No, Bağımlı Kulüp & Sporcu)
-                  _buildFilterHeader(),
+                  _buildFilterHeader(palette),
 
                   // 3. Yarış Sonuçları Listesi (SwimResultCard)
                   Expanded(
                     child: _isLoadingResults
-                        ? const Center(child: CircularProgressIndicator())
+                        ? Center(child: CircularProgressIndicator(color: palette.primary))
                         : _results.isEmpty
                             ? Center(
                                 child: Column(
@@ -163,21 +164,22 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                                     Container(
                                       width: 52,
                                       height: 52,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.card,
+                                      decoration: BoxDecoration(
+                                        color: palette.surface,
                                         shape: BoxShape.circle,
+                                        border: Border.all(color: palette.border),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.search_off_rounded,
                                         size: 24,
-                                        color: AppColors.muted,
+                                        color: palette.textMuted,
                                       ),
                                     ),
                                     const SizedBox(height: 12),
-                                    const Text(
+                                    Text(
                                       'Kriterlere uygun sonuç bulunamadı.',
                                       style: TextStyle(
-                                        color: AppColors.muted,
+                                        color: palette.textMuted,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -213,7 +215,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
     );
   }
 
-  Widget _buildFilterHeader() {
+  Widget _buildFilterHeader(AppColorPalette palette) {
     final events = _meetDetail?.events ?? [];
     final clubs = _participants?.clubs ?? [];
 
@@ -226,15 +228,9 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,19 +279,21 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    color: palette.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: palette.border),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<int?>(
                       value: _selectedClubId,
                       isExpanded: true,
-                      hint: const Text('Tüm Takımlar', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      dropdownColor: palette.surfaceElevated,
+                      hint: Text('Tüm Takımlar', style: TextStyle(fontSize: 12, color: palette.textMuted)),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Tüm Takımlar', style: TextStyle(fontSize: 12))),
+                        DropdownMenuItem(value: null, child: Text('Tüm Takımlar', style: TextStyle(fontSize: 12, color: palette.textPrimary))),
                         ...clubs.map((c) => DropdownMenuItem(
                               value: c.id,
-                              child: Text(c.name, style: const TextStyle(fontSize: 12, color: AppColors.ink), overflow: TextOverflow.ellipsis),
+                              child: Text(c.name, style: TextStyle(fontSize: 12, color: palette.textPrimary), overflow: TextOverflow.ellipsis),
                             )),
                       ],
                       onChanged: (val) {
@@ -319,21 +317,23 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    color: palette.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: palette.border),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<int?>(
                       value: _selectedAthleteId,
                       isExpanded: true,
-                      hint: const Text('Tüm Sporcular', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      dropdownColor: palette.surfaceElevated,
+                      hint: Text('Tüm Sporcular', style: TextStyle(fontSize: 12, color: palette.textMuted)),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Tüm Sporcular', style: TextStyle(fontSize: 12))),
+                        DropdownMenuItem(value: null, child: Text('Tüm Sporcular', style: TextStyle(fontSize: 12, color: palette.textPrimary))),
                         ...filteredAthletes.map((a) => DropdownMenuItem(
                               value: a.id,
                               child: Text(
                                 '${a.name}${a.birthYear != null ? " (${a.birthYear})" : ""}',
-                                style: const TextStyle(fontSize: 12, color: AppColors.ink),
+                                style: TextStyle(fontSize: 12, color: palette.textPrimary),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             )),
@@ -366,20 +366,23 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
   }
 
   Widget _buildEventPill({required String label, required bool isSelected, required VoidCallback onTap}) {
+    final palette = context.palette;
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.lime : Colors.white,
+          color: isSelected ? palette.primary : palette.surfaceSecondary,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isSelected ? palette.primary : palette.border),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: AppColors.ink,
+            color: isSelected ? onPrimary : palette.textPrimary,
           ),
         ),
       ),
@@ -387,6 +390,8 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
   }
 
   Widget _buildStatusPill(String val, String label) {
+    final palette = context.palette;
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
     final isSelected = _selectedStatus == val;
     return GestureDetector(
       onTap: () {
@@ -396,15 +401,16 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.teal : Colors.white,
+          color: isSelected ? palette.primary : palette.surfaceSecondary,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isSelected ? palette.primary : palette.border),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: AppColors.ink,
+            color: isSelected ? onPrimary : palette.textPrimary,
           ),
         ),
       ),

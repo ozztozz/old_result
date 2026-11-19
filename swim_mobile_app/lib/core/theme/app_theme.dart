@@ -18,11 +18,20 @@ abstract final class AppTheme {
     return _buildTheme(palette);
   }
 
+  /// Herhangi bir AppColorPalette üzerinden dinamik ThemeData üretir
+  static ThemeData fromPalette(AppColorPalette palette) {
+    return _buildTheme(palette);
+  }
+
   static ThemeData _buildTheme(AppColorPalette palette) {
+    final onPrimary = palette.primary.computeLuminance() > 0.42
+        ? const Color(0xFF090D16)
+        : Colors.white;
+
     final colorScheme = palette.isDark
         ? ColorScheme.dark(
             primary: palette.primary,
-            onPrimary: Colors.white,
+            onPrimary: onPrimary,
             primaryContainer: palette.primaryContainer,
             secondary: palette.secondary,
             surface: palette.surface,
@@ -33,7 +42,7 @@ abstract final class AppTheme {
           )
         : ColorScheme.light(
             primary: palette.primary,
-            onPrimary: Colors.white,
+            onPrimary: onPrimary,
             primaryContainer: palette.primaryContainer,
             secondary: palette.secondary,
             surface: palette.surface,
@@ -77,13 +86,13 @@ abstract final class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: palette.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: onPrimary,
           elevation: 0,
           padding: AppSpacing.buttonPadding,
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.buttonRadius,
           ),
-          textStyle: AppTextStyles.tabSelected.copyWith(color: Colors.white),
+          textStyle: AppTextStyles.tabSelected.copyWith(color: onPrimary),
         ),
       ),
 

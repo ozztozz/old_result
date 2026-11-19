@@ -3,6 +3,7 @@ import '../../core/components/empty_state_widget.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
+import '../../shared/widgets/theme_picker_sheet.dart';
 import 'live_meet_detail_screen.dart';
 
 /// TYF Yüzme Sonuçları — Canlı Müsabakalar Ekranı (v2.0)
@@ -120,6 +121,11 @@ class _LiveScreenState extends State<LiveScreen> {
         ),
         actions: [
           IconButton(
+            icon: Icon(Icons.palette_outlined, color: palette.primary, size: 21),
+            tooltip: 'Tema Seç',
+            onPressed: () => ThemePickerSheet.show(context),
+          ),
+          IconButton(
             icon: Icon(Icons.refresh_rounded, color: palette.textSecondary, size: 20),
             tooltip: 'Yenile',
             onPressed: _loadLiveMeets,
@@ -209,7 +215,9 @@ class _LiveScreenState extends State<LiveScreen> {
                               fontFamily: AppTextStyles.fontFamily,
                               fontSize: 12.5,
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? Colors.white : palette.textSecondary,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : palette.textSecondary,
                             ),
                             selectedColor: palette.primary,
                             backgroundColor: palette.surface,
@@ -235,21 +243,21 @@ class _LiveScreenState extends State<LiveScreen> {
                     Container(
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: palette.surface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: palette.border),
                       ),
-                      child: const Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.pool_outlined,
-                              size: 40, color: AppColors.laneNeutral),
-                          SizedBox(height: 12),
+                              size: 40, color: palette.textMuted),
+                          const SizedBox(height: 12),
                           Text(
                             'Şu anda aktif canlı müsabaka bulunmuyor',
                             style: TextStyle(
-                              fontFamily: 'Inter',
-                              color: AppColors.textSecondary,
+                              fontFamily: AppTextStyles.fontFamily,
+                              color: palette.textSecondary,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -259,14 +267,14 @@ class _LiveScreenState extends State<LiveScreen> {
                       ),
                     )
                   else
-                    ...meets.map((m) => _buildLiveMeetCard(m)),
+                    ...meets.map((m) => _buildLiveMeetCard(m, palette)),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildLiveMeetCard(LiveMeetSummary meet) {
+  Widget _buildLiveMeetCard(LiveMeetSummary meet, AppColorPalette palette) {
     final resTotal = meet.resultListProgress.total;
     final resProcessed = meet.resultListProgress.processed;
     final resRatio = resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
@@ -275,19 +283,21 @@ class _LiveScreenState extends State<LiveScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.border,
+          color: palette.border,
           width: 1.0,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x083D3038),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
+        boxShadow: palette.isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x083D3038),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
+                ),
+              ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -299,23 +309,23 @@ class _LiveScreenState extends State<LiveScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Üst Rozet Satırı: Soluk pudra gülü nokta (•) + 11px CANLI YARIŞ
+                // 1. Üst Rozet Satırı: Canlı nokta (•) + 11px CANLI YAYIN
                 Row(
                   children: [
                     Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(
-                        color: AppColors.accent,
+                      decoration: BoxDecoration(
+                        color: palette.primary,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Text(
+                    Text(
                       'CANLI YAYIN',
                       style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: AppColors.accent,
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.primary,
                         fontWeight: FontWeight.w600,
                         fontSize: 11,
                         letterSpacing: 0.6,
@@ -324,9 +334,9 @@ class _LiveScreenState extends State<LiveScreen> {
                     const Spacer(),
                     Text(
                       '${meet.totalAthletes} Sporcu',
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
@@ -338,7 +348,7 @@ class _LiveScreenState extends State<LiveScreen> {
                 // 2. Müsabaka Başlığı
                 Text(
                   meet.name,
-                  style: AppTextStyles.raceTitle,
+                  style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
                 ),
                 const SizedBox(height: 4),
 
@@ -347,16 +357,16 @@ class _LiveScreenState extends State<LiveScreen> {
                   children: [
                     Text(
                       meet.city.isNotEmpty ? meet.city : 'Türkiye',
-                      style: AppTextStyles.categorySeries,
+                      style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
                     ),
                     if (meet.date.isNotEmpty) ...[
-                      const Text(
+                      Text(
                         ' • ',
-                        style: TextStyle(color: AppColors.laneNeutral),
+                        style: TextStyle(color: palette.textMuted),
                       ),
                       Text(
                         meet.date,
-                        style: AppTextStyles.categorySeries,
+                        style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
                       ),
                     ],
                   ],
@@ -364,26 +374,26 @@ class _LiveScreenState extends State<LiveScreen> {
                 const SizedBox(height: 14),
 
                 // 4. İnce 1px Ayırıcı Çizgi & İlerleme
-                const Divider(height: 1, thickness: 1, color: AppColors.divider),
+                Divider(height: 1, thickness: 1, color: palette.divider),
                 const SizedBox(height: 10),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Sonuçlanan Yarışlar',
                       style: TextStyle(
-                        fontFamily: 'Inter',
-                        color: AppColors.textSecondary,
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                     Text(
                       '$resProcessed / $resTotal (%$resPercent)',
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.textPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -395,8 +405,8 @@ class _LiveScreenState extends State<LiveScreen> {
                   borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
                     value: resRatio,
-                    backgroundColor: AppColors.divider,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    backgroundColor: palette.divider,
+                    valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
                     minHeight: 4,
                   ),
                 ),

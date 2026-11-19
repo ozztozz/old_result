@@ -4,6 +4,7 @@ import '../../core/services/favorite_athletes_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/theme_picker_sheet.dart';
 import '../athletes/athlete_profile_screen.dart';
 
 /// 5. Ekran: Favorilerim & Hızlı Takip (Mobil Özel)
@@ -100,6 +101,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.palette_outlined, color: palette.primary, size: 21),
+            tooltip: 'Tema Seç',
+            onPressed: () => ThemePickerSheet.show(context),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: palette.primary))

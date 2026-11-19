@@ -9,6 +9,7 @@ import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
+import '../../shared/widgets/theme_picker_sheet.dart';
 import '../clubs/relay_simulator_screen.dart';
 import '../meets/meet_detail_screen.dart';
 import '../athletes/athlete_profile_screen.dart';
@@ -119,10 +120,15 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           if (kDebugMode)
             IconButton(
-              icon: const Icon(Icons.palette_outlined),
+              icon: const Icon(Icons.design_services_outlined),
               onPressed: _openGallery,
               tooltip: 'SwimDesign Galerisi',
             ),
+          IconButton(
+            icon: Icon(Icons.palette_outlined, color: palette.primary),
+            onPressed: () => ThemePickerSheet.show(context),
+            tooltip: 'Tema Seç',
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: _openSearchModal,
