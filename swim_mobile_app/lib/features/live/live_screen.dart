@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
@@ -200,8 +201,9 @@ class _LiveScreenState extends State<LiveScreen> {
                                   const SizedBox(height: 20),
                                 ],
 
-                                // Frosted Glass Arama Yüzeyi
+                                // Frosted Glass Arama Yüzeyi (Level 3)
                                 SoftGlassPanel(
+                                  level: 3,
                                   tier: GlassTier.subtle,
                                   borderRadius: BorderRadius.circular(16),
                                   padding: const EdgeInsets.symmetric(
@@ -275,39 +277,53 @@ class _LiveScreenState extends State<LiveScreen> {
                                                       : city;
                                             });
                                           },
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 180),
-                                            curve: Curves.easeOutCubic,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? palette.primary
-                                                  : palette.surfaceGlass,
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? palette.primary
-                                                    : palette.glassBorder,
-                                                width: 0.9,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: BackdropFilter(
+                                              filter: ImageFilter.blur(
+                                                sigmaX: 10,
+                                                sigmaY: 10,
                                               ),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              label,
-                                              style: TextStyle(
-                                                fontFamily: AppTextStyles.fontFamily,
-                                                fontSize: 12.5,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.w600
-                                                    : FontWeight.w500,
-                                                color: isSelected
-                                                    ? Theme.of(context)
-                                                        .colorScheme
-                                                        .onPrimary
-                                                    : palette.textSecondary,
+                                              child: AnimatedContainer(
+                                                duration: const Duration(milliseconds: 180),
+                                                curve: Curves.easeOutCubic,
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 14,
+                                                  vertical: 8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected
+                                                      ? const Color(0xFF657D91)
+                                                          .withValues(alpha: 0.85)
+                                                      : Colors.white.withValues(
+                                                          alpha: palette.isDark
+                                                              ? 0.09
+                                                              : 0.14,
+                                                        ),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: Colors.white.withValues(
+                                                      alpha: palette.isDark
+                                                          ? 0.16
+                                                          : 0.25,
+                                                    ),
+                                                    width: 1.0,
+                                                  ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: Text(
+                                                  label,
+                                                  style: TextStyle(
+                                                    fontFamily: AppTextStyles.fontFamily,
+                                                    fontSize: 12.5,
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w600
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? Colors.white
+                                                        : palette.textSecondary,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -360,6 +376,7 @@ class _LiveScreenState extends State<LiveScreen> {
     final cityCount = _availableCities.length;
 
     return SoftGlassPanel(
+      level: 1,
       tier: GlassTier.hero,
       ambientGlowBehind: true,
       borderRadius: BorderRadius.circular(24),
@@ -519,6 +536,7 @@ class _LiveScreenState extends State<LiveScreen> {
     final resPercent = (resRatio * 100).toInt();
 
     return SoftGlassPanel(
+      level: 2,
       tier: GlassTier.card,
       borderRadius: BorderRadius.circular(20),
       margin: const EdgeInsets.only(bottom: 14),
