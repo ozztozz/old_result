@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/utils/race_result_sorter.dart';
@@ -14,6 +16,9 @@ import '../../shared/widgets/modern_race_card.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
 import '../../shared/widgets/club_selection_sheet.dart';
 import 'live_race_results_screen.dart';
+
+const double _liveMeetTabBarHeight = 46;
+const double _liveMeetActionButtonOffset = (24 * 1.2 - 40) / 2;
 
 /// TYF Yüzme Sonuçları — Canlı Müsabaka Detayı: Yarışlar Ekranı (v2.0)
 /// Apple Esintili 2 Sekmeli Tasarım & Global Takım Takip Desteği
@@ -111,9 +116,8 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
               ? 'Kadınlar'
               : 'Erkekler');
 
-      final ageGroup = e.ageGroup != null && e.ageGroup!.isNotEmpty
-          ? e.ageGroup!
-          : '';
+      final ageGroup =
+          e.ageGroup != null && e.ageGroup!.isNotEmpty ? e.ageGroup! : '';
 
       final isFinished = !e.isPending ||
           e.status.toLowerCase().contains('tamam') ||
@@ -132,14 +136,18 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
       // Kazanan özeti (Tamamlanmışsa)
       String? winner;
       if (isFinished) {
-        final matched = results.where((r) => isMatchEvent(r.eventNo, e.eventNo)).toList();
+        final matched =
+            results.where((r) => isMatchEvent(r.eventNo, e.eventNo)).toList();
         if (matched.isNotEmpty) {
           RaceResultSorter.sort(matched);
           final top = matched.first;
           final topTime = top.time ??
-              (top.timeCs != null ? (top.timeCs! / 100).toStringAsFixed(2) : '');
+              (top.timeCs != null
+                  ? (top.timeCs! / 100).toStringAsFixed(2)
+                  : '');
           if (topTime.isNotEmpty && !RaceResultSorter.isDisqualified(top)) {
-            winner = '🥇 1. ${StringUtils.toTitleCase(top.athleteName)} • $topTime';
+            winner =
+                '🥇 1. ${StringUtils.toTitleCase(top.athleteName)} • $topTime';
           }
         }
       }
@@ -208,9 +216,13 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
 
   List<RaceModel> _applyGenderFilter(List<RaceModel> list) {
     if (_selectedFilter == 'Kadınlar') {
-      return list.where((r) => r.gender.toLowerCase().contains('kadın')).toList();
+      return list
+          .where((r) => r.gender.toLowerCase().contains('kadın'))
+          .toList();
     } else if (_selectedFilter == 'Erkekler') {
-      return list.where((r) => r.gender.toLowerCase().contains('erkek')).toList();
+      return list
+          .where((r) => r.gender.toLowerCase().contains('erkek'))
+          .toList();
     } else if (_selectedFilter == '★ Favoriler') {
       return list.where((r) => r.isFavorite).toList();
     } else if (_selectedFilter.startsWith('🛡️ Takımım')) {
@@ -232,14 +244,19 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
   }
 
   RaceModel? get _firstPendingRace {
-    final pending = _races.where((r) => r.status != RaceStatus.completed).toList();
+    final pending =
+        _races.where((r) => r.status != RaceStatus.completed).toList();
     return pending.isNotEmpty ? pending.first : null;
   }
 
   int get _myTeamTotalInMeet {
-    if (!SelectedClubService.instance.hasSelectedClub || _lastFeedResponse == null) return 0;
+    if (!SelectedClubService.instance.hasSelectedClub ||
+        _lastFeedResponse == null) {
+      return 0;
+    }
     final athleteIds = _lastFeedResponse!.results
-        .where((r) => SelectedClubService.instance.matches(r.clubName, r.clubId))
+        .where(
+            (r) => SelectedClubService.instance.matches(r.clubName, r.clubId))
         .map((r) => r.athleteId)
         .toSet();
     return athleteIds.length;
@@ -268,149 +285,224 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
     ];
 
     return AmbientBackground(
-      artStyle: AmbientArtStyle.contourWaves,
-      artHeight: 240,
+      artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: palette.textPrimary,
-            size: 18,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _buildHeader(context, palette),
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: palette.primary,
+                        ),
+                      )
+                    : _errorMessage != null && _races.isEmpty
+                        ? Center(
+                            child: EmptyStateWidget(
+                              title: 'Bağlantı Hatası',
+                              message: _errorMessage!,
+                              icon: Icons.cloud_off_rounded,
+                              actionText: 'Tekrar Dene',
+                              onAction: _loadFeedData,
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: palette.primary,
+                            onRefresh: _loadFeedData,
+                            child: NestedScrollView(
+                              headerSliverBuilder:
+                                  (context, innerBoxIsScrolled) {
+                                return [
+                                  if (heroRace != null)
+                                    SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          AppSpacing.s20,
+                                          AppSpacing.sm,
+                                          AppSpacing.s20,
+                                          AppSpacing.md,
+                                        ),
+                                        child: HeroRaceCard(
+                                          race: heroRace,
+                                          onTap: () =>
+                                              _openRaceResults(heroRace),
+                                        ),
+                                      ),
+                                    ),
+                                  SliverToBoxAdapter(
+                                    child: _buildClubSelectorBar(context),
+                                  ),
+                                  SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        AppSpacing.s20,
+                                        0,
+                                        AppSpacing.s20,
+                                        AppSpacing.s12,
+                                      ),
+                                      child: _buildProgressHeader(palette),
+                                    ),
+                                  ),
+                                  SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        AppSpacing.s20,
+                                        0,
+                                        AppSpacing.s20,
+                                        AppSpacing.s12,
+                                      ),
+                                      child: ModernFilterChipBar(
+                                        chips: filterChips,
+                                        selectedChip: _selectedFilter,
+                                        onSelected: (chip) => setState(
+                                          () => _selectedFilter = chip,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SliverPersistentHeader(
+                                    pinned: true,
+                                    delegate: _SliverTabHeaderDelegate(
+                                      extent: _liveMeetTabBarHeight +
+                                          AppSpacing.xs * 2,
+                                      child: Container(
+                                        color: Colors.transparent,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.s20,
+                                          vertical: AppSpacing.xs,
+                                        ),
+                                        child: ModernSegmentedTabBar(
+                                          controller: _tabController,
+                                          tabs: [
+                                            TabItemData(
+                                              title:
+                                                  'Sonuçlananlar (${completed.length})',
+                                              icon: Icons
+                                                  .check_circle_outline_rounded,
+                                            ),
+                                            TabItemData(
+                                              title:
+                                                  'Bekleyenler (${pending.length})',
+                                              icon: Icons.schedule_rounded,
+                                            ),
+                                          ],
+                                          height: _liveMeetTabBarHeight,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ];
+                              },
+                              body: TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _buildRaceListView(
+                                    races: completed,
+                                    isCompletedTab: true,
+                                    emptyMessage:
+                                        'Henüz sonuçlanmış bir yarış bulunmuyor.',
+                                    heroRace: heroRace,
+                                  ),
+                                  _buildRaceListView(
+                                    races: pending,
+                                    isCompletedTab: false,
+                                    emptyMessage:
+                                        'Bekleyen yarış bulunmuyor, tüm program tamamlandı.',
+                                    heroRace: heroRace,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+              ),
+            ],
           ),
-          onPressed: () => Navigator.maybePop(context),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              StringUtils.toTitleCase(widget.live.name),
-              style: AppTextStyles.raceTitle.copyWith(color: palette.textPrimary),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${widget.live.city} • ${widget.live.totalAthletes} Sporcu',
-              style: AppTextStyles.categorySeries.copyWith(color: palette.textSecondary),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, color: palette.textSecondary, size: 20),
-            tooltip: 'Yenile',
-            onPressed: _loadFeedData,
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: palette.primary),
-            )
-          : _errorMessage != null && _races.isEmpty
-              ? Center(
-                  child: EmptyStateWidget(
-                    title: 'Bağlantı Hatası',
-                    message: _errorMessage!,
-                    icon: Icons.cloud_off_rounded,
-                    actionText: 'Tekrar Dene',
-                    onAction: _loadFeedData,
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, AppColorPalette palette) {
+    final athleteCount =
+        NumberFormat('#,###', 'tr_TR').format(widget.live.totalAthletes);
+    final title = StringUtils.toTitleCase(widget.live.name);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        AppSpacing.s12,
+        AppSpacing.s20,
+        AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 40 + AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  '${widget.live.city} • $athleteCount sporcu',
+                  style: AppTextStyles.filterChip.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
+                    color: palette.textSecondary,
                   ),
-                )
-              : RefreshIndicator(
-              color: palette.primary,
-              onRefresh: _loadFeedData,
-              child: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) {
-                  return [
-                    // 1. Vitrin Canlı Yarış Kartı
-                    if (heroRace != null)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                          child: HeroRaceCard(
-                            race: heroRace,
-                            onTap: () => _openRaceResults(heroRace),
-                          ),
-                        ),
-                      ),
-
-                    // 2. Takım Seçim & Takip Barı (Tüm ekranlarda kalıcı)
-                    SliverToBoxAdapter(
-                      child: _buildClubSelectorBar(context),
-                    ),
-
-                    // 3. Canlı Seans İlerleme Çubuğu
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: _buildProgressHeader(palette),
-                      ),
-                    ),
-
-                    // 4. Cinsiyet, Kategori ve Takım Filtre Çipleri
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 16, bottom: 12),
-                        child: ModernFilterChipBar(
-                          chips: filterChips,
-                          selectedChip: _selectedFilter,
-                          onSelected: (chip) => setState(() => _selectedFilter = chip),
-                        ),
-                      ),
-                    ),
-
-                    // 5. Sabit 2 Sekmeli Segmented TabBar
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverTabHeaderDelegate(
-                        child: Container(
-                          color: palette.background,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          child: ModernSegmentedTabBar(
-                            controller: _tabController,
-                            tabs: [
-                              TabItemData(
-                                title: 'Sonuçlananlar (${completed.length})',
-                                icon: Icons.check_circle_outline_rounded,
-                              ),
-                              TabItemData(
-                                title: 'Bekleyenler (${pending.length})',
-                                icon: Icons.schedule_rounded,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ];
-                },
-                body: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Sekme 1: Sonuçlananlar (Ters sıralı: Sonuçlanan ilk sırada)
-                    _buildRaceListView(
-                      races: completed,
-                      isCompletedTab: true,
-                      emptyMessage: 'Henüz sonuçlanmış bir yarış bulunmuyor.',
-                    ),
-
-                    // Sekme 2: Bekleyenler
-                    _buildRaceListView(
-                      races: pending,
-                      isCompletedTab: false,
-                      emptyMessage: 'Bekleyen yarış bulunmuyor, tüm program tamamlandı.',
-                    ),
-                  ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
+              const SizedBox(width: 40 + AppSpacing.sm),
+            ],
+          ),
+          AppSpacing.vXs,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Transform.translate(
+                offset: const Offset(0, _liveMeetActionButtonOffset),
+                child: GlassCircleButton(
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  iconSize: 18,
+                  iconColor: palette.textTertiary,
+                  tooltip: 'Geri',
+                  onTap: () => Navigator.maybePop(context),
+                ),
+              ),
+              AppSpacing.hSm,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    height: 1.2,
+                    color: palette.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              AppSpacing.hSm,
+              Transform.translate(
+                offset: const Offset(0, _liveMeetActionButtonOffset),
+                child: GlassCircleButton(
+                  icon: Icons.refresh_rounded,
+                  iconColor: palette.textTertiary,
+                  tooltip: 'Yenile',
+                  onTap: _loadFeedData,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -422,127 +514,88 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
     final totalInMeet = _myTeamTotalInMeet;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: hasClub ? palette.primaryContainer : palette.surface,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(
-            color: hasClub
-                ? palette.primary.withValues(alpha: 0.35)
-                : palette.border,
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: palette.textPrimary.withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        0,
+        AppSpacing.s20,
+        AppSpacing.s12,
+      ),
+      child: SoftGlassPanel(
+        level: 3,
+        borderRadius: AppRadius.cardRadius,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12,
+          vertical: AppSpacing.sm,
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () async {
-              await ClubSelectionSheet.show(
-                context,
-                availableClubs: _availableClubs,
-              );
-            },
-            borderRadius: AppRadius.cardRadius,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
+        onTap: () async {
+          await ClubSelectionSheet.show(
+            context,
+            availableClubs: _availableClubs,
+          );
+        },
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: palette.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.shield_rounded,
+                size: 17,
+                color: palette.primary,
+              ),
+            ),
+            AppSpacing.hSm,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: hasClub ? palette.primary : palette.surfaceSecondary,
-                      shape: BoxShape.circle,
+                  Text(
+                    hasClub
+                        ? StringUtils.toTitleCase(clubName!)
+                        : 'Takımını Seç',
+                    style: AppTextStyles.categorySeries.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: palette.textPrimary,
                     ),
-                    child: Icon(
-                      Icons.shield_rounded,
-                      size: 17,
-                      color: hasClub ? Colors.white : palette.textSecondary,
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hasClub ? StringUtils.toTitleCase(clubName!) : 'Takımını Seç',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: hasClub ? palette.primary : palette.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          hasClub
-                              ? (totalInMeet > 0
-                                  ? 'Bu müsabakada $totalInMeet kulüp sporcunuz yarışıyor'
-                                  : 'Bu müsabakada kayıtlı sporcunuz yok')
-                              : 'Yarışlardaki kulüp sporcularınızı otomatik takip edin',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w400,
-                            color: hasClub
-                                ? palette.primary.withValues(alpha: 0.85)
-                                : palette.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  AppSpacing.vXs,
+                  Text(
+                    hasClub
+                        ? (totalInMeet > 0
+                            ? 'Bu müsabakada $totalInMeet kulüp sporcunuz yarışıyor'
+                            : 'Bu müsabakada kayıtlı sporcunuz yok')
+                        : 'Yarışlardaki kulüp sporcularınızı otomatik takip edin',
+                    style: AppTextStyles.labelMuted.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: palette.textSecondary,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: hasClub ? palette.surface : palette.surfaceSecondary,
-                      borderRadius: AppRadius.chipRadius,
-                      border: Border.all(
-                        color: hasClub
-                            ? palette.primary.withValues(alpha: 0.3)
-                            : palette.border,
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          hasClub ? 'Değiştir' : 'Seç',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: hasClub ? palette.primary : palette.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 14,
-                          color: hasClub ? palette.primary : palette.textSecondary,
-                        ),
-                      ],
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ),
+            AppSpacing.hSm,
+            Text(
+              hasClub ? 'Değiştir' : 'Seç',
+              style: AppTextStyles.labelMuted.copyWith(
+                fontWeight: FontWeight.w600,
+                color: palette.textSecondary,
+              ),
+            ),
+            AppSpacing.hXs,
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: palette.textSecondary,
+            ),
+          ],
         ),
       ),
     );
@@ -551,16 +604,12 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
   Widget _buildProgressHeader(AppColorPalette palette) {
     final resTotal = widget.live.resultListProgress.total;
     final resProcessed = widget.live.resultListProgress.processed;
-    final resRatio = resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
+    final resRatio =
+        resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
     final resPercent = (resRatio * 100).toInt();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: AppRadius.inputRadius,
-        border: Border.all(color: palette.border, width: 1.0),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Column(
         children: [
           Row(
@@ -569,41 +618,38 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: palette.primary,
+                  color: palette.textTertiary,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 6),
+              AppSpacing.hXs,
               Text(
                 'CANLI SEANS',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.primary,
+                style: AppTextStyles.labelMuted.copyWith(
+                  color: palette.textSecondary,
                   fontWeight: FontWeight.w600,
-                  fontSize: 11,
                   letterSpacing: 0.6,
                 ),
               ),
               const Spacer(),
               Text(
                 '$resProcessed / $resTotal Tamamlandı (%$resPercent)',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
+                style: AppTextStyles.categorySeries.copyWith(
                   color: palette.textSecondary,
-                  fontSize: 12,
                   fontWeight: FontWeight.w500,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          AppSpacing.vSm,
           ClipRRect(
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: AppRadius.full,
             child: LinearProgressIndicator(
               value: resRatio,
               backgroundColor: palette.divider,
               valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
-              minHeight: 4,
+              minHeight: AppSpacing.xs,
             ),
           ),
         ],
@@ -615,51 +661,74 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
     required List<RaceModel> races,
     required bool isCompletedTab,
     required String emptyMessage,
+    required RaceModel? heroRace,
   }) {
-    final palette = context.palette;
-
     if (races.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isCompletedTab ? Icons.emoji_events_outlined : Icons.schedule_outlined,
-                size: 40,
-                color: palette.textMuted,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                emptyMessage,
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.textSecondary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+      return EmptyStateWidget(
+        title: isCompletedTab ? 'Sonuçlanan yarış yok' : 'Bekleyen yarış yok',
+        message: emptyMessage,
+        icon: isCompletedTab
+            ? Icons.emoji_events_outlined
+            : Icons.schedule_outlined,
+        compact: true,
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        AppSpacing.sm,
+        AppSpacing.s20,
+        64 +
+            AppSpacing.md +
+            MediaQuery.of(context).padding.bottom +
+            AppSpacing.lg,
+      ),
       itemCount: races.length,
       itemBuilder: (context, index) {
         final race = races[index];
-        return ModernRaceCard(
-          race: race,
-          onTap: () => _openRaceResults(race),
-          onFavoriteToggle: () {
-            setState(() {
-              race.isFavorite = !race.isFavorite;
-            });
-          },
+        final highlight = !isCompletedTab &&
+            index == 0 &&
+            (heroRace == null || race.id == heroRace.id);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (highlight)
+                Positioned(
+                  top: -AppSpacing.md,
+                  right: -AppSpacing.md,
+                  width: 200,
+                  height: 150,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            context.palette.glowLight.withValues(
+                              alpha: context.palette.isDark ? 0.10 : 0.22,
+                            ),
+                            context.palette.glowLight.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ModernRaceCard(
+                race: race,
+                onTap: () => _openRaceResults(race),
+                onFavoriteToggle: () {
+                  setState(() {
+                    race.isFavorite = !race.isFavorite;
+                  });
+                },
+              ),
+            ],
+          ),
         );
       },
     );
@@ -668,17 +737,19 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
 
 class _SliverTabHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
+  final double extent;
 
-  _SliverTabHeaderDelegate({required this.child});
-
-  @override
-  double get minExtent => 52.0;
+  _SliverTabHeaderDelegate({required this.child, required this.extent});
 
   @override
-  double get maxExtent => 52.0;
+  double get minExtent => extent;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return child;
   }
 

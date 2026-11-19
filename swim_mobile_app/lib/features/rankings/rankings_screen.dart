@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../core/components/ambient_canvas.dart';
+import '../../core/components/app_button.dart';
+import '../../core/components/app_skeleton.dart';
+import '../../core/components/empty_state_widget.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/modern_filter_chips.dart';
 import '../athletes/athlete_profile_screen.dart';
 
 /// Yaş Grubu, Branş ve İl Bazlı Top 25 Sıralamalar Ekranı.
@@ -16,6 +23,10 @@ class RankingsScreen extends StatefulWidget {
 class _RankingsScreenState extends State<RankingsScreen> {
   final TextEditingController _cityCtrl = TextEditingController();
   final TextEditingController _yearCtrl = TextEditingController();
+  late final FocusNode _cityFocusNode;
+  late final FocusNode _yearFocusNode;
+  bool _isCityFocused = false;
+  bool _isYearFocused = false;
 
   String _gender = 'Erkek';
   String _course = 'LC';
@@ -39,14 +50,31 @@ class _RankingsScreenState extends State<RankingsScreen> {
   @override
   void initState() {
     super.initState();
+    _cityFocusNode = FocusNode()..addListener(_handleFocusChange);
+    _yearFocusNode = FocusNode()..addListener(_handleFocusChange);
     _loadRankings();
   }
 
   @override
   void dispose() {
+    _cityFocusNode.removeListener(_handleFocusChange);
+    _yearFocusNode.removeListener(_handleFocusChange);
+    _cityFocusNode.dispose();
+    _yearFocusNode.dispose();
     _cityCtrl.dispose();
     _yearCtrl.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (!mounted) return;
+    if (_isCityFocused != _cityFocusNode.hasFocus ||
+        _isYearFocused != _yearFocusNode.hasFocus) {
+      setState(() {
+        _isCityFocused = _cityFocusNode.hasFocus;
+        _isYearFocused = _yearFocusNode.hasFocus;
+      });
+    }
   }
 
   Future<void> _loadRankings() async {
@@ -85,270 +113,528 @@ class _RankingsScreenState extends State<RankingsScreen> {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          'Top 25 Sıralamalar',
-          style: AppTextStyles.appTitle.copyWith(color: palette.textPrimary),
+    final strokeChips = _strokes
+        .map((s) => FilterChipItem(label: s.$2))
+        .toList();
+    final selectedStrokeLabel = _strokes
+        .firstWhere((s) => s.$1 == _stroke, orElse: () => _strokes.first)
+        .$2;
+
+    final distanceChips = _distances
+        .map((d) => FilterChipItem(label: '${d}m'))
+        .toList();
+    final selectedDistanceLabel = '${_distance}m';
+
+    return AmbientBackground(
+      artStyle: AmbientArtStyle.none,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _buildHeader(context, palette),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.s20,
+                    AppSpacing.xs,
+                    AppSpacing.s20,
+                    64 +
+                        AppSpacing.md +
+                        MediaQuery.of(context).padding.bottom +
+                        AppSpacing.lg,
+                  ),
+                  children: [
+                    // 1. Cinsiyet & Kulvar (Tek satır, overflow korumalı)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ModernFilterChip(
+                                      label: 'Erkek',
+                                      isSelected: _gender == 'Erkek',
+                                      onTap: () {
+                                        setState(() => _gender = 'Erkek');
+                                        _loadRankings();
+                                      },
+                                    ),
+                                    ModernFilterChip(
+                                      label: 'Kadın',
+                                      isSelected: _gender == 'Kadın',
+                                      onTap: () {
+                                        setState(() => _gender = 'Kadın');
+                                        _loadRankings();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ModernFilterChip(
+                                      label: '50m',
+                                      isSelected: _course == 'LC',
+                                      onTap: () {
+                                        setState(() => _course = 'LC');
+                                        _loadRankings();
+                                      },
+                                    ),
+                                    ModernFilterChip(
+                                      label: '25m',
+                                      isSelected: _course == 'SC',
+                                      onTap: () {
+                                        setState(() => _course = 'SC');
+                                        _loadRankings();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    AppSpacing.vSm,
+
+                    // 2. Stil Çipleri (ModernFilterChipBar)
+                    ModernFilterChipBar(
+                      chips: strokeChips,
+                      selectedChip: selectedStrokeLabel,
+                      onSelected: (label) {
+                        final match = _strokes.firstWhere(
+                          (s) => s.$2 == label,
+                          orElse: () => _strokes.first,
+                        );
+                        setState(() => _stroke = match.$1);
+                        _loadRankings();
+                      },
+                    ),
+                    AppSpacing.vSm,
+
+                    // 3. Mesafe Çipleri (ModernFilterChipBar)
+                    ModernFilterChipBar(
+                      chips: distanceChips,
+                      selectedChip: selectedDistanceLabel,
+                      onSelected: (label) {
+                        final parsed = int.tryParse(label.replaceAll('m', ''));
+                        if (parsed != null) {
+                          setState(() => _distance = parsed);
+                          _loadRankings();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    // 4. İl ve Doğum Yılı Girişleri + Getir Butonu
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: _buildGlassField(
+                            palette: palette,
+                            controller: _cityCtrl,
+                            focusNode: _cityFocusNode,
+                            isFocused: _isCityFocused,
+                            hint: 'İl (ör. Ankara)',
+                          ),
+                        ),
+                        AppSpacing.hSm,
+                        Expanded(
+                          flex: 2,
+                          child: _buildGlassField(
+                            palette: palette,
+                            controller: _yearCtrl,
+                            focusNode: _yearFocusNode,
+                            isFocused: _isYearFocused,
+                            hint: 'D.Yılı (2014)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        AppSpacing.hSm,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minWidth: 88,
+                            minHeight: 48,
+                          ),
+                          child: SizedBox(
+                            height: 48,
+                            child: AppButton(
+                              text: 'Getir',
+                              size: AppButtonSize.small,
+                              onPressed: _loadRankings,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppSpacing.vMd,
+
+                    // 5. Sonuç Tablosu / Durumlar
+                    if (_loading)
+                      _buildLoadingSkeleton()
+                    else if (_error != null)
+                      SoftGlassPanel(
+                        level: 2,
+                        borderRadius: AppRadius.cardRadius,
+                        padding: AppSpacing.paddingAllLg,
+                        child: EmptyStateWidget(
+                          title: 'Bağlantı Hatası',
+                          message: _error!,
+                          icon: Icons.cloud_off_outlined,
+                          actionText: 'Tekrar dene',
+                          onAction: _loadRankings,
+                          compact: true,
+                        ),
+                      )
+                    else if (_items.isEmpty)
+                      const SoftGlassPanel(
+                        level: 2,
+                        borderRadius: AppRadius.cardRadius,
+                        padding: AppSpacing.paddingAllLg,
+                        child: EmptyStateWidget(
+                          title: 'Sonuç bulunamadı',
+                          message: 'Seçilen kriterlerde sonuç bulunamadı.',
+                          icon: Icons.leaderboard_outlined,
+                          compact: true,
+                        ),
+                      )
+                    else
+                      SoftGlassPanel(
+                        level: 2,
+                        borderRadius: AppRadius.cardRadius,
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: _items.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final item = entry.value;
+                            final isLast = idx == _items.length - 1;
+                            return _buildRankingRow(
+                              context,
+                              palette,
+                              idx: idx,
+                              item: item,
+                              showDivider: !isLast,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 36),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, AppColorPalette palette) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        AppSpacing.s12,
+        AppSpacing.s20,
+        AppSpacing.md,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Cinsiyet & Kulvar
-          Row(
-            children: [
-              _chip(palette, 'Erkek', _gender == 'Erkek', () {
-                setState(() => _gender = 'Erkek');
-                _loadRankings();
-              }),
-              const SizedBox(width: 6),
-              _chip(palette, 'Kadın', _gender == 'Kadın', () {
-                setState(() => _gender = 'Kadın');
-                _loadRankings();
-              }),
-              const Spacer(),
-              _chip(palette, '50m', _course == 'LC', () {
-                setState(() => _course = 'LC');
-                _loadRankings();
-              }),
-              const SizedBox(width: 6),
-              _chip(palette, '25m', _course == 'SC', () {
-                setState(() => _course = 'SC');
-                _loadRankings();
-              }),
-            ],
+          GlassCircleButton(
+            icon: Icons.arrow_back_outlined,
+            iconSize: 20,
+            iconColor: palette.textTertiary,
+            tooltip: 'Geri',
+            onTap: () => Navigator.maybePop(context),
           ),
-          const SizedBox(height: 10),
-
-          // Stil
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _strokes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (_, idx) {
-                final (code, label) = _strokes[idx];
-                return _chip(palette, label, _stroke == code, () {
-                  setState(() => _stroke = code);
-                  _loadRankings();
-                });
-              },
+          AppSpacing.hSm,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Türkiye Yüzme Federasyonu',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
+                    color: palette.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Top 25 Sıralamalar',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                    height: 1.15,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-
-          // Mesafe
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _distances.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (_, idx) {
-                final d = _distances[idx];
-                return _chip(palette, '${d}m', _distance == d, () {
-                  setState(() => _distance = d);
-                  _loadRankings();
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // İl ve Doğum Yılı
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: _cityCtrl,
-                  onSubmitted: (_) => _loadRankings(),
-                  style: TextStyle(fontSize: 13, color: palette.textPrimary),
-                  decoration: _inputDec(palette, 'İl (ör. Ankara)'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _yearCtrl,
-                  keyboardType: TextInputType.number,
-                  onSubmitted: (_) => _loadRankings(),
-                  style: TextStyle(fontSize: 13, color: palette.textPrimary),
-                  decoration: _inputDec(palette, 'D.Yılı (2014)'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _loadRankings,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: palette.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Getir', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          if (_loading)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator(color: palette.primary)),
-            )
-          else if (_error != null)
-            Text(_error!, style: TextStyle(color: palette.statusDanger))
-          else if (_items.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                borderRadius: AppRadius.cardRadius,
-                border: Border.all(color: palette.border),
-              ),
-              child: Text(
-                'Seçilen kriterlerde sonuç bulunamadı.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: palette.textSecondary, fontSize: 13),
-              ),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: palette.surface,
-                borderRadius: AppRadius.cardRadius,
-                border: Border.all(color: palette.border),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: _items.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final item = entry.value;
-                  final rank = item['rank'] as int? ?? (idx + 1);
-                  final isPodium = rank <= 3;
-                  final athId = item['athlete_id'] as int;
-
-                  return Column(
-                    children: [
-                      ListTile(
-                        leading: SizedBox(
-                          width: 28,
-                          child: Text(
-                            '$rank.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: isPodium ? palette.gold : palette.textSecondary,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          item['athlete_name'] as String? ?? '',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: palette.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          [
-                            if (item['birth_year'] != null) '${item['birth_year']}',
-                            item['club_name'] as String? ?? 'Ferdi',
-                            if ((item['city'] as String? ?? '').isNotEmpty) item['city'],
-                          ].join(' • '),
-                          style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              item['time'] as String? ?? '',
-                              style: AppTextStyles.officialTime.copyWith(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: palette.textPrimary,
-                              ),
-                            ),
-                            if (item['points'] != null)
-                              Text(
-                                '${item['points']} FINA',
-                                style: TextStyle(fontSize: 10, color: palette.gold, fontWeight: FontWeight.w600),
-                              ),
-                          ],
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AthleteProfileScreen(
-                                athleteId: athId,
-                                athleteName: item['athlete_name'] as String? ?? '',
-                                repository: widget.repository,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      if (idx < _items.length - 1) Divider(height: 1, color: palette.divider),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDec(AppColorPalette palette, String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(fontSize: 12.5, color: palette.textMuted),
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      filled: true,
-      fillColor: palette.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: palette.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: palette.border),
+  Widget _buildGlassField({
+    required AppColorPalette palette,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required bool isFocused,
+    required String hint,
+    TextInputType? keyboardType,
+  }) {
+    return SoftGlassPanel(
+      level: 3,
+      height: 48,
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      animationDuration: const Duration(milliseconds: 180),
+      fillAlphaOverride: palette.isDark
+          ? (isFocused ? 0.15 : 0.09)
+          : (isFocused ? 0.20 : 0.14),
+      borderAlphaOverride: palette.isDark
+          ? (isFocused ? 0.34 : 0.16)
+          : (isFocused ? 0.50 : 0.25),
+      child: Center(
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: keyboardType,
+          onSubmitted: (_) => _loadRankings(),
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 14,
+            color: palette.textPrimary,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 13.5,
+              color: palette.textSecondary.withValues(alpha: 0.85),
+            ),
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _chip(AppColorPalette palette, String label, bool selected, VoidCallback onTap) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      labelStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-        color: selected ? Colors.white : palette.textSecondary,
-      ),
-      selectedColor: palette.primary,
-      backgroundColor: palette.surface,
-      side: BorderSide(color: selected ? palette.primary : palette.border),
-      showCheckmark: false,
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  Widget _buildLoadingSkeleton() {
+    return const Column(
+      children: [
+        AppSkeleton.card(height: 60),
+        AppSpacing.v12,
+        AppSkeleton.card(height: 60),
+        AppSpacing.v12,
+        AppSkeleton.card(height: 60),
+        AppSpacing.v12,
+        AppSkeleton.card(height: 60),
+      ],
+    );
+  }
+
+  Widget _buildRankingRow(
+    BuildContext context,
+    AppColorPalette palette, {
+    required int idx,
+    required Map<String, dynamic> item,
+    required bool showDivider,
+  }) {
+    final rank = item['rank'] as int? ?? (idx + 1);
+    final isPodium = rank <= 3;
+    final athId = item['athlete_id'] as int;
+    final rawName = item['athlete_name'] as String? ?? '';
+    final athleteName = StringUtils.toTitleCase(rawName);
+
+    final rawClub = (item['club_name'] as String? ?? '').trim();
+    final clubName = rawClub.isNotEmpty
+        ? StringUtils.toTitleCase(rawClub)
+        : 'Ferdi';
+    final rawCity = (item['city'] as String? ?? '').trim();
+    final cityName = rawCity.isNotEmpty ? StringUtils.toTitleCase(rawCity) : '';
+
+    final yearClub = item['birth_year'] != null
+        ? '${item['birth_year']} • $clubName'
+        : clubName;
+    final detailLine = cityName.isNotEmpty ? '$yearClub • $cityName' : yearClub;
+
+    final chipFill = isPodium
+        ? palette.accent.withValues(alpha: 0.18)
+        : palette.textPrimary.withValues(alpha: palette.isDark ? 0.08 : 0.05);
+    final chipBorder = isPodium
+        ? palette.accent
+        : Colors.white.withValues(alpha: palette.isDark ? 0.12 : 0.25);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AthleteProfileScreen(
+                    athleteId: athId,
+                    athleteName: rawName,
+                    repository: widget.repository,
+                  ),
+                ),
+              );
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.s12,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Col 1: Sıra çipi
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 38),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: chipFill,
+                        borderRadius: AppRadius.smallRadius,
+                        border: Border.all(color: chipBorder, width: 1),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$rank.',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 13,
+                          fontWeight:
+                              isPodium ? FontWeight.w700 : FontWeight.w600,
+                          color: isPodium
+                              ? palette.accent
+                              : palette.textSecondary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    AppSpacing.h12,
+
+                    // Col 2: Sporcu adı & detay satırı
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            athleteName,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            detailLine,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 12.5,
+                              color: palette.textSecondary,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    AppSpacing.h12,
+
+                    // Col 3: Derece & FINA
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          item['time'] as String? ?? '',
+                          maxLines: 1,
+                          softWrap: false,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: palette.textPrimary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        if (item['points'] != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            '${item['points']} FINA',
+                            maxLines: 1,
+                            softWrap: false,
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: palette.accent,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (showDivider) Divider(height: 1, thickness: 1, color: palette.divider),
+      ],
     );
   }
 }

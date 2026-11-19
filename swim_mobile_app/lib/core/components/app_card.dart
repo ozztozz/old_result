@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'soft_glass_panel.dart';
 import '../theme/tokens/tokens.dart';
 
 /// Kart Görünüm Varyantları
@@ -61,6 +62,20 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final effectiveRadius = borderRadius ?? AppRadius.cardRadius;
+
+    if (variant == AppCardVariant.surface ||
+        variant == AppCardVariant.elevated) {
+      return SoftGlassPanel(
+        level: 2,
+        margin: margin,
+        padding: padding,
+        borderRadius: effectiveRadius,
+        fillColorOverride: backgroundColor,
+        borderColor: borderColor,
+        onTap: onTap,
+        child: child,
+      );
+    }
 
     Color bg;
     Border? border;

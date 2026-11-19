@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 
 /// Minimalist Filtre Çipi Tanımı
@@ -31,52 +32,46 @@ class ModernFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return GestureDetector(
+    return SoftGlassPanel(
+      level: 3,
+      height: 36,
+      margin: const EdgeInsets.only(right: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      borderRadius: AppRadius.chipRadius,
+      animationDuration: const Duration(milliseconds: 180),
+      fillColorOverride: isSelected ? palette.activeChipFill : null,
+      borderAlphaOverride: isSelected ? palette.activeChipBorderAlpha : null,
+      shadowsOverride: isSelected
+          ? [
+              BoxShadow(
+                color: palette.activeChipShadow,
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ]
+          : null,
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? palette.surfaceGlassStrong : palette.surfaceSecondary.withValues(alpha: 0.55),
-          borderRadius: AppRadius.medium,
-          border: Border.all(
-            color: isSelected ? palette.primary.withValues(alpha: 0.45) : palette.border,
-            width: 1.0,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: palette.softShadow,
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 14,
-                color: isSelected ? palette.primary : palette.textSecondary,
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: AppTextStyles.fontFamily,
-                fontSize: 12.5,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? palette.textPrimary : palette.textSecondary,
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? palette.activeChipText : palette.textTertiary,
             ),
+            AppSpacing.hXs,
           ],
-        ),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 13.5,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? palette.activeChipText : palette.textTertiary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -99,19 +94,35 @@ class ModernFilterChipBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 36,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: chips.length,
-        itemBuilder: (context, index) {
-          final item = chips[index];
-          final isSelected = item.label == selectedChip;
-          return ModernFilterChip(
-            label: item.label,
-            icon: item.icon,
-            isSelected: isSelected,
-            onTap: () => onSelected(item.label),
-          );
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) {
+          final fadeStart = bounds.width > 28
+              ? ((bounds.width - 28) / bounds.width).clamp(0.0, 1.0)
+              : 0.0;
+          return LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            stops: [0.0, fadeStart, 1.0],
+            colors: const [Colors.white, Colors.white, Colors.transparent],
+          ).createShader(bounds);
         },
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          padding: const EdgeInsets.only(right: AppSpacing.md),
+          itemCount: chips.length,
+          itemBuilder: (context, index) {
+            final item = chips[index];
+            final isSelected = item.label == selectedChip;
+            return ModernFilterChip(
+              label: item.label,
+              icon: item.icon,
+              isSelected: isSelected,
+              onTap: () => onSelected(item.label),
+            );
+          },
+        ),
       ),
     );
   }

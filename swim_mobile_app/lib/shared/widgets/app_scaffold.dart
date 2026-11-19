@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 
-/// TYF Yüzme Sonuçları — Yüzen Frosted Glass Navigasyon Katmanı
-/// SECOND DESIGN REFINEMENT — Section 7:
-/// Çerçevesiz, hafif ve zarif aktif durum; kenarlıklı araç çubuğu yerine yüzen cam hissi.
+/// TYF Yüzme Sonuçları — Yüzen Koyu Yarı Saydam Cam Navigasyon Kabuğu
+/// Doğrudan [SoftGlassPanel] (`GlassTier.dock`) kullanır.
 class AppScaffold extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onNavigationChanged;
@@ -21,28 +20,103 @@ class AppScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final fadeBaseColor = palette.ambientBottom;
 
     return Scaffold(
       backgroundColor: palette.background,
       extendBody: true,
-      body: IndexedStack(
-        index: currentIndex,
-        children: screens,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: currentIndex,
+            children: screens,
+          ),
+          // Navigasyon arkasında 120px yumuşak alt sönümleme katmanı
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 120 + bottomInset,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      fadeBaseColor.withValues(alpha: 0.0),
+                      fadeBaseColor.withValues(alpha: 0.88),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-          22,
-          0,
-          22,
-          bottomInset > 0 ? bottomInset + 8 : 16,
-        ),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + bottomInset),
         child: SoftGlassPanel(
           tier: GlassTier.dock,
-          borderRadius: BorderRadius.circular(24),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-          child: SizedBox(
-            height: 50,
-            child: Row(
+          height: 64,
+          borderRadius: BorderRadius.circular(28),
+          padding: const EdgeInsets.all(5),
+          child: _buildNavContent(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavContent(BuildContext context) {
+    final disableMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final clampedIndex = currentIndex.clamp(0, 2);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tabWidth = constraints.maxWidth / 3;
+
+        return Stack(
+          children: [
+            // Kayan yumuşak yarı saydam aktif hap (200ms, easeOut, kenarlıksız)
+            AnimatedPositioned(
+              duration: disableMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              left: clampedIndex * tabWidth,
+              top: 0,
+              bottom: 0,
+              width: tabWidth,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      height: 1.0,
+                      margin: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.0),
+                            Colors.white.withValues(alpha: 0.22),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // 3 Sekme Butonu
+            Row(
               children: [
                 _buildNavItem(
                   context,
@@ -67,9 +141,9 @@ class AppScaffold extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -82,44 +156,38 @@ class AppScaffold extends StatelessWidget {
   ) {
     final palette = context.palette;
     final isSelected = currentIndex == index;
-    final disableMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final activeColor = palette.navLabelActive;
+    final inactiveColor = palette.navLabelInactive.withValues(alpha: 0.86);
 
     return Expanded(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onNavigationChanged(index),
-          borderRadius: BorderRadius.circular(18),
-          child: AnimatedContainer(
-            duration: disableMotion
-                ? Duration.zero
-                : const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? (palette.isDark
-                      ? palette.primary.withValues(alpha: 0.14)
-                      : Colors.white.withValues(alpha: 0.52))
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
-            ),
+          borderRadius: BorderRadius.circular(22),
+          splashColor: Colors.white.withValues(alpha: 0.08),
+          highlightColor: Colors.transparent,
+          child: Center(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   isSelected ? activeIcon : icon,
-                  size: 20,
-                  color: isSelected ? palette.textPrimary : palette.textMuted,
+                  size: 22,
+                  color: isSelected ? activeColor : inactiveColor,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     letterSpacing: 0.1,
-                    color: isSelected ? palette.textPrimary : palette.textSecondary,
+                    color: isSelected ? activeColor : inactiveColor,
                   ),
                 ),
               ],

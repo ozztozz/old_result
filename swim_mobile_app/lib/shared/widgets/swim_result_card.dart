@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../data/models/race_result.dart';
+import 'status_badge.dart';
 
 String _toTitleCase(String text) {
   if (text.isEmpty) return text;
@@ -14,9 +16,13 @@ String _toTitleCase(String text) {
 }
 
 int? _parseTimeToCs(String? s) {
-  if (s == null) return null;
+  if (s == null) {
+    return null;
+  }
   final clean = s.trim();
-  if (clean.isEmpty || clean == '-' || clean == '0' || clean == '00:00.00') return null;
+  if (clean.isEmpty || clean == '-' || clean == '0' || clean == '00:00.00') {
+    return null;
+  }
   try {
     final parts = clean.split(':');
     if (parts.length == 2) {
@@ -100,12 +106,14 @@ class SwimResultCard extends StatelessWidget {
         result.resultStatus == 'DNF' ||
         result.rank.toUpperCase().startsWith('DQ') ||
         result.rank.toUpperCase().startsWith('DSQ');
-    final isSwimming = result.resultStatus == 'SWIMMING' || result.resultStatus == 'HAVUZDA';
+    final isSwimming =
+        result.resultStatus == 'SWIMMING' || result.resultStatus == 'HAVUZDA';
 
     final hasFinished = !isWaiting &&
         !isDq &&
         !isSwimming &&
-        ((result.timeCs ?? 0) > 0 || (result.time != null && result.time!.isNotEmpty));
+        ((result.timeCs ?? 0) > 0 ||
+            (result.time != null && result.time!.isNotEmpty));
 
     final rawRank = result.rank.replaceAll('.', '').trim();
     final parsedRank = int.tryParse(rawRank);
@@ -123,7 +131,8 @@ class SwimResultCard extends StatelessWidget {
     final heatStr = cleanHeat.isNotEmpty
         ? cleanHeat
         : (result.heat.isNotEmpty ? result.heat : '-');
-    final laneStr = result.lane != null && result.lane! > 0 ? '${result.lane}' : '-';
+    final laneStr =
+        result.lane != null && result.lane! > 0 ? '${result.lane}' : '-';
 
     // Sol taraftaki gösterge:
     // Yarış sonuçlanmışsa -> Sıralama (1., 2., 3. vb.)
@@ -144,7 +153,8 @@ class SwimResultCard extends StatelessWidget {
           fontFeatures: const [FontFeature.tabularFigures()],
         );
       } else if (isDq) {
-        leadingText = result.resultStatus.isNotEmpty ? result.resultStatus : 'DQ';
+        leadingText =
+            result.resultStatus.isNotEmpty ? result.resultStatus : 'DQ';
         leadingStyle = TextStyle(
           fontFamily: AppTextStyles.fontFamily,
           fontSize: 12,
@@ -220,16 +230,20 @@ class SwimResultCard extends StatelessWidget {
         ? _toTitleCase(result.clubName)
         : 'Ferdi Sporcu';
 
-    final isMyTeam = SelectedClubService.instance.matches(result.clubName, result.clubId);
+    final isMyTeam =
+        SelectedClubService.instance.matches(result.clubName, result.clubId);
     final splits = _sortedSplits();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Material(
-          color: palette.surface,
-          child: InkWell(
-            onTap: onTap,
+        SoftGlassPanel(
+          level: 2,
+          borderRadius: AppRadius.cardRadius,
+          padding: EdgeInsets.zero,
+          onTap: onTap,
+          child: Material(
+            color: Colors.transparent,
             child: Container(
               constraints: const BoxConstraints(minHeight: 52),
               padding: const EdgeInsets.symmetric(
@@ -242,10 +256,24 @@ class SwimResultCard extends StatelessWidget {
                   // 1. Sol Alan: Yarış bittiyse Sıralama (1., 2.), bekliyorsa S3/7
                   SizedBox(
                     width: 44,
-                    child: Text(
-                      leadingText,
-                      style: leadingStyle,
-                      textAlign: TextAlign.start,
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.textPrimary.withValues(alpha: 0.04),
+                        borderRadius: AppRadius.badgeRadius,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        leadingText,
+                        style: leadingStyle,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                   AppSpacing.hSm,
@@ -285,8 +313,12 @@ class SwimResultCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontFamily: AppTextStyles.fontFamily,
                                   fontSize: 12,
-                                  fontWeight: isMyTeam ? FontWeight.w600 : FontWeight.w400,
-                                  color: isMyTeam ? palette.primary : palette.textSecondary,
+                                  fontWeight: isMyTeam
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: isMyTeam
+                                      ? palette.primary
+                                      : palette.textSecondary,
                                   height: 1.25,
                                 ),
                                 maxLines: 1,
@@ -300,40 +332,8 @@ class SwimResultCard extends StatelessWidget {
                             result.qualifyingStandard!.passed &&
                             result.qualifyingStandard!.badge.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: palette.statusSuccess.withValues(alpha: 0.12),
-                              borderRadius: AppRadius.badgeRadius,
-                              border: Border.all(
-                                color: palette.statusSuccess.withValues(alpha: 0.30),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.verified_rounded,
-                                  size: 11,
-                                  color: palette.statusSuccess,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    result.qualifyingStandard!.badge,
-                                    style: TextStyle(
-                                      fontFamily: AppTextStyles.fontFamily,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: palette.statusSuccess,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          StatusBadge.standard(
+                            badge: result.qualifyingStandard!.badge,
                           ),
                         ],
                         if (splits.isNotEmpty) ...[
@@ -343,11 +343,13 @@ class SwimResultCard extends StatelessWidget {
                             runSpacing: 4,
                             children: splits.map((e) {
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: palette.background,
                                   borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(color: palette.border, width: 0.8),
+                                  border: Border.all(
+                                      color: palette.border, width: 0.8),
                                 ),
                                 child: Text(
                                   '${e.key} ${e.value}',
@@ -356,7 +358,9 @@ class SwimResultCard extends StatelessWidget {
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w500,
                                     color: palette.textSecondary,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures()
+                                    ],
                                   ),
                                 ),
                               );
@@ -378,7 +382,7 @@ class SwimResultCard extends StatelessWidget {
                         timeDisplay,
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 15,
+                          fontSize: 22,
                           fontWeight: FontWeight.w600,
                           color: timeColor,
                           fontFeatures: const [FontFeature.tabularFigures()],
@@ -386,7 +390,9 @@ class SwimResultCard extends StatelessWidget {
                       ),
 
                       // Yarış sonuçlanmışsa: Giriş Derecesi ve İyileşme Durumu
-                      if (isCompleted && seedDisplay != null && seedDisplay.isNotEmpty) ...[
+                      if (isCompleted &&
+                          seedDisplay != null &&
+                          seedDisplay.isNotEmpty) ...[
                         const SizedBox(height: 1.5),
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -404,11 +410,15 @@ class SwimResultCard extends StatelessWidget {
                               style: TextStyle(
                                 fontFamily: AppTextStyles.fontFamily,
                                 fontSize: 11,
-                                fontWeight: hasImprovement ? FontWeight.w600 : FontWeight.w400,
+                                fontWeight: hasImprovement
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
                                 color: hasImprovement
                                     ? palette.statusSuccess
                                     : palette.textSecondary,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures()
+                                ],
                               ),
                             ),
                           ],

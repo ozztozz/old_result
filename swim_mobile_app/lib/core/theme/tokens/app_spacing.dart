@@ -6,7 +6,9 @@ abstract final class AppSpacing {
   // Temel boşluk birimleri
   static const double xs = 4.0;
   static const double sm = 8.0;
+  static const double s12 = 12.0;
   static const double md = 16.0;
+  static const double s20 = 20.0;
   static const double lg = 24.0;
   static const double xl = 32.0;
   static const double xxl = 48.0;
@@ -14,7 +16,9 @@ abstract final class AppSpacing {
   // Dikey Boşluk SizedBox Sabitleri (performans ve temiz kod için const)
   static const SizedBox vXs = SizedBox(height: xs);
   static const SizedBox vSm = SizedBox(height: sm);
+  static const SizedBox v12 = SizedBox(height: s12);
   static const SizedBox vMd = SizedBox(height: md);
+  static const SizedBox v20 = SizedBox(height: s20);
   static const SizedBox vLg = SizedBox(height: lg);
   static const SizedBox vXl = SizedBox(height: xl);
   static const SizedBox vXxl = SizedBox(height: xxl);
@@ -22,7 +26,9 @@ abstract final class AppSpacing {
   // Yatay Boşluk SizedBox Sabitleri
   static const SizedBox hXs = SizedBox(width: xs);
   static const SizedBox hSm = SizedBox(width: sm);
+  static const SizedBox h12 = SizedBox(width: s12);
   static const SizedBox hMd = SizedBox(width: md);
+  static const SizedBox h20 = SizedBox(width: s20);
   static const SizedBox hLg = SizedBox(width: lg);
   static const SizedBox hXl = SizedBox(width: xl);
   static const SizedBox hXxl = SizedBox(width: xxl);

@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/tokens/tokens.dart';
+import '../../core/components/app_bottom_sheet.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/selected_club_service.dart';
+import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 
-String _toTitleCase(String text) {
-  if (text.isEmpty) return text;
-  return text.split(' ').map((word) {
-    if (word.isEmpty) return word;
-    final lower = word.toLowerCase();
-    return lower[0].toUpperCase() + lower.substring(1);
-  }).join(' ');
-}
-
-/// Kullanıcının Takım / Kulüp Seçmesini Sağlayan Apple Esintili Modal Sheet
+/// Kullanıcının Takım / Kulüp Seçmesini Sağlayan Modal Sheet
 class ClubSelectionSheet extends StatefulWidget {
   final List<String> availableClubs;
 
@@ -20,11 +14,12 @@ class ClubSelectionSheet extends StatefulWidget {
     required this.availableClubs,
   });
 
-  static Future<String?> show(BuildContext context, {required List<String> availableClubs}) {
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+  static Future<String?> show(
+    BuildContext context, {
+    required List<String> availableClubs,
+  }) {
+    return AppBottomSheet.show<String>(
+      context,
       builder: (_) => ClubSelectionSheet(availableClubs: availableClubs),
     );
   }
@@ -36,17 +31,35 @@ class ClubSelectionSheet extends StatefulWidget {
 class _ClubSelectionSheetState extends State<ClubSelectionSheet> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  late final FocusNode _searchFocusNode;
+  bool _isSearchFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode = FocusNode()..addListener(_handleSearchFocusChange);
+  }
 
   @override
   void dispose() {
+    _searchFocusNode.removeListener(_handleSearchFocusChange);
+    _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _handleSearchFocusChange() {
+    if (mounted && _isSearchFocused != _searchFocusNode.hasFocus) {
+      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
+    }
   }
 
   List<String> get _filteredClubs {
     final query = _searchQuery.trim().toLowerCase();
     if (query.isEmpty) return widget.availableClubs;
-    return widget.availableClubs.where((c) => c.toLowerCase().contains(query)).toList();
+    return widget.availableClubs
+        .where((c) => c.toLowerCase().contains(query))
+        .toList();
   }
 
   @override
@@ -54,230 +67,235 @@ class _ClubSelectionSheetState extends State<ClubSelectionSheet> {
     final palette = context.palette;
     final clubs = _filteredClubs;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
-      ),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: AppRadius.sheetRadius,
-        boxShadow: [
-          BoxShadow(
-            color: palette.textPrimary.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+    return AppBottomSheet(
+      scrollable: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Başlık Alanı
+          Row(
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                size: 20,
+                color: palette.primary,
+              ),
+              AppSpacing.hSm,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Takımını Seç',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Yarışlardaki kulüp sporcularınızı otomatik vurgular',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w400,
+                        color: palette.textSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (SelectedClubService.instance.hasSelectedClub) ...[
+                AppSpacing.hSm,
+                TextButton(
+                  onPressed: () async {
+                    await SelectedClubService.instance.clearClub();
+                    if (context.mounted) Navigator.pop(context, '');
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: palette.statusDanger,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Kaldır', style: TextStyle(fontSize: 13)),
+                ),
+              ],
+            ],
           ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Üst Tutamaç (Handle)
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 8),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.border,
-                  borderRadius: AppRadius.chipRadius,
-                ),
-              ),
-            ),
+          AppSpacing.v12,
 
-            // Başlık Alanı
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.shield_outlined,
-                    size: 22,
-                    color: palette.primary,
-                  ),
-                  AppSpacing.hSm,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Takımını Seç',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          'Yarışlardaki kulüp sporcularınızı otomatik vurgular',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: palette.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (SelectedClubService.instance.hasSelectedClub)
-                    TextButton(
-                      onPressed: () async {
-                        await SelectedClubService.instance.clearClub();
-                        if (context.mounted) Navigator.pop(context, '');
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: palette.statusDanger,
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      child: const Text('Kaldır', style: TextStyle(fontSize: 13)),
-                    ),
-                ],
-              ),
-            ),
-
-            // Arama Kutusu
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: palette.surfaceSecondary,
-                  borderRadius: AppRadius.inputRadius,
+          // Arama Kutusu (Glass Level 3 stili, iç içe blur olmadan)
+          SoftGlassPanel(
+            level: 3,
+            enableBlur: false,
+            height: 48,
+            borderRadius: BorderRadius.circular(24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            animationDuration: const Duration(milliseconds: 180),
+            fillAlphaOverride: palette.isDark
+                ? (_isSearchFocused ? 0.15 : 0.09)
+                : (_isSearchFocused ? 0.20 : 0.14),
+            borderAlphaOverride: palette.isDark
+                ? (_isSearchFocused ? 0.34 : 0.16)
+                : (_isSearchFocused ? 0.50 : 0.25),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_outlined,
+                  size: 20,
+                  color: palette.textSecondary,
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 14,
-                    color: palette.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Kulüp veya takım ara...',
-                    hintStyle: TextStyle(
+                AppSpacing.h12,
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 13.5,
-                      color: palette.textMuted,
+                      fontSize: 14.5,
+                      color: palette.textPrimary,
                     ),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      size: 20,
-                      color: palette.textSecondary,
+                    decoration: InputDecoration(
+                      hintText: 'Kulüp veya takım ara...',
+                      hintStyle: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 14,
+                        color: palette.textSecondary.withValues(alpha: 0.85),
+                      ),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
                     ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            color: palette.textSecondary,
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   ),
                 ),
-              ),
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.close_outlined, size: 18),
+                    color: palette.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+              ],
             ),
+          ),
+          AppSpacing.v12,
 
-            Divider(height: 1, thickness: 1, color: palette.divider),
+          Divider(height: 1, thickness: 1, color: palette.divider),
 
-            // Kulüpler Listesi
-            Expanded(
-              child: clubs.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'Aramanızla eşleşen kulüp bulunamadı.',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 13.5,
-                            color: palette.textSecondary,
-                          ),
+          // Kulüpler Listesi
+          Expanded(
+            child: clubs.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: AppSpacing.paddingAllLg,
+                      child: Text(
+                        'Aramanızla eşleşen kulüp bulunamadı.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 13.5,
+                          color: palette.textSecondary,
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      itemCount: clubs.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: palette.divider,
-                        indent: 52,
-                      ),
-                      itemBuilder: (context, index) {
-                        final club = clubs[index];
-                        final isSelected = SelectedClubService.instance.matches(club);
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                    itemCount: clubs.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: palette.divider,
+                    ),
+                    itemBuilder: (context, index) {
+                      final club = clubs[index];
+                      final isSelected =
+                          SelectedClubService.instance.matches(club);
 
-                        return Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () async {
-                              await SelectedClubService.instance.setClub(name: club);
-                              if (context.mounted) Navigator.pop(context, club);
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 13,
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () async {
+                            await SelectedClubService.instance
+                                .setClub(name: club);
+                            if (context.mounted) Navigator.pop(context, club);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.s12,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? palette.accent.withValues(alpha: 0.14)
+                                        : palette.textPrimary
+                                            .withValues(alpha: 0.05),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.shield_outlined,
+                                    size: 16,
+                                    color: isSelected
+                                        ? palette.accent
+                                        : palette.textSecondary,
+                                  ),
+                                ),
+                                AppSpacing.h12,
+                                Expanded(
+                                  child: Text(
+                                    StringUtils.toTitleCase(club),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 14.5,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
                                       color: isSelected
-                                          ? palette.primary
-                                          : palette.surfaceSecondary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.shield_rounded,
-                                      size: 16,
-                                      color: isSelected ? Colors.white : palette.textSecondary,
+                                          ? palette.accent
+                                          : palette.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(
-                                      _toTitleCase(club),
-                                      style: TextStyle(
-                                        fontFamily: AppTextStyles.fontFamily,
-                                        fontSize: 14.5,
-                                        fontWeight:
-                                            isSelected ? FontWeight.w600 : FontWeight.w400,
-                                        color: isSelected
-                                            ? palette.primary
-                                            : palette.textPrimary,
-                                      ),
-                                    ),
+                                ),
+                                if (isSelected) ...[
+                                  AppSpacing.hSm,
+                                  Icon(
+                                    Icons.check_outlined,
+                                    size: 20,
+                                    color: palette.accent,
                                   ),
-                                  if (isSelected)
-                                    Icon(
-                                      Icons.check_rounded,
-                                      size: 20,
-                                      color: palette.primary,
-                                    ),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

@@ -1,12 +1,13 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/section_header.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
+import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import 'live_meet_detail_screen.dart';
 
@@ -28,11 +29,27 @@ class _LiveScreenState extends State<LiveScreen> {
   List<LiveMeetSummary> _liveMeets = [];
   String _searchQuery = '';
   String? _selectedCity;
+  late final FocusNode _searchFocusNode;
+  bool _isSearchFocused = false;
 
   @override
   void initState() {
     super.initState();
+    _searchFocusNode = FocusNode()..addListener(_handleSearchFocusChange);
     _loadLiveMeets();
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.removeListener(_handleSearchFocusChange);
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleSearchFocusChange() {
+    if (mounted && _isSearchFocused != _searchFocusNode.hasFocus) {
+      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
+    }
   }
 
   Future<void> _loadLiveMeets() async {
@@ -113,40 +130,11 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   /// Türkçe karakter duyarlı Title Case dönüştürücüsü.
-  /// Küçültmeden önce 'İ' -> 'i' ve 'I' -> 'ı' eşler; kelime baş harflerini
-  /// 'i' -> 'İ', 'ı' -> 'I' dahil Türkçe kurallarına göre büyütür.
-  /// Sayı/yaş ifadelerini (ör. "11-12") olduğu gibi korur.
+  /// Sadece boşluklardan böler; Ş/ş, Ç/ç, Ğ/ğ, Ü/ü, Ö/ö, İ/i, I/ı karakterlerini korur.
   static String _toTurkishTitleCase(String input) {
     final trimmed = input.trim();
     if (trimmed.isEmpty) return trimmed;
-
-    final lowered = trimmed
-        .replaceAll('İ', 'i')
-        .replaceAll('I', 'ı')
-        .toLowerCase();
-
-    const upperMap = <String, String>{
-      'i': 'İ',
-      'ı': 'I',
-      'ç': 'Ç',
-      'ğ': 'Ğ',
-      'ö': 'Ö',
-      'ş': 'Ş',
-      'ü': 'Ü',
-    };
-
-    String capitalizeWord(String word) {
-      if (word.isEmpty) return word;
-      final first = word[0];
-      final rest = word.substring(1);
-      final upperFirst = upperMap[first] ?? first.toUpperCase();
-      return '$upperFirst$rest';
-    }
-
-    return lowered
-        .split(RegExp(r'\s+'))
-        .map(capitalizeWord)
-        .join(' ');
+    return StringUtils.toTitleCase(trimmed);
   }
 
   @override
@@ -163,7 +151,7 @@ class _LiveScreenState extends State<LiveScreen> {
           bottom: false,
           child: Column(
             children: [
-              // 1. Editoryal Üst Başlık (Sakin, nefes alan tipografi)
+              // 1. Editoryal Üst Başlık
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 14, 22, 12),
                 child: Row(
@@ -177,20 +165,20 @@ class _LiveScreenState extends State<LiveScreen> {
                             'Türkiye Yüzme Federasyonu',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              letterSpacing: 0.1,
+                              letterSpacing: 0.2,
                               color: palette.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             'Canlı Müsabakalar',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.5,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.6,
                               height: 1.15,
                               color: palette.textPrimary,
                             ),
@@ -200,14 +188,16 @@ class _LiveScreenState extends State<LiveScreen> {
                     ),
                     GlassCircleButton(
                       icon: Icons.palette_outlined,
-                      iconColor: palette.primary,
+                      iconSize: 20,
+                      iconColor: palette.textTertiary,
                       tooltip: 'Tema Seç',
                       onTap: () => ThemePickerSheet.show(context),
                     ),
                     const SizedBox(width: 8),
                     GlassCircleButton(
                       icon: Icons.refresh_rounded,
-                      iconColor: palette.textPrimary,
+                      iconSize: 20,
+                      iconColor: palette.textTertiary,
                       tooltip: 'Yenile',
                       onTap: _loadLiveMeets,
                     ),
@@ -238,7 +228,15 @@ class _LiveScreenState extends State<LiveScreen> {
                             color: palette.primary,
                             onRefresh: _loadLiveMeets,
                             child: ListView(
-                              padding: const EdgeInsets.fromLTRB(22, 8, 22, 118),
+                              padding: EdgeInsets.fromLTRB(
+                                22,
+                                8,
+                                22,
+                                64 +
+                                    16 +
+                                    MediaQuery.of(context).padding.bottom +
+                                    24,
+                              ),
                               children: [
                                 // Premium İstatistik Hero Paneli
                                 if (_liveMeets.isNotEmpty) ...[
@@ -246,48 +244,60 @@ class _LiveScreenState extends State<LiveScreen> {
                                   const SizedBox(height: 20),
                                 ],
 
-                                // Frosted Glass Arama Yüzeyi (Level 3)
+                                // Frosted Glass Arama Yüzeyi (Level 3, 180ms focus animasyonlu)
                                 SoftGlassPanel(
                                   level: 3,
-                                  tier: GlassTier.subtle,
-                                  borderRadius: BorderRadius.circular(16),
+                                  height: 48,
+                                  borderRadius: BorderRadius.circular(24),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 15,
-                                    vertical: 3,
+                                    horizontal: 16,
                                   ),
-                                  margin: const EdgeInsets.only(bottom: 14),
+                                  animationDuration:
+                                      const Duration(milliseconds: 180),
+                                  fillAlphaOverride: palette.isDark
+                                      ? (_isSearchFocused ? 0.15 : 0.09)
+                                      : (_isSearchFocused ? 0.20 : 0.14),
+                                  borderAlphaOverride: palette.isDark
+                                      ? (_isSearchFocused ? 0.34 : 0.16)
+                                      : (_isSearchFocused ? 0.50 : 0.25),
                                   child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Icon(
                                         Icons.search_rounded,
                                         color: palette.textSecondary,
-                                        size: 19,
+                                        size: 20,
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: TextField(
-                                          onChanged: (val) =>
-                                              setState(() => _searchQuery = val),
+                                          focusNode: _searchFocusNode,
+                                          onChanged: (val) => setState(
+                                            () => _searchQuery = val,
+                                          ),
                                           style: TextStyle(
-                                            fontFamily: AppTextStyles.fontFamily,
-                                            fontSize: 14,
+                                            fontFamily:
+                                                AppTextStyles.fontFamily,
+                                            fontSize: 15,
                                             color: palette.textPrimary,
                                           ),
                                           decoration: InputDecoration(
-                                            hintText: 'Müsabaka veya şehir ara...',
+                                            hintText:
+                                                'Müsabaka veya şehir ara...',
                                             hintStyle: TextStyle(
-                                              fontFamily: AppTextStyles.fontFamily,
-                                              fontSize: 13.5,
-                                              color: palette.textMuted,
+                                              fontFamily:
+                                                  AppTextStyles.fontFamily,
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w400,
+                                              color: palette.textSecondary
+                                                  .withValues(alpha: 0.85),
                                             ),
                                             filled: false,
                                             border: InputBorder.none,
                                             enabledBorder: InputBorder.none,
                                             focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                              vertical: 11,
-                                            ),
+                                            contentPadding: EdgeInsets.zero,
                                             isDense: true,
                                           ),
                                         ),
@@ -295,88 +305,28 @@ class _LiveScreenState extends State<LiveScreen> {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(height: 16),
 
-                                // İl Filtresi
+                                // İl Filtresi (Sağ kenar yumuşak fade-out)
                                 if (_availableCities.isNotEmpty) ...[
-                                  SizedBox(
-                                    height: 36,
-                                    child: ListView.separated(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: _availableCities.length + 1,
-                                      separatorBuilder: (_, __) =>
-                                          const SizedBox(width: 8),
-                                      itemBuilder: (context, idx) {
-                                        final isAll = idx == 0;
-                                        final city = isAll
+                                  ModernFilterChipBar(
+                                    chips: [
+                                      const FilterChipItem(label: 'Tüm İller'),
+                                      ..._availableCities.map(
+                                        (city) => FilterChipItem(label: city),
+                                      ),
+                                    ],
+                                    selectedChip: _selectedCity ?? 'Tüm İller',
+                                    onSelected: (label) {
+                                      setState(() {
+                                        _selectedCity = label == 'Tüm İller' ||
+                                                label == _selectedCity
                                             ? null
-                                            : _availableCities[idx - 1];
-                                        final label = isAll ? 'Tüm İller' : city!;
-                                        final isSelected = _selectedCity == city;
-
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _selectedCity =
-                                                  isSelected && !isAll
-                                                      ? null
-                                                      : city;
-                                            });
-                                          },
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: BackdropFilter(
-                                              filter: ImageFilter.blur(
-                                                sigmaX: 10,
-                                                sigmaY: 10,
-                                              ),
-                                              child: AnimatedContainer(
-                                                duration: const Duration(milliseconds: 180),
-                                                curve: Curves.easeOutCubic,
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 14,
-                                                  vertical: 8,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: isSelected
-                                                      ? const Color(0xFF657D91)
-                                                          .withValues(alpha: 0.85)
-                                                      : Colors.white.withValues(
-                                                          alpha: palette.isDark
-                                                              ? 0.09
-                                                              : 0.14,
-                                                        ),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: Colors.white.withValues(
-                                                      alpha: palette.isDark
-                                                          ? 0.16
-                                                          : 0.25,
-                                                    ),
-                                                    width: 1.0,
-                                                  ),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child: Text(
-                                                  label,
-                                                  style: TextStyle(
-                                                    fontFamily: AppTextStyles.fontFamily,
-                                                    fontSize: 12.5,
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.w600
-                                                        : FontWeight.w500,
-                                                    color: isSelected
-                                                        ? Colors.white
-                                                        : palette.textSecondary,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                            : label;
+                                      });
+                                    },
                                   ),
-                                  const SizedBox(height: 22),
+                                  const SizedBox(height: 18),
                                 ],
 
                                 // Bölüm Başlığı
@@ -420,10 +370,8 @@ class _LiveScreenState extends State<LiveScreen> {
   /// Premium Frosted İstatistik Hero Paneli
   Widget _buildLiveOverviewHero(AppColorPalette palette) {
     final cityCount = _availableCities.length;
-    final primaryTextColor =
-        palette.isDark ? palette.textPrimary : const Color(0xFF273746);
-    final labelTextColor =
-        palette.isDark ? palette.textSecondary : const Color(0xFF4F677A);
+    final primaryTextColor = palette.textPrimary;
+    final labelTextColor = palette.textSecondary;
 
     return SoftGlassPanel(
       level: 1,
@@ -462,12 +410,12 @@ class _LiveScreenState extends State<LiveScreen> {
           ),
           const SizedBox(height: 22),
 
-          // Güçlü sayısal hiyerarşi ve ferah aralıklar
+          // Güçlü sayısal hiyerarşi ve eşit hizalanmış 3 sütun
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(
+              Expanded(
+                flex: 1,
                 child: _buildHeroMetric(
                   value: _formatTurkishInt(_liveMeets.length),
                   label: 'Müsabaka',
@@ -476,7 +424,8 @@ class _LiveScreenState extends State<LiveScreen> {
                 ),
               ),
               _buildHeroDivider(),
-              Flexible(
+              Expanded(
+                flex: 1,
                 child: _buildHeroMetric(
                   value: _formatTurkishInt(_totalAthletesAcrossLive),
                   label: 'Sporcu',
@@ -485,7 +434,8 @@ class _LiveScreenState extends State<LiveScreen> {
                 ),
               ),
               _buildHeroDivider(),
-              Flexible(
+              Expanded(
+                flex: 1,
                 child: _buildHeroMetric(
                   value: _formatTurkishInt(cityCount),
                   label: 'Şehir',
@@ -506,41 +456,51 @@ class _LiveScreenState extends State<LiveScreen> {
     required Color numberColor,
     required Color labelColor,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            value,
-            maxLines: 1,
-            softWrap: false,
-            style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontSize: 42,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.5,
-              height: 1.0,
-              color: numberColor,
-              fontFeatures: const [FontFeature.tabularFigures()],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 50,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 42,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
+                    height: 1.0,
+                    color: numberColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: AppTextStyles.fontFamily,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: labelColor,
+          const SizedBox(height: 12),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: labelColor,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -548,7 +508,6 @@ class _LiveScreenState extends State<LiveScreen> {
     return Container(
       width: 1,
       height: 36,
-      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -571,15 +530,16 @@ class _LiveScreenState extends State<LiveScreen> {
   }) {
     final resTotal = meet.resultListProgress.total;
     final resProcessed = meet.resultListProgress.processed;
+    final hasNoRaces = resProcessed == 0 && resTotal == 0;
     final resRatio =
         resTotal > 0 ? (resProcessed / resTotal).clamp(0.0, 1.0) : 0.0;
     final resPercent = (resRatio * 100).toInt();
-    final isCompleted = resTotal > 0 && resPercent >= 100;
+    final isCompleted = !hasNoRaces && resTotal > 0 && resPercent >= 100;
 
     final isDark = palette.isDark;
-    final titleColor = isDark ? palette.textPrimary : const Color(0xFF273746);
-    final chipTextColor = isDark ? palette.textPrimary : const Color(0xFF3E566A);
-    final mutedTextColor = isDark ? palette.textSecondary : const Color(0xFF4F677A);
+    final titleColor = palette.textPrimary;
+    final chipTextColor = palette.textTertiary;
+    final mutedTextColor = palette.textSecondary;
 
     final cardBody = Padding(
       padding: const EdgeInsets.all(18),
@@ -593,7 +553,7 @@ class _LiveScreenState extends State<LiveScreen> {
                 height: 24,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF657D91).withValues(alpha: 0.14),
+                  color: palette.accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.25),
@@ -606,8 +566,8 @@ class _LiveScreenState extends State<LiveScreen> {
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF657D91),
+                      decoration: BoxDecoration(
+                        color: palette.accent,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -744,15 +704,15 @@ class _LiveScreenState extends State<LiveScreen> {
                   ),
                   const SizedBox(width: 8),
                   if (isCompleted) ...[
-                    const Icon(
+                    Icon(
                       Icons.check_circle,
                       size: 14,
-                      color: Color(0xFF657D91),
+                      color: palette.progressCompletedIcon,
                     ),
                     const SizedBox(width: 4),
                   ],
                   Text(
-                    '%$resPercent',
+                    hasNoRaces ? '–' : '%$resPercent',
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
                       color: titleColor,
@@ -776,7 +736,7 @@ class _LiveScreenState extends State<LiveScreen> {
                 height: 4,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: isDark ? 0.14 : 0.25),
+                  color: palette.progressTrack,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 alignment: Alignment.centerLeft,
@@ -787,15 +747,13 @@ class _LiveScreenState extends State<LiveScreen> {
                   height: 4,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    color: isCompleted
-                        ? const Color(0xFF657D91).withValues(alpha: 0.75)
-                        : null,
+                    color: isCompleted ? palette.progressCompletedFill : null,
                     gradient: isCompleted
                         ? null
-                        : const LinearGradient(
+                        : LinearGradient(
                             colors: [
-                              Color(0xFF657D91),
-                              Color(0xFF3E566A),
+                              palette.progressGradientStart,
+                              palette.progressGradientEnd,
                             ],
                           ),
                   ),
@@ -828,9 +786,9 @@ class _LiveScreenState extends State<LiveScreen> {
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            const Color(0xFFEEF3F6)
+                            palette.glowLight
                                 .withValues(alpha: isDark ? 0.12 : 0.35),
-                            const Color(0xFFEEF3F6).withValues(alpha: 0.0),
+                            palette.glowLight.withValues(alpha: 0.0),
                           ],
                         ),
                       ),
@@ -886,7 +844,8 @@ class _PulsingLiveDotState extends State<_PulsingLiveDot>
 
   @override
   Widget build(BuildContext context) {
-    final disableMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final disableMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return SizedBox(
       width: 14,

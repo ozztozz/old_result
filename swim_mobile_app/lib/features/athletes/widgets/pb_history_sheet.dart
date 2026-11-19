@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/components/app_bottom_sheet.dart';
 import '../../../core/theme/tokens/tokens.dart';
+import '../../../core/utils/string_utils.dart';
 import '../../../core/utils/swim_time_formatter.dart';
 import '../../../data/models/athlete.dart';
 import '../../../data/repositories/swim_repository.dart';
+import '../../../shared/widgets/status_badge.dart';
 
 /// Sporcu En İyi Derece (PB) tıklandığında açılan yarış geçmişi ve gelişim grafiği.
 class PbHistorySheet extends StatefulWidget {
@@ -27,10 +30,8 @@ class PbHistorySheet extends StatefulWidget {
     required String strokeLabel,
     required SwimRepository repository,
   }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    return AppBottomSheet.show<void>(
+      context,
       builder: (_) => PbHistorySheet(
         athleteId: athleteId,
         pb: pb,
@@ -152,317 +153,337 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
         ? _selectedChartIndex
         : (points.isNotEmpty ? points.length - 1 : null);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.78,
-      minChildSize: 0.50,
-      maxChildSize: 0.94,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: palette.background,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            border: Border.all(color: palette.border, width: 1),
-          ),
-          child: Column(
+    final isDark = palette.isDark;
+    final boxFill = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : palette.textPrimary.withValues(alpha: 0.04);
+    final boxBorder = Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
+
+    return AppBottomSheet(
+      scrollable: false,
+      child: Column(
+        children: [
+          // Üst Başlık
+          Row(
             children: [
-              // Tutamaç
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Üst Başlık
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 12, 12, 10),
-                child: Row(
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${widget.pb.distance}m ${widget.strokeLabel}',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$courseText • Son 3 Yıl Yarış Geçmişi',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12,
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      '${widget.pb.distance}m ${widget.strokeLabel}',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: palette.textSecondary),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$courseText • Son 3 Yıl Yarış Geçmişi',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 12.5,
+                        color: palette.textSecondary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              Divider(height: 1, color: palette.divider),
-
-              // İçerik
-              Expanded(
-                child: _loading
-                    ? Center(child: CircularProgressIndicator(color: palette.primary))
-                    : _error != null
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(_error!, style: TextStyle(color: palette.textSecondary)),
-                                const SizedBox(height: 10),
-                                TextButton(
-                                  onPressed: _loadHistory,
-                                  child: const Text('Tekrar Dene'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView(
-                            controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-                            children: [
-                              // Özet KPI Kartları
-                              Row(
-                                children: [
-                                  _buildKpiBox(
-                                    palette,
-                                    label: 'En İyi (PB)',
-                                    value: SwimTimeFormatter.formatCs(widget.pb.timeCs),
-                                    accent: palette.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildKpiBox(
-                                    palette,
-                                    label: 'Gelişim',
-                                    value: improvementCs != null
-                                        ? '-${(improvementCs / 100).toStringAsFixed(2)} sn'
-                                        : '—',
-                                    accent: improvementCs != null
-                                        ? palette.statusSuccess
-                                        : palette.textSecondary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildKpiBox(
-                                    palette,
-                                    label: 'Yarış',
-                                    value: '${_races.length}',
-                                    accent: palette.textPrimary,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-
-                              // Hedef Reglaman Barajı Kartı
-                              if (_targets.isNotEmpty) ...[
-                                _buildTargetBarajCard(palette, _targets.first),
-                                const SizedBox(height: 14),
-                              ],
-
-                              // Gelişim Grafiği Kartı
-                              if (points.length >= 2) ...[
-                                Container(
-                                  padding: const EdgeInsets.fromLTRB(12, 14, 14, 12),
-                                  decoration: BoxDecoration(
-                                    color: palette.surface,
-                                    borderRadius: AppRadius.cardRadius,
-                                    border: Border.all(color: palette.border, width: 1),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      if (activeIdx != null) ...[
-                                        _buildSelectedPointBanner(
-                                          palette,
-                                          points[activeIdx],
-                                          isPb: points[activeIdx].timeCs == minCs,
-                                        ),
-                                        const SizedBox(height: 10),
-                                      ],
-                                      SizedBox(
-                                        height: 180,
-                                        width: double.infinity,
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            return GestureDetector(
-                                              behavior: HitTestBehavior.opaque,
-                                              onTapDown: (d) => _selectNearestPoint(
-                                                d.localPosition.dx,
-                                                constraints.maxWidth,
-                                                points.length,
-                                              ),
-                                              onHorizontalDragUpdate: (d) => _selectNearestPoint(
-                                                d.localPosition.dx,
-                                                constraints.maxWidth,
-                                                points.length,
-                                              ),
-                                              child: CustomPaint(
-                                                size: Size(constraints.maxWidth, 180),
-                                                painter: _RaceChartPainter(
-                                                  points: points,
-                                                  minCs: minCs!,
-                                                  targetCs: _targets.isNotEmpty
-                                                      ? _targets.first['target_cs'] as int?
-                                                      : null,
-                                                  selectedIndex: activeIdx,
-                                                  primaryColor: palette.primary,
-                                                  pbColor: palette.statusSuccess,
-                                                  targetColor: palette.statusWarning,
-                                                  gridColor: palette.divider,
-                                                  labelColor: palette.textSecondary,
-                                                  surfaceColor: palette.surface,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-
-                              // Yarış Geçmişi Listesi
-                              Text(
-                                'Tüm Yarışlar (${_races.length})',
-                                style: TextStyle(
-                                  fontFamily: AppTextStyles.fontFamily,
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: palette.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              if (_races.isEmpty)
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: palette.surface,
-                                    borderRadius: AppRadius.cardRadius,
-                                    border: Border.all(color: palette.border),
-                                  ),
-                                  child: Text(
-                                    'Bu branşta geçmiş yarış kaydı bulunamadı.',
-                                    style: TextStyle(color: palette.textSecondary, fontSize: 13),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                )
-                              else
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: palette.surface,
-                                    borderRadius: AppRadius.cardRadius,
-                                    border: Border.all(color: palette.border, width: 1),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Column(
-                                    children: _races.asMap().entries.map((entry) {
-                                      final idx = entry.key;
-                                      final r = entry.value;
-                                      final isPb = minCs != null && r.timeCs == minCs;
-                                      final isLast = idx == _races.length - 1;
-                                      return Column(
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        r.meetName,
-                                                        style: TextStyle(
-                                                          fontFamily: AppTextStyles.fontFamily,
-                                                          fontSize: 13,
-                                                          fontWeight: FontWeight.w600,
-                                                          color: palette.textPrimary,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        [
-                                                          _formatShortDate(r.date),
-                                                          if (r.rank.isNotEmpty && r.rank != '-') '${r.rank}. sıra',
-                                                          if (r.points != null) '${r.points} FINA',
-                                                        ].join(' • '),
-                                                        style: TextStyle(
-                                                          fontFamily: AppTextStyles.fontFamily,
-                                                          fontSize: 11.5,
-                                                          color: palette.textSecondary,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                                  children: [
-                                                    Text(
-                                                      r.timeCs != null && r.timeCs! > 0
-                                                          ? SwimTimeFormatter.formatCs(r.timeCs)
-                                                          : (r.time ?? r.resultStatus),
-                                                      style: AppTextStyles.officialTime.copyWith(
-                                                        fontSize: 14,
-                                                        fontWeight: FontWeight.w700,
-                                                        color: isPb ? palette.statusSuccess : palette.textPrimary,
-                                                      ),
-                                                    ),
-                                                    if (isPb)
-                                                      Container(
-                                                        margin: const EdgeInsets.only(top: 2),
-                                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                        decoration: BoxDecoration(
-                                                          color: palette.statusSuccess.withValues(alpha: 0.14),
-                                                          borderRadius: BorderRadius.circular(4),
-                                                        ),
-                                                        child: Text(
-                                                          'PB',
-                                                          style: TextStyle(
-                                                            fontSize: 9.5,
-                                                            fontWeight: FontWeight.w700,
-                                                            color: palette.statusSuccess,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (!isLast) Divider(height: 1, color: palette.divider),
-                                        ],
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                            ],
-                          ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.close_outlined, color: palette.textSecondary),
               ),
             ],
           ),
-        );
-      },
+          AppSpacing.v12,
+          Divider(height: 1, color: palette.divider),
+
+          // İçerik
+          Expanded(
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(color: palette.primary),
+                  )
+                : _error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _error!,
+                              style: TextStyle(color: palette.textSecondary),
+                            ),
+                            AppSpacing.vSm,
+                            TextButton(
+                              onPressed: _loadHistory,
+                              child: const Text('Tekrar Dene'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView(
+                        padding: EdgeInsets.only(
+                          top: AppSpacing.md,
+                          bottom: AppSpacing.lg +
+                              MediaQuery.of(context).padding.bottom,
+                        ),
+                        children: [
+                          // Özet KPI Kartları
+                          Row(
+                            children: [
+                              _buildKpiBox(
+                                palette,
+                                fill: boxFill,
+                                borderColor: boxBorder,
+                                label: 'En İyi (PB)',
+                                value: SwimTimeFormatter.formatCs(
+                                  widget.pb.timeCs,
+                                ),
+                                accent: palette.primary,
+                              ),
+                              AppSpacing.hSm,
+                              _buildKpiBox(
+                                palette,
+                                fill: boxFill,
+                                borderColor: boxBorder,
+                                label: 'Gelişim',
+                                value: improvementCs != null
+                                    ? '-${(improvementCs / 100).toStringAsFixed(2)} sn'
+                                    : '—',
+                                accent: improvementCs != null
+                                    ? palette.successText
+                                    : palette.textSecondary,
+                              ),
+                              AppSpacing.hSm,
+                              _buildKpiBox(
+                                palette,
+                                fill: boxFill,
+                                borderColor: boxBorder,
+                                label: 'Yarış',
+                                value: '${_races.length}',
+                                accent: palette.textPrimary,
+                              ),
+                            ],
+                          ),
+                          AppSpacing.v12,
+
+                          // Hedef Reglaman Barajı Kartı (Düz renklendirilmiş konteyner)
+                          if (_targets.isNotEmpty) ...[
+                            _buildTargetBarajCard(palette, _targets.first),
+                            AppSpacing.v12,
+                          ],
+
+                          // Gelişim Grafiği Kartı
+                          if (points.length >= 2) ...[
+                            Container(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.s12,
+                                AppSpacing.md,
+                                AppSpacing.md,
+                                AppSpacing.s12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: boxFill,
+                                borderRadius: AppRadius.cardRadius,
+                                border: Border.all(color: boxBorder, width: 1),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (activeIdx != null) ...[
+                                    _buildSelectedPointBanner(
+                                      palette,
+                                      points[activeIdx],
+                                      isPb: points[activeIdx].timeCs == minCs,
+                                    ),
+                                    AppSpacing.vSm,
+                                  ],
+                                  SizedBox(
+                                    height: 180,
+                                    width: double.infinity,
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        return GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTapDown: (d) => _selectNearestPoint(
+                                            d.localPosition.dx,
+                                            constraints.maxWidth,
+                                            points.length,
+                                          ),
+                                          onHorizontalDragUpdate: (d) =>
+                                              _selectNearestPoint(
+                                            d.localPosition.dx,
+                                            constraints.maxWidth,
+                                            points.length,
+                                          ),
+                                          child: CustomPaint(
+                                            size: Size(
+                                              constraints.maxWidth,
+                                              180,
+                                            ),
+                                            painter: _RaceChartPainter(
+                                              points: points,
+                                              minCs: minCs!,
+                                              targetCs: _targets.isNotEmpty
+                                                  ? _targets.first['target_cs']
+                                                      as int?
+                                                  : null,
+                                              selectedIndex: activeIdx,
+                                              primaryColor: palette.primary,
+                                              pbColor: palette.successText,
+                                              targetColor:
+                                                  palette.statusWarning,
+                                              gridColor: palette.divider,
+                                              labelColor: palette.textSecondary,
+                                              surfaceColor: palette.surface,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            AppSpacing.vMd,
+                          ],
+
+                          // Yarış Geçmişi Listesi
+                          Text(
+                            'Tüm Yarışlar (${_races.length})',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textPrimary,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                          AppSpacing.vSm,
+                          if (_races.isEmpty)
+                            Container(
+                              padding: AppSpacing.paddingAllLg,
+                              decoration: BoxDecoration(
+                                color: boxFill,
+                                borderRadius: AppRadius.cardRadius,
+                                border: Border.all(color: boxBorder),
+                              ),
+                              child: Text(
+                                'Bu branşta geçmiş yarış kaydı bulunamadı.',
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  color: palette.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          else
+                            Container(
+                              decoration: BoxDecoration(
+                                color: boxFill,
+                                borderRadius: AppRadius.cardRadius,
+                                border: Border.all(color: boxBorder, width: 1),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                children: _races.asMap().entries.map((entry) {
+                                  final idx = entry.key;
+                                  final r = entry.value;
+                                  final isPb = minCs != null && r.timeCs == minCs;
+                                  final isLast = idx == _races.length - 1;
+                                  return Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.md,
+                                          vertical: AppSpacing.s12,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    StringUtils.toTitleCase(
+                                                      r.meetName,
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontFamily: AppTextStyles
+                                                          .fontFamily,
+                                                      fontSize: 13.5,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          palette.textPrimary,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    [
+                                                      _formatShortDate(r.date),
+                                                      if (r.rank.isNotEmpty &&
+                                                          r.rank != '-')
+                                                        '${r.rank}. sıra',
+                                                      if (r.points != null)
+                                                        '${r.points} FINA',
+                                                    ].join(' • '),
+                                                    style: TextStyle(
+                                                      fontFamily: AppTextStyles
+                                                          .fontFamily,
+                                                      fontSize: 12,
+                                                      color:
+                                                          palette.textSecondary,
+                                                      fontFeatures: const [
+                                                        FontFeature
+                                                            .tabularFigures(),
+                                                      ],
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            AppSpacing.h12,
+                                            _buildRaceTrailing(
+                                              palette,
+                                              r,
+                                              isPb: isPb,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (!isLast)
+                                        Divider(
+                                          height: 1,
+                                          color: palette.divider,
+                                        ),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -478,19 +499,89 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
     }
   }
 
+  Widget _buildRaceTrailing(
+    AppColorPalette palette,
+    AthleteRaceHistoryItem r, {
+    required bool isPb,
+  }) {
+    final hasValidTime = r.timeCs != null && r.timeCs! > 0;
+    final rawStatus = (r.resultStatus.isNotEmpty
+            ? r.resultStatus
+            : (r.time ?? ''))
+        .trim()
+        .toUpperCase();
+
+    if (!hasValidTime) {
+      if (rawStatus == 'DNS') {
+        return const StatusBadge.neutral(label: 'Başlamadı');
+      }
+      if (rawStatus == 'WAITING') {
+        return const StatusBadge.neutral(label: 'Bekleniyor');
+      }
+      if (rawStatus == 'DSQ' || rawStatus == 'DQ') {
+        return StatusBadge(
+          label: 'Diskalifiye',
+          variant: StatusBadgeVariant.error,
+          leading: Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.xs),
+            child: Icon(
+              Icons.cancel_outlined,
+              size: 13,
+              color: palette.statusDanger,
+            ),
+          ),
+        );
+      }
+      if (rawStatus == 'DNF') {
+        return const StatusBadge.neutral(label: 'Tamamlamadı');
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          hasValidTime
+              ? SwimTimeFormatter.formatCs(r.timeCs)
+              : (r.time ?? r.resultStatus),
+          maxLines: 1,
+          softWrap: false,
+          style: AppTextStyles.officialTime.copyWith(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+            color: isPb ? palette.successText : palette.textPrimary,
+          ),
+        ),
+        if (isPb) ...[
+          AppSpacing.vXs,
+          StatusBadge(
+            label: 'PB',
+            variant: StatusBadgeVariant.success,
+            textColor: palette.successText,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildKpiBox(
     AppColorPalette palette, {
+    required Color fill,
+    required Color borderColor,
     required String label,
     required String value,
     required Color accent,
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: AppRadius.smallRadius,
-          border: Border.all(color: palette.border, width: 1),
+          color: fill,
+          borderRadius: AppRadius.medium,
+          border: Border.all(color: borderColor, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,22 +590,28 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
               label,
               style: TextStyle(
                 fontFamily: AppTextStyles.fontFamily,
-                fontSize: 10.5,
+                fontSize: 11,
                 color: palette.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: AppTextStyles.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: accent,
-                fontFeatures: const [FontFeature.tabularFigures()],
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: accent,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                maxLines: 1,
+                softWrap: false,
+              ),
             ),
           ],
         ),
@@ -528,10 +625,15 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
     required bool isPb,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s12,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: palette.surfaceSecondary.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(8),
+        color: palette.textPrimary.withValues(
+          alpha: palette.isDark ? 0.08 : 0.05,
+        ),
+        borderRadius: AppRadius.smallRadius,
       ),
       child: Row(
         children: [
@@ -540,9 +642,10 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.meetName,
+                  StringUtils.toTitleCase(item.meetName),
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: palette.textPrimary,
                   ),
@@ -551,18 +654,33 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                 ),
                 Text(
                   _formatShortDate(item.date),
-                  style: TextStyle(fontSize: 10.5, color: palette.textSecondary),
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 11,
+                    color: palette.textSecondary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hSm,
+          if (isPb) ...[
+            StatusBadge(
+              label: 'PB',
+              variant: StatusBadgeVariant.success,
+              textColor: palette.successText,
+            ),
+            AppSpacing.hSm,
+          ],
           Text(
             SwimTimeFormatter.formatCs(item.timeCs),
+            maxLines: 1,
+            softWrap: false,
             style: AppTextStyles.officialTime.copyWith(
               fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: isPb ? palette.statusSuccess : palette.primary,
+              fontWeight: FontWeight.w600,
+              color: isPb ? palette.successText : palette.primary,
             ),
           ),
         ],
@@ -570,39 +688,53 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
     );
   }
 
-  Widget _buildTargetBarajCard(AppColorPalette palette, Map<String, dynamic> t) {
+  Widget _buildTargetBarajCard(
+    AppColorPalette palette,
+    Map<String, dynamic> t,
+  ) {
     final bool passed = t['passed'] == true;
     final int? diffCs = t['diff_cs'] as int?;
     final int? targetCs = t['target_cs'] as int?;
-    final String meetName = (t['meet_name'] ?? t['baraj_adi'] ?? 'Katılım Barajı').toString();
-    final Color statusColor = passed ? palette.statusSuccess : palette.statusWarning;
+    final String meetName = StringUtils.toTitleCase(
+      (t['meet_name'] ?? t['baraj_adi'] ?? 'Katılım Barajı').toString(),
+    );
+    final Color statusColor = passed ? palette.successText : palette.statusDanger;
+    final Color tintColor = passed ? palette.statusSuccess : palette.statusDanger;
 
     String statusText;
     if (diffCs == null) {
       statusText = 'Baraj: ${SwimTimeFormatter.formatCs(targetCs)}';
     } else if (passed) {
       final margin = (diffCs.abs() / 100).toStringAsFixed(2);
-      statusText = diffCs == 0 ? 'Barajla tam eşit' : 'Barajı $margin sn farkla geçti';
+      statusText = diffCs == 0
+          ? 'Barajla tam eşit (Geçildi)'
+          : 'Geçildi • $margin sn fark';
     } else {
       final rem = (diffCs / 100).toStringAsFixed(2);
-      statusText = 'Baraja $rem sn kaldı';
+      statusText = 'Geçilmedi • $rem sn kaldı';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s12,
+        vertical: AppSpacing.s12,
+      ),
       decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.10),
-        borderRadius: AppRadius.smallRadius,
-        border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1),
+        color: tintColor.withValues(alpha: 0.12),
+        borderRadius: AppRadius.medium,
+        border: Border.all(
+          color: tintColor.withValues(alpha: 0.28),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
           Icon(
-            passed ? Icons.verified_rounded : Icons.flag_rounded,
-            size: 18,
+            passed ? Icons.check_circle_outline : Icons.flag_outlined,
+            size: 20,
             color: statusColor,
           ),
-          const SizedBox(width: 10),
+          AppSpacing.h12,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -611,17 +743,18 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                   statusText,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: statusColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                   meetName,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     color: palette.textSecondary,
                   ),
                   maxLines: 1,
@@ -630,12 +763,14 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hSm,
           Text(
             SwimTimeFormatter.formatCs(targetCs),
+            maxLines: 1,
+            softWrap: false,
             style: AppTextStyles.officialTime.copyWith(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
               color: palette.textPrimary,
             ),
           ),
@@ -709,7 +844,8 @@ class _RaceChartPainter extends CustomPainter {
         text: TextSpan(
           text: SwimTimeFormatter.formatCs(vCs),
           style: TextStyle(
-            fontSize: 10,
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 11,
             color: labelColor,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
@@ -798,7 +934,15 @@ class _RaceChartPainter extends CustomPainter {
       final parts = d.split('-');
       final shortD = parts.length == 3 ? '${parts[2]}.${parts[1]}.${parts[0].substring(2)}' : d;
       final tp = TextPainter(
-        text: TextSpan(text: shortD, style: TextStyle(fontSize: 9.5, color: labelColor)),
+        text: TextSpan(
+          text: shortD,
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 11,
+            color: labelColor,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
         textDirection: TextDirection.ltr,
       )..layout();
       final dx = idx == 0 ? leftPad : (size.width - rightPad - tp.width);

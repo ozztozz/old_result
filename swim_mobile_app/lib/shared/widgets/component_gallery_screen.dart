@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/swim_theme.dart';
 import '../../data/models/race_result.dart';
-import 'swim_status_badge.dart';
+import 'status_badge.dart';
 import 'swim_result_card.dart';
 
 /// Bileşen Galerisi Ekranı (Component Gallery / Design System Showcase)
@@ -104,13 +104,13 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                SwimStatusBadge.finished(),
-                SwimStatusBadge.waiting(),
-                SwimStatusBadge.disqualified(),
-                SwimStatusBadge.pb(),
-                SwimStatusBadge.standard(badge: 'A1'),
-                SwimStatusBadge.standard(badge: 'B2'),
-                SwimStatusBadge.provisional(),
+                StatusBadge.finished(),
+                StatusBadge.waiting(),
+                StatusBadge.disqualified(),
+                StatusBadge.pb(),
+                StatusBadge.standard(badge: 'A1'),
+                StatusBadge.standard(badge: 'B2'),
+                StatusBadge.provisional(),
               ],
             ),
             const SizedBox(height: 20),

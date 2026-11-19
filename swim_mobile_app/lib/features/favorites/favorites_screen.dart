@@ -4,16 +4,24 @@ import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/status_badge.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../athletes/athlete_profile_screen.dart';
+import '../home/home_screen.dart';
 
 /// 5. Ekran: Favorilerim & Hızlı Takip (Soft Glass + Ambient Glass)
 class FavoritesScreen extends StatefulWidget {
   final SwimRepository repository;
+  final VoidCallback? onGoToDiscover;
 
-  const FavoritesScreen({super.key, required this.repository});
+  const FavoritesScreen({
+    super.key,
+    required this.repository,
+    this.onGoToDiscover,
+  });
 
   @override
   State<FavoritesScreen> createState() => _FavoritesScreenState();
@@ -23,18 +31,30 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   List<AthleteSummaryItem> _favoritesData = [];
+  String _searchQuery = '';
+  late final FocusNode _searchFocusNode;
+  bool _isSearchFocused = false;
 
   @override
   void initState() {
     super.initState();
+    _searchFocusNode = FocusNode()..addListener(_handleSearchFocusChange);
     FavoriteAthletesService.instance.addListener(_onFavoritesChanged);
     _loadFavorites();
   }
 
   @override
   void dispose() {
+    _searchFocusNode.removeListener(_handleSearchFocusChange);
+    _searchFocusNode.dispose();
     FavoriteAthletesService.instance.removeListener(_onFavoritesChanged);
     super.dispose();
+  }
+
+  void _handleSearchFocusChange() {
+    if (mounted && _isSearchFocused != _searchFocusNode.hasFocus) {
+      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
+    }
   }
 
   void _onFavoritesChanged() {
@@ -79,22 +99,71 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
+  void _goToDiscover() {
+    if (widget.onGoToDiscover != null) {
+      widget.onGoToDiscover!();
+      return;
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(repository: widget.repository),
+        ),
+      );
+    }
+  }
+
+  List<AthleteSummaryItem> get _filteredFavorites {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return _favoritesData;
+    return _favoritesData.where((fav) {
+      return fav.name.toLowerCase().contains(q) ||
+          fav.clubName.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  int get _distinctClubsCount {
+    return _favoritesData
+        .map((f) => f.clubName.trim())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .length;
+  }
+
+  int get _highestFina {
+    int best = 0;
+    for (final f in _favoritesData) {
+      final pts = f.topPerformance?.points ?? 0;
+      if (pts > best) best = pts;
+    }
+    return best;
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final filtered = _filteredFavorites;
 
     return AmbientBackground(
-      artStyle: AmbientArtStyle.orbitalArcs,
+      artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              // 1. Editoryal Üst Başlık
+              // 1. Editoryal Üst Başlık (LiveScreen ile aynı yapı)
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 14, 22, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.s20,
+                  AppSpacing.s12,
+                  AppSpacing.s20,
+                  AppSpacing.s12,
+                ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Column(
@@ -104,20 +173,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             'Hızlı takip',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              letterSpacing: 0.1,
+                              letterSpacing: 0.2,
                               color: palette.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             'Favori Sporcular',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.5,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.6,
                               height: 1.15,
                               color: palette.textPrimary,
                             ),
@@ -125,39 +196,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ],
                       ),
                     ),
-                    if (_favoritesData.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: palette.surfaceGlassStrong,
-                          borderRadius: AppRadius.full,
-                          border: Border.all(
-                            color: palette.isDark
-                                ? palette.border
-                                : palette.glassBorder,
-                          ),
-                        ),
-                        child: Text(
-                          '${_favoritesData.length} Sporcu',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: palette.textSecondary,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
+                    AppSpacing.hSm,
                     GlassCircleButton(
                       icon: Icons.palette_outlined,
-                      iconColor: palette.primary,
+                      iconSize: 20,
+                      iconColor: palette.textTertiary,
                       tooltip: 'Tema Seç',
                       onTap: () => ThemePickerSheet.show(context),
+                    ),
+                    AppSpacing.hSm,
+                    GlassCircleButton(
+                      icon: Icons.refresh_outlined,
+                      iconSize: 20,
+                      iconColor: palette.textTertiary,
+                      tooltip: 'Yenile',
+                      onTap: _loadFavorites,
                     ),
                   ],
                 ),
@@ -177,44 +230,260 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             child: EmptyStateWidget(
                               title: 'Bağlantı Hatası',
                               message: _errorMessage!,
-                              icon: Icons.error_outline_rounded,
+                              icon: Icons.error_outline,
                               actionText: 'Tekrar Dene',
                               onAction: _loadFavorites,
                             ),
                           )
                         : _favoritesData.isEmpty
-                            ? const Padding(
-                                padding: EdgeInsets.only(bottom: 72),
-                                child: EmptyStateWidget(
-                                  title: 'Henüz favori sporcu eklemediniz',
-                                  message:
-                                      'Sporcu profilindeki yıldız simgesine dokunarak takip etmek istediğiniz sporcuları buraya ekleyebilirsiniz.',
-                                  icon: Icons.star_outline_rounded,
-                                ),
-                              )
+                            ? _buildEmptyState(context, palette)
                             : RefreshIndicator(
                                 color: palette.primary,
                                 onRefresh: _loadFavorites,
-                                child: ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    8,
-                                    20,
-                                    112,
+                                child: ListView(
+                                  padding: EdgeInsets.fromLTRB(
+                                    AppSpacing.s20,
+                                    AppSpacing.sm,
+                                    AppSpacing.s20,
+                                    64 +
+                                        AppSpacing.md +
+                                        MediaQuery.of(context).padding.bottom +
+                                        AppSpacing.lg,
                                   ),
-                                  itemCount: _favoritesData.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildFavoriteCard(
-                                      context,
-                                      palette,
-                                      _favoritesData[index],
-                                    );
-                                  },
+                                  children: [
+                                    // Level 1 Hero Özet Paneli
+                                    _buildOverviewHero(palette),
+                                    AppSpacing.vLg,
+
+                                    // Level 3 Arama Çubuğu
+                                    SoftGlassPanel(
+                                      level: 3,
+                                      height: 48,
+                                      borderRadius: BorderRadius.circular(24),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.md,
+                                      ),
+                                      animationDuration:
+                                          const Duration(milliseconds: 180),
+                                      fillAlphaOverride: palette.isDark
+                                          ? (_isSearchFocused ? 0.15 : 0.09)
+                                          : (_isSearchFocused ? 0.20 : 0.14),
+                                      borderAlphaOverride: palette.isDark
+                                          ? (_isSearchFocused ? 0.34 : 0.16)
+                                          : (_isSearchFocused ? 0.50 : 0.25),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.search_outlined,
+                                            color: palette.textSecondary,
+                                            size: 20,
+                                          ),
+                                          AppSpacing.h12,
+                                          Expanded(
+                                            child: TextField(
+                                              focusNode: _searchFocusNode,
+                                              onChanged: (val) => setState(
+                                                () => _searchQuery = val,
+                                              ),
+                                              style: TextStyle(
+                                                fontFamily:
+                                                    AppTextStyles.fontFamily,
+                                                fontSize: 15,
+                                                color: palette.textPrimary,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText:
+                                                    'Sporcu veya kulüp ara...',
+                                                hintStyle: TextStyle(
+                                                  fontFamily:
+                                                      AppTextStyles.fontFamily,
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: palette.textSecondary
+                                                      .withValues(alpha: 0.85),
+                                                ),
+                                                filled: false,
+                                                border: InputBorder.none,
+                                                enabledBorder: InputBorder.none,
+                                                focusedBorder: InputBorder.none,
+                                                contentPadding: EdgeInsets.zero,
+                                                isDense: true,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    AppSpacing.vLg,
+
+                                    // Level 2 Favori Sporcu Kartları
+                                    if (filtered.isEmpty)
+                                      const EmptyStateWidget(
+                                        title: 'Sonuç bulunamadı',
+                                        message:
+                                            'Arama kriterlerinize uygun favori sporcu bulunamadı.',
+                                        icon: Icons.search_off_outlined,
+                                        compact: true,
+                                      )
+                                    else
+                                      ...filtered.map(
+                                        (fav) => _buildFavoriteCard(
+                                          context,
+                                          palette,
+                                          fav,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Level 1 Hero İstatistik Paneli
+  Widget _buildOverviewHero(AppColorPalette palette) {
+    return SoftGlassPanel(
+      level: 1,
+      tier: GlassTier.hero,
+      ambientGlowBehind: true,
+      borderRadius: AppRadius.rounded,
+      padding: AppSpacing.cardPadding,
+      artStyle: AmbientArtStyle.none,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Takip Özeti',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              AppSpacing.hSm,
+              Text(
+                'Güncel veriler',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 12,
+                  color: palette.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.v20,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _buildHeroMetric(
+                  value: '${_favoritesData.length}',
+                  label: 'Sporcu',
+                  palette: palette,
+                ),
+              ),
+              _buildHeroDivider(palette),
+              Expanded(
+                child: _buildHeroMetric(
+                  value: '$_distinctClubsCount',
+                  label: 'Kulüp',
+                  palette: palette,
+                ),
+              ),
+              _buildHeroDivider(palette),
+              Expanded(
+                child: _buildHeroMetric(
+                  value: _highestFina > 0 ? '$_highestFina' : '-',
+                  label: 'En İyi FINA',
+                  palette: palette,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroMetric({
+    required String value,
+    required String label,
+    required AppColorPalette palette,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 46,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 38,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
+                    height: 1.0,
+                    color: palette.textPrimary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          AppSpacing.vXs,
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: palette.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroDivider(AppColorPalette palette) {
+    return Container(
+      width: 1,
+      height: 36,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            palette.divider.withValues(alpha: 0.0),
+            palette.textSecondary.withValues(alpha: 0.35),
+            palette.divider.withValues(alpha: 0.0),
+          ],
         ),
       ),
     );
@@ -227,7 +496,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   ) {
     final latest = fav.latestRace;
     final topPerf = fav.topPerformance;
-    final initials = fav.name
+    final athleteName = StringUtils.toTitleCase(fav.name);
+    final clubName = StringUtils.toTitleCase(fav.clubName);
+    final branchInfo = latest != null
+        ? '${latest.distance}m ${StringUtils.toTitleCase(latest.stroke)}'
+        : (fav.birthYear != null ? '${fav.birthYear}' : '');
+    final subtitleText =
+        branchInfo.isNotEmpty ? '$clubName · $branchInfo' : clubName;
+
+    final initials = athleteName
         .split(' ')
         .where((w) => w.isNotEmpty)
         .map((w) => w[0])
@@ -235,11 +512,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         .join()
         .toUpperCase();
 
+    final bestTime = topPerf?.time.isNotEmpty == true
+        ? topPerf!.time
+        : (latest?.time.isNotEmpty == true ? latest!.time : '-');
+
     return SoftGlassPanel(
-      tier: GlassTier.card,
-      borderRadius: BorderRadius.circular(20),
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
+      level: 2,
+      borderRadius: AppRadius.cardRadius,
+      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+      padding: AppSpacing.cardPadding,
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -254,133 +535,231 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: palette.primaryContainer,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: palette.primary.withValues(alpha: 0.25),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials.isEmpty ? 'SP' : initials,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: palette.primary,
+                  ),
+                ),
+              ),
+              AppSpacing.h12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: palette.primaryContainer,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: palette.primary.withValues(alpha: 0.25),
-                        ),
+                    Text(
+                      athleteName,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                        letterSpacing: -0.2,
+                        color: palette.textPrimary,
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        initials.isEmpty ? 'SP' : initials,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitleText,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: palette.textSecondary,
+                        fontSize: 13.5,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              AppSpacing.hSm,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (bestTime.trim().toUpperCase() != 'DNS')
+                    Text(
+                      bestTime,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.star_rounded,
+                      color: palette.accent,
+                      size: 22,
+                    ),
+                    tooltip: 'Favorilerden çıkar',
+                    onPressed: () =>
+                        FavoriteAthletesService.instance.removeFavorite(fav.id),
+                  ),
+                  Icon(
+                    Icons.chevron_right_outlined,
+                    size: 20,
+                    color: palette.textSecondary,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (topPerf?.points != null || latest != null) ...[
+            AppSpacing.v12,
+            Divider(height: 1, thickness: 1, color: palette.divider),
+            AppSpacing.v12,
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (topPerf?.points != null)
+                    StatusBadge(
+                      label: '${topPerf!.points} FINA',
+                      variant: StatusBadgeVariant.info,
+                    )
+                  else if (latest != null)
+                    StatusBadge(
+                      label:
+                          '${latest.distance}m ${StringUtils.toTitleCase(latest.stroke)}',
+                      variant: StatusBadgeVariant.neutral,
+                    ),
+                  if (latest != null)
+                    if (latest.time.trim().toUpperCase() == 'DNS')
+                      const StatusBadge.neutral(label: 'Başlamadı')
+                    else
+                      Text(
+                        latest.time,
+                        maxLines: 1,
+                        softWrap: false,
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: palette.primary,
+                          color: palette.textSecondary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fav.name,
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15.5,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${fav.birthYear ?? "-"}  ·  ${fav.clubName}',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              color: palette.textSecondary,
-                              fontSize: 12,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.star_rounded, color: palette.gold, size: 22),
-                      tooltip: 'Favorilerden çıkar',
-                      onPressed: () =>
-                          FavoriteAthletesService.instance.removeFavorite(fav.id),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: palette.textMuted),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Divider(height: 1, color: palette.divider),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Son Yarışı',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              color: palette.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            latest != null
-                                ? '${latest.distance}m ${latest.stroke} · ${latest.time}'
-                                : '-',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: palette.textPrimary,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'En Yüksek FINA',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              color: palette.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            topPerf?.points != null
-                                ? '${topPerf!.points} Puan'
-                                : '-',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: palette.primary,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          );
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, AppColorPalette palette) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.s20,
+          AppSpacing.lg,
+          AppSpacing.s20,
+          64 + AppSpacing.md + MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 96,
+              height: 96,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 92,
+                    height: 92,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: palette.textSecondary.withValues(alpha: 0.25),
+                        width: 1.0,
+                      ),
+                    ),
+                  ),
+                  SoftGlassPanel(
+                    level: 3,
+                    shape: BoxShape.circle,
+                    width: 58,
+                    height: 58,
+                    padding: EdgeInsets.zero,
+                    child: Center(
+                      child: Icon(
+                        Icons.star_outline_rounded,
+                        size: 26,
+                        color: palette.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AppSpacing.vMd,
+            Text(
+              'Henüz favori sporcu eklemediniz',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.raceTitle.copyWith(
+                color: palette.textPrimary,
+              ),
+            ),
+            AppSpacing.vXs,
+            Text(
+              'Sporcu profilindeki yıldız simgesine dokunarak takip etmek istediğiniz sporcuları buraya ekleyebilirsiniz.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.categorySeries.copyWith(
+                color: palette.textSecondary,
+              ),
+            ),
+            AppSpacing.vMd,
+            SoftGlassPanel(
+              level: 3,
+              borderRadius: AppRadius.full,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.s12,
+              ),
+              onTap: _goToDiscover,
+              child: Text(
+                "Keşfet'e Git",
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: palette.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

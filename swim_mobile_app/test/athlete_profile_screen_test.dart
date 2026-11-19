@@ -102,4 +102,187 @@ void main() {
     expect(find.text('%73.8'), findsOneWidget);
     expect(find.text('980 FINA'), findsOneWidget);
   });
+
+  testWidgets(
+      'AthleteProfileScreen does not overflow at 360x780 with textScale 1.3, very long athlete/club names, and empty best times',
+      (WidgetTester tester) async {
+    final repo = _LongEmptyMockRepository();
+
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(360, 780),
+            textScaler: TextScaler.linear(1.3),
+          ),
+          child: AthleteProfileScreen(
+            athleteId: 99,
+            athleteName:
+                'ABDURRAHMAN ŞAHİN İBRAHİMOĞLU KARAOSMANOĞLU',
+            repository: repo,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Kayıtlı PB Bulunamadı'), findsOneWidget);
+  });
+
+  testWidgets(
+      'AthleteProfileScreen wraps 5 events in one stroke at 360x780 with textScale 1.3 without overflow',
+      (WidgetTester tester) async {
+    final repo = _FiveEventsMockRepository();
+
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(360, 780),
+            textScaler: TextScaler.linear(1.3),
+          ),
+          child: AthleteProfileScreen(
+            athleteId: 77,
+            athleteName: 'EGE CAN DEMİR',
+            repository: repo,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Serbest'), findsOneWidget);
+    expect(find.text('5 Derece'), findsOneWidget);
+    expect(find.text('50m'), findsOneWidget);
+    expect(find.text('100m'), findsOneWidget);
+    expect(find.text('200m'), findsOneWidget);
+    expect(find.text('400m'), findsOneWidget);
+    expect(find.text('1500m'), findsOneWidget);
+    expect(find.text('364 FINA'), findsOneWidget);
+  });
+}
+
+class _FiveEventsMockRepository implements SwimRepository {
+  @override
+  Future<AthleteDetail> getAthleteDetail(int id) async {
+    return AthleteDetail(
+      id: id,
+      name: 'EGE CAN DEMİR',
+      gender: 'M',
+      clubName: 'GALATASARAY SPOR KULÜBÜ',
+      birthYear: 2007,
+      age: 19,
+      stats: AthleteStats(
+        totalRaces: 24,
+        podiumCount: 10,
+        podiumRate: 41.7,
+        standardsPassed: 5,
+      ),
+      scoutNote: '',
+      pbs50m: [
+        PersonalBest(
+          distance: 50,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          time: '24.10',
+          timeCs: 2410,
+          points: 364,
+          date: '2025-04-12',
+          meetName: 'Türkiye Şampiyonası',
+          course: 'LC',
+        ),
+        PersonalBest(
+          distance: 100,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          time: '52.85',
+          timeCs: 5285,
+          points: 612,
+          date: '2025-04-13',
+          meetName: 'Türkiye Şampiyonası',
+          course: 'LC',
+        ),
+        PersonalBest(
+          distance: 200,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          time: '01:55.40',
+          timeCs: 11540,
+          points: 640,
+          date: '2025-04-14',
+          meetName: 'Türkiye Şampiyonası',
+          course: 'LC',
+        ),
+        PersonalBest(
+          distance: 400,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          time: '04:08.12',
+          timeCs: 24812,
+          points: 625,
+          date: '2025-04-15',
+          meetName: 'Türkiye Şampiyonası',
+          course: 'LC',
+        ),
+        PersonalBest(
+          distance: 1500,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          time: '16:45.90',
+          timeCs: 100590,
+          points: 590,
+          date: '2025-04-16',
+          meetName: 'Türkiye Şampiyonası',
+          course: 'LC',
+        ),
+      ],
+      pbs25m: const [],
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _LongEmptyMockRepository implements SwimRepository {
+  @override
+  Future<AthleteDetail> getAthleteDetail(int id) async {
+    return AthleteDetail(
+      id: id,
+      name: 'ABDURRAHMAN ŞAHİN İBRAHİMOĞLU KARAOSMANOĞLU',
+      gender: 'M',
+      clubName:
+          'İSTANBUL BÜYÜKŞEHİR BELEDİYESİ SPOR KULÜBÜ YÜZME ŞUBESİ',
+      birthYear: 2005,
+      age: 21,
+      stats: AthleteStats(
+        totalRaces: 0,
+        podiumCount: 0,
+        podiumRate: 0,
+        standardsPassed: 0,
+      ),
+      scoutNote: '',
+      pbs50m: const [],
+      pbs25m: const [],
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

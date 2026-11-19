@@ -7,11 +7,13 @@ import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
+import '../../shared/widgets/status_badge.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../clubs/relay_simulator_screen.dart';
 import '../live/live_meet_detail_screen.dart';
@@ -102,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final palette = context.palette;
 
     return AmbientBackground(
-      artStyle: AmbientArtStyle.orbitalArcs,
+      artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
@@ -111,7 +113,12 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // 1. Editoryal Üst Başlık
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 14, 22, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.s20,
+                  AppSpacing.s12,
+                  AppSpacing.s20,
+                  AppSpacing.s12,
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -123,20 +130,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             'Türkiye Yüzme Federasyonu',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              letterSpacing: 0.1,
+                              letterSpacing: 0.2,
                               color: palette.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             'Keşfet & Sonuçlar',
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.5,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.6,
                               height: 1.15,
                               color: palette.textPrimary,
                             ),
@@ -147,20 +154,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (kDebugMode) ...[
                       GlassCircleButton(
                         icon: Icons.design_services_outlined,
+                        iconSize: 20,
+                        iconColor: palette.textTertiary,
                         tooltip: 'SwimDesign Galerisi',
                         onTap: _openGallery,
                       ),
-                      const SizedBox(width: 8),
+                      AppSpacing.hSm,
                     ],
                     GlassCircleButton(
                       icon: Icons.palette_outlined,
-                      iconColor: palette.primary,
+                      iconSize: 20,
+                      iconColor: palette.textTertiary,
                       tooltip: 'Tema Seç',
                       onTap: () => ThemePickerSheet.show(context),
                     ),
-                    const SizedBox(width: 8),
+                    AppSpacing.hSm,
                     GlassCircleButton(
-                      icon: Icons.search_rounded,
+                      icon: Icons.search_outlined,
+                      iconSize: 20,
+                      iconColor: palette.textTertiary,
                       tooltip: 'Sporcu / Kulüp Ara',
                       onTap: _openSearchModal,
                     ),
@@ -193,45 +205,64 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: palette.primary,
                             onRefresh: _loadData,
                             child: ListView(
-                              padding: const EdgeInsets.fromLTRB(20, 6, 20, 112),
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.s20,
+                                AppSpacing.sm,
+                                AppSpacing.s20,
+                                64 +
+                                    AppSpacing.md +
+                                    MediaQuery.of(context).padding.bottom +
+                                    AppSpacing.lg,
+                              ),
                               children: [
-                                // Hızlı Arama Çubuğu (Frosted Glass yüzey)
+                                // Hızlı Arama Çubuğu (Level 3, height 48, radius 24, 180ms animasyon)
                                 SoftGlassPanel(
-                                  tier: GlassTier.subtle,
-                                  borderRadius: BorderRadius.circular(16),
+                                  level: 3,
+                                  height: 48,
+                                  borderRadius: BorderRadius.circular(24),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 13,
+                                    horizontal: AppSpacing.md,
                                   ),
+                                  animationDuration:
+                                      const Duration(milliseconds: 180),
                                   onTap: _openSearchModal,
                                   child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Icon(
-                                        Icons.search_rounded,
-                                        size: 19,
+                                        Icons.search_outlined,
+                                        size: 20,
                                         color: palette.textSecondary,
                                       ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Sporcu, kulüp veya müsabaka ara...',
-                                        style: TextStyle(
-                                          fontFamily: AppTextStyles.fontFamily,
-                                          color: palette.textMuted,
-                                          fontSize: 13.5,
+                                      AppSpacing.h12,
+                                      Expanded(
+                                        child: Text(
+                                          'Sporcu, kulüp veya müsabaka ara...',
+                                          style: TextStyle(
+                                            fontFamily:
+                                                AppTextStyles.fontFamily,
+                                            fontSize: 14.5,
+                                            fontWeight: FontWeight.w400,
+                                            color: palette.textSecondary
+                                                .withValues(alpha: 0.85),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 14),
+                                AppSpacing.vLg,
 
-                                // Aktif Canlı Yarış Varsa Soft Glass Hero Banner
+                                // Aktif Canlı Yarış Varsa Soft Glass Level 1 Hero Banner
                                 if (_liveMeets.isNotEmpty) ...[
                                   _buildLiveBanner(_liveMeets.first, palette),
-                                  const SizedBox(height: 18),
+                                  AppSpacing.vLg,
                                 ],
 
-                                // Hızlı Araçlar (Bayrak Simülatörü & Top 25 Sıralamalar)
+                                // Hızlı Araçlar (Sakin 2 sütunlu Level 3 ızgara)
                                 Row(
                                   children: [
                                     Expanded(
@@ -244,7 +275,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) => RelaySimulatorScreen(
+                                              builder: (_) =>
+                                                  RelaySimulatorScreen(
                                                 repository: widget.repository,
                                               ),
                                             ),
@@ -252,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         },
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
+                                    AppSpacing.h12,
                                     Expanded(
                                       child: _buildToolCard(
                                         palette,
@@ -273,12 +305,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 22),
+                                AppSpacing.vLg,
 
                                 // Favori Sporcu & Kulüp Canlı Özet Akışı
                                 if (_highlights.isNotEmpty) ...[
                                   _buildHighlightsSection(palette),
-                                  const SizedBox(height: 22),
+                                  AppSpacing.vLg,
                                 ],
 
                                 // Güncel Müsabakalar Başlığı
@@ -286,10 +318,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   title: 'Güncel Müsabakalar',
                                   trailingText: '${_recentMeets.length} Müsabaka',
                                 ),
-                                const SizedBox(height: 14),
+                                AppSpacing.v12,
 
-                                // Müsabaka Kartları Listesi
-                                ..._recentMeets.take(8).map((meet) => _buildMeetCard(meet)),
+                                // Müsabaka Kartları Listesi (Level 2)
+                                ..._recentMeets
+                                    .take(8)
+                                    .map((meet) => _buildMeetCard(meet)),
                               ],
                             ),
                           ),
@@ -309,28 +343,15 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback onTap,
   }) {
     return SoftGlassPanel(
-      tier: GlassTier.card,
-      borderRadius: BorderRadius.circular(18),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      level: 3,
+      borderRadius: AppRadius.cardRadius,
+      padding: AppSpacing.cardPadding,
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: palette.primaryContainer,
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                color: palette.primary.withValues(alpha: 0.18),
-                width: 0.8,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 19, color: palette.primary),
-          ),
-          const SizedBox(height: 12),
+          Icon(icon, size: 20, color: palette.primary),
+          AppSpacing.v12,
           Text(
             title,
             style: TextStyle(
@@ -342,12 +363,12 @@ class _HomeScreenState extends State<HomeScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          AppSpacing.vXs,
           Text(
             subtitle,
             style: TextStyle(
               fontFamily: AppTextStyles.fontFamily,
-              fontSize: 11,
+              fontSize: 12,
               color: palette.textSecondary,
             ),
             maxLines: 1,
@@ -363,28 +384,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.notifications_active_rounded, size: 17, color: palette.primary),
-            const SizedBox(width: 6),
-            Text(
-              'Favori & Kulüp Canlı Akışı',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: palette.textPrimary,
-              ),
-            ),
-          ],
+        SectionHeader(
+          title: 'Favori & Kulüp Canlı Akışı',
+          trailingText: '${items.length} Kayıt',
         ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: palette.border),
-          ),
-          clipBehavior: Clip.antiAlias,
+        AppSpacing.v12,
+        SoftGlassPanel(
+          level: 2,
+          borderRadius: AppRadius.cardRadius,
+          padding: EdgeInsets.zero,
           child: Column(
             children: items.asMap().entries.map((entry) {
               final idx = entry.key;
@@ -392,59 +400,19 @@ class _HomeScreenState extends State<HomeScreen> {
               final std = h['qualifying_standard'] as Map<String, dynamic>?;
               final bool hasStd = std != null && std['passed'] == true;
               final athId = h['athlete_id'] as int;
+              final athleteName =
+                  StringUtils.toTitleCase(h['athlete_name'] as String? ?? '');
+              final eventLabel =
+                  '${h['distance'] ?? ''}m ${h['stroke_label'] ?? ''}'.trim();
+              final city = StringUtils.toTitleCase(
+                (h['city'] as String?)?.trim() ?? '',
+              );
+              final subtitleText =
+                  city.isNotEmpty ? '$eventLabel • $city' : eventLabel;
 
               return Column(
                 children: [
-                  ListTile(
-                    dense: true,
-                    title: Text(
-                      h['athlete_name'] as String? ?? '',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            '${h['distance']}m ${h['stroke_label']} • ${h['meet_name']}',
-                            style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (hasStd) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: palette.statusSuccess.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              (std['badge'] as String?) ?? 'Baraj',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: palette.statusSuccess,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    trailing: Text(
-                      h['time'] as String? ?? '',
-                      style: AppTextStyles.officialTime.copyWith(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: palette.textPrimary,
-                      ),
-                    ),
+                  InkWell(
                     onTap: () {
                       Navigator.push(
                         context,
@@ -457,8 +425,90 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.s12,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        athleteName,
+                                        style: TextStyle(
+                                          fontFamily: AppTextStyles.fontFamily,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: palette.textPrimary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                AppSpacing.vXs,
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        subtitleText,
+                                        style: TextStyle(
+                                          fontFamily: AppTextStyles.fontFamily,
+                                          fontSize: 12.5,
+                                          color: palette.textSecondary,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (hasStd) ...[
+                                  AppSpacing.vXs,
+                                  Text(
+                                    (std['badge'] as String?) ?? 'Baraj',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: palette.successText,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          AppSpacing.h12,
+                          Text(
+                            h['time'] as String? ?? '',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: AppTextStyles.officialTime.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  if (idx < items.length - 1) Divider(height: 1, color: palette.divider),
+                  if (idx < items.length - 1)
+                    Divider(height: 1, thickness: 1, color: palette.divider),
                 ],
               );
             }).toList(),
@@ -469,12 +519,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLiveBanner(LiveMeetSummary live, AppColorPalette palette) {
+    final statusLower = live.status.toLowerCase();
+    final isCompleted = live.resultListProgress.total > 0 &&
+        live.resultListProgress.processed >= live.resultListProgress.total;
+    final isTrulyLive = !isCompleted &&
+        (statusLower.contains('canl') ||
+            statusLower.contains('live') ||
+            statusLower.contains('devam') ||
+            live.resultListProgress.processed > 0);
+
+    final StatusBadge statusBadge;
+    if (isTrulyLive) {
+      statusBadge = const StatusBadge.live(label: 'CANLI YARIŞ');
+    } else if (isCompleted) {
+      statusBadge = StatusBadge(
+        label: 'Sonuçlandı',
+        variant: StatusBadgeVariant.success,
+        textColor: palette.successText,
+      );
+    } else {
+      statusBadge = StatusBadge.neutral(
+        label: live.status.isNotEmpty
+            ? StringUtils.toTitleCase(live.status)
+            : 'Bekleniyor',
+      );
+    }
+
     return SoftGlassPanel(
+      level: 1,
       tier: GlassTier.hero,
       ambientGlowBehind: true,
-      borderRadius: const BorderRadius.all(Radius.circular(24)),
-      padding: const EdgeInsets.all(18),
-      artStyle: AmbientArtStyle.heroOrbit,
+      borderRadius: AppRadius.rounded,
+      padding: AppSpacing.cardPadding,
+      artStyle: AmbientArtStyle.none,
       onTap: () {
         Navigator.push(
           context,
@@ -491,41 +568,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: palette.statusLiveBg,
-                  borderRadius: AppRadius.full,
-                  border: Border.all(
-                    color: palette.statusLive.withValues(alpha: 0.22),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: palette.statusLive,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'CANLI YARIŞ',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        color: palette.statusLive,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 10.5,
-                        letterSpacing: 0.7,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              statusBadge,
               const Spacer(),
               if (live.city.isNotEmpty)
                 Text(
@@ -539,18 +582,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          AppSpacing.v12,
           Text(
-            live.name,
+            StringUtils.toTitleCase(live.name),
             style: TextStyle(
               fontFamily: AppTextStyles.fontFamily,
-              fontSize: 16.5,
+              fontSize: 17,
               fontWeight: FontWeight.w600,
               letterSpacing: -0.2,
               color: palette.textPrimary,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          AppSpacing.vSm,
           Row(
             children: [
               Expanded(
@@ -569,14 +614,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
                   color: palette.primary,
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 3),
+              AppSpacing.hXs,
               Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 11,
+                Icons.chevron_right_outlined,
+                size: 14,
                 color: palette.primary,
               ),
             ],
@@ -592,10 +637,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final courseColor = is25m ? palette.secondary : palette.primary;
 
     return SoftGlassPanel(
-      tier: GlassTier.card,
-      borderRadius: BorderRadius.circular(20),
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      level: 2,
+      borderRadius: AppRadius.cardRadius,
+      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+      padding: AppSpacing.cardPadding,
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -615,25 +660,28 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: Text(
-                  meet.name,
+                  StringUtils.toTitleCase(meet.name),
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     fontWeight: FontWeight.w600,
-                    fontSize: 15.5,
+                    fontSize: 16,
                     letterSpacing: -0.2,
                     color: palette.textPrimary,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              AppSpacing.h12,
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
                 decoration: BoxDecoration(
-                  color: courseColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: courseColor.withValues(alpha: 0.14),
+                  borderRadius: AppRadius.badgeRadius,
                   border: Border.all(
                     color: courseColor.withValues(alpha: 0.25),
-                    width: 0.8,
+                    width: 1,
                   ),
                 ),
                 child: Text(
@@ -649,40 +697,48 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          AppSpacing.vSm,
           Row(
             children: [
               if (meet.city.isNotEmpty) ...[
-                Icon(Icons.location_on_outlined, size: 13.5, color: palette.textMuted),
-                const SizedBox(width: 4),
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: palette.textSecondary,
+                ),
+                AppSpacing.hXs,
                 Text(
                   meet.city,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     color: palette.textSecondary,
-                    fontSize: 12,
+                    fontSize: 12.5,
                   ),
                 ),
-                const SizedBox(width: 12),
+                AppSpacing.h12,
               ],
               if (meet.startDate.isNotEmpty) ...[
-                Icon(Icons.calendar_today_outlined, size: 13, color: palette.textMuted),
-                const SizedBox(width: 4),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 14,
+                  color: palette.textSecondary,
+                ),
+                AppSpacing.hXs,
                 Text(
                   meet.startDate,
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     color: palette.textSecondary,
-                    fontSize: 12,
+                    fontSize: 12.5,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 12),
+          AppSpacing.v12,
           Divider(height: 1, thickness: 1, color: palette.divider),
-          const SizedBox(height: 10),
+          AppSpacing.v12,
           Row(
             children: [
               Text(
@@ -691,26 +747,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontFamily: AppTextStyles.fontFamily,
                   color: palette.primary,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              Text('  ·  ', style: TextStyle(color: palette.textMuted)),
+              Text('  ·  ', style: TextStyle(color: palette.textSecondary)),
               Text(
                 '${meet.totalAthletes} Sporcu',
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
                   color: palette.textSecondary,
                   fontWeight: FontWeight.w500,
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
               const Spacer(),
               Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: palette.textMuted,
+                Icons.chevron_right_outlined,
+                size: 20,
+                color: palette.textSecondary,
               ),
             ],
           ),

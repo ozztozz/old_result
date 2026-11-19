@@ -55,33 +55,10 @@ class AmbientBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final isDark = palette.isDark;
-
-    final fieldAColor = isDark
-        ? const Color(0xFF7B9AB0).withValues(alpha: 0.34)
-        : const Color(0xFFEEF3F6).withValues(alpha: 0.75);
-    final fieldBColor = isDark
-        ? const Color(0xFF4C6B82).withValues(alpha: 0.28)
-        : const Color(0xFF7F9BB0).withValues(alpha: 0.45);
-    final fieldCColor = isDark
-        ? const Color(0xFF070D13).withValues(alpha: 0.48)
-        : const Color(0xFF273746).withValues(alpha: 0.22);
-
-    final baseColors = isDark
-        ? [
-            palette.ambientBaseStart,
-            palette.ambientBaseMid,
-            palette.ambientBaseEnd,
-          ]
-        : const [
-            Color(0xFFCFDAE1),
-            Color(0xFFB4C4CF),
-            Color(0xFF98ABB9),
-          ];
 
     return Stack(
       children: [
-        // 1. Dikey taban gradyanı (#CFDAE1 @ 0.0 → #B4C4CF @ 0.45 → #98ABB9 @ 1.0)
+        // 1. Dikey taban gradyanı (paletten ambientTop → ambientMid @ 0.45 → ambientBottom)
         Positioned.fill(
           child: IgnorePointer(
             child: RepaintBoundary(
@@ -91,7 +68,11 @@ class AmbientBackground extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: const [0.0, 0.45, 1.0],
-                    colors: baseColors,
+                    colors: [
+                      palette.ambientTop,
+                      palette.ambientMid,
+                      palette.ambientBottom,
+                    ],
                   ),
                 ),
               ),
@@ -99,42 +80,42 @@ class AmbientBackground extends StatelessWidget {
           ),
         ),
 
-        // 2. Field A — Üst-sağ (istatistik paneli arkası): parlak ışık kaynağı (#EEF3F6 @ 0.75)
+        // 2. Field A — Üst-sağ (istatistik paneli arkası)
         Positioned(
           top: -260,
           right: -250,
           width: 760,
           height: 760,
           child: _SmoothEllipticalLightField(
-            color: fieldAColor,
+            color: palette.ambientFieldA,
             angle: -0.28,
             scaleX: 1.24,
             scaleY: 0.90,
           ),
         ),
 
-        // 3. Field B — Orta-sol (ilk kart arkası): çelik mavisi (#7F9BB0 @ 0.45)
+        // 3. Field B — Orta-sol (ilk kart arkası)
         Positioned(
           top: 120,
           left: -340,
           width: 780,
           height: 780,
           child: _SmoothEllipticalLightField(
-            color: fieldBColor,
+            color: palette.ambientFieldB,
             angle: 0.32,
             scaleX: 1.18,
             scaleY: 0.92,
           ),
         ),
 
-        // 4. Field C — Alt-sağ (navigasyon arkası): derin #273746 @ 0.22
+        // 4. Field C — Alt-sağ (navigasyon arkası)
         Positioned(
           bottom: -330,
           right: -260,
           width: 780,
           height: 780,
           child: _SmoothEllipticalLightField(
-            color: fieldCColor,
+            color: palette.ambientFieldC,
             angle: -0.22,
             scaleX: 1.28,
             scaleY: 0.88,

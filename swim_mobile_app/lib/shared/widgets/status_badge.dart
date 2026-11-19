@@ -1,91 +1,193 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/tokens/tokens.dart';
 
-/// TYF Yüzme Sonuçları — Durum Rozeti (v2.0)
-/// "Tamamlandı", "Canlı", "PB", "Bekliyor" mikro rozetleri
+enum StatusBadgeVariant {
+  neutral,
+  live,
+  success,
+  warning,
+  error,
+  info,
+}
+
+/// Unified muted status pill used for race, result, and achievement states.
 class StatusBadge extends StatelessWidget {
   final String label;
-  final Color bgColor;
-  final Color textColor;
+  final StatusBadgeVariant variant;
+  final Color? bgColor;
+  final Color? textColor;
   final Widget? leading;
   final bool hasBorder;
 
   const StatusBadge({
     super.key,
     required this.label,
-    required this.bgColor,
-    required this.textColor,
+    this.variant = StatusBadgeVariant.neutral,
+    this.bgColor,
+    this.textColor,
     this.leading,
     this.hasBorder = true,
   });
 
-  /// Tamamlandı / Sonuçlandı (Adaçayı Yeşili Rozet)
-  factory StatusBadge.completed({String label = 'Sonuçlandı'}) {
-    return StatusBadge(
-      label: label,
-      bgColor: AppColors.statusSuccessBg,
-      textColor: AppColors.statusSuccess,
-      hasBorder: true,
-    );
-  }
+  const StatusBadge.neutral({
+    super.key,
+    this.label = 'Bekleniyor',
+    this.leading,
+    this.hasBorder = true,
+  })  : variant = StatusBadgeVariant.neutral,
+        bgColor = null,
+        textColor = null;
 
-  /// Canlı (Pudra Gülü Noktası ile)
-  factory StatusBadge.live({String label = 'CANLI'}) {
-    return StatusBadge(
-      label: label,
-      bgColor: AppColors.statusLiveBg,
-      textColor: AppColors.statusLive,
-      hasBorder: true,
-      leading: Container(
-        width: 6,
-        height: 6,
-        margin: const EdgeInsets.only(right: 5),
-        decoration: const BoxDecoration(
-          color: AppColors.statusLive,
-          shape: BoxShape.circle,
-        ),
-      ),
-    );
-  }
+  const StatusBadge.live({
+    super.key,
+    this.label = 'CANLI',
+    this.leading,
+    this.hasBorder = true,
+  })  : variant = StatusBadgeVariant.live,
+        bgColor = null,
+        textColor = null;
 
-  /// Bekliyor / Başlamadı
-  factory StatusBadge.pending({String label = 'Bekliyor'}) {
-    return StatusBadge(
-      label: label,
-      bgColor: const Color(0xFFFAF8F7),
-      textColor: AppColors.textSecondary,
-      hasBorder: true,
-    );
-  }
+  const StatusBadge.success({
+    super.key,
+    this.label = 'Sonuçlandı',
+    this.leading,
+    this.hasBorder = true,
+  })  : variant = StatusBadgeVariant.success,
+        bgColor = null,
+        textColor = null;
 
-  /// Kişisel En İyi (Personal Best - PB)
-  factory StatusBadge.pb({String label = 'PB'}) {
-    return StatusBadge(
-      label: label,
-      bgColor: AppColors.goldBg,
-      textColor: AppColors.gold,
-      hasBorder: true,
-    );
-  }
+  const StatusBadge.warning({
+    super.key,
+    required this.label,
+    this.leading,
+    this.hasBorder = true,
+  })  : variant = StatusBadgeVariant.warning,
+        bgColor = null,
+        textColor = null;
+
+  const StatusBadge.error({
+    super.key,
+    this.label = 'Hata',
+    this.leading,
+    this.hasBorder = true,
+  })  : variant = StatusBadgeVariant.error,
+        bgColor = null,
+        textColor = null;
+
+  const StatusBadge.info({
+    super.key,
+    this.label = 'Bilgi',
+    this.leading,
+    this.hasBorder = true,
+  })  : variant = StatusBadgeVariant.info,
+        bgColor = null,
+        textColor = null;
+
+  const StatusBadge.finished({super.key, String? customLabel})
+      : label = customLabel ?? 'Sonuçlandı',
+        variant = StatusBadgeVariant.success,
+        bgColor = null,
+        textColor = null,
+        leading = null,
+        hasBorder = true;
+
+  const StatusBadge.waiting({super.key, String? customLabel})
+      : label = customLabel ?? 'Bekleniyor',
+        variant = StatusBadgeVariant.neutral,
+        bgColor = null,
+        textColor = null,
+        leading = null,
+        hasBorder = true;
+
+  const StatusBadge.disqualified({super.key, String? customLabel})
+      : label = customLabel ?? 'DQ',
+        variant = StatusBadgeVariant.error,
+        bgColor = null,
+        textColor = null,
+        leading = null,
+        hasBorder = true;
+
+  const StatusBadge.pb({super.key, String? customLabel})
+      : label = customLabel ?? 'Yeni PB',
+        variant = StatusBadgeVariant.info,
+        bgColor = null,
+        textColor = null,
+        leading = null,
+        hasBorder = true;
+
+  const StatusBadge.standard({super.key, required String badge})
+      : label = 'Baraj $badge',
+        variant = StatusBadgeVariant.success,
+        bgColor = null,
+        textColor = null,
+        leading = null,
+        hasBorder = true;
+
+  const StatusBadge.provisional({super.key, String? customLabel})
+      : label = customLabel ?? 'Geçici',
+        variant = StatusBadgeVariant.neutral,
+        bgColor = null,
+        textColor = null,
+        leading = null,
+        hasBorder = true;
+
+  factory StatusBadge.completed({String label = 'Sonuçlandı'}) =>
+      StatusBadge.success(label: label);
+
+  factory StatusBadge.pending({String label = 'Bekliyor'}) =>
+      StatusBadge.neutral(label: label);
+
+  factory StatusBadge.personalBest({String label = 'PB'}) =>
+      StatusBadge.info(label: label);
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final tint = switch (variant) {
+      StatusBadgeVariant.neutral => palette.textSecondary,
+      StatusBadgeVariant.live => palette.statusLive,
+      StatusBadgeVariant.success => palette.statusSuccess,
+      StatusBadgeVariant.warning => palette.statusWarning,
+      StatusBadgeVariant.error => palette.statusDanger,
+      StatusBadgeVariant.info => palette.primary,
+    };
+    final foreground = textColor ?? tint;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: hasBorder ? Border.all(color: textColor.withValues(alpha: 0.15), width: 0.8) : null,
+        color: bgColor ?? tint.withValues(alpha: 0.14),
+        borderRadius: AppRadius.chipRadius,
+        border: hasBorder
+            ? Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              )
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (leading != null) leading!,
+          if (leading != null)
+            leading!
+          else
+            Container(
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.only(right: AppSpacing.xs),
+              decoration: BoxDecoration(
+                color: foreground,
+                shape: BoxShape.circle,
+              ),
+            ),
           Text(
             label,
             style: AppTextStyles.badge.copyWith(
-              color: textColor,
+              color: foreground,
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
             ),

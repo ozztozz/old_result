@@ -12,12 +12,15 @@ abstract class AppColorPalette {
   // Tipografi ve Metin Renkleri
   Color get textPrimary;
   Color get textSecondary;
+  Color get textTertiary;
   Color get textMuted;
 
   // Marka & Vurgu (Accent)
   Color get primary;
+  Color get accent;
   Color get primaryContainer;
   Color get secondary;
+  Color get glowLight;
 
   // Çerçeve & Ayırıcılar
   Color get border;
@@ -25,6 +28,7 @@ abstract class AppColorPalette {
 
   // Durum Renkleri
   Color get statusSuccess;
+  Color get successText;
   Color get statusSuccessBg;
   Color get statusWarning;
   Color get statusWarningBg;
@@ -36,6 +40,18 @@ abstract class AppColorPalette {
   // Spor / Başarı / Madalya Renkleri
   Color get gold;
   Color get goldBg;
+
+  // Ambient Arka Plan, Yüzen Navigasyon & Gölge Renkleri
+  Color get ambientTop;
+  Color get ambientMid;
+  Color get ambientBottom;
+  Color get ambientFieldA;
+  Color get ambientFieldB;
+  Color get ambientFieldC;
+  Color get navFill;
+  Color get navLabelActive;
+  Color get navLabelInactive;
+  Color get shadowTint;
 
   // Tema Türü
   bool get isDark;
@@ -64,16 +80,25 @@ class LightColorPalette implements AppColorPalette {
   Color get textSecondary => const Color(0xFF475569);
 
   @override
+  Color get textTertiary => const Color(0xFF334155);
+
+  @override
   Color get textMuted => const Color(0xFF64748B);
 
   @override
   Color get primary => const Color(0xFF0F4C81);
 
   @override
+  Color get accent => const Color(0xFF0F4C81);
+
+  @override
   Color get primaryContainer => const Color(0x1A0F4C81);
 
   @override
   Color get secondary => const Color(0xFF0D9488);
+
+  @override
+  Color get glowLight => const Color(0xFFF0F6FA);
 
   @override
   Color get border => const Color(0xFFE2E8F0);
@@ -112,7 +137,40 @@ class LightColorPalette implements AppColorPalette {
   Color get goldBg => const Color(0x14B45309);
 
   @override
+  Color get ambientTop => const Color(0xFFE4ECF4);
+
+  @override
+  Color get ambientMid => const Color(0xFFC8D7E6);
+
+  @override
+  Color get ambientBottom => const Color(0xFFA8C0D6);
+
+  @override
+  Color get ambientFieldA => const Color(0xFFF0F6FA).withValues(alpha: 0.75);
+
+  @override
+  Color get ambientFieldB => const Color(0xFF0F4C81).withValues(alpha: 0.24);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF0F172A).withValues(alpha: 0.20);
+
+  @override
+  Color get navFill => const Color(0xFF0F2D4A).withValues(alpha: 0.42);
+
+  @override
+  Color get navLabelActive => const Color(0xFFF1F5F9);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFCBD5E1);
+
+  @override
+  Color get shadowTint => const Color(0xFF0F172A);
+
+  @override
   bool get isDark => false;
+
+  @override
+  Color get successText => const Color(0xFF146335);
 }
 
 /// Standart Koyu Tema Renk Paleti (Gece Modu Spor Gösterge Paneli)
@@ -135,7 +193,10 @@ class DarkColorPalette implements AppColorPalette {
   Color get textPrimary => const Color(0xFFF8FAFC);
 
   @override
-  Color get textSecondary => const Color(0xFF94A3B8);
+  Color get textSecondary => const Color(0xFFB0C0D0);
+
+  @override
+  Color get textTertiary => const Color(0xFFCBD5E1);
 
   @override
   Color get textMuted => const Color(0xFF64748B);
@@ -144,10 +205,16 @@ class DarkColorPalette implements AppColorPalette {
   Color get primary => const Color(0xFF38BDF8);
 
   @override
+  Color get accent => const Color(0xFF38BDF8);
+
+  @override
   Color get primaryContainer => const Color(0x2638BDF8);
 
   @override
   Color get secondary => const Color(0xFF2DD4BF);
+
+  @override
+  Color get glowLight => const Color(0xFFE0F2FE);
 
   @override
   Color get border => const Color(0xFF1E293B);
@@ -186,7 +253,40 @@ class DarkColorPalette implements AppColorPalette {
   Color get goldBg => const Color(0x26FBBF24);
 
   @override
+  Color get ambientTop => const Color(0xFF111C2E);
+
+  @override
+  Color get ambientMid => const Color(0xFF0C1524);
+
+  @override
+  Color get ambientBottom => const Color(0xFF080E1A);
+
+  @override
+  Color get ambientFieldA => const Color(0xFF38BDF8).withValues(alpha: 0.30);
+
+  @override
+  Color get ambientFieldB => const Color(0xFF2DD4BF).withValues(alpha: 0.12);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF050A12).withValues(alpha: 0.42);
+
+  @override
+  Color get navFill => Colors.white.withValues(alpha: 0.08);
+
+  @override
+  Color get navLabelActive => const Color(0xFFF8FAFC);
+
+  @override
+  Color get navLabelInactive => const Color(0xFF94A3B8);
+
+  @override
+  Color get shadowTint => const Color(0xFF050A12);
+
+  @override
   bool get isDark => true;
+
+  @override
+  Color get successText => const Color(0xFF4ADE80);
 }
 
 /// Olimpik Havuz Paleti (Açık — Canlı Havuz Mavisi & Turkuaz)
@@ -212,16 +312,25 @@ class OlympicPoolPalette implements AppColorPalette {
   Color get textSecondary => const Color(0xFF335C75);
 
   @override
+  Color get textTertiary => const Color(0xFF1E4966);
+
+  @override
   Color get textMuted => const Color(0xFF64869B);
 
   @override
   Color get primary => const Color(0xFF0284C7);
 
   @override
+  Color get accent => const Color(0xFF0284C7);
+
+  @override
   Color get primaryContainer => const Color(0x1F0284C7);
 
   @override
   Color get secondary => const Color(0xFF06B6D4);
+
+  @override
+  Color get glowLight => const Color(0xFFE0F2FE);
 
   @override
   Color get border => const Color(0xFFBAE6FD);
@@ -260,7 +369,40 @@ class OlympicPoolPalette implements AppColorPalette {
   Color get goldBg => const Color(0x18B45309);
 
   @override
+  Color get ambientTop => const Color(0xFFD4EEF9);
+
+  @override
+  Color get ambientMid => const Color(0xFFB0DCF0);
+
+  @override
+  Color get ambientBottom => const Color(0xFF88C4E0);
+
+  @override
+  Color get ambientFieldA => const Color(0xFFF0FAFF).withValues(alpha: 0.78);
+
+  @override
+  Color get ambientFieldB => const Color(0xFF0284C7).withValues(alpha: 0.26);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF082F49).withValues(alpha: 0.22);
+
+  @override
+  Color get navFill => const Color(0xFF082F49).withValues(alpha: 0.42);
+
+  @override
+  Color get navLabelActive => const Color(0xFFE0F2FE);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFBAE6FD);
+
+  @override
+  Color get shadowTint => const Color(0xFF082F49);
+
+  @override
   bool get isDark => false;
+
+  @override
+  Color get successText => const Color(0xFF06694B);
 }
 
 /// Milli Takım Paleti (Açık — Ay-Yıldız Kırmızısı & Antrasit)
@@ -286,16 +428,25 @@ class NationalTeamPalette implements AppColorPalette {
   Color get textSecondary => const Color(0xFF52525B);
 
   @override
+  Color get textTertiary => const Color(0xFF3F3F46);
+
+  @override
   Color get textMuted => const Color(0xFF71717A);
 
   @override
   Color get primary => const Color(0xFFC8102E);
 
   @override
+  Color get accent => const Color(0xFFC8102E);
+
+  @override
   Color get primaryContainer => const Color(0x1AC8102E);
 
   @override
   Color get secondary => const Color(0xFF1E293B);
+
+  @override
+  Color get glowLight => const Color(0xFFFDF2F4);
 
   @override
   Color get border => const Color(0xFFEADCDC);
@@ -334,7 +485,40 @@ class NationalTeamPalette implements AppColorPalette {
   Color get goldBg => const Color(0x18B45309);
 
   @override
+  Color get ambientTop => const Color(0xFFEDE2E3);
+
+  @override
+  Color get ambientMid => const Color(0xFFDDCACD);
+
+  @override
+  Color get ambientBottom => const Color(0xFFC5AEB2);
+
+  @override
+  Color get ambientFieldA => const Color(0xFFFDF5F6).withValues(alpha: 0.78);
+
+  @override
+  Color get ambientFieldB => const Color(0xFFC8102E).withValues(alpha: 0.20);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF1E293B).withValues(alpha: 0.24);
+
+  @override
+  Color get navFill => const Color(0xFF2B1B20).withValues(alpha: 0.42);
+
+  @override
+  Color get navLabelActive => const Color(0xFFFAF5F5);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFD6C7CA);
+
+  @override
+  Color get shadowTint => const Color(0xFF18181B);
+
+  @override
   bool get isDark => false;
+
+  @override
+  Color get successText => const Color(0xFF146335);
 }
 
 /// Akdeniz Mercan Paleti (Açık — Sıcak Mercan & Ege Petrol Yeşili)
@@ -360,16 +544,25 @@ class MediterraneanCoralPalette implements AppColorPalette {
   Color get textSecondary => const Color(0xFF6B4E3D);
 
   @override
+  Color get textTertiary => const Color(0xFF4E372A);
+
+  @override
   Color get textMuted => const Color(0xFF947463);
 
   @override
   Color get primary => const Color(0xFFEA580C);
 
   @override
+  Color get accent => const Color(0xFFEA580C);
+
+  @override
   Color get primaryContainer => const Color(0x1FEA580C);
 
   @override
   Color get secondary => const Color(0xFF0D9488);
+
+  @override
+  Color get glowLight => const Color(0xFFFFF3EB);
 
   @override
   Color get border => const Color(0xFFF5DEC9);
@@ -408,7 +601,40 @@ class MediterraneanCoralPalette implements AppColorPalette {
   Color get goldBg => const Color(0x18B45309);
 
   @override
+  Color get ambientTop => const Color(0xFFF2E2D7);
+
+  @override
+  Color get ambientMid => const Color(0xFFE3C8B8);
+
+  @override
+  Color get ambientBottom => const Color(0xFFCDA894);
+
+  @override
+  Color get ambientFieldA => const Color(0xFFFFF8F2).withValues(alpha: 0.78);
+
+  @override
+  Color get ambientFieldB => const Color(0xFFEA580C).withValues(alpha: 0.20);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF0D9488).withValues(alpha: 0.22);
+
+  @override
+  Color get navFill => const Color(0xFF332118).withValues(alpha: 0.42);
+
+  @override
+  Color get navLabelActive => const Color(0xFFFFF5EE);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFE0CFC4);
+
+  @override
+  Color get shadowTint => const Color(0xFF291B14);
+
+  @override
   bool get isDark => false;
+
+  @override
+  Color get successText => const Color(0xFF0E5E58);
 }
 
 /// Gece Arenası Paleti (Koyu — AMOLED Siyah & Neon Cyan / Yeşil)
@@ -431,7 +657,10 @@ class NightArenaNeonPalette implements AppColorPalette {
   Color get textPrimary => const Color(0xFFF1F5F9);
 
   @override
-  Color get textSecondary => const Color(0xFF94A3B8);
+  Color get textSecondary => const Color(0xFFB0C0D0);
+
+  @override
+  Color get textTertiary => const Color(0xFFCBD5E1);
 
   @override
   Color get textMuted => const Color(0xFF64748B);
@@ -440,10 +669,16 @@ class NightArenaNeonPalette implements AppColorPalette {
   Color get primary => const Color(0xFF00E5FF);
 
   @override
+  Color get accent => const Color(0xFF00E5FF);
+
+  @override
   Color get primaryContainer => const Color(0x2400E5FF);
 
   @override
   Color get secondary => const Color(0xFF22C55E);
+
+  @override
+  Color get glowLight => const Color(0xFFE0FCFF);
 
   @override
   Color get border => const Color(0xFF1E2E4A);
@@ -482,7 +717,40 @@ class NightArenaNeonPalette implements AppColorPalette {
   Color get goldBg => const Color(0x24FDE047);
 
   @override
+  Color get ambientTop => const Color(0xFF0B1326);
+
+  @override
+  Color get ambientMid => const Color(0xFF070D1B);
+
+  @override
+  Color get ambientBottom => const Color(0xFF040710);
+
+  @override
+  Color get ambientFieldA => const Color(0xFF00E5FF).withValues(alpha: 0.30);
+
+  @override
+  Color get ambientFieldB => const Color(0xFF22C55E).withValues(alpha: 0.14);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF02040A).withValues(alpha: 0.45);
+
+  @override
+  Color get navFill => Colors.white.withValues(alpha: 0.08);
+
+  @override
+  Color get navLabelActive => const Color(0xFFF1F5F9);
+
+  @override
+  Color get navLabelInactive => const Color(0xFF94A3B8);
+
+  @override
+  Color get shadowTint => const Color(0xFF02040A);
+
+  @override
   bool get isDark => true;
+
+  @override
+  Color get successText => const Color(0xFF22C55E);
 }
 
 /// Final Gecesi Paleti (Koyu — Şampiyona Laciverti & Altın)
@@ -505,7 +773,10 @@ class FinalNightGoldPalette implements AppColorPalette {
   Color get textPrimary => const Color(0xFFF8FAFC);
 
   @override
-  Color get textSecondary => const Color(0xFFB0BDD4);
+  Color get textSecondary => const Color(0xFFB8C7D8);
+
+  @override
+  Color get textTertiary => const Color(0xFFDCE4F0);
 
   @override
   Color get textMuted => const Color(0xFF7B8BA6);
@@ -514,10 +785,16 @@ class FinalNightGoldPalette implements AppColorPalette {
   Color get primary => const Color(0xFFF59E0B);
 
   @override
+  Color get accent => const Color(0xFFF59E0B);
+
+  @override
   Color get primaryContainer => const Color(0x26F59E0B);
 
   @override
   Color get secondary => const Color(0xFF38BDF8);
+
+  @override
+  Color get glowLight => const Color(0xFFFEF3C7);
 
   @override
   Color get border => const Color(0xFF263554);
@@ -556,7 +833,40 @@ class FinalNightGoldPalette implements AppColorPalette {
   Color get goldBg => const Color(0x28FBBF24);
 
   @override
+  Color get ambientTop => const Color(0xFF131D34);
+
+  @override
+  Color get ambientMid => const Color(0xFF0D1528);
+
+  @override
+  Color get ambientBottom => const Color(0xFF080E1C);
+
+  @override
+  Color get ambientFieldA => const Color(0xFFF59E0B).withValues(alpha: 0.30);
+
+  @override
+  Color get ambientFieldB => const Color(0xFF38BDF8).withValues(alpha: 0.14);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF040812).withValues(alpha: 0.45);
+
+  @override
+  Color get navFill => Colors.white.withValues(alpha: 0.08);
+
+  @override
+  Color get navLabelActive => const Color(0xFFF8FAFC);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFB0BDD4);
+
+  @override
+  Color get shadowTint => const Color(0xFF040812);
+
+  @override
   bool get isDark => true;
+
+  @override
+  Color get successText => const Color(0xFF34D399);
 }
 
 /// Cool Sophisticated — Açık Tema (Soft Glass + Ambient Glass)
@@ -580,7 +890,10 @@ class CoolSophisticatedLightPalette implements AppColorPalette {
   Color get textPrimary => const Color(0xFF273746);
 
   @override
-  Color get textSecondary => const Color(0xFF71808C);
+  Color get textSecondary => const Color(0xFF4F677A);
+
+  @override
+  Color get textTertiary => const Color(0xFF3E566A);
 
   @override
   Color get textMuted => const Color(0xFF8E9DA8);
@@ -589,10 +902,16 @@ class CoolSophisticatedLightPalette implements AppColorPalette {
   Color get primary => const Color(0xFF657D91);
 
   @override
+  Color get accent => const Color(0xFF657D91);
+
+  @override
   Color get primaryContainer => const Color(0x1F657D91);
 
   @override
   Color get secondary => const Color(0xFF4A667B);
+
+  @override
+  Color get glowLight => const Color(0xFFEEF3F6);
 
   @override
   Color get border => const Color(0xFFD8E1E6);
@@ -631,7 +950,40 @@ class CoolSophisticatedLightPalette implements AppColorPalette {
   Color get goldBg => const Color(0x18A57B36);
 
   @override
+  Color get ambientTop => const Color(0xFFCFDAE1);
+
+  @override
+  Color get ambientMid => const Color(0xFFB4C4CF);
+
+  @override
+  Color get ambientBottom => const Color(0xFFA9BAC6);
+
+  @override
+  Color get ambientFieldA => const Color(0xFFEEF3F6).withValues(alpha: 0.75);
+
+  @override
+  Color get ambientFieldB => const Color(0xFF7F9BB0).withValues(alpha: 0.45);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF273746).withValues(alpha: 0.14);
+
+  @override
+  Color get navFill => const Color(0xFF273746).withValues(alpha: 0.38);
+
+  @override
+  Color get navLabelActive => const Color(0xFFDCE4E8);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFAABBC6);
+
+  @override
+  Color get shadowTint => const Color(0xFF273746);
+
+  @override
   bool get isDark => false;
+
+  @override
+  Color get successText => const Color(0xFF1F6B3E);
 }
 
 /// Cool Sophisticated — Koyu Tema (Soft Glass + Ambient Glass)
@@ -655,7 +1007,10 @@ class CoolSophisticatedDarkPalette implements AppColorPalette {
   Color get textPrimary => const Color(0xFFE7EDF1);
 
   @override
-  Color get textSecondary => const Color(0xFFAABBC6);
+  Color get textSecondary => const Color(0xFFB8C7D1);
+
+  @override
+  Color get textTertiary => const Color(0xFFDCE4E8);
 
   @override
   Color get textMuted => const Color(0xFF7B90A0);
@@ -664,10 +1019,16 @@ class CoolSophisticatedDarkPalette implements AppColorPalette {
   Color get primary => const Color(0xFFAABBC6);
 
   @override
+  Color get accent => const Color(0xFFAABBC6);
+
+  @override
   Color get primaryContainer => const Color(0x26AABBC6);
 
   @override
   Color get secondary => const Color(0xFF7FA0B5);
+
+  @override
+  Color get glowLight => const Color(0xFFEEF3F6);
 
   @override
   Color get border => const Color(0x1FE7EDF1);
@@ -706,7 +1067,40 @@ class CoolSophisticatedDarkPalette implements AppColorPalette {
   Color get goldBg => const Color(0x24DFBD73);
 
   @override
+  Color get ambientTop => const Color(0xFF17232D);
+
+  @override
+  Color get ambientMid => const Color(0xFF131E27);
+
+  @override
+  Color get ambientBottom => const Color(0xFF0F1A22);
+
+  @override
+  Color get ambientFieldA => const Color(0xFF657D91).withValues(alpha: 0.36);
+
+  @override
+  Color get ambientFieldB => const Color(0xFFAABBC6).withValues(alpha: 0.12);
+
+  @override
+  Color get ambientFieldC => const Color(0xFF0A1118).withValues(alpha: 0.40);
+
+  @override
+  Color get navFill => Colors.white.withValues(alpha: 0.08);
+
+  @override
+  Color get navLabelActive => const Color(0xFFDCE4E8);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFAABBC6);
+
+  @override
+  Color get shadowTint => const Color(0xFF0A1118);
+
+  @override
   bool get isDark => true;
+
+  @override
+  Color get successText => const Color(0xFF6BC2A4);
 }
 
 /// Material ThemeData ile entegre olabilen ThemeExtension
@@ -752,9 +1146,7 @@ extension AppColorPaletteGlass on AppColorPalette {
   Color get ambientBaseMid {
     if (_isCoolLight) return const Color(0xFFB4C4CF);
     if (_isCoolDark) return const Color(0xFF15202A);
-    return isDark
-        ? background
-        : Color.lerp(background, primary, 0.22)!;
+    return isDark ? background : Color.lerp(background, primary, 0.22)!;
   }
 
   /// Atmosferik arka plan alt tonu (#98ABB9 — alt üçte birlik kesim belirgin daha derin)
@@ -853,19 +1245,16 @@ extension AppColorPaletteGlass on AppColorPalette {
   }
 
   /// Parlak üst-sol ince cam kenarlığı (ışık kırılması)
-  Color get glassBorder => isDark
-      ? const Color(0x36E7EDF1)
-      : const Color(0xCCFFFFFF);
+  Color get glassBorder =>
+      isDark ? const Color(0x36E7EDF1) : const Color(0xCCFFFFFF);
 
   /// Alt-sağ yumuşak şeffaf cam kenarlığı
-  Color get glassBorderSubtle => isDark
-      ? const Color(0x10E7EDF1)
-      : const Color(0x2E657D91);
+  Color get glassBorderSubtle =>
+      isDark ? const Color(0x10E7EDF1) : const Color(0x2E657D91);
 
   /// Cam panellerin üst iç ışık yansıması
-  Color get glassSheen => isDark
-      ? const Color(0x24E7EDF1)
-      : const Color(0xB8FFFFFF);
+  Color get glassSheen =>
+      isDark ? const Color(0x24E7EDF1) : const Color(0xB8FFFFFF);
 
   /// Fısıltı düzeyinde zarif vektör akış çizgisi rengi (duvar kağıdı değil, imza)
   Color get vectorStroke {
@@ -887,6 +1276,40 @@ extension AppColorPaletteGlass on AppColorPalette {
   Color get softShadow => isDark
       ? Colors.black.withValues(alpha: 0.30)
       : const Color(0xFF273746).withValues(alpha: 0.075);
+
+  // --- İlerleme Çubuğu ve Aktif Çip Cam Belirteçleri ---
+
+  Color get progressTrack =>
+      Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
+
+  Color get progressGradientStart =>
+      isDark ? accent.withValues(alpha: 0.55) : accent;
+
+  Color get progressGradientEnd => isDark
+      ? (_isCoolDark
+          ? const Color(0xFF657D91).withValues(alpha: 0.80)
+          : secondary.withValues(alpha: 0.80))
+      : textTertiary;
+
+  Color get progressCompletedFill =>
+      isDark ? accent.withValues(alpha: 0.50) : accent.withValues(alpha: 0.75);
+
+  Color get progressCompletedIcon =>
+      isDark ? accent.withValues(alpha: 0.85) : accent;
+
+  Color get activeChipFill {
+    if (isDark) return accent.withValues(alpha: 0.80);
+    if (_isCoolLight) return accent.withValues(alpha: 0.85);
+    return Color.lerp(accent, textSecondary, 0.45)!.withValues(alpha: 0.82);
+  }
+
+  double get activeChipBorderAlpha => isDark ? 0.20 : 0.25;
+
+  Color get activeChipShadow => isDark
+      ? Colors.black.withValues(alpha: 0.25)
+      : textPrimary.withValues(alpha: 0.12);
+
+  Color get activeChipText => isDark ? background : Colors.white;
 }
 
 /// Context üzerinden palete hızlı ve güvenli erişim için Extension
@@ -896,4 +1319,3 @@ extension BuildContextPalette on BuildContext {
         const CoolSophisticatedLightPalette();
   }
 }
-

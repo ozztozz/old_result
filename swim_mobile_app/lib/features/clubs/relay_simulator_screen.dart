@@ -1,9 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/components/ambient_canvas.dart';
+import '../../core/components/app_skeleton.dart';
+import '../../core/components/empty_state_widget.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/modern_filter_chips.dart';
 import '../athletes/athlete_profile_screen.dart';
 
 /// Kulüp Bayrak Takımı Simülatörü (4x50 / 4x100 Serbest & Karışık).
@@ -19,6 +25,10 @@ class RelaySimulatorScreen extends StatefulWidget {
 class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
   final TextEditingController _clubSearchCtrl = TextEditingController();
   final TextEditingController _yearCtrl = TextEditingController();
+  late final FocusNode _clubSearchFocusNode;
+  late final FocusNode _yearFocusNode;
+  bool _isClubSearchFocused = false;
+  bool _isYearFocused = false;
   Timer? _debounce;
 
   int? _clubId;
@@ -37,6 +47,8 @@ class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
   @override
   void initState() {
     super.initState();
+    _clubSearchFocusNode = FocusNode()..addListener(_handleFocusChange);
+    _yearFocusNode = FocusNode()..addListener(_handleFocusChange);
     final sel = SelectedClubService.instance;
     if (sel.hasSelectedClub) {
       _clubId = sel.clubId;
@@ -48,9 +60,24 @@ class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _clubSearchFocusNode.removeListener(_handleFocusChange);
+    _yearFocusNode.removeListener(_handleFocusChange);
+    _clubSearchFocusNode.dispose();
+    _yearFocusNode.dispose();
     _clubSearchCtrl.dispose();
     _yearCtrl.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (!mounted) return;
+    if (_isClubSearchFocused != _clubSearchFocusNode.hasFocus ||
+        _isYearFocused != _yearFocusNode.hasFocus) {
+      setState(() {
+        _isClubSearchFocused = _clubSearchFocusNode.hasFocus;
+        _isYearFocused = _yearFocusNode.hasFocus;
+      });
+    }
   }
 
   void _onClubSearchChanged(String q) {
@@ -111,349 +138,818 @@ class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
     }
   }
 
+  static const _relayOptions = [
+    ('4x50_free', '4x50 Serbest'),
+    ('4x100_free', '4x100 Serbest'),
+    ('4x50_medley', '4x50 Karışık'),
+    ('4x100_medley', '4x100 Karışık'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final legs = (_simData?['legs'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    final legs = (_simData?['legs'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>();
     final totalTime = _simData?['total_time'] as String?;
     final complete = _simData?['complete'] == true;
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          'Bayrak Takımı Simülatörü',
-          style: AppTextStyles.appTitle.copyWith(color: palette.textPrimary),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 36),
-        children: [
-          // Kulüp Seçimi
-          if (_clubName != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: palette.primaryContainer,
-                borderRadius: AppRadius.cardRadius,
-                border: Border.all(color: palette.primary.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.shield_rounded, color: palette.primary, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _clubName!,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: palette.primary,
-                      ),
-                    ),
+    final relayChips = _relayOptions
+        .map((r) => FilterChipItem(label: r.$2))
+        .toList();
+    final selectedRelayLabel = _relayOptions
+        .firstWhere((r) => r.$1 == _relayType, orElse: () => _relayOptions.first)
+        .$2;
+
+    return AmbientBackground(
+      artStyle: AmbientArtStyle.none,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _buildHeader(context, palette),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.s20,
+                    AppSpacing.xs,
+                    AppSpacing.s20,
+                    64 +
+                        AppSpacing.md +
+                        MediaQuery.of(context).padding.bottom +
+                        AppSpacing.lg,
                   ),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _clubId = null;
-                      _clubName = null;
-                      _simData = null;
-                    }),
-                    child: const Text('Değiştir'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                borderRadius: AppRadius.inputRadius,
-                border: Border.all(color: palette.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.search_rounded, color: palette.textSecondary, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _clubSearchCtrl,
-                      onChanged: _onClubSearchChanged,
-                      style: TextStyle(fontSize: 14, color: palette.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: 'Kulüp ara (ör. Enka, Fenerbahçe, Alpha)...',
-                        hintStyle: TextStyle(fontSize: 13.5, color: palette.textMuted),
-                        border: InputBorder.none,
-                        isDense: true,
+                  children: [
+                    // 1. Kulüp Seçimi
+                    if (_clubName != null) ...[
+                      SoftGlassPanel(
+                        level: 3,
+                        borderRadius: AppRadius.cardRadius,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.s12,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.shield_outlined,
+                              color: palette.primary,
+                              size: 20,
+                            ),
+                            AppSpacing.hSm,
+                            Expanded(
+                              child: Text(
+                                StringUtils.toTitleCase(_clubName!),
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            AppSpacing.hSm,
+                            TextButton(
+                              onPressed: () => setState(() {
+                                _clubId = null;
+                                _clubName = null;
+                                _simData = null;
+                              }),
+                              style: TextButton.styleFrom(
+                                foregroundColor: palette.accent,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              child: Text(
+                                'Değiştir',
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.accent,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                  if (_searchingClubs)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: palette.primary),
-                    ),
-                ],
-              ),
-            ),
-            if (_clubResults.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: AppRadius.cardRadius,
-                  border: Border.all(color: palette.border),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: _clubResults.take(8).map((c) {
-                    return ListTile(
-                      dense: true,
-                      leading: Icon(Icons.shield_outlined, color: palette.primary, size: 18),
-                      title: Text(
-                        c.name,
-                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: palette.textPrimary),
+                      AppSpacing.vMd,
+                    ] else ...[
+                      SoftGlassPanel(
+                        level: 3,
+                        height: 48,
+                        borderRadius: BorderRadius.circular(24),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        animationDuration: const Duration(milliseconds: 180),
+                        fillAlphaOverride: palette.isDark
+                            ? (_isClubSearchFocused ? 0.15 : 0.09)
+                            : (_isClubSearchFocused ? 0.20 : 0.14),
+                        borderAlphaOverride: palette.isDark
+                            ? (_isClubSearchFocused ? 0.34 : 0.16)
+                            : (_isClubSearchFocused ? 0.50 : 0.25),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_outlined,
+                              color: palette.textSecondary,
+                              size: 20,
+                            ),
+                            AppSpacing.h12,
+                            Expanded(
+                              child: TextField(
+                                controller: _clubSearchCtrl,
+                                focusNode: _clubSearchFocusNode,
+                                onChanged: _onClubSearchChanged,
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 14.5,
+                                  color: palette.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Kulüp ara (ör. Enka, Fenerbahçe)...',
+                                  hintStyle: TextStyle(
+                                    fontFamily: AppTextStyles.fontFamily,
+                                    fontSize: 14,
+                                    color: palette.textSecondary
+                                        .withValues(alpha: 0.85),
+                                  ),
+                                  filled: false,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                  isDense: true,
+                                ),
+                              ),
+                            ),
+                            if (_searchingClubs)
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: palette.primary,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      onTap: () {
-                        setState(() {
-                          _clubId = c.id;
-                          _clubName = c.name;
-                          _clubResults = [];
-                          _clubSearchCtrl.clear();
-                        });
-                        _runSimulation();
-                      },
-                    );
-                  }).toList(),
+                      if (_clubResults.isNotEmpty) ...[
+                        AppSpacing.vSm,
+                        SoftGlassPanel(
+                          level: 2,
+                          borderRadius: AppRadius.cardRadius,
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: _clubResults
+                                .take(8)
+                                .toList()
+                                .asMap()
+                                .entries
+                                .map((entry) {
+                              final idx = entry.key;
+                              final c = entry.value;
+                              final isLast =
+                                  idx == (_clubResults.take(8).length - 1);
+                              return Column(
+                                children: [
+                                  ListTile(
+                                    dense: true,
+                                    leading: Icon(
+                                      Icons.shield_outlined,
+                                      color: palette.primary,
+                                      size: 20,
+                                    ),
+                                    title: Text(
+                                      StringUtils.toTitleCase(c.name),
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.fontFamily,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: palette.textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    onTap: () {
+                                      setState(() {
+                                        _clubId = c.id;
+                                        _clubName = c.name;
+                                        _clubResults = [];
+                                        _clubSearchCtrl.clear();
+                                      });
+                                      _runSimulation();
+                                    },
+                                  ),
+                                  if (!isLast)
+                                    Divider(
+                                      height: 1,
+                                      color: palette.divider,
+                                    ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ] else if (!_searchingClubs) ...[
+                        AppSpacing.vLg,
+                        SoftGlassPanel(
+                          level: 2,
+                          borderRadius: AppRadius.cardRadius,
+                          padding: AppSpacing.paddingAllLg,
+                          child: EmptyStateWidget(
+                            title: 'Kulüp seçilmedi',
+                            message:
+                                'Bayrak kadrosu simüle etmek için yukarıdan bir kulüp arayın veya seçin.',
+                            icon: Icons.shield_outlined,
+                            actionText: 'Kulüp Seç',
+                            onAction: () => _clubSearchFocusNode.requestFocus(),
+                            compact: true,
+                          ),
+                        ),
+                      ],
+                      AppSpacing.vMd,
+                    ],
+
+                    // 2. Filtreler
+                    if (_clubName != null) ...[
+                      ModernFilterChipBar(
+                        chips: relayChips,
+                        selectedChip: selectedRelayLabel,
+                        onSelected: (label) {
+                          final match = _relayOptions.firstWhere(
+                            (r) => r.$2 == label,
+                            orElse: () => _relayOptions.first,
+                          );
+                          setState(() => _relayType = match.$1);
+                          _runSimulation();
+                        },
+                      ),
+                      AppSpacing.vSm,
+                      _buildGenderPoolYearRow(context, palette),
+                      AppSpacing.vMd,
+                    ],
+
+                    // 3. Simülasyon Durumları & Sonuçlar
+                    if (_loading)
+                      _buildLoadingSkeleton()
+                    else if (_error != null)
+                      SoftGlassPanel(
+                        level: 2,
+                        borderRadius: AppRadius.cardRadius,
+                        padding: AppSpacing.paddingAllLg,
+                        child: EmptyStateWidget(
+                          title: 'Bağlantı Hatası',
+                          message: _error!,
+                          icon: Icons.cloud_off_outlined,
+                          actionText: 'Tekrar dene',
+                          onAction: _runSimulation,
+                          compact: true,
+                        ),
+                      )
+                    else if (_simData != null) ...[
+                      // Tahmini Toplam Süre Kartı (Tek Level 1 Hero yüzey — yerel parlak cam override)
+                      SoftGlassPanel(
+                        level: 1,
+                        tier: GlassTier.hero,
+                        ambientGlowBehind: true,
+                        borderRadius: AppRadius.rounded,
+                        padding: EdgeInsets.zero,
+                        fillColorOverride: Colors.transparent,
+                        borderAlphaOverride: palette.isDark ? 0.26 : 0.60,
+                        shadowsOverride: palette.isDark
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color:
+                                      palette.shadowTint.withValues(alpha: 0.20),
+                                  blurRadius: 40,
+                                  offset: const Offset(0, 14),
+                                ),
+                              ],
+                        artStyle: AmbientArtStyle.none,
+                        child: Stack(
+                          children: [
+                            if (palette.isDark)
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: palette.accent.withValues(alpha: 0.10),
+                                  ),
+                                ),
+                              ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: palette.isDark
+                                      ? [
+                                          Colors.white.withValues(alpha: 0.24),
+                                          Colors.white.withValues(alpha: 0.10),
+                                        ]
+                                      : [
+                                          Colors.white.withValues(alpha: 0.58),
+                                          Colors.white.withValues(alpha: 0.28),
+                                        ],
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.s20),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            complete
+                                                ? 'Tahmini En Hızlı Bayrak'
+                                                : 'Yeterli Sporcu Bulunamadı',
+                                            style: TextStyle(
+                                              fontFamily:
+                                                  AppTextStyles.fontFamily,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: complete
+                                                  ? palette.accent
+                                                  : palette.statusWarning,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          AppSpacing.vXs,
+                                          Text(
+                                            'Son 2 yıl PB derecelerine göre otomatik kadro',
+                                            style: TextStyle(
+                                              fontFamily:
+                                                  AppTextStyles.fontFamily,
+                                              fontSize: 12.5,
+                                              color: palette.textSecondary,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    AppSpacing.h12,
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 148,
+                                      ),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          totalTime ?? '--:--.--',
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          style: TextStyle(
+                                            fontFamily:
+                                                AppTextStyles.fontFamily,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: -0.5,
+                                            color: complete
+                                                ? palette.textPrimary
+                                                : palette.textSecondary,
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (palette.isDark)
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: 1,
+                                child: ColoredBox(
+                                  color: Colors.white.withValues(alpha: 0.32),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      AppSpacing.vMd,
+
+                      // 4 Ayak Kadro Listesi (Level 2)
+                      if (legs.isEmpty)
+                        const SoftGlassPanel(
+                          level: 2,
+                          borderRadius: AppRadius.cardRadius,
+                          padding: AppSpacing.paddingAllLg,
+                          child: EmptyStateWidget(
+                            title: 'Yeterli sporcu bulunamadı',
+                            message:
+                                'Seçilen bayrak türü ve yaş kriteri için uygun 4 sporcu bulunamadı.',
+                            icon: Icons.groups_outlined,
+                            compact: true,
+                          ),
+                        )
+                      else
+                        SoftGlassPanel(
+                          level: 2,
+                          borderRadius: AppRadius.cardRadius,
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: legs.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final leg = entry.value;
+                              final isLast = idx == legs.length - 1;
+                              return _buildLegRow(
+                                context,
+                                palette,
+                                leg: leg,
+                                showDivider: !isLast,
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                    ],
+                  ],
                 ),
               ),
             ],
-            const SizedBox(height: 12),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
 
-          // Filtreler
-          if (_clubName != null) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+  Widget _buildGenderPoolYearRow(
+    BuildContext context,
+    AppColorPalette palette,
+  ) {
+    final chips = [
+      _buildCompactChip(
+        palette,
+        label: 'Erkek',
+        isSelected: _gender == 'Erkek',
+        onTap: () {
+          setState(() => _gender = 'Erkek');
+          _runSimulation();
+        },
+      ),
+      _buildCompactChip(
+        palette,
+        label: 'Kadın',
+        isSelected: _gender == 'Kadın',
+        onTap: () {
+          setState(() => _gender = 'Kadın');
+          _runSimulation();
+        },
+      ),
+      _buildCompactChip(
+        palette,
+        label: '50m',
+        isSelected: _course == 'LC',
+        onTap: () {
+          setState(() => _course = 'LC');
+          _runSimulation();
+        },
+      ),
+      _buildCompactChip(
+        palette,
+        label: '25m',
+        isSelected: _course == 'SC',
+        onTap: () {
+          setState(() => _course = 'SC');
+          _runSimulation();
+        },
+      ),
+    ];
+
+    final yearField = SoftGlassPanel(
+      level: 3,
+      height: 40,
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+      animationDuration: const Duration(milliseconds: 180),
+      fillAlphaOverride: palette.isDark
+          ? (_isYearFocused ? 0.14 : 0.08)
+          : (_isYearFocused ? 0.20 : 0.14),
+      borderAlphaOverride: palette.isDark
+          ? (_isYearFocused ? 0.24 : 0.12)
+          : (_isYearFocused ? 0.40 : 0.25),
+      child: Center(
+        child: TextField(
+          controller: _yearCtrl,
+          focusNode: _yearFocusNode,
+          keyboardType: TextInputType.number,
+          onSubmitted: (_) => _runSimulation(),
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 13.5,
+            color: palette.textPrimary,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          decoration: InputDecoration(
+            hintText: 'D.Yılı',
+            hintStyle: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 13,
+              color: palette.textSecondary,
+            ),
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
+        ),
+      ),
+    );
+
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (textScale <= 1.1 && constraints.maxWidth >= 320) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (int i = 0; i < chips.length; i++) ...[
+                chips[i],
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 96),
+                  child: yearField,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Wrap(
+          spacing: 6,
+          runSpacing: AppSpacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ...chips,
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 96, maxWidth: 120),
+              child: yearField,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCompactChip(
+    AppColorPalette palette, {
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return SoftGlassPanel(
+      level: 3,
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+      borderRadius: AppRadius.chipRadius,
+      animationDuration: const Duration(milliseconds: 180),
+      fillColorOverride: isSelected ? palette.activeChipFill : null,
+      borderAlphaOverride: isSelected ? palette.activeChipBorderAlpha : null,
+      onTap: onTap,
+      child: Center(
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            color: isSelected ? palette.activeChipText : palette.textTertiary,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, AppColorPalette palette) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        AppSpacing.s12,
+        AppSpacing.s20,
+        AppSpacing.md,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          GlassCircleButton(
+            icon: Icons.arrow_back_outlined,
+            iconSize: 20,
+            iconColor: palette.textTertiary,
+            tooltip: 'Geri',
+            onTap: () => Navigator.maybePop(context),
+          ),
+          AppSpacing.hSm,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _chip(palette, '4x50 Serbest', _relayType == '4x50_free', () {
-                  setState(() => _relayType = '4x50_free');
-                  _runSimulation();
-                }),
-                _chip(palette, '4x100 Serbest', _relayType == '4x100_free', () {
-                  setState(() => _relayType = '4x100_free');
-                  _runSimulation();
-                }),
-                _chip(palette, '4x50 Karışık', _relayType == '4x50_medley', () {
-                  setState(() => _relayType = '4x50_medley');
-                  _runSimulation();
-                }),
-                _chip(palette, '4x100 Karışık', _relayType == '4x100_medley', () {
-                  setState(() => _relayType = '4x100_medley');
-                  _runSimulation();
-                }),
+                Text(
+                  'Türkiye Yüzme Federasyonu',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
+                    color: palette.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Bayrak Simülatörü',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                    height: 1.15,
+                    color: palette.textPrimary,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _chip(palette, 'Erkek', _gender == 'Erkek', () {
-                  setState(() => _gender = 'Erkek');
-                  _runSimulation();
-                }),
-                const SizedBox(width: 6),
-                _chip(palette, 'Kadın', _gender == 'Kadın', () {
-                  setState(() => _gender = 'Kadın');
-                  _runSimulation();
-                }),
-                const SizedBox(width: 10),
-                _chip(palette, '50m', _course == 'LC', () {
-                  setState(() => _course = 'LC');
-                  _runSimulation();
-                }),
-                const SizedBox(width: 6),
-                _chip(palette, '25m', _course == 'SC', () {
-                  setState(() => _course = 'SC');
-                  _runSimulation();
-                }),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _yearCtrl,
-                    keyboardType: TextInputType.number,
-                    onSubmitted: (_) => _runSimulation(),
-                    style: TextStyle(fontSize: 13, color: palette.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'D.Yılı',
-                      hintStyle: TextStyle(fontSize: 12, color: palette.textMuted),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      filled: true,
-                      fillColor: palette.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: palette.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: palette.border),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          if (_loading)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator(color: palette.primary)),
-            )
-          else if (_error != null)
-            Text(_error!, style: TextStyle(color: palette.statusDanger))
-          else if (_simData != null) ...[
-            // Tahmini Toplam Süre Kartı
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: palette.surface,
-                borderRadius: AppRadius.cardRadius,
-                border: Border.all(color: palette.border),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          complete ? 'Tahmini En Hızlı Bayrak' : 'Yeterli Sporcu Bulunamadı',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: complete ? palette.statusSuccess : palette.statusWarning,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Son 2 yıl PB derecelerine göre otomatik kadro',
-                          style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    totalTime ?? '--:--.--',
-                    style: AppTextStyles.officialTime.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: complete ? palette.primary : palette.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // 4 Ayak Listesi
-            if (legs.isNotEmpty)
-              Container(
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: AppRadius.cardRadius,
-                  border: Border.all(color: palette.border),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: legs.asMap().entries.map((entry) {
-                    final idx = entry.key;
-                    final leg = entry.value;
-                    final athId = leg['athlete_id'] as int;
-                    return Column(
-                      children: [
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 15,
-                            backgroundColor: palette.primaryContainer,
-                            child: Text(
-                              '${leg['leg']}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: palette.primary,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            leg['athlete_name'] as String? ?? '',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '${leg['distance']}m ${leg['stroke_label']}'
-                            '${leg['birth_year'] != null ? ' • ${leg['birth_year']}' : ''}',
-                            style: TextStyle(fontSize: 11.5, color: palette.textSecondary),
-                          ),
-                          trailing: Text(
-                            leg['time'] as String? ?? '',
-                            style: AppTextStyles.officialTime.copyWith(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AthleteProfileScreen(
-                                  athleteId: athId,
-                                  athleteName: leg['athlete_name'] as String? ?? '',
-                                  repository: widget.repository,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        if (idx < legs.length - 1) Divider(height: 1, color: palette.divider),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _chip(AppColorPalette palette, String label, bool selected, VoidCallback onTap) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      labelStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-        color: selected ? Colors.white : palette.textSecondary,
-      ),
-      selectedColor: palette.primary,
-      backgroundColor: palette.surface,
-      side: BorderSide(color: selected ? palette.primary : palette.border),
-      showCheckmark: false,
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  Widget _buildLoadingSkeleton() {
+    return const Column(
+      children: [
+        AppSkeleton.card(height: 88),
+        AppSpacing.v12,
+        AppSkeleton.card(height: 60),
+        AppSpacing.v12,
+        AppSkeleton.card(height: 60),
+      ],
+    );
+  }
+
+  Widget _buildLegRow(
+    BuildContext context,
+    AppColorPalette palette, {
+    required Map<String, dynamic> leg,
+    required bool showDivider,
+  }) {
+    final athId = leg['athlete_id'] as int;
+    final rawName = leg['athlete_name'] as String? ?? '';
+    final athleteName = StringUtils.toTitleCase(rawName);
+    final strokeLabel = StringUtils.toTitleCase(
+      leg['stroke_label'] as String? ?? '',
+    );
+    final detailText =
+        '${leg['distance']}m $strokeLabel${leg['birth_year'] != null ? ' • ${leg['birth_year']}' : ''}';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AthleteProfileScreen(
+                    athleteId: athId,
+                    athleteName: rawName,
+                    repository: widget.repository,
+                  ),
+                ),
+              );
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.s12,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Col 1: Ayak numarası (sessiz düz çip)
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: palette.textPrimary.withValues(
+                          alpha: palette.isDark ? 0.08 : 0.05,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: palette.isDark ? 0.12 : 0.25,
+                          ),
+                          width: 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${leg['leg']}',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: palette.textSecondary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    AppSpacing.h12,
+
+                    // Col 2: Sporcu adı & branş/doğum yılı
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            athleteName,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            detailText,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 12.5,
+                              color: palette.textSecondary,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    AppSpacing.h12,
+
+                    // Col 3: Ayak derecesi
+                    Text(
+                      leg['time'] as String? ?? '',
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (showDivider) Divider(height: 1, thickness: 1, color: palette.divider),
+      ],
     );
   }
 }
