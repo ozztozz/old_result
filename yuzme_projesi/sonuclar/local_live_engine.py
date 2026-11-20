@@ -1130,7 +1130,7 @@ class LocalLiveEngine:
 
 DEFAULT_SCAN_FALLBACK_START = 1005900
 DEFAULT_SCAN_WINDOW = 80
-DEFAULT_SCAN_BACK_LOOK = 20
+DEFAULT_SCAN_BACK_LOOK = 200
 
 
 def _normalize_live_url(url: str) -> str:
@@ -1179,7 +1179,7 @@ def discover_new_live_meets(
     end_id: Optional[int] = None,
     window: int = DEFAULT_SCAN_WINDOW,
     back_look: int = DEFAULT_SCAN_BACK_LOOK,
-    workers: int = 15,
+    workers: int = 20,
     timeout: float = 5.0,
     year: Optional[int] = None,
 ) -> List[str]:
@@ -1538,6 +1538,9 @@ if __name__ == "__main__":
     parser.add_argument("--durum", action="store_true", help="Çalışan takipçi durumunu ve PID'sini göster")
     parser.add_argument("--interval", type=int, default=DEFAULT_POLL_INTERVAL, help="Kontrol aralığı (saniye, varsayılan: 5)")
     parser.add_argument("--force", action="store_true", help="Daha önce işlenen dosyaları tekrar tara")
+    parser.add_argument("--kesfet", action="store_true", help="Yeni canlı yarışları ileri ve geri tarayarak keşfet")
+    parser.add_argument("--geri", type=int, default=DEFAULT_SCAN_BACK_LOOK, help=f"En yüksek ID'den geriye taranacak ID sayısı (varsayılan: {DEFAULT_SCAN_BACK_LOOK})")
+    parser.add_argument("--ileri", type=int, default=DEFAULT_SCAN_WINDOW, help=f"En yüksek ID'den ileriye taranacak ID sayısı (varsayılan: {DEFAULT_SCAN_WINDOW})")
 
     args = parser.parse_args()
 
@@ -1551,6 +1554,9 @@ if __name__ == "__main__":
             print("[-] Canlı Takipçi şu anda ÇALIŞMIYOR.")
     elif args.baslat:
         start_daemon_background(poll_interval=args.interval)
+    elif args.kesfet:
+        added = discover_new_live_meets(window=args.ileri, back_look=args.geri)
+        print(f"[+] Keşif tamamlandı: {len(added)} yeni yarış eklendi (Geri: {args.geri}, İleri: {args.ileri}).")
     elif args.cron:
         run_cron_orchestrator(poll_interval=args.interval)
     elif args.daemon:
