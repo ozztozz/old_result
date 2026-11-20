@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../data/models/race_result.dart';
@@ -285,7 +286,7 @@ class SwimResultCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _toTitleCase(result.athleteName),
+                          StringUtils.formatAthleteName(result.athleteName),
                           style: TextStyle(
                             fontFamily: AppTextStyles.fontFamily,
                             fontSize: 15,

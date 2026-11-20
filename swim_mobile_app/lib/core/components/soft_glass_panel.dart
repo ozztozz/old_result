@@ -158,6 +158,17 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
     switch (_resolvedLevel) {
       // LEVEL 1 — Statistics panel & sheet (hero glass)
       case 1:
+        if (palette.isCrispCardTheme) {
+          return BoxDecoration(
+            shape: widget.shape,
+            borderRadius: radius,
+            color: widget.fillColorOverride ?? palette.surface,
+            border: Border.all(
+              color: widget.borderColor ?? palette.border,
+              width: 1.0,
+            ),
+          );
+        }
         return BoxDecoration(
           shape: widget.shape,
           borderRadius: radius,
@@ -188,6 +199,17 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
 
       // LEVEL 2 — Competition cards
       case 2:
+        if (palette.isCrispCardTheme) {
+          return BoxDecoration(
+            shape: widget.shape,
+            borderRadius: radius,
+            color: widget.fillColorOverride ?? palette.surface,
+            border: Border.all(
+              color: widget.borderColor ?? palette.border,
+              width: 1.0,
+            ),
+          );
+        }
         return BoxDecoration(
           shape: widget.shape,
           borderRadius: radius,
@@ -218,6 +240,17 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
 
       // LEVEL 3 — Search bar, filter chips, badges, round buttons
       default:
+        if (palette.isCrispCardTheme) {
+          return BoxDecoration(
+            shape: widget.shape,
+            borderRadius: radius,
+            color: widget.fillColorOverride ?? palette.surface,
+            border: Border.all(
+              color: widget.borderColor ?? palette.border,
+              width: 1.0,
+            ),
+          );
+        }
         final fillAlpha = widget.fillAlphaOverride ?? (isDark ? 0.09 : 0.14);
         final borderAlpha =
             widget.borderAlphaOverride ?? (isDark ? 0.16 : 0.25);
@@ -237,6 +270,34 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
 
   List<BoxShadow> _shadows(AppColorPalette palette) {
     if (widget.shadowsOverride != null) return widget.shadowsOverride!;
+
+    if (palette.isShadcn && !_isDock) {
+      if (_resolvedLevel == 1 || _resolvedLevel == 2) {
+        return [
+          BoxShadow(
+            color: palette.shadowTint
+                .withValues(alpha: palette.isDark ? 0.25 : 0.05),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ];
+      }
+      return const [];
+    }
+
+    if (palette.isCoolHorizon && !_isDock) {
+      if (_resolvedLevel == 1 || _resolvedLevel == 2) {
+        return [
+          BoxShadow(
+            color: palette.shadowTint
+                .withValues(alpha: palette.isDark ? 0.24 : 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ];
+      }
+      return const [];
+    }
 
     if (_isDock) {
       return [
@@ -272,6 +333,7 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
   }
 
   double? _topHighlightAlpha(AppColorPalette palette) {
+    if (palette.isCrispCardTheme && !_isDock) return null;
     if (_isCircle) return null;
     if (_isDock) return 0.22;
     switch (_resolvedLevel) {

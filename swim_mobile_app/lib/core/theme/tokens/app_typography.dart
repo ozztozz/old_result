@@ -5,6 +5,12 @@ import 'app_colors.dart';
 /// Apple esintili yalınlık, tabular rakamlar, okunaklı ve dengeli hiyerarşi.
 abstract final class AppTextStyles {
   static const String fontFamily = 'Inter';
+  static const String displayFontFamily = 'PlusJakartaSans';
+  static const String monoFontFamily = 'JetBrainsMono';
+  static const List<String> fontFamilyFallback = [
+    'NotoSansSymbols2',
+    'NotoColorEmoji',
+  ];
 
   // 1. Uygulama Başlığı
   static const TextStyle appTitle = TextStyle(

@@ -81,4 +81,33 @@ abstract final class StringUtils {
         return ch.toUpperCase();
     }
   }
+
+  /// "Maskeli Sporcu (...)" ön ekini ve dış parantezleri kaldırarak
+  /// ayrıştırılmış sporcu adını Başlık Düzenine çevirir.
+  static String formatAthleteName(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    final parenMatch = RegExp(
+      r'^\s*maskel[iıİ]\s+sporcu\s*(?:\(([^)]*)\))?\s*$',
+      caseSensitive: false,
+    ).firstMatch(trimmed);
+    if (parenMatch != null) {
+      final inner = (parenMatch.group(1) ?? '').trim();
+      if (inner.isNotEmpty) {
+        return toTitleCase(inner);
+      }
+    }
+
+    final stripped = trimmed
+        .replaceFirst(
+          RegExp(
+            r'^\s*maskel[iıİ]\s+sporcu\s*[-–:]?\s*',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .trim();
+    return toTitleCase(stripped.isNotEmpty ? stripped : trimmed);
+  }
 }

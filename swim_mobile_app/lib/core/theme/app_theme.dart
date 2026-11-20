@@ -204,6 +204,7 @@ abstract final class AppTheme {
       // Tipografi
       textTheme: AppTextStyles.textTheme.apply(
         fontFamily: AppTextStyles.fontFamily,
+        fontFamilyFallback: AppTextStyles.fontFamilyFallback,
         bodyColor: palette.textPrimary,
         displayColor: palette.textPrimary,
       ),

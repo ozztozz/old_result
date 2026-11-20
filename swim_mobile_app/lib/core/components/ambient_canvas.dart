@@ -44,17 +44,27 @@ class AmbientBackground extends StatelessWidget {
   final Widget child;
   final AmbientArtStyle artStyle;
   final double artHeight;
+  final double fieldAlphaBoost;
+  final double topAccentTintAlpha;
 
   const AmbientBackground({
     super.key,
     required this.child,
     this.artStyle = AmbientArtStyle.none,
     this.artHeight = 165,
+    this.fieldAlphaBoost = 0.0,
+    this.topAccentTintAlpha = 0.0,
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final fieldAColor = palette.ambientFieldA.withValues(
+      alpha: (palette.ambientFieldA.a + fieldAlphaBoost).clamp(0.0, 1.0),
+    );
+    final fieldBColor = palette.ambientFieldB.withValues(
+      alpha: (palette.ambientFieldB.a + fieldAlphaBoost).clamp(0.0, 1.0),
+    );
 
     return Stack(
       children: [
@@ -87,7 +97,7 @@ class AmbientBackground extends StatelessWidget {
           width: 760,
           height: 760,
           child: _SmoothEllipticalLightField(
-            color: palette.ambientFieldA,
+            color: fieldAColor,
             angle: -0.28,
             scaleX: 1.24,
             scaleY: 0.90,
@@ -101,12 +111,38 @@ class AmbientBackground extends StatelessWidget {
           width: 780,
           height: 780,
           child: _SmoothEllipticalLightField(
-            color: palette.ambientFieldB,
+            color: fieldBColor,
             angle: 0.32,
             scaleX: 1.18,
             scaleY: 0.92,
           ),
         ),
+
+        if (topAccentTintAlpha > 0)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 240,
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        palette.accent.withValues(
+                          alpha: topAccentTintAlpha.clamp(0.0, 1.0),
+                        ),
+                        palette.accent.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
         // 4. Field C — Alt-sağ (navigasyon arkası)
         Positioned(

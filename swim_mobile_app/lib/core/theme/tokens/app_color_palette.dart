@@ -875,232 +875,464 @@ class CoolSophisticatedLightPalette implements AppColorPalette {
   const CoolSophisticatedLightPalette();
 
   @override
-  Color get background => const Color(0xFFF1F4F6);
+  Color get background => const Color(0xFFF4F7FA);
 
   @override
   Color get surface => const Color(0xFFFFFFFF);
 
   @override
-  Color get surfaceSecondary => const Color(0xFFEDF2F5);
+  Color get surfaceSecondary => const Color(0xFFEBF1F6);
 
   @override
   Color get surfaceElevated => const Color(0xFFFFFFFF);
 
   @override
-  Color get textPrimary => const Color(0xFF273746);
+  Color get textPrimary => const Color(0xFF182433);
 
   @override
-  Color get textSecondary => const Color(0xFF4F677A);
+  Color get textSecondary => const Color(0xFF6E7F91);
 
   @override
   Color get textTertiary => const Color(0xFF3E566A);
 
   @override
-  Color get textMuted => const Color(0xFF8E9DA8);
+  Color get textMuted => const Color(0xFF8FA3B8);
 
   @override
-  Color get primary => const Color(0xFF657D91);
+  Color get primary => const Color(0xFF007AFF);
 
   @override
-  Color get accent => const Color(0xFF657D91);
+  Color get accent => const Color(0xFF007AFF);
 
   @override
-  Color get primaryContainer => const Color(0x1F657D91);
+  Color get primaryContainer => const Color(0xFFE5F1FF);
 
   @override
-  Color get secondary => const Color(0xFF4A667B);
+  Color get secondary => const Color(0xFF0B192C);
 
   @override
-  Color get glowLight => const Color(0xFFEEF3F6);
+  Color get glowLight => const Color(0xFFFFFFFF);
 
   @override
-  Color get border => const Color(0xFFD8E1E6);
+  Color get border => const Color(0xFFE1E8EF);
 
   @override
-  Color get divider => const Color(0xFFE3EAEF);
+  Color get divider => const Color(0xFFEDF2F7);
 
   @override
-  Color get statusSuccess => const Color(0xFF2E7D64);
+  Color get statusSuccess => const Color(0xFF10B981);
 
   @override
-  Color get statusSuccessBg => const Color(0x172E7D64);
+  Color get statusSuccessBg => const Color(0xFFECFDF5);
 
   @override
-  Color get statusWarning => const Color(0xFFB3742B);
+  Color get statusWarning => const Color(0xFFF59E0B);
 
   @override
-  Color get statusWarningBg => const Color(0x1AB3742B);
+  Color get statusWarningBg => const Color(0xFFFFFBEB);
 
   @override
-  Color get statusDanger => const Color(0xFFB94A53);
+  Color get statusDanger => const Color(0xFFEF4444);
 
   @override
-  Color get statusDangerBg => const Color(0x17B94A53);
+  Color get statusDangerBg => const Color(0xFFFEF2F2);
 
   @override
-  Color get statusLive => const Color(0xFFC24B57);
+  Color get statusLive => const Color(0xFFEF4444);
 
   @override
-  Color get statusLiveBg => const Color(0x18C24B57);
+  Color get statusLiveBg => const Color(0xFFFEF2F2);
 
   @override
-  Color get gold => const Color(0xFFA57B36);
+  Color get gold => const Color(0xFFF59E0B);
 
   @override
-  Color get goldBg => const Color(0x18A57B36);
+  Color get goldBg => const Color(0xFFFFFBEB);
 
   @override
-  Color get ambientTop => const Color(0xFFCFDAE1);
+  Color get ambientTop => const Color(0xFFF4F7FA);
 
   @override
-  Color get ambientMid => const Color(0xFFB4C4CF);
+  Color get ambientMid => const Color(0xFFF0F5FA);
 
   @override
-  Color get ambientBottom => const Color(0xFFA9BAC6);
+  Color get ambientBottom => const Color(0xFFEBF1F6);
 
   @override
-  Color get ambientFieldA => const Color(0xFFEEF3F6).withValues(alpha: 0.75);
+  Color get ambientFieldA => const Color(0xFFFFFFFF).withValues(alpha: 0.90);
 
   @override
-  Color get ambientFieldB => const Color(0xFF7F9BB0).withValues(alpha: 0.45);
+  Color get ambientFieldB => const Color(0xFF007AFF).withValues(alpha: 0.05);
 
   @override
-  Color get ambientFieldC => const Color(0xFF273746).withValues(alpha: 0.14);
+  Color get ambientFieldC => const Color(0xFF0B192C).withValues(alpha: 0.03);
 
   @override
-  Color get navFill => const Color(0xFF273746).withValues(alpha: 0.38);
+  Color get navFill => const Color(0xFFFFFFFF);
 
   @override
-  Color get navLabelActive => const Color(0xFFDCE4E8);
+  Color get navLabelActive => const Color(0xFF007AFF);
 
   @override
-  Color get navLabelInactive => const Color(0xFFAABBC6);
+  Color get navLabelInactive => const Color(0xFF6E7F91);
 
   @override
-  Color get shadowTint => const Color(0xFF273746);
+  Color get shadowTint => const Color(0xFF0B192C);
 
   @override
   bool get isDark => false;
 
   @override
-  Color get successText => const Color(0xFF1F6B3E);
+  Color get successText => const Color(0xFF059669);
 }
 
-/// Cool Sophisticated — Koyu Tema (Soft Glass + Ambient Glass)
-/// Deep atmospheric slate surfaces with Ice/Mist accents & luminous hairlines.
+/// Cool Horizon — Koyu Tema (Crisp Athletic Glass + Focal Contrast)
+/// Deep navy surfaces (#0D1520 / #152232) with Vibrant Pool Azure (#2997FF) accents.
 class CoolSophisticatedDarkPalette implements AppColorPalette {
   const CoolSophisticatedDarkPalette();
 
   @override
-  Color get background => const Color(0xFF17232D);
+  Color get background => const Color(0xFF0D1520);
 
   @override
-  Color get surface => const Color(0xFF202F3B);
+  Color get surface => const Color(0xFF152232);
 
   @override
-  Color get surfaceSecondary => const Color(0xFF273746);
+  Color get surfaceSecondary => const Color(0xFF1D2D42);
 
   @override
-  Color get surfaceElevated => const Color(0xFF2B3D4E);
+  Color get surfaceElevated => const Color(0xFF1E3552);
 
   @override
-  Color get textPrimary => const Color(0xFFE7EDF1);
+  Color get textPrimary => const Color(0xFFF0F4F8);
 
   @override
-  Color get textSecondary => const Color(0xFFB8C7D1);
+  Color get textSecondary => const Color(0xFF8FA3B8);
 
   @override
   Color get textTertiary => const Color(0xFFDCE4E8);
 
   @override
-  Color get textMuted => const Color(0xFF7B90A0);
+  Color get textMuted => const Color(0xFF6E7F91);
 
   @override
-  Color get primary => const Color(0xFFAABBC6);
+  Color get primary => const Color(0xFF2997FF);
 
   @override
-  Color get accent => const Color(0xFFAABBC6);
+  Color get accent => const Color(0xFF2997FF);
 
   @override
-  Color get primaryContainer => const Color(0x26AABBC6);
+  Color get primaryContainer => const Color(0x292997FF);
 
   @override
-  Color get secondary => const Color(0xFF7FA0B5);
+  Color get secondary => const Color(0xFF06B6D4);
 
   @override
   Color get glowLight => const Color(0xFFEEF3F6);
 
   @override
-  Color get border => const Color(0x1FE7EDF1);
+  Color get border => const Color(0x14FFFFFF);
 
   @override
-  Color get divider => const Color(0x16E7EDF1);
+  Color get divider => const Color(0x0FFFFFFF);
 
   @override
-  Color get statusSuccess => const Color(0xFF6BC2A4);
+  Color get statusSuccess => const Color(0xFF10B981);
 
   @override
-  Color get statusSuccessBg => const Color(0x246BC2A4);
+  Color get statusSuccessBg => const Color(0x2410B981);
 
   @override
-  Color get statusWarning => const Color(0xFFE0AE62);
+  Color get statusWarning => const Color(0xFFF59E0B);
 
   @override
-  Color get statusWarningBg => const Color(0x24E0AE62);
+  Color get statusWarningBg => const Color(0x24F59E0B);
 
   @override
-  Color get statusDanger => const Color(0xFFE07A82);
+  Color get statusDanger => const Color(0xFFEF4444);
 
   @override
-  Color get statusDangerBg => const Color(0x24E07A82);
+  Color get statusDangerBg => const Color(0x24EF4444);
 
   @override
-  Color get statusLive => const Color(0xFFE5737D);
+  Color get statusLive => const Color(0xFFEF4444);
 
   @override
-  Color get statusLiveBg => const Color(0x24E5737D);
+  Color get statusLiveBg => const Color(0x24EF4444);
 
   @override
-  Color get gold => const Color(0xFFDFBD73);
+  Color get gold => const Color(0xFFF59E0B);
 
   @override
-  Color get goldBg => const Color(0x24DFBD73);
+  Color get goldBg => const Color(0x24F59E0B);
 
   @override
-  Color get ambientTop => const Color(0xFF17232D);
+  Color get ambientTop => const Color(0xFF0D1520);
 
   @override
-  Color get ambientMid => const Color(0xFF131E27);
+  Color get ambientMid => const Color(0xFF0B131D);
 
   @override
-  Color get ambientBottom => const Color(0xFF0F1A22);
+  Color get ambientBottom => const Color(0xFF091019);
 
   @override
-  Color get ambientFieldA => const Color(0xFF657D91).withValues(alpha: 0.36);
+  Color get ambientFieldA => const Color(0xFF2997FF).withValues(alpha: 0.10);
 
   @override
-  Color get ambientFieldB => const Color(0xFFAABBC6).withValues(alpha: 0.12);
+  Color get ambientFieldB => const Color(0xFF1E3552).withValues(alpha: 0.25);
 
   @override
-  Color get ambientFieldC => const Color(0xFF0A1118).withValues(alpha: 0.40);
+  Color get ambientFieldC => const Color(0xFF070D14).withValues(alpha: 0.45);
 
   @override
-  Color get navFill => Colors.white.withValues(alpha: 0.08);
+  Color get navFill => const Color(0xFF152232);
 
   @override
-  Color get navLabelActive => const Color(0xFFDCE4E8);
+  Color get navLabelActive => const Color(0xFF2997FF);
 
   @override
-  Color get navLabelInactive => const Color(0xFFAABBC6);
+  Color get navLabelInactive => const Color(0xFF8FA3B8);
 
   @override
-  Color get shadowTint => const Color(0xFF0A1118);
+  Color get shadowTint => const Color(0xFF070D14);
 
   @override
   bool get isDark => true;
 
   @override
-  Color get successText => const Color(0xFF6BC2A4);
+  Color get successText => const Color(0xFF10B981);
+}
+
+/// shadcn/ui Zinc — Açık Tema (Yüksek kontrast, net 1px kenarlık, minimal gölge)
+class ShadcnLightPalette implements AppColorPalette {
+  const ShadcnLightPalette();
+
+  @override
+  Color get background => const Color(0xFFFFFFFF);
+
+  @override
+  Color get surface => const Color(0xFFFFFFFF);
+
+  @override
+  Color get surfaceSecondary => const Color(0xFFF4F4F5);
+
+  @override
+  Color get surfaceElevated => const Color(0xFFFFFFFF);
+
+  @override
+  Color get textPrimary => const Color(0xFF09090B);
+
+  @override
+  Color get textSecondary => const Color(0xFF71717A);
+
+  @override
+  Color get textTertiary => const Color(0xFF3F3F46);
+
+  @override
+  Color get textMuted => const Color(0xFFA1A1AA);
+
+  @override
+  Color get primary => const Color(0xFF18181B);
+
+  @override
+  Color get accent => const Color(0xFF18181B);
+
+  @override
+  Color get primaryContainer => const Color(0xFFF4F4F5);
+
+  @override
+  Color get secondary => const Color(0xFF2563EB);
+
+  @override
+  Color get glowLight => const Color(0xFFFFFFFF);
+
+  @override
+  Color get border => const Color(0xFFE4E4E7);
+
+  @override
+  Color get divider => const Color(0xFFE4E4E7);
+
+  @override
+  Color get statusSuccess => const Color(0xFF16A34A);
+
+  @override
+  Color get statusSuccessBg => const Color(0xFFDCFCE7);
+
+  @override
+  Color get statusWarning => const Color(0xFFD97706);
+
+  @override
+  Color get statusWarningBg => const Color(0xFFFEF3C7);
+
+  @override
+  Color get statusDanger => const Color(0xFFDC2626);
+
+  @override
+  Color get statusDangerBg => const Color(0xFFFEE2E2);
+
+  @override
+  Color get statusLive => const Color(0xFFDC2626);
+
+  @override
+  Color get statusLiveBg => const Color(0xFFFEE2E2);
+
+  @override
+  Color get gold => const Color(0xFFD97706);
+
+  @override
+  Color get goldBg => const Color(0xFFFEF3C7);
+
+  @override
+  Color get ambientTop => const Color(0xFFFFFFFF);
+
+  @override
+  Color get ambientMid => const Color(0xFFFFFFFF);
+
+  @override
+  Color get ambientBottom => const Color(0xFFFFFFFF);
+
+  @override
+  Color get ambientFieldA => Colors.transparent;
+
+  @override
+  Color get ambientFieldB => Colors.transparent;
+
+  @override
+  Color get ambientFieldC => Colors.transparent;
+
+  @override
+  Color get navFill => const Color(0xFFFFFFFF);
+
+  @override
+  Color get navLabelActive => const Color(0xFF09090B);
+
+  @override
+  Color get navLabelInactive => const Color(0xFF71717A);
+
+  @override
+  Color get shadowTint => const Color(0xFF09090B);
+
+  @override
+  bool get isDark => false;
+
+  @override
+  Color get successText => const Color(0xFF15803D);
+}
+
+/// shadcn/ui Zinc — Koyu Tema (Derin #09090B zemin, net #27272A kenarlık)
+class ShadcnDarkPalette implements AppColorPalette {
+  const ShadcnDarkPalette();
+
+  @override
+  Color get background => const Color(0xFF09090B);
+
+  @override
+  Color get surface => const Color(0xFF111113);
+
+  @override
+  Color get surfaceSecondary => const Color(0xFF18181B);
+
+  @override
+  Color get surfaceElevated => const Color(0xFF18181B);
+
+  @override
+  Color get textPrimary => const Color(0xFFFAFAFA);
+
+  @override
+  Color get textSecondary => const Color(0xFFA1A1AA);
+
+  @override
+  Color get textTertiary => const Color(0xFFD4D4D8);
+
+  @override
+  Color get textMuted => const Color(0xFF71717A);
+
+  @override
+  Color get primary => const Color(0xFFFAFAFA);
+
+  @override
+  Color get accent => const Color(0xFFFAFAFA);
+
+  @override
+  Color get primaryContainer => const Color(0xFF27272A);
+
+  @override
+  Color get secondary => const Color(0xFF3B82F6);
+
+  @override
+  Color get glowLight => const Color(0xFF18181B);
+
+  @override
+  Color get border => const Color(0xFF27272A);
+
+  @override
+  Color get divider => const Color(0xFF27272A);
+
+  @override
+  Color get statusSuccess => const Color(0xFF22C55E);
+
+  @override
+  Color get statusSuccessBg => const Color(0x2622C55E);
+
+  @override
+  Color get statusWarning => const Color(0xFFF59E0B);
+
+  @override
+  Color get statusWarningBg => const Color(0x26F59E0B);
+
+  @override
+  Color get statusDanger => const Color(0xFFEF4444);
+
+  @override
+  Color get statusDangerBg => const Color(0x26EF4444);
+
+  @override
+  Color get statusLive => const Color(0xFFEF4444);
+
+  @override
+  Color get statusLiveBg => const Color(0x26EF4444);
+
+  @override
+  Color get gold => const Color(0xFFF59E0B);
+
+  @override
+  Color get goldBg => const Color(0x26F59E0B);
+
+  @override
+  Color get ambientTop => const Color(0xFF09090B);
+
+  @override
+  Color get ambientMid => const Color(0xFF09090B);
+
+  @override
+  Color get ambientBottom => const Color(0xFF09090B);
+
+  @override
+  Color get ambientFieldA => Colors.transparent;
+
+  @override
+  Color get ambientFieldB => Colors.transparent;
+
+  @override
+  Color get ambientFieldC => Colors.transparent;
+
+  @override
+  Color get navFill => const Color(0xFF09090B);
+
+  @override
+  Color get navLabelActive => const Color(0xFFFAFAFA);
+
+  @override
+  Color get navLabelInactive => const Color(0xFFA1A1AA);
+
+  @override
+  Color get shadowTint => const Color(0xFF000000);
+
+  @override
+  bool get isDark => true;
+
+  @override
+  Color get successText => const Color(0xFF22C55E);
 }
 
 /// Material ThemeData ile entegre olabilen ThemeExtension
@@ -1130,29 +1362,61 @@ class AppPaletteExtension extends ThemeExtension<AppPaletteExtension> {
 extension AppColorPaletteGlass on AppColorPalette {
   bool get _isCoolLight => this is CoolSophisticatedLightPalette;
   bool get _isCoolDark => this is CoolSophisticatedDarkPalette;
+  bool get isCoolHorizon => _isCoolLight || _isCoolDark;
+  bool get isShadcn => this is ShadcnLightPalette || this is ShadcnDarkPalette;
+  bool get isCrispCardTheme => isCoolHorizon || isShadcn;
+
+  /// Kontrast odak kartı yüzeyi
+  Color get surfaceContrast {
+    if (isShadcn) return const Color(0xFF18181B);
+    if (_isCoolLight) return const Color(0xFF0B192C);
+    if (_isCoolDark) return const Color(0xFF1E3552);
+    return isDark ? surfaceElevated : const Color(0xFF0B192C);
+  }
+
+  /// Kontrast odak kartı üzerindeki metin rengi
+  Color get textOnContrast {
+    if (isShadcn) return const Color(0xFFFAFAFA);
+    if (_isCoolLight) return const Color(0xFFF4F7FA);
+    if (_isCoolDark) return Colors.white;
+    return Colors.white;
+  }
+
+  /// Yumuşak vurgu dolgusu
+  Color get accentSoft {
+    if (isShadcn) return surfaceSecondary;
+    if (_isCoolLight) return const Color(0xFFE5F1FF);
+    if (_isCoolDark) return const Color(0x292997FF);
+    return accent.withValues(alpha: isDark ? 0.16 : 0.12);
+  }
+
+  Color get infoCyan => const Color(0xFF06B6D4);
+
+  Color get infoCyanBg =>
+      isDark ? const Color(0x2406B6D4) : const Color(0xFFECFEFF);
 
   // --- Layer 1: Ambient Arka Plan Katmanı ---
 
-  /// Atmosferik arka plan üst tonu (#CFDAE1 — net mavi-gri, asla beyaz değil)
+  /// Atmosferik arka plan üst tonu
   Color get ambientBaseStart {
-    if (_isCoolLight) return const Color(0xFFCFDAE1);
-    if (_isCoolDark) return const Color(0xFF1B2935);
+    if (_isCoolLight) return const Color(0xFFF4F7FA);
+    if (_isCoolDark) return const Color(0xFF0D1520);
     return isDark
         ? Color.lerp(background, const Color(0xFF223342), 0.25)!
         : Color.lerp(background, primary, 0.14)!;
   }
 
-  /// Atmosferik arka plan orta tonu (#B4C4CF @ 0.45)
+  /// Atmosferik arka plan orta tonu
   Color get ambientBaseMid {
-    if (_isCoolLight) return const Color(0xFFB4C4CF);
-    if (_isCoolDark) return const Color(0xFF15202A);
+    if (_isCoolLight) return const Color(0xFFF0F5FA);
+    if (_isCoolDark) return const Color(0xFF0B131D);
     return isDark ? background : Color.lerp(background, primary, 0.22)!;
   }
 
-  /// Atmosferik arka plan alt tonu (#98ABB9 — alt üçte birlik kesim belirgin daha derin)
+  /// Atmosferik arka plan alt tonu
   Color get ambientBaseEnd {
-    if (_isCoolLight) return const Color(0xFF98ABB9);
-    if (_isCoolDark) return const Color(0xFF0E161E);
+    if (_isCoolLight) return const Color(0xFFEBF1F6);
+    if (_isCoolDark) return const Color(0xFF091019);
     return isDark
         ? Color.lerp(background, Colors.black, 0.28)!
         : Color.lerp(background, secondary, 0.30)!;
@@ -1232,15 +1496,15 @@ extension AppColorPaletteGlass on AppColorPalette {
 
   /// Arama çubuğu / İkincil sakin frosted yüzey
   Color get surfaceGlass {
-    if (_isCoolLight) return const Color(0x73FFFFFF);
-    if (_isCoolDark) return const Color(0x7A1E2D3A);
+    if (_isCoolLight) return const Color(0xC7FFFFFF);
+    if (_isCoolDark) return const Color(0xC7152232);
     return surface.withValues(alpha: isDark ? 0.48 : 0.46);
   }
 
   /// Yüzen Navigasyon & Modal Sheet buzlu cam yüzeyi
   Color get surfaceGlassStrong {
-    if (_isCoolLight) return const Color(0x9EF2F6F8);
-    if (_isCoolDark) return const Color(0xB31B2A36);
+    if (_isCoolLight) return const Color(0xEBFFFFFF);
+    if (_isCoolDark) return const Color(0xEB152232);
     return surface.withValues(alpha: isDark ? 0.72 : 0.64);
   }
 
@@ -1275,41 +1539,46 @@ extension AppColorPaletteGlass on AppColorPalette {
   /// Yumuşak, yayvan atmosfer gölgesi (keskin gölge yok)
   Color get softShadow => isDark
       ? Colors.black.withValues(alpha: 0.30)
-      : const Color(0xFF273746).withValues(alpha: 0.075);
+      : const Color(0xFF0B192C).withValues(alpha: 0.04);
 
   // --- İlerleme Çubuğu ve Aktif Çip Cam Belirteçleri ---
 
-  Color get progressTrack =>
-      Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
+  Color get progressTrack => isDark
+      ? (isShadcn ? border : Colors.white.withValues(alpha: 0.10))
+      : ((_isCoolLight || isShadcn)
+          ? border
+          : Colors.white.withValues(alpha: 0.25));
 
-  Color get progressGradientStart =>
-      isDark ? accent.withValues(alpha: 0.55) : accent;
+  Color get progressGradientStart => accent;
 
-  Color get progressGradientEnd => isDark
-      ? (_isCoolDark
-          ? const Color(0xFF657D91).withValues(alpha: 0.80)
-          : secondary.withValues(alpha: 0.80))
-      : textTertiary;
+  Color get progressGradientEnd => isShadcn
+      ? accent
+      : (isDark
+          ? (_isCoolDark
+              ? const Color(0xFF06B6D4)
+              : secondary.withValues(alpha: 0.80))
+          : (_isCoolLight ? const Color(0xFF38BDF8) : textTertiary));
 
   Color get progressCompletedFill =>
-      isDark ? accent.withValues(alpha: 0.50) : accent.withValues(alpha: 0.75);
+      isDark ? accent.withValues(alpha: 0.65) : accent;
 
-  Color get progressCompletedIcon =>
-      isDark ? accent.withValues(alpha: 0.85) : accent;
+  Color get progressCompletedIcon => accent;
 
   Color get activeChipFill {
+    if (isCrispCardTheme) return accent;
     if (isDark) return accent.withValues(alpha: 0.80);
-    if (_isCoolLight) return accent.withValues(alpha: 0.85);
     return Color.lerp(accent, textSecondary, 0.45)!.withValues(alpha: 0.82);
   }
 
-  double get activeChipBorderAlpha => isDark ? 0.20 : 0.25;
+  double get activeChipBorderAlpha =>
+      isCrispCardTheme ? 0.0 : (isDark ? 0.20 : 0.25);
 
   Color get activeChipShadow => isDark
       ? Colors.black.withValues(alpha: 0.25)
-      : textPrimary.withValues(alpha: 0.12);
+      : accent.withValues(alpha: isShadcn ? 0.12 : 0.22);
 
-  Color get activeChipText => isDark ? background : Colors.white;
+  Color get activeChipText =>
+      (isShadcn && isDark) ? const Color(0xFF18181B) : Colors.white;
 }
 
 /// Context üzerinden palete hızlı ve güvenli erişim için Extension

@@ -13,7 +13,6 @@ import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
-import '../../shared/widgets/status_badge.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../clubs/relay_simulator_screen.dart';
 import '../live/live_meet_detail_screen.dart';
@@ -256,74 +255,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 AppSpacing.vLg,
 
-                                // Aktif Canlı Yarış Varsa Soft Glass Level 1 Hero Banner
+                                // 1. Öne Çıkan Canlı Havuz Spotlight Kartı
                                 if (_liveMeets.isNotEmpty) ...[
-                                  _buildLiveBanner(_liveMeets.first, palette),
-                                  AppSpacing.vLg,
+                                  _buildUnifiedSpotlightCard(
+                                    _liveMeets.first,
+                                    palette,
+                                  ),
+                                  const SizedBox(height: 16),
                                 ],
 
-                                // Hızlı Araçlar (Sakin 2 sütunlu Level 3 ızgara)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildToolCard(
-                                        palette,
-                                        icon: Icons.groups_outlined,
-                                        title: 'Bayrak Simülatörü',
-                                        subtitle: 'En hızlı 4x50 / 4x100',
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  RelaySimulatorScreen(
-                                                repository: widget.repository,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    AppSpacing.h12,
-                                    Expanded(
-                                      child: _buildToolCard(
-                                        palette,
-                                        icon: Icons.leaderboard_outlined,
-                                        title: 'Top 25 Sıralama',
-                                        subtitle: 'Branş & il en iyileri',
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RankingsScreen(
-                                                repository: widget.repository,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                AppSpacing.vLg,
+                                // 2. 2 Sütunlu Mikro-Rozetli Hızlı Araçlar
+                                _buildUnifiedToolGrid(palette),
+                                const SizedBox(height: 18),
 
-                                // Favori Sporcu & Kulüp Canlı Özet Akışı
+                                // 3. Favori Sporcu & Kulüp Canlı Akışı
                                 if (_highlights.isNotEmpty) ...[
                                   _buildHighlightsSection(palette),
-                                  AppSpacing.vLg,
+                                  const SizedBox(height: 18),
                                 ],
 
-                                // Güncel Müsabakalar Başlığı
-                                SectionHeader(
-                                  title: 'Güncel Müsabakalar',
-                                  trailingText: '${_recentMeets.length} Müsabaka',
-                                ),
-                                AppSpacing.v12,
-
-                                // Müsabaka Kartları Listesi (Level 2)
-                                ..._recentMeets
-                                    .take(8)
-                                    .map((meet) => _buildMeetCard(meet)),
+                                // 4. Güncel Müsabakalar (25m / 50m Kulvar Şeritleri)
+                                _buildUnifiedMeetList(palette),
                               ],
                             ),
                           ),
@@ -335,46 +287,382 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildToolCard(
+  Widget _buildUnifiedSpotlightCard(
+    LiveMeetSummary live,
+    AppColorPalette palette,
+  ) {
+    final isCompleted = live.resultListProgress.total > 0 &&
+        live.resultListProgress.processed >= live.resultListProgress.total;
+    final statusLower = live.status.toLowerCase();
+    final isTrulyLive = !isCompleted &&
+        (statusLower.contains('canl') ||
+            statusLower.contains('live') ||
+            statusLower.contains('devam') ||
+            live.resultListProgress.processed > 0);
+    final total = live.resultListProgress.total;
+    final done = live.resultListProgress.processed;
+    final ratio = total > 0 ? (done / total).clamp(0.0, 1.0) : 0.0;
+    final pct = (ratio * 100).round();
+
+    return _KheloOnTapScale(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LiveMeetDetailScreen(
+              live: live,
+              repository: widget.repository,
+            ),
+          ),
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: CustomPaint(
+          painter: _HomePoolLanesPainter(
+            laneColor: Colors.white.withValues(alpha: 0.06),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  palette.surfaceContrast,
+                  Color.lerp(palette.surfaceContrast, palette.accent, 0.25)!,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isTrulyLive
+                            ? palette.statusLive
+                            : Colors.white.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isTrulyLive
+                            ? 'CANLI YAYIN'
+                            : (isCompleted ? 'SONUÇLANDI' : 'YAKLAŞAN'),
+                        style: const TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (live.city.isNotEmpty)
+                      Text(
+                        live.city,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: palette.textOnContrast.withValues(alpha: 0.78),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  StringUtils.toTitleCase(live.name),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    height: 1.25,
+                    color: palette.textOnContrast,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (total > 0) ...[
+                  ClipRRect(
+                    borderRadius: AppRadius.full,
+                    child: LinearProgressIndicator(
+                      value: ratio,
+                      minHeight: 4.5,
+                      backgroundColor: Colors.white.withValues(alpha: 0.16),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isCompleted
+                            ? palette.statusSuccess
+                            : Color.lerp(palette.accent, Colors.white, 0.22)!,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        total > 0
+                            ? 'Seri $done/$total  ·  %$pct'
+                            : 'Start ${live.startListProgress.processed}/${live.startListProgress.total}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: palette.textOnContrast.withValues(alpha: 0.75),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'İzle',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textOnContrast,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 17,
+                      color: palette.textOnContrast,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnifiedToolGrid(AppColorPalette palette) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMicroBadgeToolCard(
+            palette,
+            title: 'Bayrak Simülatörü',
+            subtitle: 'En hızlı 4x50 / 4x100',
+            icon: Icons.groups_outlined,
+            badgeColor: palette.accent,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      RelaySimulatorScreen(repository: widget.repository),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildMicroBadgeToolCard(
+            palette,
+            title: 'Top 25 Sıralama',
+            subtitle: 'Branş & il en iyileri',
+            icon: Icons.leaderboard_outlined,
+            badgeColor: palette.infoCyan,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RankingsScreen(repository: widget.repository),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMicroBadgeToolCard(
     AppColorPalette palette, {
-    required IconData icon,
     required String title,
     required String subtitle,
+    required IconData icon,
+    required Color badgeColor,
     required VoidCallback onTap,
   }) {
-    return SoftGlassPanel(
-      level: 3,
-      borderRadius: AppRadius.cardRadius,
-      padding: AppSpacing.cardPadding,
+    return _KheloOnTapScale(
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: palette.primary),
-          AppSpacing.v12,
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: palette.textPrimary,
+      child: SoftGlassPanel(
+        level: 2,
+        borderRadius: BorderRadius.circular(18),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Spacer(),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 17, color: badgeColor),
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          AppSpacing.vXs,
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontSize: 12,
-              color: palette.textSecondary,
+            const SizedBox(height: 10),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: palette.textPrimary,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 12,
+                color: palette.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnifiedMeetList(AppColorPalette palette) {
+    final items = _recentMeets.take(8).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Güncel Müsabakalar',
+          trailingText: '${_recentMeets.length} Müsabaka',
+        ),
+        const SizedBox(height: 12),
+        for (final meet in items) _buildUnifiedMeetRow(meet, palette),
+      ],
+    );
+  }
+
+  Widget _buildUnifiedMeetRow(MeetSummary meet, AppColorPalette palette) {
+    final is25m = meet.course == 'SC';
+    final courseColor = is25m ? palette.infoCyan : palette.accent;
+    final cityText = meet.city.isNotEmpty ? meet.city : 'Türkiye';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: _KheloOnTapScale(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => MeetDetailScreen(
+                meetId: meet.id,
+                meetTitle: meet.name,
+                repository: widget.repository,
+              ),
+            ),
+          );
+        },
+        child: SoftGlassPanel(
+          level: 2,
+          borderRadius: BorderRadius.circular(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: courseColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    is25m ? '25m' : '50m',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: courseColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      StringUtils.toTitleCase(meet.name),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        cityText,
+                        if (meet.startDate.isNotEmpty) meet.startDate,
+                        '${meet.totalRaces} yarış',
+                      ].join('  ·  '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 11.5,
+                        color: palette.textSecondary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: palette.textSecondary,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -518,262 +806,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildLiveBanner(LiveMeetSummary live, AppColorPalette palette) {
-    final statusLower = live.status.toLowerCase();
-    final isCompleted = live.resultListProgress.total > 0 &&
-        live.resultListProgress.processed >= live.resultListProgress.total;
-    final isTrulyLive = !isCompleted &&
-        (statusLower.contains('canl') ||
-            statusLower.contains('live') ||
-            statusLower.contains('devam') ||
-            live.resultListProgress.processed > 0);
-
-    final StatusBadge statusBadge;
-    if (isTrulyLive) {
-      statusBadge = const StatusBadge.live(label: 'CANLI YARIŞ');
-    } else if (isCompleted) {
-      statusBadge = StatusBadge(
-        label: 'Sonuçlandı',
-        variant: StatusBadgeVariant.success,
-        textColor: palette.successText,
-      );
-    } else {
-      statusBadge = StatusBadge.neutral(
-        label: live.status.isNotEmpty
-            ? StringUtils.toTitleCase(live.status)
-            : 'Bekleniyor',
-      );
-    }
-
-    return SoftGlassPanel(
-      level: 1,
-      tier: GlassTier.hero,
-      ambientGlowBehind: true,
-      borderRadius: AppRadius.rounded,
-      padding: AppSpacing.cardPadding,
-      artStyle: AmbientArtStyle.none,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => LiveMeetDetailScreen(
-              live: live,
-              repository: widget.repository,
-            ),
-          ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              statusBadge,
-              const Spacer(),
-              if (live.city.isNotEmpty)
-                Text(
-                  live.city,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    color: palette.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
-          ),
-          AppSpacing.v12,
-          Text(
-            StringUtils.toTitleCase(live.name),
-            style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.2,
-              color: palette.textPrimary,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          AppSpacing.vSm,
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Start ${live.startListProgress.processed}/${live.startListProgress.total}  ·  Sonuç ${live.resultListProgress.processed}/${live.resultListProgress.total}',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    color: palette.textSecondary,
-                    fontSize: 12,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-              Text(
-                'Aç',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              AppSpacing.hXs,
-              Icon(
-                Icons.chevron_right_outlined,
-                size: 14,
-                color: palette.primary,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMeetCard(MeetSummary meet) {
-    final is25m = meet.course == 'SC';
-    final palette = context.palette;
-    final courseColor = is25m ? palette.secondary : palette.primary;
-
-    return SoftGlassPanel(
-      level: 2,
-      borderRadius: AppRadius.cardRadius,
-      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
-      padding: AppSpacing.cardPadding,
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => MeetDetailScreen(
-              meetId: meet.id,
-              meetTitle: meet.name,
-              repository: widget.repository,
-            ),
-          ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  StringUtils.toTitleCase(meet.name),
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    letterSpacing: -0.2,
-                    color: palette.textPrimary,
-                  ),
-                ),
-              ),
-              AppSpacing.h12,
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: courseColor.withValues(alpha: 0.14),
-                  borderRadius: AppRadius.badgeRadius,
-                  border: Border.all(
-                    color: courseColor.withValues(alpha: 0.25),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  is25m ? '25m' : '50m',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    color: courseColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          AppSpacing.vSm,
-          Row(
-            children: [
-              if (meet.city.isNotEmpty) ...[
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 14,
-                  color: palette.textSecondary,
-                ),
-                AppSpacing.hXs,
-                Text(
-                  meet.city,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    color: palette.textSecondary,
-                    fontSize: 12.5,
-                  ),
-                ),
-                AppSpacing.h12,
-              ],
-              if (meet.startDate.isNotEmpty) ...[
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: 14,
-                  color: palette.textSecondary,
-                ),
-                AppSpacing.hXs,
-                Text(
-                  meet.startDate,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    color: palette.textSecondary,
-                    fontSize: 12.5,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ],
-          ),
-          AppSpacing.v12,
-          Divider(height: 1, thickness: 1, color: palette.divider),
-          AppSpacing.v12,
-          Row(
-            children: [
-              Text(
-                '${meet.totalRaces} Yarış',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.5,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              Text('  ·  ', style: TextStyle(color: palette.textSecondary)),
-              Text(
-                '${meet.totalAthletes} Sporcu',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  color: palette.textSecondary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 12.5,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const Spacer(),
-              Icon(
-                Icons.chevron_right_outlined,
-                size: 20,
-                color: palette.textSecondary,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// Arama Delegesi
@@ -880,6 +912,65 @@ class _SwimSearchDelegate extends SearchDelegate {
           ],
         );
       },
+    );
+  }
+}
+
+class _HomePoolLanesPainter extends CustomPainter {
+  final Color laneColor;
+
+  const _HomePoolLanesPainter({required this.laneColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = laneColor
+      ..strokeWidth = 1.2;
+    const laneCount = 5;
+    for (int i = 1; i < laneCount; i++) {
+      final y = size.height * (i / laneCount);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_HomePoolLanesPainter oldDelegate) =>
+      laneColor != oldDelegate.laneColor;
+}
+
+class _KheloOnTapScale extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _KheloOnTapScale({
+    required this.child,
+    this.onTap,
+  });
+
+  @override
+  State<_KheloOnTapScale> createState() => _KheloOnTapScaleState();
+}
+
+class _KheloOnTapScaleState extends State<_KheloOnTapScale> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final disableMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration:
+            disableMotion ? Duration.zero : const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
     );
   }
 }

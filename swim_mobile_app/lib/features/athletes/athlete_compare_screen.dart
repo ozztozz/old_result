@@ -630,25 +630,94 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
     }
 
     Widget rowItem(String label, int valA, int valB) {
+      final total = valA + valB;
+      final ratioA = total > 0 ? (valA / total).clamp(0.0, 1.0) : 0.5;
+      final ratioB = total > 0 ? (valB / total).clamp(0.0, 1.0) : 0.5;
+      final colorA =
+          valA > valB ? palette.successText : palette.accent.withValues(alpha: 0.65);
+      final colorB =
+          valB > valA ? palette.successText : palette.accent.withValues(alpha: 0.65);
+
       return Padding(
         padding: AppSpacing.paddingVerticalSm,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            statValue(valA, valA > valB, alignRight: false),
-            Expanded(
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 13,
-                  color: palette.textSecondary,
+            Row(
+              children: [
+                statValue(valA, valA > valB, alignRight: false),
+                Expanded(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 13,
+                      color: palette.textSecondary,
+                    ),
+                  ),
                 ),
-              ),
+                statValue(valB, valB > valA, alignRight: true),
+              ],
             ),
-            statValue(valB, valB > valA, alignRight: true),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: palette.progressTrack,
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(4),
+                      ),
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FractionallySizedBox(
+                        widthFactor: ratioA,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorA,
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Container(
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: palette.progressTrack,
+                      borderRadius: const BorderRadius.horizontal(
+                        right: Radius.circular(4),
+                      ),
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: ratioB,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: colorB,
+                            borderRadius: const BorderRadius.horizontal(
+                              right: Radius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       );
