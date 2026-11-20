@@ -63,6 +63,10 @@ def get_live_meets(request):
 
     filtered = []
     for m in CanliYaris.objects.select_related('event').all():
+        # Start listesi olmayan (henüz boş) yarışları gösterme
+        if (m.toplam_start_listesi or 0) <= 0 and (m.islenen_start_listesi or 0) <= 0:
+            continue
+
         start_iso, end_iso = _extract_live_meet_dates(m)
         if start_iso:
             # Günü gelmemiş yarışları ve 1 haftadan eski yarışları ele
