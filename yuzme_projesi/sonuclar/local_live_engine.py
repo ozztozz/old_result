@@ -105,6 +105,7 @@ from sonuclar.live_engine import (
     detect_pdf_type,
     clean_pdf_filename,
     download_file_with_meta,
+    fetch_remote_headers_map,
     parse_tr_date_range,
 )
 
@@ -307,6 +308,8 @@ class LocalLiveEngine:
         self.start_parser = LocalStartListParser()
         self.result_parser = LocalResultListParser()
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        self._last_head_check: Dict[int, float] = {}
+        self._head_check_interval: float = 45.0
 
     def fetch_meet_pdf_catalog(self, base_url: str) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
         """
@@ -514,12 +517,45 @@ class LocalLiveEngine:
                 if ev_update_fields:
                     db_retry(lambda: event.save(update_fields=ev_update_fields))
 
-            processed_files = set(
-                CanliYarisDosya.objects.filter(canli_yaris=yaris, durum="ISLENDI").values_list("dosya_adi", flat=True)
-            )
+            known_files = {
+                d.dosya_adi: d
+                for d in CanliYarisDosya.objects.filter(canli_yaris=yaris)
+            }
 
-            pending_starts = [p for p in pdf_items if p["doc_type"] == "start_listesi" and (force or p["filename"] not in processed_files)]
-            pending_results = [p for p in pdf_items if p["doc_type"] == "sonuc_listesi" and (force or p["filename"] not in processed_files)]
+            now_ts = time.time()
+            remote_headers: Dict[str, Dict[str, Any]] = {}
+            if not force and known_files and (now_ts - self._last_head_check.get(yaris.id, 0.0) >= self._head_check_interval):
+                check_urls = [p["url"] for p in pdf_items if p["filename"] in known_files]
+                if check_urls:
+                    remote_headers = fetch_remote_headers_map(check_urls)
+                self._last_head_check[yaris.id] = now_ts
+
+            def _needs_processing(p_item: Dict[str, str]) -> bool:
+                if force:
+                    return True
+                kf = known_files.get(p_item["filename"])
+                if not kf or kf.durum != "ISLENDI":
+                    return True
+                if kf.dosya_url and p_item["url"] and kf.dosya_url != p_item["url"]:
+                    return True
+                rh = remote_headers.get(p_item["filename"])
+                if rh:
+                    r_etag = (rh.get("etag") or "").strip('"')
+                    k_etag = (kf.etag or "").strip('"')
+                    if r_etag and k_etag and r_etag != k_etag:
+                        return True
+                    r_lm = (rh.get("last_modified") or "").strip()
+                    k_lm = (kf.last_modified or "").strip()
+                    if r_lm and k_lm and r_lm != k_lm:
+                        return True
+                    r_sz = int(rh.get("dosya_boyutu") or 0)
+                    k_sz = int(kf.dosya_boyutu or 0)
+                    if r_sz > 0 and k_sz > 0 and r_sz != k_sz:
+                        return True
+                return False
+
+            pending_starts = [p for p in pdf_items if p["doc_type"] == "start_listesi" and _needs_processing(p)]
+            pending_results = [p for p in pdf_items if p["doc_type"] == "sonuc_listesi" and _needs_processing(p)]
 
             # Yarış sırasına göre düzenle (Start listeleri sonuçlardan önce çözülür)
             pending_starts.sort(key=lambda x: int(x["yaris_no"]) if x["yaris_no"].isdigit() else 9999)
@@ -629,6 +665,8 @@ class LocalLiveEngine:
 
         pdf_bytes = resp.content
         file_size = len(pdf_bytes)
+        etag = (resp.headers.get("ETag") or "").strip('"')
+        last_modified = (resp.headers.get("Last-Modified") or "").strip()
         is_school = is_school_meet(event.musabaka_adi)
         course = detect_course(event.musabaka_adi)
 
@@ -661,6 +699,8 @@ class LocalLiveEngine:
             "cinsiyet": cinsiyet,
             "yas_grubu": parsed.get("yas_grubu") or "",
             "dosya_boyutu": file_size,
+            "etag": etag,
+            "last_modified": last_modified,
             "durum": "ISLENDI",
             "kayit_sayisi": len(raw_swimmers),
             "son_islem_tarihi": timezone.now(),
@@ -751,6 +791,7 @@ class LocalLiveEngine:
 
         def _save_pdf_atomically() -> int:
             records_added = 0
+            seen_result_ids: List[int] = []
             with transaction.atomic():
                 dosya_obj, _ = CanliYarisDosya.objects.update_or_create(
                     canli_yaris=yaris,
@@ -1002,13 +1043,22 @@ class LocalLiveEngine:
                             for k_f, v_f in defaults_dict.items():
                                 setattr(existing, k_f, v_f)
                             existing.save()
+                        seen_result_ids.append(existing.id)
                         created = False
                     else:
                         create_kwargs = {**lookup_dict, **defaults_dict}
-                        YarisSonucu.objects.create(**create_kwargs)
+                        new_obj = YarisSonucu.objects.create(**create_kwargs)
+                        seen_result_ids.append(new_obj.id)
                         created = True
                     if created:
                         records_added += 1
+
+                if doc_type == "start_listesi" and seen_result_ids:
+                    # Güncellenmiş StartList'ten çıkarılan sporcuların eski bekleyen kayıtlarını temizle
+                    YarisSonucu.objects.filter(
+                        canli_dosya=dosya_obj,
+                        kaynak_turu="CANLI_START_LISTESI",
+                    ).exclude(id__in=seen_result_ids).delete()
 
             return records_added
 
