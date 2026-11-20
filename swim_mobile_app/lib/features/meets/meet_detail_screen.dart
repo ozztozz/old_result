@@ -802,7 +802,8 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
 
     final isPodium = isCompleted && effectiveRank != null && effectiveRank <= 3;
 
-    final cleanHeat = result.heat.replaceAll(RegExp(r'[^\d]'), '').trim();
+    final heatMatch = RegExp(r'\d+').firstMatch(result.heat);
+    final cleanHeat = heatMatch?.group(0) ?? '';
     final heatStr = cleanHeat.isNotEmpty
         ? cleanHeat
         : (result.heat.isNotEmpty ? result.heat : '-');
@@ -811,23 +812,34 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
 
     final String rankOrLaneText = isCompleted && effectiveRank != null
         ? '$effectiveRank.'
-        : 'S$heatStr/$laneStr';
+        : '$heatStr/$laneStr';
 
     final isFollowed =
         SelectedClubService.instance.matches(result.clubName, result.clubId) ||
             FavoriteAthletesService.instance.isFavorite(result.athleteId);
 
-    final athleteName = StringUtils.toTitleCase(result.athleteName);
+    final athleteName = StringUtils.formatAthleteName(result.athleteName);
     final clubName = result.clubName.trim().isNotEmpty
         ? StringUtils.toTitleCase(result.clubName)
         : 'Ferdi Sporcu';
 
-    final chipFill = isPodium
-        ? palette.successText.withValues(alpha: 0.14)
-        : palette.textPrimary.withValues(alpha: palette.isDark ? 0.08 : 0.05);
-    final chipBorder = isPodium
-        ? palette.successText.withValues(alpha: 0.28)
-        : Colors.white.withValues(alpha: palette.isDark ? 0.12 : 0.25);
+    final Color? podiumBadgeColor;
+    if (isCompleted && effectiveRank == 1) {
+      podiumBadgeColor = palette.statusWarning;
+    } else if (isCompleted && effectiveRank == 2) {
+      podiumBadgeColor = palette.textSecondary;
+    } else if (isCompleted && effectiveRank == 3) {
+      podiumBadgeColor = palette.accent;
+    } else {
+      podiumBadgeColor = null;
+    }
+
+    final chipFill = podiumBadgeColor != null
+        ? podiumBadgeColor.withValues(alpha: 0.15)
+        : palette.surfaceSecondary;
+    final chipBorder = podiumBadgeColor != null
+        ? podiumBadgeColor.withValues(alpha: 0.28)
+        : palette.border.withValues(alpha: 0.6);
 
     final String formattedTime;
     if (result.timeCs != null && result.timeCs! > 0) {
@@ -898,7 +910,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
             softWrap: false,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
+              fontFamily: AppTextStyles.displayFontFamily,
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: palette.textPrimary,
@@ -999,9 +1011,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                           fontSize: 12.5,
                           fontWeight:
                               isPodium ? FontWeight.w700 : FontWeight.w600,
-                          color: isPodium
-                              ? palette.successText
-                              : palette.textSecondary,
+                          color: podiumBadgeColor ?? palette.textSecondary,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -1015,15 +1025,14 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                           Row(
                             children: [
                               if (isFollowed)
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  margin: const EdgeInsets.only(
+                                Padding(
+                                  padding: const EdgeInsets.only(
                                     right: AppSpacing.xs,
                                   ),
-                                  decoration: BoxDecoration(
+                                  child: Icon(
+                                    Icons.star_rounded,
+                                    size: 14,
                                     color: palette.accent,
-                                    shape: BoxShape.circle,
                                   ),
                                 ),
                               Expanded(

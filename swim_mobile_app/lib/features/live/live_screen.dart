@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/components/ambient_canvas.dart';
@@ -20,8 +21,13 @@ import 'live_race_results_screen.dart';
 /// Tarih zaman çizelgesi + odak merkezli (fisheye) kaydırma efekti.
 class LiveScreen extends StatefulWidget {
   final SwimRepository repository;
+  final ValueListenable<int?>? selectedMeetIdListenable;
 
-  const LiveScreen({super.key, required this.repository});
+  const LiveScreen({
+    super.key,
+    required this.repository,
+    this.selectedMeetIdListenable,
+  });
 
   @override
   State<LiveScreen> createState() => _LiveScreenState();
@@ -72,6 +78,7 @@ class _LiveScreenState extends State<LiveScreen> {
   void initState() {
     super.initState();
     SelectedClubService.instance.addListener(_onSelectedClubChanged);
+    widget.selectedMeetIdListenable?.addListener(_onRequestedMeetIdChanged);
     _autoRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _autoRefreshSelectedFeed(),
@@ -82,9 +89,19 @@ class _LiveScreenState extends State<LiveScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    widget.selectedMeetIdListenable?.removeListener(_onRequestedMeetIdChanged);
     SelectedClubService.instance.removeListener(_onSelectedClubChanged);
     _feedPageController.dispose();
     super.dispose();
+  }
+
+  void _onRequestedMeetIdChanged() {
+    final requestedId = widget.selectedMeetIdListenable?.value;
+    if (requestedId == null || !mounted) return;
+    final match = _liveMeets.where((m) => m.id == requestedId).firstOrNull;
+    if (match != null) {
+      _selectStoryMeet(match);
+    }
   }
 
   void _onSelectedClubChanged() {
@@ -99,11 +116,16 @@ class _LiveScreenState extends State<LiveScreen> {
     try {
       final list = await widget.repository.getLiveMeets();
       if (mounted) {
-        LiveMeetSummary? initial;
-        for (final m in list) {
-          if (_statusOf(m).live) {
-            initial = m;
-            break;
+        final requestedId = widget.selectedMeetIdListenable?.value;
+        LiveMeetSummary? initial = requestedId == null
+            ? null
+            : list.where((m) => m.id == requestedId).firstOrNull;
+        if (initial == null) {
+          for (final m in list) {
+            if (_statusOf(m).live) {
+              initial = m;
+              break;
+            }
           }
         }
         initial ??= list.isNotEmpty ? list.first : null;
@@ -1512,16 +1534,63 @@ class _LiveScreenState extends State<LiveScreen> {
                 ],
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    strokeText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.displayFontFamily,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textPrimary,
-                    ),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          strokeText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.displayFontFamily,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (genderText.isNotEmpty) ...[
+                        const SizedBox(width: 7),
+                        Tooltip(
+                          message: genderText,
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: (isFemale
+                                      ? palette.statusLive
+                                      : (isMale
+                                          ? palette.accent
+                                          : palette.infoCyan))
+                                  .withValues(alpha: 0.14),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: (isFemale
+                                        ? palette.statusLive
+                                        : (isMale
+                                            ? palette.accent
+                                            : palette.infoCyan))
+                                    .withValues(alpha: 0.35),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Icon(
+                              isFemale
+                                  ? Icons.female_rounded
+                                  : (isMale
+                                      ? Icons.male_rounded
+                                      : Icons.wc_rounded),
+                              size: 16,
+                              color: isFemale
+                                  ? palette.statusLive
+                                  : (isMale
+                                      ? palette.accent
+                                      : palette.infoCyan),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (clubMatches.isNotEmpty && !isDone) ...[
@@ -1553,21 +1622,6 @@ class _LiveScreenState extends State<LiveScreen> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                ],
-                if (genderText.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Tooltip(
-                    message: genderText,
-                    child: Icon(
-                      isFemale
-                          ? Icons.female_rounded
-                          : (isMale ? Icons.male_rounded : Icons.wc_rounded),
-                      size: 18,
-                      color: isFemale
-                          ? palette.statusLive
-                          : (isMale ? palette.accent : palette.infoCyan),
                     ),
                   ),
                 ],

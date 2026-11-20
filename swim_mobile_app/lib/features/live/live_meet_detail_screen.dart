@@ -202,15 +202,11 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
             ageGroup: race.ageCategory,
           );
 
-    Navigator.push(
+    LiveRaceResultsScreen.showSheet(
       context,
-      MaterialPageRoute(
-        builder: (_) => LiveRaceResultsScreen(
-          live: widget.live,
-          event: eventItem,
-          repository: widget.repository,
-        ),
-      ),
+      live: widget.live,
+      event: eventItem,
+      repository: widget.repository,
     );
   }
 

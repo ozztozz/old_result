@@ -28,6 +28,7 @@ class LiveRaceResultsScreen extends StatefulWidget {
   final LiveEventProgramItem event;
   final SwimRepository repository;
   final bool asSheet;
+  final ScrollController? sheetScrollController;
 
   const LiveRaceResultsScreen({
     super.key,
@@ -35,6 +36,7 @@ class LiveRaceResultsScreen extends StatefulWidget {
     required this.event,
     required this.repository,
     this.asSheet = false,
+    this.sheetScrollController,
   });
 
   static Future<void> showSheet(
@@ -45,15 +47,19 @@ class LiveRaceResultsScreen extends StatefulWidget {
   }) {
     return AppBottomSheet.show<void>(
       context,
-      builder: (ctx) => AppBottomSheet(
-        scrollable: false,
-        child: SizedBox(
-          height: MediaQuery.of(ctx).size.height * 0.76,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.82,
+        minChildSize: 0.38,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (sheetCtx, scrollController) => AppBottomSheet(
+          scrollable: false,
           child: LiveRaceResultsScreen(
             live: live,
             event: event,
             repository: repository,
             asSheet: true,
+            sheetScrollController: scrollController,
           ),
         ),
       ),
@@ -244,38 +250,25 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       _ => 'Tümü',
     };
 
-    final bodyContent = Expanded(
-      child: _errorMessage != null && _allResults.isEmpty
-          ? Center(
-              child: EmptyStateWidget(
-                title: 'Bağlantı Hatası',
-                message: _errorMessage!,
-                icon: Icons.cloud_off_outlined,
-                actionText: 'Tekrar Dene',
-                onAction: () => _loadResults(),
-              ),
-            )
-          : RefreshIndicator(
-              color: palette.primary,
-              onRefresh: () => _loadResults(),
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  widget.asSheet ? 0 : AppSpacing.s20,
-                  AppSpacing.sm,
-                  widget.asSheet ? 0 : AppSpacing.s20,
-                  widget.asSheet
-                      ? AppSpacing.lg
-                      : (64 +
-                          AppSpacing.md +
-                          MediaQuery.of(context).padding.bottom +
-                          AppSpacing.lg),
-                ),
-                children: [
-                  if (!widget.asSheet) ...[
-                    // 1. Level 1 Yarış Özet Kartı
-                    _buildRaceSummaryHero(palette, title),
-                    AppSpacing.vMd,
-                  ],
+    final resultsListView = ListView(
+      controller: widget.sheetScrollController,
+      padding: EdgeInsets.fromLTRB(
+        widget.asSheet ? 0 : AppSpacing.s20,
+        AppSpacing.sm,
+        widget.asSheet ? 0 : AppSpacing.s20,
+        widget.asSheet
+            ? AppSpacing.lg
+            : (64 +
+                AppSpacing.md +
+                MediaQuery.of(context).padding.bottom +
+                AppSpacing.lg),
+      ),
+      children: [
+        if (!widget.asSheet) ...[
+          // 1. Level 1 Yarış Özet Kartı
+          _buildRaceSummaryHero(palette, title),
+          AppSpacing.vMd,
+        ],
 
                             // 1.5. Seriler / İstatistik Sekme Hapları
                             _buildDetailTabPills(palette),
@@ -453,9 +446,27 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                               ),
                             ],
                           ],
-                        ),
-                      ),
-            );
+    );
+
+    final bodyContent = Expanded(
+      child: _errorMessage != null && _allResults.isEmpty
+          ? Center(
+              child: EmptyStateWidget(
+                title: 'Bağlantı Hatası',
+                message: _errorMessage!,
+                icon: Icons.cloud_off_outlined,
+                actionText: 'Tekrar Dene',
+                onAction: () => _loadResults(),
+              ),
+            )
+          : (widget.asSheet
+              ? resultsListView
+              : RefreshIndicator(
+                  color: palette.primary,
+                  onRefresh: () => _loadResults(),
+                  child: resultsListView,
+                )),
+    );
 
     if (widget.asSheet) {
       return Column(
@@ -1276,54 +1287,91 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
   }) {
     final splits = result.splitTimes;
     if (splits == null || splits.isEmpty) return const [];
-    final entries = splits.entries.toList();
+
     int parseDist(String key) =>
-        int.tryParse(key.replaceAll(RegExp(r'[^\d]'), '')) ?? 999999;
-    entries.sort((a, b) => parseDist(a.key).compareTo(parseDist(b.key)));
+        int.tryParse(key.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
 
-    final legs = <({String label, String lapTime, String? cumulativeTime})>[];
-    int? prevCs;
-    int prevDist = 0;
-
-    for (final entry in entries) {
+    final checkpoints = <({int dist, int cs, String? rawVal, String label})>[];
+    for (final entry in splits.entries) {
+      final dist = parseDist(entry.key);
       final rawVal = entry.value.trim();
-      final currCs = _parseTimeToCs(rawVal);
-      final dist = int.tryParse(entry.key.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-
-      final String lapTime;
-      final String? cumulativeTime;
-      if (prevCs == null) {
-        lapTime = currCs != null ? SwimTimeFormatter.formatCs(currCs) : rawVal;
-        cumulativeTime = null;
-      } else if (currCs != null && currCs > prevCs) {
-        lapTime = SwimTimeFormatter.formatCs(currCs - prevCs);
-        cumulativeTime = rawVal;
-      } else {
-        lapTime = rawVal;
-        cumulativeTime = null;
+      final cs = _parseTimeToCs(rawVal);
+      if (dist > 0 && cs != null && cs > 0) {
+        checkpoints.add((dist: dist, cs: cs, rawVal: rawVal, label: entry.key));
       }
-
-      legs.add((
-        label: entry.key,
-        lapTime: lapTime,
-        cumulativeTime: cumulativeTime,
-      ));
-      prevCs = currCs;
-      if (dist > prevDist) prevDist = dist;
     }
+
+    if (checkpoints.isEmpty) {
+      return splits.entries
+          .map((e) => (
+                label: e.key,
+                lapTime: e.value.trim(),
+                cumulativeTime: null,
+              ))
+          .toList();
+    }
+
+    checkpoints.sort((a, b) => a.dist.compareTo(b.dist));
 
     final totalDistance = result.distance ?? widget.event.distance ?? 0;
     if (isCompleted &&
         finishCs != null &&
         finishCs > 0 &&
-        totalDistance > prevDist &&
-        prevCs != null &&
-        finishCs > prevCs) {
-      legs.add((
+        totalDistance > checkpoints.last.dist &&
+        finishCs > checkpoints.last.cs) {
+      checkpoints.add((
+        dist: totalDistance,
+        cs: finishCs,
+        rawVal: formattedTime,
         label: '${totalDistance}m',
-        lapTime: SwimTimeFormatter.formatCs(finishCs - prevCs),
-        cumulativeTime: formattedTime,
       ));
+    }
+
+    final legs = <({String label, String lapTime, String? cumulativeTime})>[];
+    int prevDist = 0;
+    int prevCs = 0;
+
+    for (final cp in checkpoints) {
+      if (cp.dist <= prevDist || cp.cs <= prevCs) continue;
+      final gap = cp.dist - prevDist;
+      final deltaCs = cp.cs - prevCs;
+
+      if (gap > 50 && gap % 50 == 0) {
+        final steps = gap ~/ 50;
+        var runningPrevCs = prevCs;
+        for (int s = 1; s <= steps; s++) {
+          final stepDist = prevDist + s * 50;
+          final isMeasuredEnd = s == steps;
+          final stepCumulCs = isMeasuredEnd
+              ? cp.cs
+              : prevCs + (deltaCs * s / steps).round();
+          final stepLapCs = stepCumulCs - runningPrevCs;
+          final isFirstEver = legs.isEmpty;
+
+          legs.add((
+            label: isMeasuredEnd ? cp.label : '~${stepDist}m',
+            lapTime: SwimTimeFormatter.formatCs(stepLapCs),
+            cumulativeTime: isFirstEver
+                ? null
+                : (isMeasuredEnd
+                    ? (cp.rawVal ?? SwimTimeFormatter.formatCs(stepCumulCs))
+                    : SwimTimeFormatter.formatCs(stepCumulCs)),
+          ));
+          runningPrevCs = stepCumulCs;
+        }
+      } else {
+        final isFirstEver = legs.isEmpty;
+        legs.add((
+          label: cp.label,
+          lapTime: SwimTimeFormatter.formatCs(deltaCs),
+          cumulativeTime: isFirstEver
+              ? null
+              : (cp.rawVal ?? SwimTimeFormatter.formatCs(cp.cs)),
+        ));
+      }
+
+      prevDist = cp.dist;
+      prevCs = cp.cs;
     }
 
     return legs;

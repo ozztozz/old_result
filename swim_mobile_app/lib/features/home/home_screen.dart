@@ -23,8 +23,13 @@ import '../rankings/rankings_screen.dart';
 /// 1. Ekran: Ana Sayfa & Keşfet (Home Dashboard)
 class HomeScreen extends StatefulWidget {
   final SwimRepository repository;
+  final ValueChanged<int>? onOpenLiveMeet;
 
-  const HomeScreen({super.key, required this.repository});
+  const HomeScreen({
+    super.key,
+    required this.repository,
+    this.onOpenLiveMeet,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -306,6 +311,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return _KheloOnTapScale(
       onTap: () {
+        if (widget.onOpenLiveMeet != null) {
+          widget.onOpenLiveMeet!(live.id);
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -582,6 +591,13 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: _KheloOnTapScale(
         onTap: () {
+          final matchingLive = _liveMeets
+              .where((m) => m.meetId != null && m.meetId == meet.id)
+              .firstOrNull;
+          if (matchingLive != null && widget.onOpenLiveMeet != null) {
+            widget.onOpenLiveMeet!(matchingLive.id);
+            return;
+          }
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => MeetDetailScreen(

@@ -12,6 +12,7 @@ import 'shared/widgets/app_scaffold.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   // Global Tercihler, Tema, Kulüp ve Favori Sporcular Servisi
   await Future.wait([
@@ -38,13 +39,28 @@ class SwimApp extends StatelessWidget {
       listenable: ThemeService.instance,
       builder: (context, _) {
         final themeService = ThemeService.instance;
-        return MaterialApp(
-          title: 'TYF Yüzme Sonuçları',
-          debugShowCheckedModeBanner: false,
-          theme: themeService.lightTheme,
-          darkTheme: themeService.darkTheme,
-          themeMode: themeService.themeMode,
-          home: MainNavigationContainer(repository: repository),
+        final platformDark =
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+        final isDark = themeService.themeMode == ThemeMode.dark ||
+            (themeService.themeMode == ThemeMode.system && platformDark);
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                isDark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarIconBrightness:
+                isDark ? Brightness.light : Brightness.dark,
+          ),
+          child: MaterialApp(
+            title: 'TYF Yüzme Sonuçları',
+            debugShowCheckedModeBanner: false,
+            theme: themeService.lightTheme,
+            darkTheme: themeService.darkTheme,
+            themeMode: themeService.themeMode,
+            home: MainNavigationContainer(repository: repository),
+          ),
         );
       },
     );
@@ -63,6 +79,7 @@ class MainNavigationContainer extends StatefulWidget {
 class _MainNavigationContainerState extends State<MainNavigationContainer> {
   int _currentIndex = 1; // Canlı Takip ile açılış
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
+  final ValueNotifier<int?> _requestedLiveMeetId = ValueNotifier<int?>(null);
 
   @override
   void initState() {
@@ -72,6 +89,20 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
       GlobalKey<NavigatorState>(),
       GlobalKey<NavigatorState>(),
     ];
+  }
+
+  @override
+  void dispose() {
+    _requestedLiveMeetId.dispose();
+    super.dispose();
+  }
+
+  void _openLiveMeetInLiveTab(int liveMeetId) {
+    _requestedLiveMeetId.value = liveMeetId;
+    if (_currentIndex != 1) {
+      setState(() => _currentIndex = 1);
+    }
+    _navigatorKeys[1].currentState?.popUntil((route) => route.isFirst);
   }
 
   void _onNavigationChanged(int index) {
@@ -114,8 +145,20 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
         currentIndex: _currentIndex,
         onNavigationChanged: _onNavigationChanged,
         screens: [
-          _buildTabNavigator(0, HomeScreen(repository: widget.repository)),
-          _buildTabNavigator(1, LiveScreen(repository: widget.repository)),
+          _buildTabNavigator(
+            0,
+            HomeScreen(
+              repository: widget.repository,
+              onOpenLiveMeet: _openLiveMeetInLiveTab,
+            ),
+          ),
+          _buildTabNavigator(
+            1,
+            LiveScreen(
+              repository: widget.repository,
+              selectedMeetIdListenable: _requestedLiveMeetId,
+            ),
+          ),
           _buildTabNavigator(2, FavoritesScreen(repository: widget.repository)),
         ],
       ),

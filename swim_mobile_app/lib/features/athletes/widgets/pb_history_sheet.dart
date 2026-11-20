@@ -14,6 +14,7 @@ class PbHistorySheet extends StatefulWidget {
   final PersonalBest pb;
   final String strokeLabel;
   final SwimRepository repository;
+  final ScrollController? sheetScrollController;
 
   const PbHistorySheet({
     super.key,
@@ -21,6 +22,7 @@ class PbHistorySheet extends StatefulWidget {
     required this.pb,
     required this.strokeLabel,
     required this.repository,
+    this.sheetScrollController,
   });
 
   static Future<void> show(
@@ -32,11 +34,18 @@ class PbHistorySheet extends StatefulWidget {
   }) {
     return AppBottomSheet.show<void>(
       context,
-      builder: (_) => PbHistorySheet(
-        athleteId: athleteId,
-        pb: pb,
-        strokeLabel: strokeLabel,
-        repository: repository,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.82,
+        minChildSize: 0.38,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => PbHistorySheet(
+          athleteId: athleteId,
+          pb: pb,
+          strokeLabel: strokeLabel,
+          repository: repository,
+          sheetScrollController: scrollController,
+        ),
       ),
     );
   }
@@ -153,11 +162,13 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
         ? _selectedChartIndex
         : (points.isNotEmpty ? points.length - 1 : null);
 
-    final isDark = palette.isDark;
-    final boxFill = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : palette.textPrimary.withValues(alpha: 0.04);
-    final boxBorder = Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
+    final cardShadow = [
+      BoxShadow(
+        color: palette.textPrimary.withValues(alpha: 0.05),
+        blurRadius: 14,
+        offset: const Offset(0, 4),
+      ),
+    ];
 
     return AppBottomSheet(
       scrollable: false,
@@ -166,6 +177,54 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
           // Üst Başlık
           Row(
             children: [
+              if (widget.pb.distance > 0) ...[
+                Container(
+                  width: 36,
+                  height: 36,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        palette.accent.withValues(alpha: 0.2),
+                        palette.infoCyan.withValues(alpha: 0.1),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: palette.accent.withValues(alpha: 0.38),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: palette.surface.withValues(alpha: 0.65),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${widget.pb.distance}',
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.displayFontFamily,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            color: palette.accent,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,8 +232,8 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                     Text(
                       '${widget.pb.distance}m ${widget.strokeLabel}',
                       style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 18,
+                        fontFamily: AppTextStyles.displayFontFamily,
+                        fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: palette.textPrimary,
                       ),
@@ -186,7 +245,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                       '$courseText • Son 3 Yıl Yarış Geçmişi',
                       style: TextStyle(
                         fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         color: palette.textSecondary,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
@@ -196,14 +255,27 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(Icons.close_outlined, color: palette.textSecondary),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: palette.surfaceSecondary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: palette.textSecondary,
+                  ),
+                ),
               ),
             ],
           ),
           AppSpacing.v12,
-          Divider(height: 1, color: palette.divider),
+          Divider(height: 1, color: palette.divider.withValues(alpha: 0.7)),
 
           // İçerik
           Expanded(
@@ -229,6 +301,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                         ),
                       )
                     : ListView(
+                        controller: widget.sheetScrollController,
                         padding: EdgeInsets.only(
                           top: AppSpacing.md,
                           bottom: AppSpacing.lg +
@@ -240,19 +313,19 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                             children: [
                               _buildKpiBox(
                                 palette,
-                                fill: boxFill,
-                                borderColor: boxBorder,
+                                fill: palette.surface,
+                                shadow: cardShadow,
                                 label: 'En İyi (PB)',
                                 value: SwimTimeFormatter.formatCs(
                                   widget.pb.timeCs,
                                 ),
-                                accent: palette.primary,
+                                accent: palette.accent,
                               ),
                               AppSpacing.hSm,
                               _buildKpiBox(
                                 palette,
-                                fill: boxFill,
-                                borderColor: boxBorder,
+                                fill: palette.surface,
+                                shadow: cardShadow,
                                 label: 'Gelişim',
                                 value: improvementCs != null
                                     ? '-${(improvementCs / 100).toStringAsFixed(2)} sn'
@@ -264,8 +337,8 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                               AppSpacing.hSm,
                               _buildKpiBox(
                                 palette,
-                                fill: boxFill,
-                                borderColor: boxBorder,
+                                fill: palette.surface,
+                                shadow: cardShadow,
                                 label: 'Yarış',
                                 value: '${_races.length}',
                                 accent: palette.textPrimary,
@@ -274,7 +347,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                           ),
                           AppSpacing.v12,
 
-                          // Hedef Reglaman Barajı Kartı (Düz renklendirilmiş konteyner)
+                          // Hedef Reglaman Barajı Kartı
                           if (_targets.isNotEmpty) ...[
                             _buildTargetBarajCard(palette, _targets.first),
                             AppSpacing.v12,
@@ -290,9 +363,9 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                 AppSpacing.s12,
                               ),
                               decoration: BoxDecoration(
-                                color: boxFill,
-                                borderRadius: AppRadius.cardRadius,
-                                border: Border.all(color: boxBorder, width: 1),
+                                color: palette.surface,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: cardShadow,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,9 +446,9 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                             Container(
                               padding: AppSpacing.paddingAllLg,
                               decoration: BoxDecoration(
-                                color: boxFill,
-                                borderRadius: AppRadius.cardRadius,
-                                border: Border.all(color: boxBorder),
+                                color: palette.surface,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: cardShadow,
                               ),
                               child: Text(
                                 'Bu branşta geçmiş yarış kaydı bulunamadı.',
@@ -390,9 +463,9 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                           else
                             Container(
                               decoration: BoxDecoration(
-                                color: boxFill,
-                                borderRadius: AppRadius.cardRadius,
-                                border: Border.all(color: boxBorder, width: 1),
+                                color: palette.surface,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: cardShadow,
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: Column(
@@ -546,10 +619,12 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
               : (r.time ?? r.resultStatus),
           maxLines: 1,
           softWrap: false,
-          style: AppTextStyles.officialTime.copyWith(
+          style: TextStyle(
+            fontFamily: AppTextStyles.displayFontFamily,
             fontSize: 14.5,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: isPb ? palette.successText : palette.textPrimary,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         if (isPb) ...[
@@ -567,7 +642,7 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
   Widget _buildKpiBox(
     AppColorPalette palette, {
     required Color fill,
-    required Color borderColor,
+    required List<BoxShadow> shadow,
     required String label,
     required String value,
     required Color accent,
@@ -580,8 +655,8 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
         ),
         decoration: BoxDecoration(
           color: fill,
-          borderRadius: AppRadius.medium,
-          border: Border.all(color: borderColor, width: 1),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: shadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
