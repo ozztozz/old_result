@@ -761,6 +761,7 @@ class LocalLiveEngine:
         """Birden fazla PDF'i paralel indirip ayrıştırır; DB kaydını ana iş parçacığına bırakır."""
         if not items:
             return {}
+        t0 = time.perf_counter()
         results: Dict[Tuple[str, str], Dict[str, Any]] = {}
         workers = min(max_workers, len(items))
 
@@ -778,6 +779,8 @@ class LocalLiveEngine:
                     results[k] = payload
                 except Exception as exc:
                     results[key] = {"error": exc}
+        elapsed = time.perf_counter() - t0
+        logger.info(f"  [⚡] {len(items)} PDF {workers} paralel iş parçacığıyla {elapsed:.2f} sn'de indirilip ayrıştırıldı.")
         return results
 
     def _process_single_pdf(
@@ -1594,7 +1597,10 @@ def run_local_live_worker(
     active_meets = list(
         CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
     )
+    t_cat = time.perf_counter()
     catalogs = engine.prefetch_meet_catalogs(active_meets, max_workers=8)
+    if active_meets:
+        logger.info(f"[⚡] {len(active_meets)} yarış kataloğu {min(8, len(active_meets))} paralel iş parçacığıyla {time.perf_counter() - t_cat:.2f} sn'de çekildi.")
     results = []
     for y in active_meets:
         results.append(engine.process_meet(y, force=force, prefetched_catalog=catalogs.get(y.id)))
