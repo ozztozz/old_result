@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.views.decorators.http import require_GET
 from sonuclar.models import CanliYaris, YarisSonucu
 from sonuclar.live_engine import parse_tr_date_range
@@ -12,33 +13,77 @@ from .utils import (
     parse_qualifying_standard,
 )
 
+TR_TIMEZONE = dt_timezone(timedelta(hours=3))
 
-def _live_meet_sort_key(m: CanliYaris):
-    iso_date = ""
-    if m.event_id and m.event and m.event.yaris_tarihi_baslangic:
-        cand = str(m.event.yaris_tarihi_baslangic).strip()
-        if re.match(r"^\d{4}-\d{2}-\d{2}$", cand):
-            iso_date = cand
-    if not iso_date:
-        raw_t = (m.gosterilen_tarih or "").strip()
+
+def _extract_live_meet_dates(m: CanliYaris):
+    """Müsabakanın (baslangic_iso, bitis_iso) tarihlerini döndürür."""
+    start_iso = ""
+    end_iso = ""
+    if m.event_id and m.event:
+        cand_s = str(m.event.yaris_tarihi_baslangic or "").strip()
+        cand_e = str(m.event.yaris_tarihi_bitis or "").strip()
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", cand_s):
+            start_iso = cand_s
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", cand_e):
+            end_iso = cand_e
+
+    if not start_iso or not end_iso:
+        raw_t = (m.gosterilen_tarih or m.tarih or "").strip()
         if raw_t and raw_t != "-":
             m_iso = re.search(r"(\d{4}-\d{2}-\d{2})", raw_t)
             if m_iso:
-                iso_date = m_iso.group(1)
+                if not start_iso:
+                    start_iso = m_iso.group(1)
             else:
-                iso_date, _ = parse_tr_date_range(raw_t)
+                p_start, p_end = parse_tr_date_range(raw_t)
+                if not start_iso and p_start:
+                    start_iso = p_start
+                if not end_iso and p_end:
+                    end_iso = p_end
+
+    if not end_iso and start_iso:
+        end_iso = start_iso
+    return start_iso, end_iso
+
+
+def _live_meet_sort_key(m: CanliYaris):
+    start_iso, _ = _extract_live_meet_dates(m)
+    is_active = 1 if (m.durum or "").upper() in ("ISLENIYOR", "BEKLIYOR", "BEKLEMEDE") else 0
     ts = m.olusturulma_tarihi.timestamp() if m.olusturulma_tarihi else 0.0
-    return (iso_date or "", ts, m.id)
+    return (is_active, start_iso or "", ts, m.id)
 
 
 @require_GET
 def get_live_meets(request):
-    """Aktif ve son tamamlanan canlı yarışların durum özeti (yarış tarihine göre en yeni üstte)."""
+    """Günü gelmiş ve 1 haftadan eski olmayan canlı yarışların durum özeti."""
+    today_tr = datetime.now(TR_TIMEZONE).date()
+    today_iso = today_tr.isoformat()
+    week_ago_iso = (today_tr - timedelta(days=7)).isoformat()
+
+    filtered = []
+    for m in CanliYaris.objects.select_related('event').all():
+        start_iso, end_iso = _extract_live_meet_dates(m)
+        if start_iso:
+            # Günü gelmemiş yarışları ve 1 haftadan eski yarışları ele
+            if start_iso > today_iso:
+                continue
+            if end_iso and end_iso < week_ago_iso:
+                continue
+        else:
+            # Tarihi çözülemeyen kayıtlarda oluşturulma tarihine göre 7 gün sınırı uygula
+            if m.olusturulma_tarihi:
+                created_tr = m.olusturulma_tarihi.astimezone(TR_TIMEZONE).date()
+                if created_tr.isoformat() < week_ago_iso or created_tr.isoformat() > today_iso:
+                    continue
+
+        filtered.append(m)
+
     meets = sorted(
-        CanliYaris.objects.select_related('event').all(),
+        filtered,
         key=_live_meet_sort_key,
         reverse=True,
-    )[:15]
+    )[:50]
     data = []
 
     for m in meets:
