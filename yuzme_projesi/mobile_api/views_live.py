@@ -47,19 +47,21 @@ def _extract_live_meet_dates(m: CanliYaris):
     return start_iso, end_iso
 
 
-def _live_meet_sort_key(m: CanliYaris):
-    start_iso, _ = _extract_live_meet_dates(m)
+def _live_meet_sort_key(m: CanliYaris, today_iso: str = ""):
+    start_iso, end_iso = _extract_live_meet_dates(m)
+    is_live_today = 1 if (today_iso and start_iso and end_iso and start_iso <= today_iso <= end_iso) else 0
     is_active = 1 if (m.durum or "").upper() in ("ISLENIYOR", "BEKLIYOR", "BEKLEMEDE") else 0
     ts = m.olusturulma_tarihi.timestamp() if m.olusturulma_tarihi else 0.0
-    return (is_active, start_iso or "", ts, m.id)
+    return (is_live_today, is_active, start_iso or "", ts, m.id)
 
 
 @require_GET
 def get_live_meets(request):
-    """Günü gelmiş ve 1 haftadan eski olmayan canlı yarışların durum özeti."""
+    """Önümüzdeki 10 gün içinde başlayacak ve 1 haftadan eski olmayan (start listesi bulunan) canlı yarışlar."""
     today_tr = datetime.now(TR_TIMEZONE).date()
     today_iso = today_tr.isoformat()
     week_ago_iso = (today_tr - timedelta(days=7)).isoformat()
+    ten_days_ahead_iso = (today_tr + timedelta(days=10)).isoformat()
 
     filtered = []
     for m in CanliYaris.objects.select_related('event').all():
@@ -69,8 +71,8 @@ def get_live_meets(request):
 
         start_iso, end_iso = _extract_live_meet_dates(m)
         if start_iso:
-            # Günü gelmemiş yarışları ve 1 haftadan eski yarışları ele
-            if start_iso > today_iso:
+            # 10 günden daha uzak gelecekteki yarışları ve 1 haftadan eski yarışları ele
+            if start_iso > ten_days_ahead_iso:
                 continue
             if end_iso and end_iso < week_ago_iso:
                 continue
@@ -78,14 +80,14 @@ def get_live_meets(request):
             # Tarihi çözülemeyen kayıtlarda oluşturulma tarihine göre 7 gün sınırı uygula
             if m.olusturulma_tarihi:
                 created_tr = m.olusturulma_tarihi.astimezone(TR_TIMEZONE).date()
-                if created_tr.isoformat() < week_ago_iso or created_tr.isoformat() > today_iso:
+                if created_tr.isoformat() < week_ago_iso or created_tr.isoformat() > ten_days_ahead_iso:
                     continue
 
         filtered.append(m)
 
     meets = sorted(
         filtered,
-        key=_live_meet_sort_key,
+        key=lambda m: _live_meet_sort_key(m, today_iso),
         reverse=True,
     )[:50]
     data = []
