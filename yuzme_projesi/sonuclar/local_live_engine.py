@@ -648,10 +648,26 @@ class LocalLiveEngine:
                 f"Yeni Dosya Tespit Edildi: {len(pending_starts)} Start, {len(pending_results)} Sonuç"
             )
 
+            all_pending_items = (
+                [("start_listesi", it) for it in pending_starts]
+                + [("sonuc_listesi", it) for it in pending_results]
+            )
+            prefetched_map = (
+                self._prefetch_parsed_pdfs(all_pending_items, max_workers=8)
+                if len(all_pending_items) > 1
+                else {}
+            )
+
             # 1. Start Listeleri
             for item in pending_starts:
                 try:
-                    added = self._process_single_pdf(yaris, event, item, "start_listesi")
+                    added = self._process_single_pdf(
+                        yaris,
+                        event,
+                        item,
+                        "start_listesi",
+                        prefetched=prefetched_map.get(("start_listesi", item["url"])),
+                    )
                     stats["yeni_start"] += 1
                     stats["eklenen_kayit"] += added
                 except Exception as exc:
@@ -662,7 +678,13 @@ class LocalLiveEngine:
             # 2. Sonuç Listeleri
             for item in pending_results:
                 try:
-                    added = self._process_single_pdf(yaris, event, item, "sonuc_listesi")
+                    added = self._process_single_pdf(
+                        yaris,
+                        event,
+                        item,
+                        "sonuc_listesi",
+                        prefetched=prefetched_map.get(("sonuc_listesi", item["url"])),
+                    )
                     stats["yeni_sonuc"] += 1
                     stats["eklenen_kayit"] += added
                 except Exception as exc:
@@ -707,17 +729,9 @@ class LocalLiveEngine:
 
         return stats
 
-    def _process_single_pdf(
-        self,
-        yaris: CanliYaris,
-        event: Event,
-        item: Dict[str, str],
-        doc_type: str
-    ) -> int:
-        filename = item["filename"]
+    def _download_and_parse_pdf(self, item: Dict[str, str], doc_type: str) -> Dict[str, Any]:
+        """PDF'i indirip yerel PyMuPDF parser ile çözer (thread-safe, DB yazmaz)."""
         url = item["url"]
-        logger.info(f"  [>] {filename} indiriliyor ve ayrıştırılıyor ({doc_type})...")
-
         resp = self.session.get(url, timeout=12)
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code}")
@@ -726,14 +740,75 @@ class LocalLiveEngine:
         file_size = len(pdf_bytes)
         etag = (resp.headers.get("ETag") or "").strip('"')
         last_modified = (resp.headers.get("Last-Modified") or "").strip()
+
+        if doc_type == "start_listesi":
+            parsed = LocalStartListParser().parse(pdf_bytes)
+        else:
+            parsed = LocalResultListParser().parse(pdf_bytes, unmask=False)
+
+        return {
+            "parsed": parsed,
+            "file_size": file_size,
+            "etag": etag,
+            "last_modified": last_modified,
+        }
+
+    def _prefetch_parsed_pdfs(
+        self,
+        items: List[Tuple[str, Dict[str, str]]],
+        max_workers: int = 8,
+    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        """Birden fazla PDF'i paralel indirip ayrıştırır; DB kaydını ana iş parçacığına bırakır."""
+        if not items:
+            return {}
+        results: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        workers = min(max_workers, len(items))
+
+        def _worker(doc_t: str, it: Dict[str, str]):
+            return (doc_t, it["url"]), self._download_and_parse_pdf(it, doc_t)
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_map = {
+                executor.submit(_worker, doc_t, it): (doc_t, it["url"])
+                for doc_t, it in items
+            }
+            for fut, key in future_map.items():
+                try:
+                    k, payload = fut.result()
+                    results[k] = payload
+                except Exception as exc:
+                    results[key] = {"error": exc}
+        return results
+
+    def _process_single_pdf(
+        self,
+        yaris: CanliYaris,
+        event: Event,
+        item: Dict[str, str],
+        doc_type: str,
+        prefetched: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        filename = item["filename"]
+        url = item["url"]
+        logger.info(f"  [>] {filename} işleniyor ({doc_type})...")
+
+        if prefetched is not None:
+            if "error" in prefetched:
+                raise prefetched["error"]
+            data_pack = prefetched
+        else:
+            data_pack = self._download_and_parse_pdf(item, doc_type)
+
+        parsed = data_pack["parsed"]
+        file_size = data_pack["file_size"]
+        etag = data_pack["etag"]
+        last_modified = data_pack["last_modified"]
         is_school = is_school_meet(event.musabaka_adi)
         course = detect_course(event.musabaka_adi)
 
         if doc_type == "start_listesi":
-            parsed = self.start_parser.parse(pdf_bytes)
             raw_swimmers = parsed.get("sporcular", [])
         else:
-            parsed = self.result_parser.parse(pdf_bytes, unmask=False)
             raw_swimmers = parsed.get("sonuclar", [])
 
         cinsiyet = _normalize_gender(parsed.get("cinsiyet"))
