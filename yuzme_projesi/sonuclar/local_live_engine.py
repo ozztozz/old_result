@@ -308,14 +308,64 @@ class LocalLiveEngine:
         self.start_parser = LocalStartListParser()
         self.result_parser = LocalResultListParser()
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        self.session = requests.Session()
+        self.session.verify = False
+        self.session.headers.update(self.headers)
+        adapter = HTTPAdapter(pool_connections=32, pool_maxsize=32)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         self._last_head_check: Dict[int, float] = {}
         self._head_check_interval: float = 45.0
+        self._last_future_poll: Dict[int, float] = {}
+        self._future_poll_interval: float = 300.0
+
+    def filter_due_meets(self, meets: List[CanliYaris], today_iso: str) -> List[CanliYaris]:
+        """Başlangıç tarihi gelecekte olan ve start listeleri tamamlanmış yarışları 5 dk'da bir tarar."""
+        now_ts = time.time()
+        due: List[CanliYaris] = []
+        for y in meets:
+            start_iso, _ = _get_meet_date_bounds(y, y.event)
+            if (
+                start_iso
+                and today_iso < start_iso
+                and (y.toplam_start_listesi or 0) > 0
+                and (y.islenen_start_listesi or 0) >= (y.toplam_start_listesi or 0)
+            ):
+                if now_ts - self._last_future_poll.get(y.id, 0.0) < self._future_poll_interval:
+                    continue
+                self._last_future_poll[y.id] = now_ts
+            due.append(y)
+        return due
+
+    def prefetch_meet_catalogs(
+        self,
+        meets: List[CanliYaris],
+        max_workers: int = 8,
+    ) -> Dict[int, Tuple[Dict[str, Any], List[Dict[str, str]]]]:
+        """Çok sayıda yarışın HTML kataloglarını paralel çekerek tarama süresini ~10x hızlandırır."""
+        if not meets:
+            return {}
+        catalogs: Dict[int, Tuple[Dict[str, Any], List[Dict[str, str]]]] = {}
+
+        def _fetch_one(y: CanliYaris):
+            return y.id, self.fetch_meet_pdf_catalog(y.canli_url)
+
+        workers = min(max_workers, len(meets))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_fetch_one, y) for y in meets]
+            for fut in as_completed(futures):
+                try:
+                    yid, cat = fut.result()
+                    catalogs[yid] = cat
+                except Exception as exc:
+                    logger.warning(f"  [!] Paralel katalog ön-çekme uyarısı: {exc}")
+        return catalogs
 
     def fetch_meet_pdf_catalog(self, base_url: str) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
         """
         TYF canlı sayfasını çekip başlık bilgileri ile tüm Start ve Sonuç PDF linklerini listeler.
         """
-        resp = requests.get(base_url, headers=self.headers, verify=False, timeout=10)
+        resp = self.session.get(base_url, timeout=10)
         soup = BeautifulSoup(resp.content.decode("utf-8", errors="replace"), "html.parser")
 
         title = soup.title.string.strip() if soup.title else ""
@@ -440,7 +490,12 @@ class LocalLiveEngine:
         }
         return meta, pdf_items
 
-    def process_meet(self, yaris: CanliYaris, force: bool = False) -> Dict[str, Any]:
+    def process_meet(
+        self,
+        yaris: CanliYaris,
+        force: bool = False,
+        prefetched_catalog: Optional[Tuple[Dict[str, Any], List[Dict[str, str]]]] = None,
+    ) -> Dict[str, Any]:
         """
         Tek bir CanliYaris nesnesini yerel parser'larla baştan sona işler.
         """
@@ -471,7 +526,11 @@ class LocalLiveEngine:
                 except Exception as exc:
                     logger.warning(f"  [!] #{yaris.id} Reglaman barajları okunamadı: {exc}")
 
-            meta, pdf_items = self.fetch_meet_pdf_catalog(yaris.canli_url)
+            meta, pdf_items = (
+                prefetched_catalog
+                if prefetched_catalog is not None
+                else self.fetch_meet_pdf_catalog(yaris.canli_url)
+            )
             yaris_update_fields = []
             if meta["musabaka_adi"] and not yaris.musabaka_adi:
                 yaris.musabaka_adi = meta["musabaka_adi"]
@@ -659,7 +718,7 @@ class LocalLiveEngine:
         url = item["url"]
         logger.info(f"  [>] {filename} indiriliyor ve ayrıştırılıyor ({doc_type})...")
 
-        resp = requests.get(url, headers=self.headers, verify=False, timeout=12)
+        resp = self.session.get(url, timeout=12)
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code}")
 
@@ -1405,13 +1464,18 @@ def run_daemon_worker(poll_interval: int = DEFAULT_POLL_INTERVAL, end_hour: int 
                 logger.info(f"[*] Saat {now.strftime('%H:%M')}. Çalışma saatleri dışına çıkıldı. Daemon güvenle kapatılıyor.")
                 break
 
-            active_meets = list(CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]))
+            active_meets = list(
+                CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
+            )
             if not active_meets:
                 logger.info("[*] Takipte aktif canlı yarış kalmadı. Daemon güvenle kapatılıyor.")
                 break
 
-            for yaris in active_meets:
-                engine.process_meet(yaris, force=False)
+            due_meets = engine.filter_due_meets(active_meets, now.date().isoformat())
+            if due_meets:
+                catalogs = engine.prefetch_meet_catalogs(due_meets, max_workers=8)
+                for yaris in due_meets:
+                    engine.process_meet(yaris, force=False, prefetched_catalog=catalogs.get(yaris.id))
 
             time.sleep(poll_interval)
 
@@ -1452,10 +1516,13 @@ def run_local_live_worker(
 
     # Parametresiz çağrıda tüm aktif yarışları bir kez tara
     reopen_active_multiday_meets()
-    active_meets = CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"])
+    active_meets = list(
+        CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
+    )
+    catalogs = engine.prefetch_meet_catalogs(active_meets, max_workers=8)
     results = []
     for y in active_meets:
-        results.append(engine.process_meet(y, force=force))
+        results.append(engine.process_meet(y, force=force, prefetched_catalog=catalogs.get(y.id)))
     return results
 
 
