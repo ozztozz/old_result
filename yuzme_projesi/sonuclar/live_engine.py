@@ -922,6 +922,25 @@ def is_meet_truly_completed(
     if t_start > 0 and i_sonuc < t_start:
         return False
 
+    # Çok günlük yarışlarda bitiş tarihine kadar erken TAMAMLANDI işaretlenmesini engelle
+    ev = yaris.event
+    end_iso = (ev.yaris_tarihi_bitis or "").strip() if ev else ""
+    if not end_iso and ev and ev.yaris_tarihi_baslangic:
+        end_iso = (ev.yaris_tarihi_baslangic or "").strip()
+    if not end_iso:
+        raw_date = (yaris.tarih or (ev.yaris_tarihi_ham if ev else "") or "").strip()
+        if raw_date:
+            p_start, p_end = parse_tr_date_range(raw_date)
+            end_iso = p_end or p_start
+
+    if end_iso:
+        now_tr = get_current_tr_time()
+        today_iso = now_tr.date().isoformat()
+        if today_iso < end_iso:
+            return False
+        if today_iso == end_iso and now_tr.hour < 19:
+            return False
+
     return True
 
 
@@ -1549,6 +1568,22 @@ def run_cron_orchestrator(kesfet: bool = False) -> None:
         logger.info("[*] TYF sayfalarından yeni yarış keşfi yapılıyor...")
         added = discover_new_meets_db()
         logger.info(f"[*] Keşif tamamlandı ({added} yeni yarış eklendi).")
+
+    # Erken TAMAMLANDI işaretlenmiş çok günlük devam eden yarışları tekrar aç
+    today_iso = now.date().isoformat()
+    for done_y in CanliYaris.objects.filter(durum="TAMAMLANDI").select_related("event"):
+        if not is_meet_truly_completed(done_y):
+            ev = done_y.event
+            end_iso = (ev.yaris_tarihi_bitis or ev.yaris_tarihi_baslangic or "") if ev else ""
+            if not end_iso and done_y.tarih:
+                p_s, p_e = parse_tr_date_range(done_y.tarih)
+                end_iso = p_e or p_s
+            if (end_iso and today_iso <= end_iso) or (
+                done_y.toplam_start_listesi and done_y.islenen_sonuc_listesi < done_y.toplam_start_listesi
+            ):
+                done_y.durum = "ISLENIYOR"
+                done_y.save(update_fields=["durum"])
+                logger.info(f"[↻] #{done_y.id} ({done_y.musabaka_adi or done_y.canli_url}) devam eden yarış olduğu için ISLENIYOR yapıldı.")
 
     qs = CanliYaris.objects.filter(
         Q(durum="ISLENIYOR") | Q(durum="BEKLIYOR")

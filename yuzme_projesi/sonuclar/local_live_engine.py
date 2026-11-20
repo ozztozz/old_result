@@ -528,8 +528,24 @@ class LocalLiveEngine:
             all_start_count = len([p for p in pdf_items if p["doc_type"] == "start_listesi"])
             all_result_count = len([p for p in pdf_items if p["doc_type"] == "sonuc_listesi"])
 
-            # Yeni dosya yoksa sessizce çık (5 sn kontrolü için minimum log ve yük)
+            # Yeni dosya yoksa: çok günlük yarış bitiş tarihi geçtiyse TAMAMLANDI'ya al, değilse sessizce çık
             if not pending_starts and not pending_results:
+                islenen_start = CanliYarisDosya.objects.filter(canli_yaris=yaris, dosya_turu="START_LISTESI", durum="ISLENDI").count()
+                islenen_sonuc = CanliYarisDosya.objects.filter(canli_yaris=yaris, dosya_turu="SONUC_LISTESI", durum="ISLENDI").count()
+                if _should_mark_meet_completed(
+                    yaris, event, all_start_count, islenen_start, all_result_count, islenen_sonuc, has_errors=False
+                ):
+                    if yaris.durum != "TAMAMLANDI":
+                        yaris.durum = "TAMAMLANDI"
+                        yaris.toplam_start_listesi = all_start_count
+                        yaris.islenen_start_listesi = islenen_start
+                        yaris.toplam_sonuc_listesi = all_result_count
+                        yaris.islenen_sonuc_listesi = islenen_sonuc
+                        db_retry(lambda: yaris.save(update_fields=[
+                            "durum", "toplam_start_listesi", "islenen_start_listesi",
+                            "toplam_sonuc_listesi", "islenen_sonuc_listesi"
+                        ]))
+                        logger.info(f"  [✔] #{yaris.id} Müsabaka bitiş tarihi geçtiği ve tüm dosyalar işlendiği için TAMAMLANDI olarak kapatıldı.")
                 return stats
 
             logger.info(
@@ -570,7 +586,10 @@ class LocalLiveEngine:
             yaris.eklenen_kayit_sayisi = (yaris.eklenen_kayit_sayisi or 0) + stats["eklenen_kayit"]
             yaris.son_islem_tarihi = timezone.now()
 
-            if all_result_count > 0 and islenen_sonuc >= all_result_count and not stats["hatalar"]:
+            if _should_mark_meet_completed(
+                yaris, event, all_start_count, islenen_start, all_result_count, islenen_sonuc,
+                has_errors=bool(stats["hatalar"])
+            ):
                 yaris.durum = "TAMAMLANDI"
             else:
                 yaris.durum = "ISLENIYOR"
@@ -1163,6 +1182,101 @@ def discover_new_live_meets(
 
 
 # ==============================================================================
+# ÇOK GÜNLÜ YARIŞ TAMAMLANMA VE YENİDEN AÇMA MANTIĞI
+# ==============================================================================
+
+def _get_meet_date_bounds(yaris: CanliYaris, event: Optional[Event] = None) -> Tuple[str, str]:
+    """Müsabakanın (baslangic_iso, bitis_iso) tarihlerini döndürür."""
+    ev = event or yaris.event
+    start_iso = (ev.yaris_tarihi_baslangic or "").strip() if ev else ""
+    end_iso = (ev.yaris_tarihi_bitis or "").strip() if ev else ""
+
+    if not start_iso or not end_iso:
+        raw_date = (yaris.tarih or (ev.yaris_tarihi_ham if ev else "") or "").strip()
+        if raw_date:
+            p_start, p_end = parse_tr_date_range(raw_date)
+            if not start_iso and p_start:
+                start_iso = p_start
+            if not end_iso and p_end:
+                end_iso = p_end
+
+    if not end_iso and start_iso:
+        end_iso = start_iso
+    return start_iso, end_iso
+
+
+def _should_mark_meet_completed(
+    yaris: CanliYaris,
+    event: Optional[Event],
+    all_start_count: int,
+    islenen_start: int,
+    all_result_count: int,
+    islenen_sonuc: int,
+    has_errors: bool = False,
+) -> bool:
+    """
+    Çok günlük yarışlarda gün içinde yeni sonuç gelmediğinde erken TAMAMLANDI
+    işaretlenmesini engeller. Bitiş tarihine kadar yarışı ISLENIYOR tutar.
+    """
+    if has_errors:
+        return False
+    if all_result_count <= 0 or islenen_sonuc < all_result_count:
+        return False
+    if all_start_count > 0 and (islenen_start < all_start_count or islenen_sonuc < all_start_count):
+        return False
+
+    _, end_iso = _get_meet_date_bounds(yaris, event)
+    now_tr = get_current_tr_time()
+    today_iso = now_tr.date().isoformat()
+
+    if end_iso:
+        if today_iso < end_iso:
+            return False
+        if today_iso == end_iso and now_tr.hour < 20:
+            return False
+
+    return True
+
+
+def reopen_active_multiday_meets() -> int:
+    """
+    Çok günlük olup erken 'TAMAMLANDI' işaretlenmiş (bitiş tarihi henüz geçmemiş
+    veya bugün yarış günü olan) müsabakaları tekrar 'ISLENIYOR' durumuna alır.
+    """
+    now_tr = get_current_tr_time()
+    today_iso = now_tr.date().isoformat()
+    reopened = 0
+
+    completed_qs = CanliYaris.objects.filter(durum="TAMAMLANDI").select_related("event")
+    for y in completed_qs:
+        _, end_iso = _get_meet_date_bounds(y, y.event)
+        should_reopen = False
+
+        if end_iso:
+            if today_iso < end_iso:
+                should_reopen = True
+            elif today_iso == end_iso and (
+                now_tr.hour < 20
+                or (y.toplam_start_listesi and y.islenen_sonuc_listesi < y.toplam_start_listesi)
+            ):
+                should_reopen = True
+        elif y.son_islem_tarihi and (now_tr - y.son_islem_tarihi.astimezone(TR_TIMEZONE)).days <= 2:
+            if y.toplam_start_listesi and y.islenen_sonuc_listesi < y.toplam_start_listesi:
+                should_reopen = True
+
+        if should_reopen:
+            y.durum = "ISLENIYOR"
+            db_retry(lambda obj=y: obj.save(update_fields=["durum"]))
+            reopened += 1
+            logger.info(
+                f"  [↻] #{y.id} ({y.musabaka_adi or y.canli_url}) devam eden çok günlük yarış olduğu için "
+                f"tekrar ISLENIYOR durumuna alındı (Bitiş: {end_iso or 'Bilinmiyor'})."
+            )
+
+    return reopened
+
+
+# ==============================================================================
 # SERVİS 1: SAATLİK CRON ORKESTRATÖRÜ
 # ==============================================================================
 
@@ -1191,6 +1305,8 @@ def run_cron_orchestrator(
                 logger.info(f"[+] Otomatik tarama ile {len(newly_added)} yeni canlı yarış eklendi.")
         except Exception as exc:
             logger.warning(f"[!] Otomatik yarış keşif taraması uyarısı: {exc}")
+
+    reopen_active_multiday_meets()
 
     active_qs = CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"])
     active_count = active_qs.count()
@@ -1228,6 +1344,7 @@ def run_daemon_worker(poll_interval: int = DEFAULT_POLL_INTERVAL, end_hour: int 
     logger.info(f"============================================================")
 
     engine = LocalLiveEngine()
+    reopen_active_multiday_meets()
 
     try:
         while True:
@@ -1284,6 +1401,7 @@ def run_local_live_worker(
         return engine.process_meet(yaris, force=force)
 
     # Parametresiz çağrıda tüm aktif yarışları bir kez tara
+    reopen_active_multiday_meets()
     active_meets = CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"])
     results = []
     for y in active_meets:
