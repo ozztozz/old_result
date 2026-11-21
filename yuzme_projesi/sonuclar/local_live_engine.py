@@ -1164,6 +1164,23 @@ class LocalLiveEngine:
                         lookup_dict["yaris_no"] = yaris_no
 
                     existing = YarisSonucu.objects.filter(**lookup_dict).order_by("-id").first()
+                    if not existing and seri_val and kulvar_val is not None:
+                        lane_qs = YarisSonucu.objects.filter(
+                            event=event,
+                            mesafe=mesafe,
+                            stil=stil,
+                            cinsiyet=cinsiyet,
+                            kulvar=kulvar_val,
+                        )
+                        if yaris_no:
+                            lane_qs = lane_qs.filter(yaris_no=yaris_no)
+                        for cand in lane_qs.select_related("sporcu").order_by("-id"):
+                            c_seri_m = re.search(r"\d+", str(cand.seri or ""))
+                            c_seri_no = int(c_seri_m.group()) if c_seri_m else None
+                            if (seri_no and c_seri_no == seri_no) or (str(cand.seri or "").strip() == str(seri_val).strip()):
+                                existing = cand
+                                break
+
                     if existing:
                         if doc_type == "start_listesi" and existing.kaynak_turu == "CANLI_SONUC":
                             # Mevcut sonuç derecesini StartList ile ezme; sadece eksik başlangıç bilgilerini tamamla
@@ -1174,9 +1191,24 @@ class LocalLiveEngine:
                             if defaults_dict.get("kulup") and not existing.kulup_id:
                                 existing.kulup = defaults_dict["kulup"]
                                 update_fields.append("kulup")
+                            if (
+                                existing.sporcu
+                                and existing.sporcu.sporcu_adi.startswith("Maskeli sporcu")
+                                and athlete
+                                and not athlete.sporcu_adi.startswith("Maskeli sporcu")
+                            ):
+                                existing.sporcu = athlete
+                                update_fields.append("sporcu")
                             if update_fields:
                                 existing.save(update_fields=update_fields)
                         else:
+                            # Gerçek (maskesiz) sporcuyu asla yeni bir 'Maskeli sporcu' ile ezme
+                            existing_is_masked = bool(existing.sporcu and existing.sporcu.sporcu_adi.startswith("Maskeli sporcu"))
+                            new_is_masked = bool(athlete and athlete.sporcu_adi.startswith("Maskeli sporcu"))
+                            if not existing_is_masked and new_is_masked:
+                                pass
+                            elif existing_is_masked and not new_is_masked:
+                                existing.sporcu = athlete
                             for k_f, v_f in defaults_dict.items():
                                 setattr(existing, k_f, v_f)
                             existing.save()
@@ -1190,11 +1222,11 @@ class LocalLiveEngine:
                     if created:
                         records_added += 1
 
-                if doc_type == "start_listesi" and seen_result_ids:
-                    # Güncellenmiş StartList'ten çıkarılan sporcuların eski bekleyen kayıtlarını temizle
+                if seen_result_ids:
+                    stale_source = "CANLI_START_LISTESI" if doc_type == "start_listesi" else "CANLI_SONUC"
                     YarisSonucu.objects.filter(
                         canli_dosya=dosya_obj,
-                        kaynak_turu="CANLI_START_LISTESI",
+                        kaynak_turu=stale_source,
                     ).exclude(id__in=seen_result_ids).delete()
 
             return records_added
@@ -1607,6 +1639,74 @@ def run_local_live_worker(
     return results
 
 
+def deduplicate_live_results(event_id: Optional[int] = None) -> int:
+    """
+    Aynı (event, yaris_no/mesafe/stil/cinsiyet, seri, kulvar) için tekrar oluşmuş
+    mükerrer YarisSonucu kayıtlarını temizler; gerçek (maskesiz) sporcuyu korur.
+    """
+    qs = YarisSonucu.objects.filter(
+        seri__isnull=False,
+        kulvar__isnull=False,
+    ).exclude(seri="").select_related("sporcu")
+
+    if event_id:
+        qs = qs.filter(event_id=event_id)
+    else:
+        live_event_ids = list(CanliYaris.objects.exclude(event_id__isnull=True).values_list("event_id", flat=True))
+        if not live_event_ids:
+            return 0
+        qs = qs.filter(event_id__in=live_event_ids)
+
+    groups: Dict[tuple, List[YarisSonucu]] = {}
+    for row in qs.iterator(chunk_size=500):
+        m_s = re.search(r"\d+", str(row.seri or ""))
+        seri_key = m_s.group() if m_s else str(row.seri or "").strip()
+        key = (
+            row.event_id,
+            str(row.yaris_no or ""),
+            row.mesafe,
+            row.stil or "",
+            row.cinsiyet or "",
+            seri_key,
+            row.kulvar,
+        )
+        groups.setdefault(key, []).append(row)
+
+    to_delete: List[int] = []
+    for key, rows in groups.items():
+        if len(rows) <= 1:
+            continue
+
+        def _row_rank(r: YarisSonucu):
+            sp_name = r.sporcu.sporcu_adi if r.sporcu else ""
+            is_real = 1 if (sp_name and not sp_name.startswith("Maskeli sporcu")) else 0
+            is_result = 1 if r.kaynak_turu == "CANLI_SONUC" else 0
+            has_time = 1 if (r.derece_saniye is not None) else 0
+            return (is_real, is_result, has_time, -r.id)
+
+        rows_sorted = sorted(rows, key=_row_rank, reverse=True)
+        for dup in rows_sorted[1:]:
+            to_delete.append(dup.id)
+
+    deleted_count = 0
+    if to_delete:
+        with transaction.atomic():
+            for i in range(0, len(to_delete), 500):
+                batch = to_delete[i:i + 500]
+                cnt, _ = YarisSonucu.objects.filter(id__in=batch).delete()
+                deleted_count += cnt
+
+            orphan_cnt, _ = Sporcu.objects.filter(
+                sporcu_adi__startswith="Maskeli sporcu",
+                yaris_sonuclari__isnull=True,
+            ).delete()
+            if orphan_cnt:
+                logger.info(f"[*] {orphan_cnt} sahipsiz 'Maskeli sporcu' kaydı temizlendi.")
+
+    logger.info(f"[✔] Mükerrer temizliği tamamlandı: {deleted_count} tekrarlı sonuç satırı silindi.")
+    return deleted_count
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -1622,6 +1722,7 @@ if __name__ == "__main__":
     parser.add_argument("--kesfet", action="store_true", help="Yeni canlı yarışları ileri ve geri tarayarak keşfet")
     parser.add_argument("--geri", type=int, default=DEFAULT_SCAN_BACK_LOOK, help=f"En yüksek ID'den geriye taranacak ID sayısı (varsayılan: {DEFAULT_SCAN_BACK_LOOK})")
     parser.add_argument("--ileri", type=int, default=DEFAULT_SCAN_WINDOW, help=f"En yüksek ID'den ileriye taranacak ID sayısı (varsayılan: {DEFAULT_SCAN_WINDOW})")
+    parser.add_argument("--temizle", nargs="?", const=-1, type=int, help="Mükerrer seri/kulvar sonuçlarını temizle (isteğe bağlı Event ID)")
 
     args = parser.parse_args()
 
@@ -1633,6 +1734,9 @@ if __name__ == "__main__":
             print(f"[+] 5 Saniyelik Canlı Takipçi AKTİF çalışıyor (PID: {pid}).")
         else:
             print("[-] Canlı Takipçi şu anda ÇALIŞMIYOR.")
+    elif args.temizle is not None:
+        ev_id = args.temizle if args.temizle > 0 else None
+        deduplicate_live_results(event_id=ev_id)
     elif args.baslat:
         start_daemon_background(poll_interval=args.interval)
     elif args.kesfet:
