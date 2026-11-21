@@ -635,13 +635,31 @@ class LocalLiveEngine:
             pending_starts.sort(key=lambda x: int(x["yaris_no"]) if x["yaris_no"].isdigit() else 9999)
             pending_results.sort(key=lambda x: int(x["yaris_no"]) if x["yaris_no"].isdigit() else 9999)
 
-            all_start_count = len([p for p in pdf_items if p["doc_type"] == "start_listesi"])
-            all_result_count = len([p for p in pdf_items if p["doc_type"] == "sonuc_listesi"])
+            current_start_names = {p["filename"] for p in pdf_items if p["doc_type"] == "start_listesi"}
+            current_result_names = {p["filename"] for p in pdf_items if p["doc_type"] == "sonuc_listesi"}
+            all_start_count = len(current_start_names)
+            all_result_count = len(current_result_names)
+
+            def _count_processed_current():
+                s_cnt = (
+                    CanliYarisDosya.objects.filter(
+                        canli_yaris=yaris, dosya_turu="START_LISTESI", durum="ISLENDI", dosya_adi__in=current_start_names
+                    ).count()
+                    if current_start_names
+                    else 0
+                )
+                r_cnt = (
+                    CanliYarisDosya.objects.filter(
+                        canli_yaris=yaris, dosya_turu="SONUC_LISTESI", durum="ISLENDI", dosya_adi__in=current_result_names
+                    ).count()
+                    if current_result_names
+                    else 0
+                )
+                return s_cnt, r_cnt
 
             # Yeni dosya yoksa: çok günlük yarış bitiş tarihi geçtiyse TAMAMLANDI'ya al, değilse sessizce çık
             if not pending_starts and not pending_results:
-                islenen_start = CanliYarisDosya.objects.filter(canli_yaris=yaris, dosya_turu="START_LISTESI", durum="ISLENDI").count()
-                islenen_sonuc = CanliYarisDosya.objects.filter(canli_yaris=yaris, dosya_turu="SONUC_LISTESI", durum="ISLENDI").count()
+                islenen_start, islenen_sonuc = _count_processed_current()
                 if _should_mark_meet_completed(
                     yaris, event, all_start_count, islenen_start, all_result_count, islenen_sonuc, has_errors=False
                 ):
@@ -708,8 +726,7 @@ class LocalLiveEngine:
                     stats["hatalar"].append(err)
 
             # İstatistikleri Güncelle
-            islenen_start = CanliYarisDosya.objects.filter(canli_yaris=yaris, dosya_turu="START_LISTESI", durum="ISLENDI").count()
-            islenen_sonuc = CanliYarisDosya.objects.filter(canli_yaris=yaris, dosya_turu="SONUC_LISTESI", durum="ISLENDI").count()
+            islenen_start, islenen_sonuc = _count_processed_current()
 
             yaris.toplam_start_listesi = all_start_count
             yaris.islenen_start_listesi = islenen_start
@@ -1483,20 +1500,34 @@ def _should_mark_meet_completed(
     """
     if has_errors:
         return False
-    if all_result_count <= 0 or islenen_sonuc < all_result_count:
+    if all_start_count > 0 and islenen_start < all_start_count:
         return False
-    if all_start_count > 0 and (islenen_start < all_start_count or islenen_sonuc < all_start_count):
+    if all_result_count > 0 and islenen_sonuc < all_result_count:
         return False
 
     _, end_iso = _get_meet_date_bounds(yaris, event)
     now_tr = get_current_tr_time()
-    today_iso = now_tr.date().isoformat()
+    today_date = now_tr.date()
+    today_iso = today_date.isoformat()
 
+    # Bitiş tarihinin üzerinden 2+ gün geçtiyse (iptal edilen yarış vb. yüzünden sonuç < start kalsa bile) kapat
     if end_iso:
+        try:
+            grace_end_iso = (datetime.strptime(end_iso, "%Y-%m-%d").date() + timedelta(days=2)).isoformat()
+            if today_iso >= grace_end_iso:
+                return True
+        except ValueError:
+            pass
+
         if today_iso < end_iso:
             return False
         if today_iso == end_iso and now_tr.hour < 20:
             return False
+
+    if all_result_count <= 0:
+        return False
+    if all_start_count > 0 and islenen_sonuc < all_start_count:
+        return False
 
     return True
 
