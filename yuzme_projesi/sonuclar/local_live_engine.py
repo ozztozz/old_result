@@ -1590,7 +1590,9 @@ def run_daemon_worker(poll_interval: int = DEFAULT_POLL_INTERVAL, end_hour: int 
                 break
 
             active_meets = list(
-                CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
+                CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"])
+                .select_related("event")
+                .order_by("-eklenen_kayit_sayisi", "-id")
             )
             if not active_meets:
                 logger.info("[*] Takipte aktif canlı yarış kalmadı. Daemon güvenle kapatılıyor.")
@@ -1644,7 +1646,9 @@ def run_local_live_worker(
     # Parametresiz çağrıda tüm aktif yarışları bir kez tara
     reopen_active_multiday_meets()
     active_meets = list(
-        CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
+        CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"])
+        .select_related("event")
+        .order_by("-eklenen_kayit_sayisi", "-id")
     )
     t_cat = time.perf_counter()
     catalogs = engine.prefetch_meet_catalogs(active_meets, max_workers=4)

@@ -51,8 +51,9 @@ def _live_meet_sort_key(m: CanliYaris, today_iso: str = ""):
     start_iso, end_iso = _extract_live_meet_dates(m)
     is_live_today = 1 if (today_iso and start_iso and end_iso and start_iso <= today_iso <= end_iso) else 0
     is_active = 1 if (m.durum or "").upper() in ("ISLENIYOR", "BEKLIYOR", "BEKLEMEDE") else 0
+    athlete_count = int(m.eklenen_kayit_sayisi or 0)
     ts = m.olusturulma_tarihi.timestamp() if m.olusturulma_tarihi else 0.0
-    return (is_live_today, is_active, start_iso or "", ts, m.id)
+    return (is_live_today, is_active, start_iso or "", athlete_count, ts, m.id)
 
 
 @require_GET
