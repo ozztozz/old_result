@@ -13,6 +13,7 @@ veritabanındaki Sporcu kayıtlarıyla eşleştirme yapar.
 from __future__ import annotations
 import re
 import time
+from functools import lru_cache
 from typing import Dict, Any, List, Optional, Tuple
 from django.db.models import Q
 from .models import Sporcu
@@ -123,6 +124,18 @@ def normalize_tr(s: Optional[str], keep_asterisks: bool = False) -> str:
     return re.sub(r'\s+', ' ', cleaned).strip()
 
 
+@lru_cache(maxsize=4096)
+def _compile_masked_token_regexes(m_tok: str) -> Tuple[re.Pattern, Optional[re.Pattern]]:
+    def _rep(match):
+        k = len(match.group())
+        return f'.{{1,{k + 1}}}'
+
+    regex_body = re.sub(r'\*+', _rep, m_tok)
+    rx_exact = re.compile(f'^{regex_body}$')
+    rx_prefix = re.compile(f'^{regex_body}') if len(m_tok) >= 4 else None
+    return rx_exact, rx_prefix
+
+
 def token_1to1_match(m_tok: str, c_tok: str, strict: bool = False) -> bool:
     """
     Maskeli token eşleştirmesi:
@@ -146,29 +159,19 @@ def token_1to1_match(m_tok: str, c_tok: str, strict: bool = False) -> bool:
     if strict:
         return False
 
-    def _rep(match):
-        k = len(match.group())
-        min_c = 1
-        max_c = k + 1
-        return f'.{{{min_c},{max_c}}}'
-
-    regex_body = re.sub(r'\*+', _rep, m_tok)
-    # 1. Tam bitiş eşleşmesi
-    pat_exact = f'^{regex_body}$'
     try:
-        if bool(re.match(pat_exact, c_tok)):
-            return True
+        rx_exact, rx_prefix = _compile_masked_token_regexes(m_tok)
     except Exception:
-        pass
+        return False
+
+    # 1. Tam bitiş eşleşmesi
+    if rx_exact.match(c_tok):
+        return True
 
     # 2. PDF tarafından kesilmiş/kırpılmış uzun soyadlar için önek (prefix) eşleşmesi (en az 4 karakter)
-    if len(c_tok) > len(m_tok) and len(m_tok) >= 4:
-        pat_prefix = f'^{regex_body}'
-        try:
-            if bool(re.match(pat_prefix, c_tok)):
-                return True
-        except Exception:
-            pass
+    if rx_prefix is not None and len(c_tok) > len(m_tok) and len(m_tok) >= 4:
+        if rx_prefix.match(c_tok):
+            return True
 
     return False
 

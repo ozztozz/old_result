@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 from datetime import datetime, timedelta, timezone as dt_timezone
+from django.db.models import Q
 from django.views.decorators.http import require_GET
 from sonuclar.models import CanliYaris, YarisSonucu
 from sonuclar.live_engine import parse_tr_date_range
@@ -64,8 +65,15 @@ def get_live_meets(request):
     week_ago_iso = (today_tr - timedelta(days=7)).isoformat()
     ten_days_ahead_iso = (today_tr + timedelta(days=10)).isoformat()
 
+    qs = (
+        CanliYaris.objects.select_related('event')
+        .filter(Q(toplam_start_listesi__gt=0) | Q(islenen_start_listesi__gt=0))
+        .exclude(event__yaris_tarihi_bitis__startswith='20', event__yaris_tarihi_bitis__lt=week_ago_iso)
+        .exclude(event__yaris_tarihi_baslangic__startswith='20', event__yaris_tarihi_baslangic__gt=ten_days_ahead_iso)
+    )
+
     filtered = []
-    for m in CanliYaris.objects.select_related('event').all():
+    for m in qs:
         # Start listesi olmayan (henüz boş) yarışları gösterme
         if (m.toplam_start_listesi or 0) <= 0 and (m.islenen_start_listesi or 0) <= 0:
             continue

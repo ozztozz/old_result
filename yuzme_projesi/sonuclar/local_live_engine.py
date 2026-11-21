@@ -23,6 +23,7 @@ Tamamen Yerel (Local) TYF Canlı Yarış Takip, Ayrıştırma ve Veritabanı Kay
 import os
 import sys
 import re
+import hashlib
 import time
 import signal
 import tempfile
@@ -328,6 +329,8 @@ class LocalLiveEngine:
         self._future_poll_interval: float = 300.0
         self._match_cache: Dict[Tuple[str, Any, str, str], Tuple[float, Optional[int]]] = {}
         self._match_cache_ttl: float = 600.0
+        self._html_cache: Dict[int, Dict[str, str]] = {}
+        self._club_cache: Dict[Tuple[str, bool], Any] = {}
 
     def _cached_match_athlete(
         self,
@@ -384,6 +387,7 @@ class LocalLiveEngine:
         self,
         meets: List[CanliYaris],
         max_workers: int = 4,
+        force: bool = False,
     ) -> Dict[int, Optional[Tuple[Dict[str, Any], List[Dict[str, str]]]]]:
         """Çok sayıda yarışın HTML kataloglarını paralel çekerek tarama süresini hızlandırır."""
         if not meets:
@@ -391,7 +395,7 @@ class LocalLiveEngine:
         catalogs: Dict[int, Optional[Tuple[Dict[str, Any], List[Dict[str, str]]]]] = {}
 
         def _fetch_one(y: CanliYaris):
-            return y.id, self.fetch_meet_pdf_catalog(y.canli_url)
+            return y.id, self.fetch_meet_pdf_catalog(y.canli_url, cache_id=y.id, force=force)
 
         workers = min(max_workers, len(meets))
         with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -405,12 +409,43 @@ class LocalLiveEngine:
                     logger.warning(f"  [!] Paralel katalog ön-çekme uyarısı (#{yid}): {exc}")
         return catalogs
 
-    def fetch_meet_pdf_catalog(self, base_url: str) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+    def fetch_meet_pdf_catalog(
+        self,
+        base_url: str,
+        cache_id: Optional[int] = None,
+        force: bool = False,
+    ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
         """
         TYF canlı sayfasını çekip başlık bilgileri ile tüm Start ve Sonuç PDF linklerini listeler.
+        cache_id verildiğinde 304 Not Modified ve MD5 hash ile değişmeyen sayfaları atlar.
         """
-        resp = self.session.get(base_url, timeout=(6, 15))
-        soup = BeautifulSoup(resp.content.decode("utf-8", errors="replace"), "html.parser")
+        req_headers = {}
+        cached_entry = self._html_cache.get(cache_id) if (cache_id is not None and not force) else None
+        if cached_entry:
+            if cached_entry.get("etag"):
+                req_headers["If-None-Match"] = cached_entry["etag"]
+            if cached_entry.get("last_modified"):
+                req_headers["If-Modified-Since"] = cached_entry["last_modified"]
+
+        resp = self.session.get(base_url, headers=req_headers or None, timeout=(6, 15))
+        if resp.status_code == 304 and cached_entry:
+            return {"__unchanged__": True, "canli_url": base_url}, []
+
+        raw_bytes = resp.content
+        md5_hex = hashlib.md5(raw_bytes).hexdigest() if cache_id is not None else ""
+        if cached_entry and md5_hex and cached_entry.get("md5") == md5_hex:
+            cached_entry["etag"] = (resp.headers.get("ETag") or cached_entry.get("etag") or "").strip()
+            cached_entry["last_modified"] = (resp.headers.get("Last-Modified") or cached_entry.get("last_modified") or "").strip()
+            return {"__unchanged__": True, "canli_url": base_url}, []
+
+        if cache_id is not None:
+            self._html_cache[cache_id] = {
+                "etag": (resp.headers.get("ETag") or "").strip(),
+                "last_modified": (resp.headers.get("Last-Modified") or "").strip(),
+                "md5": md5_hex,
+            }
+
+        soup = BeautifulSoup(raw_bytes.decode("utf-8", errors="replace"), "html.parser")
 
         title = soup.title.string.strip() if soup.title else ""
         title = re.sub(r"\s+", " ", title)
@@ -573,8 +608,27 @@ class LocalLiveEngine:
             meta, pdf_items = (
                 prefetched_catalog
                 if prefetched_catalog is not None
-                else self.fetch_meet_pdf_catalog(yaris.canli_url)
+                else self.fetch_meet_pdf_catalog(yaris.canli_url, cache_id=yaris.id, force=force)
             )
+            if meta.get("__unchanged__"):
+                # Sayfa 304/MD5 ile değişmediyse: yalnızca bitiş tarihi geçmiş yarışın kapanışını kontrol et
+                _, end_iso = _get_meet_date_bounds(yaris, yaris.event)
+                now_tr = get_current_tr_time()
+                today_iso = now_tr.date().isoformat()
+                if end_iso and (today_iso > end_iso or (today_iso == end_iso and now_tr.hour >= 20)):
+                    if _should_mark_meet_completed(
+                        yaris,
+                        yaris.event,
+                        int(yaris.toplam_start_listesi or 0),
+                        int(yaris.islenen_start_listesi or 0),
+                        int(yaris.toplam_sonuc_listesi or 0),
+                        int(yaris.islenen_sonuc_listesi or 0),
+                        has_errors=False,
+                    ):
+                        yaris.durum = "TAMAMLANDI"
+                        db_retry(lambda: yaris.save(update_fields=["durum"]))
+                        logger.info(f"  [✔] #{yaris.id} Müsabaka bitiş tarihi geçtiği ve tüm dosyalar işlendiği için TAMAMLANDI olarak kapatıldı.")
+                return stats
             yaris_update_fields = []
             if meta["musabaka_adi"] and not yaris.musabaka_adi:
                 yaris.musabaka_adi = meta["musabaka_adi"]
@@ -770,6 +824,9 @@ class LocalLiveEngine:
             yaris.eklenen_kayit_sayisi = (yaris.eklenen_kayit_sayisi or 0) + stats["eklenen_kayit"]
             yaris.son_islem_tarihi = timezone.now()
 
+            if stats["hatalar"]:
+                self._html_cache.pop(yaris.id, None)
+
             if _should_mark_meet_completed(
                 yaris, event, all_start_count, islenen_start, all_result_count, islenen_sonuc,
                 has_errors=bool(stats["hatalar"])
@@ -945,7 +1002,9 @@ class LocalLiveEngine:
         def _save_pdf_atomically() -> int:
             records_added = 0
             seen_result_ids: List[int] = []
-            club_cache: Dict[str, Any] = {}
+            if len(self._club_cache) >= 1000:
+                self._club_cache.clear()
+            club_cache = self._club_cache
             to_update_map: Dict[int, YarisSonucu] = {}
             bulk_update_fields: set = set()
             to_create_objs: List[YarisSonucu] = []
@@ -1049,11 +1108,12 @@ class LocalLiveEngine:
                         clean_club_str = ""
                     club_lookup_str = clean_club_str or raw_club
                     if club_lookup_str:
-                        if club_lookup_str in club_cache:
-                            club = club_cache[club_lookup_str]
+                        ck_key = (club_lookup_str, is_school)
+                        if ck_key in club_cache:
+                            club = club_cache[ck_key]
                         else:
                             club, _ = get_or_resolve_canonical_club(club_lookup_str, is_school=is_school)
-                            club_cache[club_lookup_str] = club
+                            club_cache[ck_key] = club
                     else:
                         club = None
 

@@ -25,6 +25,14 @@ class StartResultMatchingTests(TransactionTestCase):
             with connection.cursor() as cur:
                 cur.execute("PRAGMA foreign_keys = ON;")
 
+    def tearDown(self):
+        YarisSonucu.objects.all().delete()
+        CanliYarisDosya.objects.all().delete()
+        CanliYaris.objects.all().delete()
+        Event.objects.all().delete()
+        Sporcu.objects.all().delete()
+        Kulup.objects.all().delete()
+
     def setUp(self):
         self.club_ank = Kulup.objects.create(kulup_adi="Ankara Üniversitesi S.K.")
         self.club_nova = Kulup.objects.create(kulup_adi="Nova Akademi Spor Kulübü")
@@ -169,3 +177,56 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertEqual(YarisSonucu.objects.filter(event=self.event).count(), 5)
         self.assertEqual(YarisSonucu.objects.get(event=self.event, seri="1", kulvar=7).sporcu_id, self.sp_elif.id)
         self.assertEqual(YarisSonucu.objects.get(event=self.event, seri="1", kulvar=5).sporcu_id, self.sp_zeynep.id)
+
+    def test_html_304_and_md5_skip_and_views_live(self):
+        from types import SimpleNamespace
+        from django.test import RequestFactory
+        from mobile_api.views_live import get_live_meets
+
+        html_v1 = b"<html><title>TEST</title><body><a href='StartList_1.pdf?v=1'>S</a></body></html>"
+        html_v2 = b"<html><title>TEST</title><body><a href='StartList_1.pdf?v=1'>S</a><a href='ResultList_1.pdf?v=2'>R</a></body></html>"
+
+        responses = [
+            SimpleNamespace(status_code=200, content=html_v1, headers={"ETag": '"e1"', "Last-Modified": "Sat, 21 Nov 2026 10:00:00 GMT"}),
+            SimpleNamespace(status_code=304, content=b"", headers={}),
+            SimpleNamespace(status_code=200, content=html_v1, headers={"ETag": '"e1"'}),
+            SimpleNamespace(status_code=200, content=html_v2, headers={"ETag": '"e2"'}),
+        ]
+        sent_headers = []
+
+        def fake_get(url, headers=None, timeout=None):
+            sent_headers.append(headers or {})
+            return responses.pop(0)
+
+        with patch.object(self.engine.session, "get", side_effect=fake_get):
+            m1, items1 = self.engine.fetch_meet_pdf_catalog(self.yaris.canli_url, cache_id=self.yaris.id)
+            self.assertFalse(m1.get("__unchanged__", False))
+            self.assertEqual(len(items1), 1)
+
+            # 2. istek: 304 Not Modified -> atlanmalı ve If-None-Match gönderilmeli
+            m2, items2 = self.engine.fetch_meet_pdf_catalog(self.yaris.canli_url, cache_id=self.yaris.id)
+            self.assertTrue(m2.get("__unchanged__", False))
+            self.assertEqual(items2, [])
+            self.assertEqual(sent_headers[1].get("If-None-Match"), '"e1"')
+
+            # 3. istek: Sunucu 200 dönse bile aynı MD5 -> yine atlanmalı
+            m3, items3 = self.engine.fetch_meet_pdf_catalog(self.yaris.canli_url, cache_id=self.yaris.id)
+            self.assertTrue(m3.get("__unchanged__", False))
+
+            # 4. istek: HTML değişti -> yeniden ayrıştırılmalı
+            m4, items4 = self.engine.fetch_meet_pdf_catalog(self.yaris.canli_url, cache_id=self.yaris.id)
+            self.assertFalse(m4.get("__unchanged__", False))
+            self.assertEqual(len(items4), 2)
+
+        # Mobile API ön-filtresi testi: start listesi olmayan yarış gelmemeli, olan gelmeli
+        self.yaris.toplam_start_listesi = 1
+        self.yaris.save(update_fields=["toplam_start_listesi"])
+        rf = RequestFactory()
+        req = rf.get("/api/v1/live/")
+        resp = get_live_meets(req)
+        self.assertEqual(resp.status_code, 200)
+        import json
+        payload = json.loads(resp.content.decode("utf-8"))
+        self.assertEqual(len(payload["data"]), 1)
+        self.assertEqual(payload["data"][0]["id"], self.yaris.id)
+
