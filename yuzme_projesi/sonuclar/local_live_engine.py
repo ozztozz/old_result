@@ -121,7 +121,7 @@ if not logger.handlers:
 # Türkiye Zaman Dilimi (UTC+3)
 TR_TIMEZONE = dt_timezone(timedelta(hours=3))
 PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "local_live_worker.pid")
-DEFAULT_POLL_INTERVAL = 10  # 10 saniyelik anlık takip (TYF sunucu rate-limit dostu)
+DEFAULT_POLL_INTERVAL = 5  # 5 saniyelik anlık takip (304 Not Modified ile TYF dostu)
 
 
 def _normalize_gender(raw_gender: Optional[str]) -> Optional[str]:
