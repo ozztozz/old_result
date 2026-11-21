@@ -944,12 +944,38 @@ class LocalLiveEngine:
         def _save_pdf_atomically() -> int:
             records_added = 0
             seen_result_ids: List[int] = []
+            club_cache: Dict[str, Any] = {}
             with transaction.atomic():
                 dosya_obj, _ = CanliYarisDosya.objects.update_or_create(
                     canli_yaris=yaris,
                     dosya_adi=filename,
                     defaults=dosya_defaults
                 )
+
+                pre_qs = YarisSonucu.objects.filter(
+                    event=event,
+                    mesafe=mesafe,
+                    stil=stil,
+                    cinsiyet=cinsiyet,
+                ).select_related("sporcu", "kulup")
+                if yaris_no:
+                    pre_qs = pre_qs.filter(yaris_no=yaris_no)
+
+                existing_by_athlete: Dict[int, YarisSonucu] = {}
+                existing_by_lane_num: Dict[Tuple[int, int], YarisSonucu] = {}
+                existing_by_lane: Dict[Tuple[str, int], YarisSonucu] = {}
+                for row in pre_qs.order_by("-id"):
+                    if row.sporcu_id and row.sporcu_id not in existing_by_athlete:
+                        existing_by_athlete[row.sporcu_id] = row
+                    if row.seri and row.kulvar is not None:
+                        m_cs = re.search(r"\d+", str(row.seri))
+                        if m_cs:
+                            k_num = (int(m_cs.group()), row.kulvar)
+                            if k_num not in existing_by_lane_num:
+                                existing_by_lane_num[k_num] = row
+                        k_str = (str(row.seri).strip(), row.kulvar)
+                        if k_str not in existing_by_lane:
+                            existing_by_lane[k_str] = row
 
                 for s in raw_swimmers:
                     raw_name = (s.get("sporcu") or "").strip()
@@ -990,7 +1016,15 @@ class LocalLiveEngine:
                     clean_club_str = clean_club_name_tags(raw_club) if raw_club else ""
                     if clean_club_str and _INVALID_CLUB_RE.match(clean_club_str):
                         clean_club_str = ""
-                    club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school) if (clean_club_str or raw_club) else (None, False)
+                    club_lookup_str = clean_club_str or raw_club
+                    if club_lookup_str:
+                        if club_lookup_str in club_cache:
+                            club = club_cache[club_lookup_str]
+                        else:
+                            club, _ = get_or_resolve_canonical_club(club_lookup_str, is_school=is_school)
+                            club_cache[club_lookup_str] = club
+                    else:
+                        club = None
 
                     seri_val = s.get("seri")
                     kulvar_val = s.get("kulvar")
@@ -1178,23 +1212,12 @@ class LocalLiveEngine:
                     if yaris_no:
                         lookup_dict["yaris_no"] = yaris_no
 
-                    existing = YarisSonucu.objects.filter(**lookup_dict).order_by("-id").first()
+                    existing = existing_by_athlete.get(athlete.id)
                     if not existing and seri_val and kulvar_val is not None:
-                        lane_qs = YarisSonucu.objects.filter(
-                            event=event,
-                            mesafe=mesafe,
-                            stil=stil,
-                            cinsiyet=cinsiyet,
-                            kulvar=kulvar_val,
-                        )
-                        if yaris_no:
-                            lane_qs = lane_qs.filter(yaris_no=yaris_no)
-                        for cand in lane_qs.select_related("sporcu").order_by("-id"):
-                            c_seri_m = re.search(r"\d+", str(cand.seri or ""))
-                            c_seri_no = int(c_seri_m.group()) if c_seri_m else None
-                            if (seri_no and c_seri_no == seri_no) or (str(cand.seri or "").strip() == str(seri_val).strip()):
-                                existing = cand
-                                break
+                        if seri_no is not None:
+                            existing = existing_by_lane_num.get((seri_no, kulvar_val))
+                        if not existing:
+                            existing = existing_by_lane.get((str(seri_val).strip(), kulvar_val))
 
                     if existing:
                         if doc_type == "start_listesi" and existing.kaynak_turu == "CANLI_SONUC":
@@ -1220,18 +1243,24 @@ class LocalLiveEngine:
                             # Gerçek (maskesiz) sporcuyu asla yeni bir 'Maskeli sporcu' ile ezme
                             existing_is_masked = bool(existing.sporcu and existing.sporcu.sporcu_adi.startswith("Maskeli sporcu"))
                             new_is_masked = bool(athlete and athlete.sporcu_adi.startswith("Maskeli sporcu"))
-                            if not existing_is_masked and new_is_masked:
-                                pass
-                            elif existing_is_masked and not new_is_masked:
+                            dirty_fields: List[str] = []
+                            if existing_is_masked and not new_is_masked:
                                 existing.sporcu = athlete
+                                dirty_fields.append("sporcu")
                             for k_f, v_f in defaults_dict.items():
-                                setattr(existing, k_f, v_f)
-                            existing.save()
+                                if getattr(existing, k_f) != v_f:
+                                    setattr(existing, k_f, v_f)
+                                    dirty_fields.append(k_f)
+                            if dirty_fields:
+                                existing.save(update_fields=dirty_fields)
                         seen_result_ids.append(existing.id)
                         created = False
                     else:
                         create_kwargs = {**lookup_dict, **defaults_dict}
                         new_obj = YarisSonucu.objects.create(**create_kwargs)
+                        existing_by_athlete[new_obj.sporcu_id] = new_obj
+                        if seri_no is not None and kulvar_val is not None:
+                            existing_by_lane_num[(seri_no, kulvar_val)] = new_obj
                         seen_result_ids.append(new_obj.id)
                         created = True
                     if created:
