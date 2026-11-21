@@ -326,6 +326,41 @@ class LocalLiveEngine:
         self._head_check_interval: float = 300.0
         self._last_future_poll: Dict[int, float] = {}
         self._future_poll_interval: float = 300.0
+        self._match_cache: Dict[Tuple[str, Any, str, str], Tuple[float, Optional[int]]] = {}
+        self._match_cache_ttl: float = 600.0
+
+    def _cached_match_athlete(
+        self,
+        clean_name: str,
+        birth_year: Any,
+        club_str: str,
+        gender: Optional[str],
+    ) -> Optional[int]:
+        """match_athlete sonuçlarını (ve negatif/bulunamayanları) 10 dk önbellekte tutar."""
+        key = (clean_name, birth_year, club_str or "", gender or "")
+        now_ts = time.monotonic()
+        cached = self._match_cache.get(key)
+        if cached and (now_ts - cached[0]) < self._match_cache_ttl:
+            return cached[1]
+
+        match_res = match_athlete(
+            clean_name,
+            birth_year_or_date=birth_year,
+            club=club_str,
+            gender=gender,
+        )
+        found_id = match_res.get("bulunan_id")
+        if not found_id and match_res.get("muhtemel_eslesmeler"):
+            cands = match_res["muhtemel_eslesmeler"]
+            norm_names = {normalize_tr(c.get("sporcu_adi") or "") for c in cands if c.get("sporcu_adi")}
+            if len(norm_names) == 1 and float(cands[0].get("benzerlik_orani") or 0) >= 85.0:
+                best = max(cands, key=lambda c: (int(c.get("toplam_yaris_sayisi") or 0), -int(c.get("id") or 0)))
+                found_id = best.get("id")
+
+        if len(self._match_cache) >= 4000:
+            self._match_cache.clear()
+        self._match_cache[key] = (now_ts, found_id)
+        return found_id
 
     def filter_due_meets(self, meets: List[CanliYaris], today_iso: str) -> List[CanliYaris]:
         """Başlangıç tarihi gelecekte olan ve start listeleri tamamlanmış yarışları 5 dk'da bir tarar."""
@@ -875,57 +910,6 @@ class LocalLiveEngine:
             "son_islem_tarihi": timezone.now(),
         }
 
-        cross_unmasked = {}
-        cross_by_lane = {}
-        cross_by_masked = {}
-        all_start_cands = []
-        if doc_type == "sonuc_listesi":
-            start_dosya = None
-            if yaris_no:
-                start_dosya = CanliYarisDosya.objects.filter(
-                    canli_yaris=yaris,
-                    dosya_turu="START_LISTESI",
-                    yaris_no=yaris_no
-                ).first()
-            if not start_dosya and mesafe and stil and cinsiyet:
-                start_dosya = CanliYarisDosya.objects.filter(
-                    canli_yaris=yaris,
-                    dosya_turu="START_LISTESI",
-                    mesafe=mesafe,
-                    stil=stil,
-                    cinsiyet=cinsiyet
-                ).first()
-            prev_qs = YarisSonucu.objects.filter(canli_dosya=start_dosya).select_related("sporcu", "kulup") if start_dosya else YarisSonucu.objects.none()
-            if not prev_qs.exists() and event:
-                if yaris_no:
-                    prev_qs = YarisSonucu.objects.filter(event=event, yaris_no=yaris_no).select_related("sporcu", "kulup")
-                elif mesafe and stil and cinsiyet:
-                    prev_qs = YarisSonucu.objects.filter(event=event, mesafe=mesafe, stil=stil, cinsiyet=cinsiyet).select_related("sporcu", "kulup")
-            for prev_s in prev_qs:
-                if prev_s.sporcu:
-                    cand_tuple = (
-                        prev_s.sporcu,
-                        prev_s.sporcu_maskeli or "",
-                        prev_s.kulup_id,
-                        str(prev_s.sporcu.dogum_yili or ""),
-                    )
-                    all_start_cands.append(cand_tuple)
-                    if prev_s.sporcu_maskeli:
-                        m_key = normalize_tr(prev_s.sporcu_maskeli, keep_asterisks=True)
-                        if m_key:
-                            cross_by_masked.setdefault(m_key, []).append(cand_tuple)
-                    if prev_s.kulvar:
-                        if prev_s.seri:
-                            m_s = re.search(r"\d+", str(prev_s.seri))
-                            s_no = int(m_s.group()) if m_s else None
-                            if s_no:
-                                cross_unmasked[(s_no, prev_s.kulvar)] = (
-                                    prev_s.sporcu,
-                                    prev_s.sporcu_maskeli or "",
-                                    prev_s.kulup_id,
-                                )
-                        cross_by_lane.setdefault(prev_s.kulvar, []).append(cand_tuple)
-
         def _vis_chars(txt: str) -> str:
             return re.sub(r"[\*\s]+", "", normalize_tr(txt, keep_asterisks=True))
 
@@ -962,6 +946,10 @@ class LocalLiveEngine:
             records_added = 0
             seen_result_ids: List[int] = []
             club_cache: Dict[str, Any] = {}
+            cross_unmasked = {}
+            cross_by_lane = {}
+            cross_by_masked = {}
+            all_start_cands = []
             with transaction.atomic():
                 dosya_obj, _ = CanliYarisDosya.objects.update_or_create(
                     canli_yaris=yaris,
@@ -974,7 +962,7 @@ class LocalLiveEngine:
                     mesafe=mesafe,
                     stil=stil,
                     cinsiyet=cinsiyet,
-                ).select_related("sporcu", "kulup")
+                ).select_related("sporcu", "kulup", "sporcu__birincil_kulup")
                 if yaris_no:
                     pre_qs = pre_qs.filter(yaris_no=yaris_no)
 
@@ -984,15 +972,38 @@ class LocalLiveEngine:
                 for row in pre_qs.order_by("-id"):
                     if row.sporcu_id and row.sporcu_id not in existing_by_athlete:
                         existing_by_athlete[row.sporcu_id] = row
+                    s_num = None
                     if row.seri and row.kulvar is not None:
                         m_cs = re.search(r"\d+", str(row.seri))
                         if m_cs:
-                            k_num = (int(m_cs.group()), row.kulvar)
+                            s_num = int(m_cs.group())
+                            k_num = (s_num, row.kulvar)
                             if k_num not in existing_by_lane_num:
                                 existing_by_lane_num[k_num] = row
                         k_str = (str(row.seri).strip(), row.kulvar)
                         if k_str not in existing_by_lane:
                             existing_by_lane[k_str] = row
+
+                    if doc_type == "sonuc_listesi" and row.sporcu:
+                        cand_tuple = (
+                            row.sporcu,
+                            row.sporcu_maskeli or "",
+                            row.kulup_id,
+                            str(row.sporcu.dogum_yili or ""),
+                        )
+                        all_start_cands.append(cand_tuple)
+                        if row.sporcu_maskeli:
+                            m_key = normalize_tr(row.sporcu_maskeli, keep_asterisks=True)
+                            if m_key:
+                                cross_by_masked.setdefault(m_key, []).append(cand_tuple)
+                        if row.kulvar:
+                            if s_num and (s_num, row.kulvar) not in cross_unmasked:
+                                cross_unmasked[(s_num, row.kulvar)] = (
+                                    row.sporcu,
+                                    row.sporcu_maskeli or "",
+                                    row.kulup_id,
+                                )
+                            cross_by_lane.setdefault(row.kulvar, []).append(cand_tuple)
 
                 for s in raw_swimmers:
                     raw_name = (s.get("sporcu") or "").strip()
@@ -1105,6 +1116,12 @@ class LocalLiveEngine:
                             elif st_mask:
                                 clean_name = st_mask
 
+                    #    d) (Seri, Kulvar) mevcut DB kaydında zaten gerçek sporcu varsa doğrudan onu kullan
+                    if not athlete and seri_no and kulvar_val is not None:
+                        lane_row = existing_by_lane_num.get((seri_no, kulvar_val))
+                        if lane_row and lane_row.sporcu and not lane_row.sporcu.sporcu_adi.startswith("Maskeli sporcu"):
+                            athlete = lane_row.sporcu
+
                     # Sonuç listesinde kulüp boşsa (ör. EXH/DSQ) StartList'teki kulübü miras al
                     if not club and matched_start_club_id:
                         club = Kulup.objects.filter(id=matched_start_club_id).first()
@@ -1120,27 +1137,20 @@ class LocalLiveEngine:
                                 birincil_kulup=club,
                             )
 
-                    # 3. Veritabanından Unmasking (Maske Kaldırma)
+                    # 3. Veritabanından Unmasking (Maske Kaldırma - Önbellekli)
                     if not athlete and clean_name and "," not in clean_name:
-                        match_res = match_athlete(
+                        found_id = self._cached_match_athlete(
                             clean_name,
-                            birth_year_or_date=birth_year,
-                            club=clean_club_str or raw_club,
+                            birth_year=birth_year,
+                            club_str=clean_club_str or raw_club,
                             gender=None if cinsiyet == "Karma" else cinsiyet,
                         )
-                        if match_res.get("bulunan_id"):
-                            athlete = Sporcu.objects.filter(id=match_res["bulunan_id"]).first()
-                        elif match_res.get("muhtemel_eslesmeler"):
-                            cands = match_res["muhtemel_eslesmeler"]
-                            norm_names = {normalize_tr(c.get("sporcu_adi") or "") for c in cands if c.get("sporcu_adi")}
-                            if len(norm_names) == 1 and float(cands[0].get("benzerlik_orani") or 0) >= 85.0:
-                                best = max(cands, key=lambda c: (int(c.get("toplam_yaris_sayisi") or 0), -int(c.get("id") or 0)))
-                                if best.get("id"):
-                                    athlete = Sporcu.objects.filter(id=best["id"]).first()
+                        if found_id:
+                            athlete = Sporcu.objects.filter(id=found_id).select_related("birincil_kulup").first()
 
-                    # Sonuç listesinde kulüp hâlâ boşsa ve gerçek sporcu eşleştiyse aktif kulübünü kullan
+                    # Sonuç listesinde kulüp hâlâ boşsa ve gerçek sporcu eşleştiyse birincil/aktif kulübünü kullan
                     if not club and athlete and not athlete.sporcu_adi.startswith("Maskeli sporcu"):
-                        club = athlete.aktif_kulup() or athlete.birincil_kulup
+                        club = athlete.birincil_kulup or athlete.aktif_kulup()
 
                     # 4. Bulunamazsa Maskeli Sporcu Kaydı
                     if not athlete:
