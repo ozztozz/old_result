@@ -313,17 +313,17 @@ class LocalLiveEngine:
         self.session.verify = False
         self.session.headers.update(self.headers)
         retry_strategy = Retry(
-            total=3,
-            connect=3,
-            read=2,
-            backoff_factor=1.0,
+            total=2,
+            connect=1,
+            read=1,
+            backoff_factor=0.5,
             status_forcelist=[429, 500, 502, 503, 504],
         )
         adapter = HTTPAdapter(pool_connections=16, pool_maxsize=16, max_retries=retry_strategy)
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
         self._last_head_check: Dict[int, float] = {}
-        self._head_check_interval: float = 45.0
+        self._head_check_interval: float = 300.0
         self._last_future_poll: Dict[int, float] = {}
         self._future_poll_interval: float = 300.0
 
@@ -374,7 +374,7 @@ class LocalLiveEngine:
         """
         TYF canlı sayfasını çekip başlık bilgileri ile tüm Start ve Sonuç PDF linklerini listeler.
         """
-        resp = self.session.get(base_url, timeout=(15, 25))
+        resp = self.session.get(base_url, timeout=(6, 15))
         soup = BeautifulSoup(resp.content.decode("utf-8", errors="replace"), "html.parser")
 
         title = soup.title.string.strip() if soup.title else ""
@@ -593,7 +593,13 @@ class LocalLiveEngine:
             now_ts = time.time()
             remote_headers: Dict[str, Dict[str, Any]] = {}
             if not force and known_files and (now_ts - self._last_head_check.get(yaris.id, 0.0) >= self._head_check_interval):
-                check_urls = [p["url"] for p in pdf_items if p["filename"] in known_files]
+                # Splash '?v=...' parametresi olan linklerde değişiklik HTML URL'sinden 0 istekle anlaşılır;
+                # yalnızca '?v=' içermeyen statik URL'ler için HEAD isteği at (TYF rate-limit koruması).
+                check_urls = [
+                    p["url"]
+                    for p in pdf_items
+                    if p["filename"] in known_files and "?v=" not in p["url"].lower()
+                ]
                 if check_urls:
                     remote_headers = fetch_remote_headers_map(check_urls)
                 self._last_head_check[yaris.id] = now_ts
@@ -741,7 +747,7 @@ class LocalLiveEngine:
     def _download_and_parse_pdf(self, item: Dict[str, str], doc_type: str) -> Dict[str, Any]:
         """PDF'i indirip yerel PyMuPDF parser ile çözer (thread-safe, DB yazmaz)."""
         url = item["url"]
-        resp = self.session.get(url, timeout=(15, 25))
+        resp = self.session.get(url, timeout=(6, 15))
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code}")
 
