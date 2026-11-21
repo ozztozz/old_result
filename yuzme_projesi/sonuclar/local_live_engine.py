@@ -946,6 +946,9 @@ class LocalLiveEngine:
             records_added = 0
             seen_result_ids: List[int] = []
             club_cache: Dict[str, Any] = {}
+            to_update_map: Dict[int, YarisSonucu] = {}
+            bulk_update_fields: set = set()
+            to_create_objs: List[YarisSonucu] = []
             cross_unmasked = {}
             cross_by_lane = {}
             cross_by_masked = {}
@@ -1274,7 +1277,11 @@ class LocalLiveEngine:
                             existing = existing_by_lane.get((str(seri_val).strip(), kulvar_val))
 
                     if existing:
-                        if doc_type == "start_listesi" and existing.kaynak_turu == "CANLI_SONUC":
+                        if existing.pk is None:
+                            # Aynı PDF içinde henüz bulk_create edilmemiş satır: yalnızca bellekte güncelle
+                            for k_f, v_f in defaults_dict.items():
+                                setattr(existing, k_f, v_f)
+                        elif doc_type == "start_listesi" and existing.kaynak_turu == "CANLI_SONUC":
                             # Mevcut sonuç derecesini StartList ile ezme; sadece eksik başlangıç bilgilerini tamamla
                             update_fields = []
                             if defaults_dict.get("giris_derecesi") and not existing.giris_derecesi:
@@ -1292,7 +1299,8 @@ class LocalLiveEngine:
                                 existing.sporcu = athlete
                                 update_fields.append("sporcu")
                             if update_fields:
-                                existing.save(update_fields=update_fields)
+                                to_update_map[existing.id] = existing
+                                bulk_update_fields.update(update_fields)
                         else:
                             # Gerçek (maskesiz) sporcuyu asla yeni bir 'Maskeli sporcu' ile ezme
                             existing_is_masked = bool(existing.sporcu and existing.sporcu.sporcu_adi.startswith("Maskeli sporcu"))
@@ -1306,19 +1314,31 @@ class LocalLiveEngine:
                                     setattr(existing, k_f, v_f)
                                     dirty_fields.append(k_f)
                             if dirty_fields:
-                                existing.save(update_fields=dirty_fields)
-                        seen_result_ids.append(existing.id)
-                        created = False
+                                to_update_map[existing.id] = existing
+                                bulk_update_fields.update(dirty_fields)
+                        if existing.id:
+                            seen_result_ids.append(existing.id)
                     else:
                         create_kwargs = {**lookup_dict, **defaults_dict}
-                        new_obj = YarisSonucu.objects.create(**create_kwargs)
+                        new_obj = YarisSonucu(**create_kwargs)
+                        to_create_objs.append(new_obj)
                         existing_by_athlete[new_obj.sporcu_id] = new_obj
                         if seri_no is not None and kulvar_val is not None:
                             existing_by_lane_num[(seri_no, kulvar_val)] = new_obj
-                        seen_result_ids.append(new_obj.id)
-                        created = True
-                    if created:
                         records_added += 1
+
+                if to_update_map and bulk_update_fields:
+                    YarisSonucu.objects.bulk_update(
+                        list(to_update_map.values()),
+                        list(bulk_update_fields),
+                        batch_size=500,
+                    )
+
+                if to_create_objs:
+                    created_objs = YarisSonucu.objects.bulk_create(to_create_objs, batch_size=500)
+                    for co in created_objs:
+                        if co.id:
+                            seen_result_ids.append(co.id)
 
                 if seen_result_ids:
                     stale_source = "CANLI_START_LISTESI" if doc_type == "start_listesi" else "CANLI_SONUC"
