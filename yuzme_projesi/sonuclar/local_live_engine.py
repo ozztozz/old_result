@@ -120,7 +120,7 @@ if not logger.handlers:
 # Türkiye Zaman Dilimi (UTC+3)
 TR_TIMEZONE = dt_timezone(timedelta(hours=3))
 PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "local_live_worker.pid")
-DEFAULT_POLL_INTERVAL = 5  # 5 saniyelik anlık takip
+DEFAULT_POLL_INTERVAL = 10  # 10 saniyelik anlık takip (TYF sunucu rate-limit dostu)
 
 
 def _normalize_gender(raw_gender: Optional[str]) -> Optional[str]:
@@ -348,32 +348,33 @@ class LocalLiveEngine:
     def prefetch_meet_catalogs(
         self,
         meets: List[CanliYaris],
-        max_workers: int = 6,
-    ) -> Dict[int, Tuple[Dict[str, Any], List[Dict[str, str]]]]:
-        """Çok sayıda yarışın HTML kataloglarını paralel çekerek tarama süresini ~10x hızlandırır."""
+        max_workers: int = 4,
+    ) -> Dict[int, Optional[Tuple[Dict[str, Any], List[Dict[str, str]]]]]:
+        """Çok sayıda yarışın HTML kataloglarını paralel çekerek tarama süresini hızlandırır."""
         if not meets:
             return {}
-        catalogs: Dict[int, Tuple[Dict[str, Any], List[Dict[str, str]]]] = {}
+        catalogs: Dict[int, Optional[Tuple[Dict[str, Any], List[Dict[str, str]]]]] = {}
 
         def _fetch_one(y: CanliYaris):
             return y.id, self.fetch_meet_pdf_catalog(y.canli_url)
 
         workers = min(max_workers, len(meets))
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(_fetch_one, y) for y in meets]
-            for fut in as_completed(futures):
+            future_map = {executor.submit(_fetch_one, y): y.id for y in meets}
+            for fut, yid in future_map.items():
                 try:
-                    yid, cat = fut.result()
+                    _, cat = fut.result()
                     catalogs[yid] = cat
                 except Exception as exc:
-                    logger.warning(f"  [!] Paralel katalog ön-çekme uyarısı: {exc}")
+                    catalogs[yid] = None
+                    logger.warning(f"  [!] Paralel katalog ön-çekme uyarısı (#{yid}): {exc}")
         return catalogs
 
     def fetch_meet_pdf_catalog(self, base_url: str) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
         """
         TYF canlı sayfasını çekip başlık bilgileri ile tüm Start ve Sonuç PDF linklerini listeler.
         """
-        resp = self.session.get(base_url, timeout=10)
+        resp = self.session.get(base_url, timeout=(15, 25))
         soup = BeautifulSoup(resp.content.decode("utf-8", errors="replace"), "html.parser")
 
         title = soup.title.string.strip() if soup.title else ""
@@ -1591,8 +1592,10 @@ def run_daemon_worker(poll_interval: int = DEFAULT_POLL_INTERVAL, end_hour: int 
 
             due_meets = engine.filter_due_meets(active_meets, now.date().isoformat())
             if due_meets:
-                catalogs = engine.prefetch_meet_catalogs(due_meets, max_workers=8)
+                catalogs = engine.prefetch_meet_catalogs(due_meets, max_workers=4)
                 for yaris in due_meets:
+                    if yaris.id in catalogs and catalogs[yaris.id] is None:
+                        continue
                     engine.process_meet(yaris, force=False, prefetched_catalog=catalogs.get(yaris.id))
 
             time.sleep(poll_interval)
@@ -1638,11 +1641,13 @@ def run_local_live_worker(
         CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
     )
     t_cat = time.perf_counter()
-    catalogs = engine.prefetch_meet_catalogs(active_meets, max_workers=8)
+    catalogs = engine.prefetch_meet_catalogs(active_meets, max_workers=4)
     if active_meets:
-        logger.info(f"[⚡] {len(active_meets)} yarış kataloğu {min(8, len(active_meets))} paralel iş parçacığıyla {time.perf_counter() - t_cat:.2f} sn'de çekildi.")
+        logger.info(f"[⚡] {len(active_meets)} yarış kataloğu {min(4, len(active_meets))} paralel iş parçacığıyla {time.perf_counter() - t_cat:.2f} sn'de çekildi.")
     results = []
     for y in active_meets:
+        if y.id in catalogs and catalogs[y.id] is None:
+            continue
         results.append(engine.process_meet(y, force=force, prefetched_catalog=catalogs.get(y.id)))
     return results
 
