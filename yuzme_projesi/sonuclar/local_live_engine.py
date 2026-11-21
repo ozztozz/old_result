@@ -47,6 +47,7 @@ if not apps.ready:
 import requests
 from requests.adapters import HTTPAdapter
 import urllib3
+from urllib3.util.retry import Retry
 import time
 from bs4 import BeautifulSoup
 from django.db import transaction, connection
@@ -311,7 +312,14 @@ class LocalLiveEngine:
         self.session = requests.Session()
         self.session.verify = False
         self.session.headers.update(self.headers)
-        adapter = HTTPAdapter(pool_connections=32, pool_maxsize=32)
+        retry_strategy = Retry(
+            total=3,
+            connect=3,
+            read=2,
+            backoff_factor=1.0,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(pool_connections=16, pool_maxsize=16, max_retries=retry_strategy)
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
         self._last_head_check: Dict[int, float] = {}
@@ -340,7 +348,7 @@ class LocalLiveEngine:
     def prefetch_meet_catalogs(
         self,
         meets: List[CanliYaris],
-        max_workers: int = 8,
+        max_workers: int = 6,
     ) -> Dict[int, Tuple[Dict[str, Any], List[Dict[str, str]]]]:
         """Çok sayıda yarışın HTML kataloglarını paralel çekerek tarama süresini ~10x hızlandırır."""
         if not meets:
@@ -653,7 +661,7 @@ class LocalLiveEngine:
                 + [("sonuc_listesi", it) for it in pending_results]
             )
             prefetched_map = (
-                self._prefetch_parsed_pdfs(all_pending_items, max_workers=8)
+                self._prefetch_parsed_pdfs(all_pending_items, max_workers=4)
                 if len(all_pending_items) > 1
                 else {}
             )
@@ -732,7 +740,7 @@ class LocalLiveEngine:
     def _download_and_parse_pdf(self, item: Dict[str, str], doc_type: str) -> Dict[str, Any]:
         """PDF'i indirip yerel PyMuPDF parser ile çözer (thread-safe, DB yazmaz)."""
         url = item["url"]
-        resp = self.session.get(url, timeout=12)
+        resp = self.session.get(url, timeout=(15, 25))
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code}")
 
