@@ -1066,7 +1066,9 @@ class LocalLiveEngine:
                             seri_no = int(m_s.group())
 
                     athlete = None
-                    matched_start_club_id = None
+                    matched_masked_sp = None
+                    matched_start_mask = ""
+                    matched_start_club = None
                     # 1. StartList Çapraz Eşleşmesi:
                     #    a) Öncelikle StartList'teki maskeli isim anahtarıyla eşleştir
                     if "*" in clean_name and cross_by_masked:
@@ -1074,33 +1076,38 @@ class LocalLiveEngine:
                         picked = _narrow_cross_cands(cross_by_masked.get(m_key), club.id if club else None, birth_year, clean_name)
                         if picked:
                             st_sp, st_mask, st_club_id, _ = picked
-                            matched_start_club_id = st_club_id
+                            matched_start_club = matched_start_club or (st_club_id and existing_by_athlete.get(st_sp.id).kulup if st_sp and st_sp.id in existing_by_athlete else None)
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
-                            elif st_mask:
-                                clean_name = st_mask
+                            elif st_sp:
+                                matched_masked_sp = st_sp
+                                matched_start_mask = st_mask or ""
 
                     #    b) Eşleşmezse (K/S) veya seri yoksa Kulvar + Kulüp/Yıl üzerinden dene
                     if not athlete:
                         if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
                             st_sp, st_mask, st_club_id = cross_unmasked[(seri_no, kulvar_val)]
-                            matched_start_club_id = matched_start_club_id or st_club_id
+                            if not matched_start_club and st_sp and st_sp.id in existing_by_athlete:
+                                matched_start_club = existing_by_athlete[st_sp.id].kulup
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
-                            elif st_mask:
-                                clean_name = st_mask
+                            elif st_sp and not matched_masked_sp:
+                                matched_masked_sp = st_sp
+                                matched_start_mask = st_mask or ""
                         elif not seri_no and kulvar_val and kulvar_val in cross_by_lane:
                             picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year, clean_name)
                             if picked:
                                 st_sp, st_mask, st_club_id, _ = picked
-                                matched_start_club_id = matched_start_club_id or st_club_id
+                                if not matched_start_club and st_sp and st_sp.id in existing_by_athlete:
+                                    matched_start_club = existing_by_athlete[st_sp.id].kulup
                                 if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                     athlete = st_sp
-                                elif st_mask:
-                                    clean_name = st_mask
+                                elif st_sp and not matched_masked_sp:
+                                    matched_masked_sp = st_sp
+                                    matched_start_mask = st_mask or ""
 
                     #    c) Hâlâ eşleşmediyse (ör. DSQ/kulvar yok veya maske harfi kırpılmışsa) tüm StartList havuzunda ara
-                    if not athlete and all_start_cands:
+                    if not athlete and not matched_masked_sp and all_start_cands:
                         picked = _narrow_cross_cands(
                             all_start_cands,
                             club.id if club else None,
@@ -1110,24 +1117,32 @@ class LocalLiveEngine:
                         )
                         if picked:
                             st_sp, st_mask, st_club_id, _ = picked
-                            matched_start_club_id = matched_start_club_id or st_club_id
+                            if not matched_start_club and st_sp and st_sp.id in existing_by_athlete:
+                                matched_start_club = existing_by_athlete[st_sp.id].kulup
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
-                            elif st_mask:
-                                clean_name = st_mask
+                            elif st_sp:
+                                matched_masked_sp = st_sp
+                                matched_start_mask = st_mask or ""
 
-                    #    d) (Seri, Kulvar) mevcut DB kaydında zaten gerçek sporcu varsa doğrudan onu kullan
+                    #    d) (Seri, Kulvar) mevcut DB kaydında zaten sporcu varsa doğrudan onu kullan
                     if not athlete and seri_no and kulvar_val is not None:
                         lane_row = existing_by_lane_num.get((seri_no, kulvar_val))
-                        if lane_row and lane_row.sporcu and not lane_row.sporcu.sporcu_adi.startswith("Maskeli sporcu"):
-                            athlete = lane_row.sporcu
+                        if lane_row and lane_row.sporcu:
+                            if not matched_start_club and lane_row.kulup:
+                                matched_start_club = lane_row.kulup
+                            if not lane_row.sporcu.sporcu_adi.startswith("Maskeli sporcu"):
+                                athlete = lane_row.sporcu
+                            elif not matched_masked_sp:
+                                matched_masked_sp = lane_row.sporcu
+                                matched_start_mask = lane_row.sporcu_maskeli or ""
 
-                    # Sonuç listesinde kulüp boşsa (ör. EXH/DSQ) StartList'teki kulübü miras al
-                    if not club and matched_start_club_id:
-                        club = Kulup.objects.filter(id=matched_start_club_id).first()
+                    # Sonuç listesinde kulüp boşsa (ör. EXH/DSQ) StartList'teki kulübü bellekten miras al
+                    if not club and matched_start_club:
+                        club = matched_start_club
 
                     # 2. Bayrak / Relay Takımı Eşleşmesi
-                    if not athlete and (is_bayrak or "(tk)" in raw_name.lower()):
+                    if not athlete and not matched_masked_sp and (is_bayrak or "(tk)" in raw_name.lower()):
                         team_name = clean_name or (club.kulup_adi if club else "Takım")
                         athlete = Sporcu.objects.filter(sporcu_adi=team_name).first()
                         if not athlete:
@@ -1137,7 +1152,16 @@ class LocalLiveEngine:
                                 birincil_kulup=club,
                             )
 
-                    # 3. Veritabanından Unmasking (Maske Kaldırma - Önbellekli)
+                    # 3. Veritabanından Unmasking:
+                    #    StartList'te zaten Maskeli sporcu olarak kayıtlıysa tekrar DB'ye gitme;
+                    #    yalnızca StartList'te hiç yoksa (yedek/yeni) veya ResultList açık/daha net isim veriyorsa DB'de ara.
+                    if not athlete and matched_masked_sp:
+                        result_is_clearer = ("*" not in clean_name) or (
+                            matched_start_mask and len(_vis_chars(clean_name)) > len(_vis_chars(matched_start_mask)) + 1
+                        )
+                        if not result_is_clearer:
+                            athlete = matched_masked_sp
+
                     if not athlete and clean_name and "," not in clean_name:
                         found_id = self._cached_match_athlete(
                             clean_name,
@@ -1147,6 +1171,9 @@ class LocalLiveEngine:
                         )
                         if found_id:
                             athlete = Sporcu.objects.filter(id=found_id).select_related("birincil_kulup").first()
+
+                    if not athlete and matched_masked_sp:
+                        athlete = matched_masked_sp
 
                     # Sonuç listesinde kulüp hâlâ boşsa ve gerçek sporcu eşleştiyse birincil/aktif kulübünü kullan
                     if not club and athlete and not athlete.sporcu_adi.startswith("Maskeli sporcu"):
