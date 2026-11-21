@@ -1107,15 +1107,20 @@ class LocalLiveEngine:
                     if clean_club_str and _INVALID_CLUB_RE.match(clean_club_str):
                         clean_club_str = ""
                     club_lookup_str = clean_club_str or raw_club
-                    if club_lookup_str:
+
+                    def _resolve_club_lazy():
+                        if not club_lookup_str:
+                            return None
                         ck_key = (club_lookup_str, is_school)
                         if ck_key in club_cache:
-                            club = club_cache[ck_key]
-                        else:
-                            club, _ = get_or_resolve_canonical_club(club_lookup_str, is_school=is_school)
-                            club_cache[ck_key] = club
-                    else:
-                        club = None
+                            return club_cache[ck_key]
+                        c_obj, _ = get_or_resolve_canonical_club(club_lookup_str, is_school=is_school)
+                        club_cache[ck_key] = c_obj
+                        return c_obj
+
+                    # ResultList'te kulüp bilgisini baştan DB'den çözme; StartList zaten çözmüş durumda.
+                    # Yalnızca StartList işlenirken (veya ResultList'te yeni/eksik kulüp gerektiğinde) çöz.
+                    club = _resolve_club_lazy() if doc_type == "start_listesi" else None
 
                     seri_val = s.get("seri")
                     kulvar_val = s.get("kulvar")
@@ -1206,6 +1211,8 @@ class LocalLiveEngine:
 
                     # 2. Bayrak / Relay Takımı Eşleşmesi
                     if not athlete and not matched_masked_sp and (is_bayrak or "(tk)" in raw_name.lower()):
+                        if not club and club_lookup_str:
+                            club = _resolve_club_lazy()
                         team_name = clean_name or (club.kulup_adi if club else "Takım")
                         athlete = Sporcu.objects.filter(sporcu_adi=team_name).first()
                         if not athlete:
@@ -1244,6 +1251,8 @@ class LocalLiveEngine:
 
                     # 4. Bulunamazsa Maskeli Sporcu Kaydı
                     if not athlete:
+                        if not club and club_lookup_str:
+                            club = _resolve_club_lazy()
                         sp_target_name = f"Maskeli sporcu ({clean_name})" if "*" in clean_name else (standardize_turkish_athlete_name(clean_name) or clean_name)
                         athlete = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year).first()
                         if not athlete:
@@ -1335,6 +1344,13 @@ class LocalLiveEngine:
                             existing = existing_by_lane_num.get((seri_no, kulvar_val))
                         if not existing:
                             existing = existing_by_lane.get((str(seri_val).strip(), kulvar_val))
+
+                    if doc_type == "sonuc_listesi":
+                        if existing and existing.kulup_id:
+                            # Mevcut StartList kaydında kulüp zaten var: ResultList'te sadece sonuç & ara dereceleri güncelle
+                            defaults_dict.pop("kulup", None)
+                        elif not club and club_lookup_str:
+                            defaults_dict["kulup"] = _resolve_club_lazy()
 
                     if existing:
                         if existing.pk is None:
