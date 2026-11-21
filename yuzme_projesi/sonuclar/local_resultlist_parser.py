@@ -46,7 +46,7 @@ class LocalResultListParser:
     RE_YEAR_PREFIX = re.compile(r"^(19\d\d|20[01]\d|202[0-2])([A-Za-zçğıöşüÇĞİÖŞÜ*].*)$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
-        r"(Erkekler|Kadınlar|Bayanlar|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
+        r"(Erkekler|Kadınlar|Bayanlar|Kızlar|Karışık|Karma|Mixed|Mix|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
         re.IGNORECASE,
     )
     RE_TABLE_HEADER = re.compile(
@@ -158,7 +158,13 @@ class LocalResultListParser:
             if not info["yaris"]:
                 m_ev = self.RE_EVENT_INFO.search(l)
                 if m_ev:
-                    info["cinsiyet"] = "Erkek" if m_ev.group(1).lower().startswith(("erkek", "men", "boy")) else "Kadın"
+                    g_raw = m_ev.group(1).lower()
+                    if g_raw.startswith(("erkek", "men", "boy")):
+                        info["cinsiyet"] = "Erkek"
+                    elif g_raw.startswith(("karışık", "karisik", "karma", "mix")):
+                        info["cinsiyet"] = "Karma"
+                    else:
+                        info["cinsiyet"] = "Kadın"
                     dist_str = m_ev.group(2).replace(" ", "")
                     if "x" in dist_str.lower():
                         nums = [int(n) for n in re.findall(r"\d+", dist_str)]

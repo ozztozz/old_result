@@ -1029,11 +1029,14 @@ class LocalLiveEngine:
                     pre_qs = pre_qs.filter(yaris_no=yaris_no)
 
                 existing_by_athlete: Dict[int, YarisSonucu] = {}
+                existing_unlaned_by_athlete: Dict[int, List[YarisSonucu]] = {}
                 existing_by_lane_num: Dict[Tuple[int, int], YarisSonucu] = {}
                 existing_by_lane: Dict[Tuple[str, int], YarisSonucu] = {}
                 for row in pre_qs.order_by("-id"):
                     if row.sporcu_id and row.sporcu_id not in existing_by_athlete:
                         existing_by_athlete[row.sporcu_id] = row
+                    if row.sporcu_id and row.kulvar is None:
+                        existing_unlaned_by_athlete.setdefault(row.sporcu_id, []).append(row)
                     s_num = None
                     if row.seri and row.kulvar is not None:
                         m_cs = re.search(r"\d+", str(row.seri))
@@ -1338,12 +1341,19 @@ class LocalLiveEngine:
                     if yaris_no:
                         lookup_dict["yaris_no"] = yaris_no
 
-                    existing = existing_by_athlete.get(athlete.id)
+                    is_relay_entry = bool(is_bayrak or "(tk)" in raw_name.lower())
+                    existing = None
+                    if not is_relay_entry:
+                        existing = existing_by_athlete.get(athlete.id)
                     if not existing and seri_val and kulvar_val is not None:
                         if seri_no is not None:
                             existing = existing_by_lane_num.get((seri_no, kulvar_val))
                         if not existing:
                             existing = existing_by_lane.get((str(seri_val).strip(), kulvar_val))
+                    if not existing and is_relay_entry and kulvar_val is None:
+                        unlaned_q = existing_unlaned_by_athlete.get(athlete.id)
+                        if unlaned_q:
+                            existing = unlaned_q.pop()
 
                     if doc_type == "sonuc_listesi":
                         if existing and existing.kulup_id:
@@ -1398,9 +1408,12 @@ class LocalLiveEngine:
                         create_kwargs = {**lookup_dict, **defaults_dict}
                         new_obj = YarisSonucu(**create_kwargs)
                         to_create_objs.append(new_obj)
-                        existing_by_athlete[new_obj.sporcu_id] = new_obj
+                        if not is_relay_entry:
+                            existing_by_athlete[new_obj.sporcu_id] = new_obj
                         if seri_no is not None and kulvar_val is not None:
                             existing_by_lane_num[(seri_no, kulvar_val)] = new_obj
+                        if seri_val and kulvar_val is not None:
+                            existing_by_lane[(str(seri_val).strip(), kulvar_val)] = new_obj
                         records_added += 1
 
                 if to_update_map and bulk_update_fields:

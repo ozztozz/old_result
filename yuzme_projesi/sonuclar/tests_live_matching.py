@@ -230,3 +230,89 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertEqual(len(payload["data"]), 1)
         self.assertEqual(payload["data"][0]["id"], self.yaris.id)
 
+    def test_same_club_relay_teams_preserved_and_mixed_relay_header(self):
+        from sonuclar.local_resultlist_parser import LocalResultListParser
+        from sonuclar.local_startlist_parser import LocalStartListParser
+
+        # 1. Aynı kulüpten 2 bayrak takımı (Sıra 1 ve Sıra 2) birbirini ezmemeli
+        relay_item = {
+            "filename": "ResultList_1081.pdf",
+            "url": "https://canli.tyf.gov.tr/live/2026/9999999/ResultList_1081.pdf?v=1",
+            "doc_type": "sonuc_listesi",
+            "yaris_no": "10",
+        }
+        relay_prefetched = {
+            "parsed": {
+                "cinsiyet": "Erkek",
+                "mesafe": 200,
+                "stil": "Karışık Bayrak",
+                "yas_grubu": "7-24",
+                "yaris": "Erkek 200m Karışık Bayrak",
+                "yaris_no": "10",
+                "sonuclar": [
+                    {
+                        "sira": 1,
+                        "kulvar": 3,
+                        "seri": 1,
+                        "dogum_yili": None,
+                        "sporcu": "Ankara Üniversitesi S.K.",
+                        "kulup": "Ankara Üniversitesi S.K.",
+                        "derece": "3:37.76",
+                        "puan": None,
+                        "durum": "OK",
+                        "notlar": "Yüzücü A, B, C, D",
+                    },
+                    {
+                        "sira": 2,
+                        "kulvar": 4,
+                        "seri": 1,
+                        "dogum_yili": None,
+                        "sporcu": "Ankara Üniversitesi S.K.",
+                        "kulup": "Ankara Üniversitesi S.K.",
+                        "derece": "4:57.27",
+                        "puan": None,
+                        "durum": "OK",
+                        "notlar": "Yüzücü E, F, G, H",
+                    },
+                    {
+                        "sira": None,
+                        "kulvar": None,
+                        "seri": None,
+                        "dogum_yili": None,
+                        "sporcu": "Nova Akademi Spor Kulübü",
+                        "kulup": "Nova Akademi Spor Kulübü",
+                        "derece": None,
+                        "puan": None,
+                        "durum": "DSQ",
+                        "notlar": "SW 9.4",
+                    },
+                ],
+            },
+            "file_size": 1000,
+            "etag": "r1",
+            "last_modified": "",
+        }
+        self.engine._process_single_pdf(self.yaris, self.event, relay_item, "sonuc_listesi", prefetched=relay_prefetched)
+
+        rows = list(YarisSonucu.objects.filter(event=self.event, yaris_no="10").order_by("sira", "kulvar"))
+        self.assertEqual(len(rows), 3)
+        ranks = [str(r.sira) for r in rows if r.sira is not None]
+        self.assertEqual(sorted(ranks), ["1", "2"])
+        self.assertEqual([r.derece for r in rows if str(r.sira) in ("1", "2")], ["3:37.76", "4:57.27"])
+
+        # 2. "Karışık 4x100m Karışık Bayrak" başlığı her iki parser tarafından da tanınmalı
+        rl_header = LocalResultListParser()._extract_header([
+            ["TEST MÜSABAKASI", "Sonuçlar | 21.11.2026", "Karışık 4x100m Karışık Bayrak"]
+        ])
+        self.assertEqual(rl_header["cinsiyet"], "Karma")
+        self.assertEqual(rl_header["mesafe"], 400)
+        self.assertEqual(rl_header["stil"], "Karışık Bayrak")
+
+        sl_header = LocalStartListParser()._extract_header_info(
+            [["TEST MÜSABAKASI", "Start Listesi | 21.11.2026", "Karışık 4x100m Karışık Bayrak"]]
+        )
+        self.assertEqual(sl_header["cinsiyet"], "Karma")
+        self.assertEqual(sl_header["mesafe"], 400)
+        self.assertEqual(sl_header["stil"], "Karışık Bayrak")
+
+

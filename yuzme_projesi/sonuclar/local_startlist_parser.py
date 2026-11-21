@@ -52,7 +52,7 @@ class LocalStartListParser:
     RE_LANE_AND_NAME = re.compile(r"^([0-9]|10)\s+(.+)$")
     RE_DATE = re.compile(r"(\d{2}[./-]\d{2}[./-]\d{4})")
     RE_EVENT_INFO = re.compile(
-        r"(Erkekler|Kadınlar|Bayanlar|Kızlar|Karma|Mix|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
+        r"(Erkekler|Kadınlar|Bayanlar|Kızlar|Karışık|Karma|Mixed|Mix|Men|Women|Boys|Girls)\s*,?\s*(\d+\s*x\s*\d+|\d+)\s*m\s+([A-Za-zçğıöşüÇĞİÖŞÜ]+)(?:\s+(Bayrak|Relay))?",
         re.IGNORECASE,
     )
 
@@ -161,7 +161,7 @@ class LocalStartListParser:
                     g_txt = m_ev.group(1).lower()
                     if g_txt.startswith(("erkek", "men", "boy")):
                         info["cinsiyet"] = "Erkek"
-                    elif g_txt.startswith(("karma", "mix")):
+                    elif g_txt.startswith(("karışık", "karisik", "karma", "mix")):
                         info["cinsiyet"] = "Karma"
                     else:
                         info["cinsiyet"] = "Kadın"
