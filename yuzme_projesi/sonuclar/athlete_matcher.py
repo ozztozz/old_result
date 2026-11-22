@@ -18,7 +18,10 @@ from typing import Dict, Any, List, Optional, Tuple
 from django.db.models import Q
 from .models import Sporcu
 
-_MASKED_POOL_CACHE: Dict[Tuple[Any, Any], Tuple[float, List[Tuple[int, List[str]]]]] = {}
+_MASKED_POOL_CACHE: Dict[
+    Tuple[Any, Any],
+    Tuple[float, Tuple[List[Tuple[int, List[str]]], Dict[str, List[Tuple[int, List[str]]]]]],
+] = {}
 _MASKED_POOL_TTL = 300.0
 _MASKED_POOL_MAX_KEYS = 32
 
@@ -229,7 +232,9 @@ def match_masked_athlete_exact(
             "sorgu": sorgu_info
         }
 
-    def _get_masked_pool(year_filter, gender_filter) -> List[Tuple[int, List[str]]]:
+    def _get_masked_pool(
+        year_filter, gender_filter
+    ) -> Tuple[List[Tuple[int, List[str]]], Dict[str, List[Tuple[int, List[str]]]]]:
         cache_key = (year_filter, (gender_filter or "").lower())
         now_ts = time.monotonic()
         cached = _MASKED_POOL_CACHE.get(cache_key)
@@ -243,22 +248,39 @@ def match_masked_athlete_exact(
             cand_qs = cand_qs.filter(Q(cinsiyet__iexact=gender_filter) | Q(cinsiyet__isnull=True) | Q(cinsiyet=""))
 
         pool: List[Tuple[int, List[str]]] = []
+        by_first_token: Dict[str, List[Tuple[int, List[str]]]] = {}
         for cand_id, sporcu_adi in cand_qs.values_list("id", "sporcu_adi"):
             cand_clean = clean_athlete_name_tags(sporcu_adi)
             norm_c_tokens = [normalize_tr(w) for w in cand_clean.split() if w]
             if norm_c_tokens:
-                pool.append((cand_id, norm_c_tokens))
+                entry = (cand_id, norm_c_tokens)
+                pool.append(entry)
+                by_first_token.setdefault(norm_c_tokens[0], []).append(entry)
 
+        packed = (pool, by_first_token)
         if len(_MASKED_POOL_CACHE) >= _MASKED_POOL_MAX_KEYS:
             _MASKED_POOL_CACHE.clear()
-        _MASKED_POOL_CACHE[cache_key] = (now_ts, pool)
-        return pool
+        _MASKED_POOL_CACHE[cache_key] = (now_ts, packed)
+        return packed
 
     def _search_in_pool(year_filter, gender_filter, strict=True):
-        pool = _get_masked_pool(year_filter, gender_filter)
+        pool, by_first_token = _get_masked_pool(year_filter, gender_filter)
         matched_ids: List[int] = []
 
-        for cand_id, norm_c_tokens in pool:
+        first_m_tok = norm_m_tokens[0]
+        if "*" not in first_m_tok:
+            search_pool = by_first_token.get(first_m_tok, [])
+            if not strict and len(first_m_tok) >= 4:
+                prefix_entries: List[Tuple[int, List[str]]] = []
+                for f_key, entries in by_first_token.items():
+                    if f_key != first_m_tok and f_key.startswith(first_m_tok):
+                        prefix_entries.extend(entries)
+                if prefix_entries:
+                    search_pool = list(search_pool) + prefix_entries
+        else:
+            search_pool = pool
+
+        for cand_id, norm_c_tokens in search_pool:
             # Senaryo 1: Token sayısı birebir aynı (Örn: 'D***Z K**T' vs 'DENIZ KURT' veya 'HANZADE **O**N' vs 'HANZADE DOGAN')
             is_match = False
             if len(norm_m_tokens) == len(norm_c_tokens):

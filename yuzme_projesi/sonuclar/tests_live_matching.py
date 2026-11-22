@@ -26,6 +26,8 @@ class StartResultMatchingTests(TransactionTestCase):
                 cur.execute("PRAGMA foreign_keys = ON;")
 
     def tearDown(self):
+        from sonuclar.athlete_matcher import _MASKED_POOL_CACHE
+        _MASKED_POOL_CACHE.clear()
         YarisSonucu.objects.all().delete()
         CanliYarisDosya.objects.all().delete()
         CanliYaris.objects.all().delete()
@@ -347,5 +349,17 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertEqual(row_21_lane2.sporcu_id, first_masked.id)
         self.assertNotEqual(row_21_lane3.sporcu_id, first_masked.id)
         self.assertEqual(Sporcu.objects.filter(sporcu_adi__startswith="Maskeli sporcu").count(), 2)
+
+    def test_masked_first_token_index_lookup(self):
+        from sonuclar.athlete_matcher import match_masked_athlete_exact, _MASKED_POOL_CACHE
+        _MASKED_POOL_CACHE.clear()
+        res = match_masked_athlete_exact(
+            "Elif Ö**ü B*s*a*",
+            birth_year=2018,
+            gender="Kadın",
+            club="Ankara Üniversitesi S.K.",
+        )
+        self.assertEqual(res.get("sonuc"), "tam_eslesme")
+        self.assertEqual(res.get("bulunan_id"), self.sp_elif.id)
 
 

@@ -307,6 +307,10 @@ def _masked_names_compatibility(name_a: str, name_b: str) -> Tuple[bool, int]:
     if not toks_a or not toks_b or len(toks_a) != len(toks_b):
         return False, 0
 
+    # TYF maskelemesinde ilk ad genellikle tamamen açık gelir; ikisi de açık ve farklıysa erken çık
+    if "*" not in toks_a[0] and "*" not in toks_b[0] and toks_a[0] != toks_b[0]:
+        return False, 0
+
     common_visible = 0
     for ta, tb in zip(toks_a, toks_b):
         if len(ta) == len(tb):
