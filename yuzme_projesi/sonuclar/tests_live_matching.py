@@ -315,4 +315,37 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertEqual(sl_header["mesafe"], 400)
         self.assertEqual(sl_header["stil"], "Karışık Bayrak")
 
+    def test_masked_athlete_deduplication_across_and_within_startlists(self):
+        # 1. StartList (50m): DB'de olmayan sporcu A*** Y*lm*z olarak geliyor -> yeni Maskeli sporcu oluşmalı
+        self._run_prefetched(
+            "StartList_2001.pdf",
+            "start_listesi",
+            "20",
+            [
+                {"seri": "1", "kulvar": 4, "sporcu": "A*** Y*lm*z", "dogum_yili": 2016, "kulup": "Ankara Üniversitesi S.K.", "giris_derecesi": "42.00"},
+            ],
+        )
+        masked_count_1 = Sporcu.objects.filter(sporcu_adi__startswith="Maskeli sporcu").count()
+        self.assertEqual(masked_count_1, 1)
+        first_masked = Sporcu.objects.get(sporcu_adi__startswith="Maskeli sporcu")
+
+        # 2. Farklı StartList (100m): Aynı sporcu farklı maskeyle (*hm*t Y*lm**) geliyor ->
+        #    aynı event + kulüp + yaş + cinsiyet + uyumlu maske olduğu için AYNI sporcuya bağlanmalı!
+        self._run_prefetched(
+            "StartList_2002.pdf",
+            "start_listesi",
+            "21",
+            [
+                {"seri": "1", "kulvar": 2, "sporcu": "*hm*t Y*lm**", "dogum_yili": 2016, "kulup": "Ankara Üniversitesi S.K.", "giris_derecesi": "1:35.00"},
+                # Aynı StartList içinde aynı kulüp + yaş + cinsiyetteki ikinci bir yüzücü (*m*r K*y*) aynı kişiye bağlanmamalı,
+                # ayrıca harf uzunluğu uyumlu olsa bile aynı PDF'te iki kayıt aynı athlete_id almamalı:
+                {"seri": "1", "kulvar": 3, "sporcu": "*y** *ı***z", "dogum_yili": 2016, "kulup": "Ankara Üniversitesi S.K.", "giris_derecesi": "1:38.00"},
+            ],
+        )
+        row_21_lane2 = YarisSonucu.objects.get(event=self.event, yaris_no="21", kulvar=2)
+        row_21_lane3 = YarisSonucu.objects.get(event=self.event, yaris_no="21", kulvar=3)
+        self.assertEqual(row_21_lane2.sporcu_id, first_masked.id)
+        self.assertNotEqual(row_21_lane3.sporcu_id, first_masked.id)
+        self.assertEqual(Sporcu.objects.filter(sporcu_adi__startswith="Maskeli sporcu").count(), 2)
+
 

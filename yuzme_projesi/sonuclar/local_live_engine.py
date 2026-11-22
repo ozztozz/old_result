@@ -297,6 +297,37 @@ def start_daemon_background(poll_interval: int = DEFAULT_POLL_INTERVAL) -> Optio
         return None
 
 
+def _masked_names_compatibility(name_a: str, name_b: str) -> Tuple[bool, int]:
+    """
+    İki maskeli ismin aynı sporcuya ait olup olamayacağını kontrol eder.
+    Dönüş: (uyumlu_mu, ortak_acik_harf_sayisi)
+    """
+    toks_a = normalize_tr(name_a, keep_asterisks=True).split()
+    toks_b = normalize_tr(name_b, keep_asterisks=True).split()
+    if not toks_a or not toks_b or len(toks_a) != len(toks_b):
+        return False, 0
+
+    common_visible = 0
+    for ta, tb in zip(toks_a, toks_b):
+        if len(ta) == len(tb):
+            for ca, cb in zip(ta, tb):
+                if ca != "*" and cb != "*":
+                    if ca != cb:
+                        return False, 0
+                    common_visible += 1
+        else:
+            min_len = min(len(ta), len(tb))
+            if min_len < 4 or abs(len(ta) - len(tb)) > 2:
+                return False, 0
+            for ca, cb in zip(ta[:min_len], tb[:min_len]):
+                if ca != "*" and cb != "*":
+                    if ca != cb:
+                        return False, 0
+                    common_visible += 1
+
+    return True, common_visible
+
+
 # ==============================================================================
 # CANLI TAKİP VE AYRIŞTIRMA MOTORU
 # ==============================================================================
@@ -1002,6 +1033,7 @@ class LocalLiveEngine:
         def _save_pdf_atomically() -> int:
             records_added = 0
             seen_result_ids: List[int] = []
+            seen_athlete_ids_in_pdf: set = set()
             if len(self._club_cache) >= 1000:
                 self._club_cache.clear()
             club_cache = self._club_cache
@@ -1032,6 +1064,22 @@ class LocalLiveEngine:
                 existing_unlaned_by_athlete: Dict[int, List[YarisSonucu]] = {}
                 existing_by_lane_num: Dict[Tuple[int, int], YarisSonucu] = {}
                 existing_by_lane: Dict[Tuple[str, int], YarisSonucu] = {}
+                event_masked_athletes: Dict[Tuple[int, Any, str], List[Sporcu]] = {}
+                if not is_bayrak:
+                    masked_sp_ids = set(
+                        YarisSonucu.objects.filter(
+                            event=event,
+                            sporcu__sporcu_adi__startswith="Maskeli sporcu",
+                        ).values_list("sporcu_id", flat=True).distinct()
+                    )
+                    if masked_sp_ids:
+                        for m_sp in Sporcu.objects.filter(id__in=masked_sp_ids).select_related("birincil_kulup"):
+                            m_key_pool = (
+                                m_sp.birincil_kulup_id or 0,
+                                m_sp.dogum_yili,
+                                (m_sp.cinsiyet or "").strip(),
+                            )
+                            event_masked_athletes.setdefault(m_key_pool, []).append(m_sp)
                 for row in pre_qs.order_by("-id"):
                     if row.sporcu_id and row.sporcu_id not in existing_by_athlete:
                         existing_by_athlete[row.sporcu_id] = row
@@ -1257,7 +1305,37 @@ class LocalLiveEngine:
                         if not club and club_lookup_str:
                             club = _resolve_club_lazy()
                         sp_target_name = f"Maskeli sporcu ({clean_name})" if "*" in clean_name else (standardize_turkish_athlete_name(clean_name) or clean_name)
-                        athlete = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year).first()
+
+                        # 4a. Birebir aynı (sporcu_adi, dogum_yili) kaydı varsa (ve bu PDF içinde henüz atanmadıysa) kullan
+                        exact_qs = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year)
+                        cand_exact = (exact_qs.filter(birincil_kulup=club).first() if club else None) or exact_qs.first()
+                        if cand_exact and (is_bayrak or cand_exact.id not in seen_athlete_ids_in_pdf):
+                            athlete = cand_exact
+
+                        # 4b. Aynı canlı yarışta kulübü + yaşı + cinsiyeti tutan ve maskesi uyumlu mevcut Maskeli sporcu
+                        if not athlete and "*" in clean_name and club and birth_year and not is_bayrak:
+                            pool_key = (club.id, birth_year, (cinsiyet or "").strip())
+                            pool_cands = [
+                                m_sp for m_sp in event_masked_athletes.get(pool_key, [])
+                                if m_sp.id not in seen_athlete_ids_in_pdf
+                            ]
+                            if pool_cands:
+                                compat_cands = []
+                                for m_sp in pool_cands:
+                                    inner_mask = m_sp.sporcu_adi
+                                    if inner_mask.startswith("Maskeli sporcu (") and inner_mask.endswith(")"):
+                                        inner_mask = inner_mask[len("Maskeli sporcu ("):-1]
+                                    ok, common_vis = _masked_names_compatibility(clean_name, inner_mask)
+                                    if ok:
+                                        compat_cands.append((common_vis, m_sp))
+                                if len(compat_cands) == 1:
+                                    athlete = compat_cands[0][1]
+                                elif len(compat_cands) > 1:
+                                    compat_cands.sort(key=lambda x: (-x[0], x[1].id))
+                                    if compat_cands[0][0] > compat_cands[1][0]:
+                                        athlete = compat_cands[0][1]
+
+                        # 4c. Hâlâ bulunamadıysa yeni Sporcu oluştur
                         if not athlete:
                             athlete = Sporcu.objects.create(
                                 sporcu_adi=sp_target_name,
@@ -1265,6 +1343,13 @@ class LocalLiveEngine:
                                 cinsiyet=cinsiyet,
                                 birincil_kulup=club,
                             )
+                            if "*" in clean_name and club and birth_year and not is_bayrak:
+                                pool_key = (club.id, birth_year, (cinsiyet or "").strip())
+                                event_masked_athletes.setdefault(pool_key, []).append(athlete)
+
+                    is_relay_entry = bool(is_bayrak or "(tk)" in raw_name.lower())
+                    if athlete and not is_relay_entry:
+                        seen_athlete_ids_in_pdf.add(athlete.id)
 
                     derece_sn = _time_to_seconds(derece_val)
                     fina = s.get("puan")
@@ -1341,7 +1426,6 @@ class LocalLiveEngine:
                     if yaris_no:
                         lookup_dict["yaris_no"] = yaris_no
 
-                    is_relay_entry = bool(is_bayrak or "(tk)" in raw_name.lower())
                     existing = None
                     if not is_relay_entry:
                         existing = existing_by_athlete.get(athlete.id)
