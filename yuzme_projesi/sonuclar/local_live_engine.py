@@ -180,6 +180,84 @@ def _resolve_or_create_relay_team(team_name: str, club: Optional[Kulup] = None) 
         birincil_kulup=club,
     )
 
+
+_NAME_DICT_CACHE: Dict[str, Any] = {"ts": 0.0, "fn": {"ERKEK": {}, "KADIN": {}}, "ln": {}}
+_NAME_DICT_TTL = 3600.0
+
+
+def _get_name_dict_cache() -> Dict[str, Any]:
+    """Gerçek sporcu ad/soyad sözlüğünü (freq>=3, len>=4) süreç başına 1 kez RAM'e yükler."""
+    now = time.time()
+    if now - _NAME_DICT_CACHE["ts"] < _NAME_DICT_TTL and _NAME_DICT_CACHE["ln"]:
+        return _NAME_DICT_CACHE
+
+    from collections import Counter, defaultdict
+
+    def _tr_upper(s: str) -> str:
+        return s.replace("i", "İ").replace("ı", "I").upper()
+
+    def _tr_title(s: str) -> str:
+        return (s[0].replace("i", "İ").replace("ı", "I").upper() + s[1:].replace("İ", "i").replace("I", "ı").lower()) if s else ""
+
+    fn_raw = {"ERKEK": defaultdict(Counter), "KADIN": defaultdict(Counter)}
+    ln_raw = defaultdict(Counter)
+
+    for name, cins in Sporcu.objects.exclude(sporcu_adi__startswith="Maskeli").filter(
+        cinsiyet__in=("ERKEK", "KADIN")
+    ).values_list("sporcu_adi", "cinsiyet").iterator():
+        toks = (name or "").split()
+        if len(toks) < 2:
+            continue
+        for t in toks[:-1]:
+            nt = normalize_tr(t).lower()
+            if len(nt) >= 4 and nt.isalpha():
+                fn_raw[cins][nt][t] += 1
+        lt = normalize_tr(toks[-1]).lower()
+        if len(lt) >= 4 and lt.isalpha():
+            ln_raw[lt][toks[-1]] += 1
+
+    _NAME_DICT_CACHE["fn"] = {
+        g: {nt: _tr_title(cnts.most_common(1)[0][0]) for nt, cnts in d.items() if sum(cnts.values()) >= 3}
+        for g, d in fn_raw.items()
+    }
+    _NAME_DICT_CACHE["ln"] = {
+        nt: _tr_upper(cnts.most_common(1)[0][0]) for nt, cnts in ln_raw.items() if sum(cnts.values()) >= 3
+    }
+    _NAME_DICT_CACHE["ts"] = now
+    return _NAME_DICT_CACHE
+
+
+def _predict_masked_name_from_dict(masked_name: str, gender: Optional[str]) -> str:
+    """Maskeli kelimeleri RAM sözlüğünde tekil (1 adet) eşleşme varsa gerçek yazımıyla çözer."""
+    if not masked_name or "*" not in masked_name:
+        return masked_name
+    g_norm = "ERKEK" if (gender or "").strip().lower().startswith("erkek") else (
+        "KADIN" if (gender or "").strip().lower().startswith(("kad", "kız", "kiz")) else ""
+    )
+    if not g_norm:
+        return masked_name
+
+    cache = _get_name_dict_cache()
+    fn_map = cache["fn"].get(g_norm, {})
+    ln_map = cache["ln"]
+    toks = masked_name.split()
+    out_toks = list(toks)
+
+    for i, t in enumerate(toks):
+        if "*" not in t:
+            continue
+        nt = normalize_tr(t, keep_asterisks=True).lower()
+        vis = sum(1 for ch in nt if ch != "*")
+        if len(nt) < 4 or vis < 2:
+            continue
+        wmap = ln_map if (i == len(toks) - 1 and len(toks) >= 2) else fn_map
+        rx = re.compile("^" + "".join("." if ch == "*" else re.escape(ch) for ch in nt) + "$")
+        matches = [real_w for nw, real_w in wmap.items() if len(nw) == len(nt) and rx.match(nw)]
+        if len(matches) == 1:
+            out_toks[i] = matches[0]
+
+    return " ".join(out_toks)
+
 # Türkiye Zaman Dilimi (UTC+3)
 TR_TIMEZONE = dt_timezone(timedelta(hours=3))
 PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "local_live_worker.pid")
@@ -1364,7 +1442,8 @@ class LocalLiveEngine:
                     if not athlete:
                         if not club and club_lookup_str:
                             club = _resolve_club_lazy()
-                        sp_target_name = f"Maskeli sporcu ({clean_name})" if "*" in clean_name else (standardize_turkish_athlete_name(clean_name) or clean_name)
+                        resolved_clean = _predict_masked_name_from_dict(clean_name, cinsiyet) if ("*" in clean_name and not is_bayrak) else clean_name
+                        sp_target_name = f"Maskeli sporcu ({resolved_clean})" if "*" in resolved_clean else (standardize_turkish_athlete_name(resolved_clean) or resolved_clean)
 
                         # 4a. Birebir aynı (sporcu_adi, dogum_yili) kaydı varsa (ve bu PDF içinde henüz atanmadıysa) kullan
                         exact_qs = Sporcu.objects.filter(sporcu_adi=sp_target_name, dogum_yili=birth_year)
@@ -1372,7 +1451,7 @@ class LocalLiveEngine:
                         if cand_exact and (is_bayrak or cand_exact.id not in seen_athlete_ids_in_pdf):
                             athlete = cand_exact
 
-                        # 4b. Aynı canlı yarışta kulübü + yaşı + cinsiyeti tutan ve maskesi uyumlu mevcut Maskeli sporcu
+                        # 4b. Aynı canlı yarışta (veya aynı kulüp+yaş+cinsiyet DB maskeli havuzunda tekil aday varsa) uyumlu mevcut Maskeli sporcu
                         if not athlete and "*" in clean_name and club and birth_year and not is_bayrak:
                             pool_key = (club.id, birth_year, (cinsiyet or "").strip())
                             pool_cands = [
@@ -1394,6 +1473,27 @@ class LocalLiveEngine:
                                     compat_cands.sort(key=lambda x: (-x[0], x[1].id))
                                     if compat_cands[0][0] > compat_cands[1][0]:
                                         athlete = compat_cands[0][1]
+
+                            # 4b-ek: Event havuzunda yoksa DB'de aynı (kulüp, doğum yılı, cinsiyet) grubunda tekil uyumlu Maskeli ara
+                            if not athlete:
+                                db_pool = [
+                                    m_sp for m_sp in Sporcu.objects.filter(
+                                        sporcu_adi__startswith="Maskeli sporcu (",
+                                        birincil_kulup=club,
+                                        dogum_yili=birth_year,
+                                        cinsiyet=(cinsiyet or "").strip(),
+                                    )
+                                    if m_sp.id not in seen_athlete_ids_in_pdf
+                                ]
+                                db_compat = []
+                                for m_sp in db_pool:
+                                    inner_mask = m_sp.sporcu_adi[len("Maskeli sporcu ("):-1] if m_sp.sporcu_adi.endswith(")") else m_sp.sporcu_adi
+                                    ok, common_vis = _masked_names_compatibility(clean_name, inner_mask)
+                                    if ok and common_vis >= 2:
+                                        db_compat.append((common_vis, m_sp))
+                                if len(db_compat) == 1:
+                                    athlete = db_compat[0][1]
+                                    event_masked_athletes.setdefault(pool_key, []).append(athlete)
 
                         # 4c. Hâlâ bulunamadıysa yeni Sporcu oluştur
                         if not athlete:
