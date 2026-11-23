@@ -118,6 +118,68 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
+
+def _extract_relay_suffix(name: str) -> str:
+    """Bayrak takım adının sonundaki A/B/C/1/2/3 gibi alt-takım ekini ayırır."""
+    m = re.search(r'(?:\s+|-)([A-D]|[1-4])(?:\s+tak[ıi]m[ıi])?$', (name or "").strip(), re.IGNORECASE)
+    return m.group(1).upper() if m else ""
+
+
+def _resolve_or_create_relay_team(team_name: str, club: Optional[Kulup] = None) -> Sporcu:
+    """
+    Bayrak/Takım sporcu kaydını cinsiyet='Takım' üzerinden yüksek esneklikle eşleştirir;
+    bulunamazsa cinsiyet='Takım' olarak yeni kayıt oluşturur.
+    """
+    from rapidfuzz import fuzz
+
+    clean = (team_name or "").strip() or (club.kulup_adi if club else "Takım")
+    norm_target = normalize_tr(clean)
+    target_suffix = _extract_relay_suffix(clean)
+
+    # 1. Birebir isim eşleşmesi (Takım öncelikli)
+    exact = (
+        Sporcu.objects.filter(sporcu_adi=clean, cinsiyet="Takım").first()
+        or Sporcu.objects.filter(sporcu_adi__iexact=clean, cinsiyet="Takım").first()
+        or Sporcu.objects.filter(sporcu_adi=clean, dogum_yili__isnull=True).first()
+    )
+    if exact:
+        return exact
+
+    # 2. Çözümlenmiş kulüp üzerinden Takım eşleşmesi
+    if club:
+        club_teams = list(Sporcu.objects.filter(cinsiyet="Takım", birincil_kulup=club))
+        for ct in club_teams:
+            if _extract_relay_suffix(ct.sporcu_adi) == target_suffix:
+                return ct
+        if len(club_teams) == 1 and not target_suffix:
+            return club_teams[0]
+
+    # 3. Tüm 'Takım' kayıtları arasında yüksek esnekliğe sahip bulanık eşleşme
+    best_cand = None
+    best_score = 0.0
+    for cand in Sporcu.objects.filter(cinsiyet="Takım"):
+        if _extract_relay_suffix(cand.sporcu_adi) != target_suffix:
+            continue
+        norm_cand = normalize_tr(cand.sporcu_adi)
+        if not norm_cand:
+            continue
+        if norm_cand == norm_target:
+            return cand
+        score = max(fuzz.ratio(norm_target, norm_cand), fuzz.token_set_ratio(norm_target, norm_cand) * 0.96)
+        if score > best_score:
+            best_score = score
+            best_cand = cand
+
+    if best_cand and best_score >= 82.0:
+        return best_cand
+
+    # 4. Bulunamazsa yeni Takım kaydı oluştur
+    return Sporcu.objects.create(
+        sporcu_adi=clean,
+        cinsiyet="Takım",
+        birincil_kulup=club,
+    )
+
 # Türkiye Zaman Dilimi (UTC+3)
 TR_TIMEZONE = dt_timezone(timedelta(hours=3))
 PID_FILE_PATH = os.path.join(tempfile.gettempdir(), "local_live_worker.pid")
@@ -1269,13 +1331,7 @@ class LocalLiveEngine:
                         if not club and club_lookup_str:
                             club = _resolve_club_lazy()
                         team_name = clean_name or (club.kulup_adi if club else "Takım")
-                        athlete = Sporcu.objects.filter(sporcu_adi=team_name).first()
-                        if not athlete:
-                            athlete = Sporcu.objects.create(
-                                sporcu_adi=team_name,
-                                cinsiyet=cinsiyet,
-                                birincil_kulup=club,
-                            )
+                        athlete = _resolve_or_create_relay_team(team_name, club=club)
 
                     # 3. Veritabanından Unmasking:
                     #    StartList'te zaten Maskeli sporcu olarak kayıtlıysa tekrar DB'ye gitme;

@@ -1,0 +1,5306 @@
+[
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:50.04"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "02:07.19"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:26.23"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:56.90"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "02:02.32"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:12.34"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:42.20"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "16:42.66"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:28.70"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:02.16"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:12.05"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.56"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:08.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:28.83"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:27.52"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "01:00.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:13.53"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "01:04.33"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:18.48"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:47.35"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:47.61"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:59.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:31.50"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:58.73"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:20.40"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:24.22"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:52.71"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:52.71"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:53.95"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:00.04"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:14.46"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:46.31"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:26.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:57.67"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:06.05"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.17"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:06.52"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:23.08"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:25.73"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:57.09"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:05.98"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:59.20"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:10.82"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:37.70"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:40.46"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:44.37"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:11.84"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:51.87"
+  },
+  {
+    "havuz": 25,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:05.62"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:43.42"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:54.70"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:26.05"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:56.42"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:59.82"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:08.51"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:29.34"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "16:21.65"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:28.52"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:00.51"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:10.37"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.52"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:08.50"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:28.83"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:27.09"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.88"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:10.69"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "01:03.62"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:16.67"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:44.55"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:47.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:56.03"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:31.50"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:58.18"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:14.97"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:23.22"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:50.51"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:50.60"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:55.88"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:59.93"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:05.25"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:25.62"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:55.99"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:02.51"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:28.58"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:02.34"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:17.43"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:25.06"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:54.88"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:00.78"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:57.59"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:05.32"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:25.89"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:37.53"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:33.98"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:45.64"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:46.93"
+  },
+  {
+    "havuz": 25,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:54.03"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:25.37"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:55.69"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.40"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:03.10"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:19.33"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:45.29"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:28.03"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:00.38"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:10.37"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:07.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:24.48"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.79"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.60"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:10.69"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "01:03.13"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:16.67"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:43.18"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:45.49"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:48.06"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:18.43"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:55.82"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:11.99"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:22.89"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:49.54"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:47.75"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:47.30"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:43.67"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:49.70"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:25.30"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:54.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:58.04"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:28.54"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:02.34"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:13.39"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:24.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:52.81"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:55.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:55.95"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:02.58"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:21.71"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:33.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:25.03"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:30.85"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:42.04"
+  },
+  {
+    "havuz": 25,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:44.43"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:44.31"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:53.98"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:25.23"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:54.64"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.17"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.17"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:02.47"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:17.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:45.29"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:27.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:00.14"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:09.73"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:05.31"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:22.93"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.53"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.45"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:09.55"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "01:02.87"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:12.70"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:36.08"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:44.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:46.02"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:08.75"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:54.57"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:07.85"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:22.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:48.16"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:45.59"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:45.88"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:41.42"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:38.61"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:24.69"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:53.22"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:55.95"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:28.27"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:00.65"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:06.31"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:23.63"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:52.59"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:55.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:55.27"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:00.01"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:14.79"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:33.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:23.38"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:23.38"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:28.33"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:42.04"
+  },
+  {
+    "havuz": 25,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:44.43"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:24.81"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:53.84"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:55.91"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:02.47"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:17.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:45.29"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:27.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:59.63"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:09.50"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:05.06"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:19.73"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.46"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.11"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:08.69"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:59.58"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:11.14"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:38.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:43.55"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:46.02"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:08.75"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:54.57"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:07.84"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:21.95"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:48.16"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:44.93"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:43.81"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:38.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:20.64"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:24.51"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:51.94"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:52.75"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:27.08"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "00:59.27"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:05.18"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:23.17"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:51.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:55.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:53.53"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "01:55.56"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:11.33"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:31.45"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:20.78"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:15.42"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:39.82"
+  },
+  {
+    "havuz": 25,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:36.39"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:40.81"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:53.83"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:24.81"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:53.84"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:55.91"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:02.47"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:17.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:45.29"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:27.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:59.63"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:08.57"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:08.57"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:05.06"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:19.73"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.46"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.11"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:08.69"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:59.58"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:10.72"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:36.04"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:43.55"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:46.02"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:06.21"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:49.92"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:02.41"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:21.57"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:47.27"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:43.35"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:42.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:38.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:20.64"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:24.24"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:51.58"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:52.67"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:26.67"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "00:59.07"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:05.18"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:22.56"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:50.83"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:55.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:53.49"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "01:55.56"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:10.63"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:28.50"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:16.29"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:07.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:36.43"
+  },
+  {
+    "havuz": 25,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:32.75"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:34.24"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:40.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:24.62"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:53.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:55.91"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:02.47"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:17.12"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:45.29"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:27.02"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:57.96"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:05.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.28"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:05.06"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:19.73"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:25.95"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:58.09"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:06.87"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:59.36"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:07.16"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:32.64"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:40.00"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:38.57"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:56.94"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:48.99"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:58.94"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:21.10"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:46.63"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:42.92"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:41.60"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:38.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:20.64"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:23.48"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:50.76"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:51.08"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:24.95"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "00:55.74"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:03.78"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:22.37"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:49.77"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:53.55"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "100m",
+    "derece": "00:51.14"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "01:52.25"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:09.79"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:25.94"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:25.94"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:11.19"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:03.31"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:32.82"
+  },
+  {
+    "havuz": 25,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:27.52"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:50.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:02.75"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "02:02.90"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:25.72"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:26.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:58.21"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "02:05.99"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:19.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:54.10"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "17:06.67"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:30.48"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:04.66"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:15.95"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:32.45"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:10.96"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:33.29"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:27.81"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "01:01.99"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:14.99"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:21.74"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:59.09"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:50.76"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:02.82"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:59.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "02:01.98"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:23.14"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:24.52"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:54.18"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.01"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:07.39"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:30.33"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "16:09.73"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:28.05"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:00.04"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:08.95"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.07"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:09.00"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:27.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.05"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:57.43"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:10.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:15.16"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:42.47"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:43.58"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:49.04"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:24.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:54.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "13",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:14.47"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:47.46"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:59.51"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:26.74"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:57.53"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "02:02.77"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:12.74"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:43.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "16:36.20"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:29.73"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:03.02"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:13.51"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:32.45"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:09.93"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:31.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:27.58"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "01:00.85"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:12.39"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:19.44"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:54.34"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:50.09"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:53.81"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:32.57"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "02:00.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:17.51"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:23.85"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:52.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:55.26"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:59.60"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:13.49"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:38.05"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:27.12"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:58.97"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:07.20"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:29.42"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:04.78"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:20.71"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:25.29"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:55.28"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:03.75"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:08.02"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:34.94"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:39.93"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:34.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:53.90"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:49.18"
+  },
+  {
+    "havuz": 50,
+    "yas": "14",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:56.14"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:26.57"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:56.80"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "02:00.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:06.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:28.34"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "16:03.23"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:29.10"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:02.58"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:13.51"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.98"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:09.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:30.38"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:27.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "01:00.36"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:12.39"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:18.52"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:45.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:49.71"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:53.81"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:24.38"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:59.42"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:17.51"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:23.75"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:51.31"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:51.72"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:55.84"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:59.34"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:06.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:26.08"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:56.40"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:03.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:29.30"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:03.96"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:18.26"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:24.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:53.48"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:58.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:05.47"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:27.67"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:36.71"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:31.19"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:47.54"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:46.46"
+  },
+  {
+    "havuz": 50,
+    "yas": "15",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:49.60"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:42.10"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:40.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:55.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:04.75"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:26.13"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:56.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:59.70"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:06.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:21.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:55.23"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:29.10"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:02.07"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:12.31"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:31.98"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:09.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:29.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "01:00.08"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:11.54"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:16.44"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:45.01"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:47.48"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:50.89"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:24.38"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:56.89"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:17.51"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:23.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:49.85"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:49.82"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:51.29"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:48.75"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:54.16"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:25.92"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:56.32"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:01.49"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:28.53"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:02.18"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:11.61"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:24.36"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:53.17"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:58.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:58.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:03.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:03.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:24.94"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:36.71"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:28.05"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:35.38"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:46.46"
+  },
+  {
+    "havuz": 50,
+    "yas": "16",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:46.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:25.57"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:55.69"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.61"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:06.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:21.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:55.23"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:29.10"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:02.07"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:12.31"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.55"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:06.77"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:19.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.85"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:10.07"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:11.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:43.65"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:46.38"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:46.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:09.11"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:56.06"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:09.82"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:22.87"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:49.55"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:47.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:50.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:47.29"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:41.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:25.92"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:55.12"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:59.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:27.35"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:01.33"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:09.92"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:24.06"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:52.73"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:58.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:58.62"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:00.55"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:21.65"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:34.81"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:28.05"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:35.38"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:45.98"
+  },
+  {
+    "havuz": 50,
+    "yas": "17",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:41.69"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:33.00"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:52.35"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:25.48"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:55.30"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:06.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:21.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:55.23"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:29.10"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:01.87"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:12.31"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.55"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:06.77"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:19.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.83"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.85"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:09.34"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:11.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:39.53"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:45.47"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:46.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:09.11"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:55.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:09.82"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:22.71"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:49.40"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:45.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:48.53"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:45.13"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:41.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:25.74"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:54.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:57.36"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:26.98"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:00.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:09.43"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:23.72"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:52.57"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:58.14"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "01:59.67"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:19.92"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:31.88"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:20.65"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:19.28"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:40.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "18",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:39.49"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Karma",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:31.94"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Karma",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:50.75"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:25.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:54.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:58.24"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "04:06.25"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "08:21.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "15:55.23"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:28.41"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "01:00.48"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "02:11.18"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:30.55"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "01:06.77"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:19.64"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:26.17"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:59.54"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "02:09.34"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "02:11.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:39.53"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:43.82"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:43.03"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "08:01.58"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:53.14"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Kadın",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "04:04.01"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "50m",
+    "derece": "00:22.05"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "100m",
+    "derece": "00:49.13"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "200m",
+    "derece": "01:45.68"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "400m",
+    "derece": "03:48.53"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "800m",
+    "derece": "07:45.13"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest",
+    "mesafe": "1500m",
+    "derece": "14:41.22"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "50m",
+    "derece": "00:24.84"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "100m",
+    "derece": "00:54.44"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Sırtüstü",
+    "mesafe": "200m",
+    "derece": "01:57.36"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "50m",
+    "derece": "00:26.71"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "100m",
+    "derece": "00:58.85"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kurbağalama",
+    "mesafe": "200m",
+    "derece": "02:09.43"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "50m",
+    "derece": "00:23.52"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "100m",
+    "derece": "00:51.91"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Kelebek",
+    "mesafe": "200m",
+    "derece": "01:56.41"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "200m",
+    "derece": "01:58.20"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık",
+    "mesafe": "400m",
+    "derece": "04:19.92"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:29.37"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:17.94"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Serbest Bayrak",
+    "mesafe": "4x200m",
+    "derece": "07:19.28"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x50m",
+    "derece": "01:37.36"
+  },
+  {
+    "havuz": 50,
+    "yas": "19+ (Açık Yaş)",
+    "cinsiyet": "Erkek",
+    "stil": "Karışık Bayrak",
+    "mesafe": "4x100m",
+    "derece": "03:35.98"
+  }
+]
