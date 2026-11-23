@@ -23,6 +23,7 @@ Tamamen Yerel (Local) TYF Canlı Yarış Takip, Ayrıştırma ve Veritabanı Kay
 import os
 import sys
 import re
+import json
 import hashlib
 import time
 import signal
@@ -117,6 +118,18 @@ if not logger.handlers:
     handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%H:%M:%S"))
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+
+
+def _log_unmatched_result_record(record: Dict[str, Any]) -> None:
+    """StartList ile eşleşemeyen ResultList satırlarını analiz için JSONL dosyasına yazar."""
+    try:
+        log_dir = os.path.join(os.path.dirname(PROJECT_DIR), "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "unmatched_result_records.jsonl")
+        with open(log_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
 
 def _extract_relay_suffix(name: str) -> str:
@@ -1145,9 +1158,23 @@ class LocalLiveEngine:
         def _vis_chars(txt: str) -> str:
             return re.sub(r"[\*\s]+", "", normalize_tr(txt, keep_asterisks=True))
 
+        counterpart_start_filename = (
+            re.sub(r"^ResultList_", "StartList_", filename, flags=re.IGNORECASE)
+            if doc_type == "sonuc_listesi"
+            else None
+        )
+
         def _narrow_cross_cands(cands, club_id, by, result_name: str = "", require_name_match: bool = False):
             if not cands:
                 return None
+            if len(cands) > 1 and counterpart_start_filename:
+                filtered = [c for c in cands if (c[4].dosya_adi or "").lower() == counterpart_start_filename.lower()]
+                if filtered:
+                    cands = filtered
+            if len(cands) > 1:
+                filtered = [c for c in cands if c[4].derece == "Bekleniyor"]
+                if filtered:
+                    cands = filtered
             if len(cands) > 1 and club_id:
                 filtered = [c for c in cands if c[2] == club_id]
                 if filtered:
@@ -1176,8 +1203,10 @@ class LocalLiveEngine:
 
         def _save_pdf_atomically() -> int:
             records_added = 0
+            unmatched_skipped = 0
             seen_result_ids: List[int] = []
             seen_athlete_ids_in_pdf: set = set()
+            has_startlist_for_race = False
             if len(self._club_cache) >= 1000:
                 self._club_cache.clear()
             club_cache = self._club_cache
@@ -1203,6 +1232,14 @@ class LocalLiveEngine:
                 ).select_related("sporcu", "kulup", "sporcu__birincil_kulup")
                 if yaris_no:
                     pre_qs = pre_qs.filter(yaris_no=yaris_no)
+                if doc_type == "start_listesi":
+                    res_counterpart = re.sub(r"^StartList_", "ResultList_", filename, flags=re.IGNORECASE)
+                    pre_qs = pre_qs.filter(
+                        Q(dosya_adi__iexact=filename)
+                        | Q(dosya_adi__iexact=res_counterpart)
+                        | Q(dosya_adi__isnull=True)
+                        | Q(dosya_adi="")
+                    )
 
                 existing_by_athlete: Dict[int, YarisSonucu] = {}
                 existing_unlaned_by_athlete: Dict[int, List[YarisSonucu]] = {}
@@ -1224,7 +1261,24 @@ class LocalLiveEngine:
                                 (m_sp.cinsiyet or "").strip(),
                             )
                             event_masked_athletes.setdefault(m_key_pool, []).append(m_sp)
-                for row in pre_qs.order_by("-id"):
+                fname_lower = filename.lower()
+                counterpart_lower = counterpart_start_filename.lower() if counterpart_start_filename else ""
+                result_counterpart_lower = (
+                    re.sub(r"^startlist_", "resultlist_", fname_lower)
+                    if doc_type == "start_listesi"
+                    else ""
+                )
+
+                def _pre_row_sort_key(r: YarisSonucu):
+                    rf = (r.dosya_adi or "").lower()
+                    same_file = (
+                        rf == fname_lower
+                        or (counterpart_lower and rf == counterpart_lower)
+                        or (result_counterpart_lower and rf == result_counterpart_lower)
+                    )
+                    return (0 if same_file else 1, 0 if r.derece == "Bekleniyor" else 1, -r.id)
+
+                for row in sorted(pre_qs.order_by("-id"), key=_pre_row_sort_key):
                     if row.sporcu_id and row.sporcu_id not in existing_by_athlete:
                         existing_by_athlete[row.sporcu_id] = row
                     if row.sporcu_id and row.kulvar is None:
@@ -1242,11 +1296,14 @@ class LocalLiveEngine:
                             existing_by_lane[k_str] = row
 
                     if doc_type == "sonuc_listesi" and row.sporcu:
+                        if row.kaynak_turu == "CANLI_START_LISTESI":
+                            has_startlist_for_race = True
                         cand_tuple = (
                             row.sporcu,
                             row.sporcu_maskeli or "",
                             row.kulup_id,
                             str(row.sporcu.dogum_yili or ""),
+                            row,
                         )
                         all_start_cands.append(cand_tuple)
                         if row.sporcu_maskeli:
@@ -1259,6 +1316,7 @@ class LocalLiveEngine:
                                     row.sporcu,
                                     row.sporcu_maskeli or "",
                                     row.kulup_id,
+                                    row,
                                 )
                             cross_by_lane.setdefault(row.kulvar, []).append(cand_tuple)
 
@@ -1282,6 +1340,19 @@ class LocalLiveEngine:
                     durum_val = (s.get("durum") or "NORMAL").strip()
                     if durum_val.upper() == "DQ" or durum_val.upper().startswith("SW "):
                         durum_val = "DSQ"
+                    if durum_val in ["DSQ", "DNS", "DNF", "EXH"] and clean_name:
+                        clean_name = re.sub(r"\s*\(\d{1,2}:\d{2}\b.*$", "", clean_name).strip()
+                        clean_name = re.sub(
+                            r"\s+(?:[a-zçğıöşü]+ığından|atılmadığından|dokunmadan|dokunmayarak|hatalı\s+çıkış|erken\s+çıkış|starttan\s+sonra)\b.*$",
+                            "",
+                            clean_name,
+                            flags=re.IGNORECASE,
+                        ).strip()
+                        clean_name = re.sub(
+                            r"\s+(?:\d{1,2}(?:\s*[-–/]\s*\d{1,2})?\s*\+?\s*[Yy]a[sş](?:\s+ve\s+[üu]zeri)?|[Aa][cç][ıi]k\s*[Yy]a[sş])\s*$",
+                            "",
+                            clean_name,
+                        ).strip()
                     raw_club = (s.get("kulup") or "").strip()
                     baraj_note = (s.get("notlar") or "").strip() if durum_val not in ["DSQ", "DNS", "DNF", "EXH"] else ""
                     if raw_club and "baraj" in raw_club.lower():
@@ -1332,14 +1403,16 @@ class LocalLiveEngine:
                     matched_masked_sp = None
                     matched_start_mask = ""
                     matched_start_club = None
+                    matched_start_row = None
                     # 1. StartList Çapraz Eşleşmesi:
                     #    a) Öncelikle StartList'teki maskeli isim anahtarıyla eşleştir
                     if "*" in clean_name and cross_by_masked:
                         m_key = normalize_tr(clean_name, keep_asterisks=True)
                         picked = _narrow_cross_cands(cross_by_masked.get(m_key), club.id if club else None, birth_year, clean_name)
                         if picked:
-                            st_sp, st_mask, st_club_id, _ = picked
-                            matched_start_club = matched_start_club or (st_club_id and existing_by_athlete.get(st_sp.id).kulup if st_sp and st_sp.id in existing_by_athlete else None)
+                            st_sp, st_mask, st_club_id, _, st_row = picked
+                            matched_start_row = st_row
+                            matched_start_club = matched_start_club or st_row.kulup
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
                             elif st_sp:
@@ -1349,9 +1422,10 @@ class LocalLiveEngine:
                     #    b) Eşleşmezse (K/S) veya seri yoksa Kulvar + Kulüp/Yıl üzerinden dene
                     if not athlete:
                         if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
-                            st_sp, st_mask, st_club_id = cross_unmasked[(seri_no, kulvar_val)]
-                            if not matched_start_club and st_sp and st_sp.id in existing_by_athlete:
-                                matched_start_club = existing_by_athlete[st_sp.id].kulup
+                            st_sp, st_mask, st_club_id, st_row = cross_unmasked[(seri_no, kulvar_val)]
+                            matched_start_row = matched_start_row or st_row
+                            if not matched_start_club:
+                                matched_start_club = st_row.kulup
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
                             elif st_sp and not matched_masked_sp:
@@ -1360,9 +1434,10 @@ class LocalLiveEngine:
                         elif not seri_no and kulvar_val and kulvar_val in cross_by_lane:
                             picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year, clean_name)
                             if picked:
-                                st_sp, st_mask, st_club_id, _ = picked
-                                if not matched_start_club and st_sp and st_sp.id in existing_by_athlete:
-                                    matched_start_club = existing_by_athlete[st_sp.id].kulup
+                                st_sp, st_mask, st_club_id, _, st_row = picked
+                                matched_start_row = matched_start_row or st_row
+                                if not matched_start_club:
+                                    matched_start_club = st_row.kulup
                                 if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                     athlete = st_sp
                                 elif st_sp and not matched_masked_sp:
@@ -1371,6 +1446,8 @@ class LocalLiveEngine:
 
                     #    c) Hâlâ eşleşmediyse (ör. DSQ/kulvar yok veya maske harfi kırpılmışsa) tüm StartList havuzunda ara
                     if not athlete and not matched_masked_sp and all_start_cands:
+                        if not club and club_lookup_str:
+                            club = _resolve_club_lazy()
                         picked = _narrow_cross_cands(
                             all_start_cands,
                             club.id if club else None,
@@ -1379,9 +1456,10 @@ class LocalLiveEngine:
                             require_name_match=True,
                         )
                         if picked:
-                            st_sp, st_mask, st_club_id, _ = picked
-                            if not matched_start_club and st_sp and st_sp.id in existing_by_athlete:
-                                matched_start_club = existing_by_athlete[st_sp.id].kulup
+                            st_sp, st_mask, st_club_id, _, st_row = picked
+                            matched_start_row = matched_start_row or st_row
+                            if not matched_start_club:
+                                matched_start_club = st_row.kulup
                             if st_sp and not st_sp.sporcu_adi.startswith("Maskeli sporcu"):
                                 athlete = st_sp
                             elif st_sp:
@@ -1392,6 +1470,7 @@ class LocalLiveEngine:
                     if not athlete and seri_no and kulvar_val is not None:
                         lane_row = existing_by_lane_num.get((seri_no, kulvar_val))
                         if lane_row and lane_row.sporcu:
+                            matched_start_row = matched_start_row or lane_row
                             if not matched_start_club and lane_row.kulup:
                                 matched_start_club = lane_row.kulup
                             if not lane_row.sporcu.sporcu_adi.startswith("Maskeli sporcu"):
@@ -1588,21 +1667,37 @@ class LocalLiveEngine:
 
                     existing = None
                     if not is_relay_entry:
-                        existing = existing_by_athlete.get(athlete.id)
+                        existing = matched_start_row or existing_by_athlete.get(athlete.id)
                     if not existing and seri_val and kulvar_val is not None:
                         if seri_no is not None:
                             existing = existing_by_lane_num.get((seri_no, kulvar_val))
                         if not existing:
                             existing = existing_by_lane.get((str(seri_val).strip(), kulvar_val))
-                    if not existing and is_relay_entry and kulvar_val is None:
-                        unlaned_q = existing_unlaned_by_athlete.get(athlete.id)
-                        if unlaned_q:
-                            existing = unlaned_q.pop()
+                    if not existing and is_relay_entry:
+                        if kulvar_val is None:
+                            unlaned_q = existing_unlaned_by_athlete.get(athlete.id)
+                            if unlaned_q:
+                                existing = unlaned_q.pop()
+                            else:
+                                existing = matched_start_row or existing_by_athlete.get(athlete.id)
+                        else:
+                            existing = matched_start_row
 
                     if doc_type == "sonuc_listesi":
-                        if existing and existing.kulup_id:
-                            # Mevcut StartList kaydında kulüp zaten var: ResultList'te sadece sonuç & ara dereceleri güncelle
-                            defaults_dict.pop("kulup", None)
+                        if existing:
+                            # StartList ana kaynaktır: mevcut kayıtta zaten dolu olan başlangıç bilgilerini ezme
+                            if existing.kulup_id:
+                                defaults_dict.pop("kulup", None)
+                            elif not club and club_lookup_str:
+                                defaults_dict["kulup"] = _resolve_club_lazy()
+                            if existing.seri:
+                                defaults_dict.pop("seri", None)
+                            if existing.kulvar is not None:
+                                defaults_dict.pop("kulvar", None)
+                            if existing.yaris_no is not None:
+                                defaults_dict.pop("yaris_no", None)
+                            if existing.sporcu_maskeli:
+                                defaults_dict.pop("sporcu_maskeli", None)
                         elif not club and club_lookup_str:
                             defaults_dict["kulup"] = _resolve_club_lazy()
 
@@ -1649,6 +1744,31 @@ class LocalLiveEngine:
                         if existing.id:
                             seen_result_ids.append(existing.id)
                     else:
+                        if doc_type == "sonuc_listesi" and has_startlist_for_race:
+                            unmatched_skipped += 1
+                            _log_unmatched_result_record({
+                                "ts": timezone.now().isoformat(),
+                                "event_id": event.id,
+                                "yaris_id": yaris.id,
+                                "filename": filename,
+                                "yaris_no": yaris_no,
+                                "mesafe": mesafe,
+                                "stil": stil,
+                                "cinsiyet": cinsiyet,
+                                "durum": durum_val,
+                                "seri": seri_val,
+                                "kulvar": kulvar_val,
+                                "raw_name": raw_name,
+                                "clean_name": clean_name,
+                                "dogum_yili": birth_year,
+                                "raw_club": raw_club,
+                                "derece": derece_val,
+                                "notlar": s.get("notlar"),
+                                "matched_athlete_id": athlete.id if athlete else None,
+                                "matched_athlete_name": athlete.sporcu_adi if athlete else None,
+                                "reason": "unmatched_with_startlist",
+                            })
+                            continue
                         create_kwargs = {**lookup_dict, **defaults_dict}
                         new_obj = YarisSonucu(**create_kwargs)
                         to_create_objs.append(new_obj)
@@ -1679,6 +1799,12 @@ class LocalLiveEngine:
                         canli_dosya=dosya_obj,
                         kaynak_turu=stale_source,
                     ).exclude(id__in=seen_result_ids).delete()
+
+                if unmatched_skipped:
+                    logger.warning(
+                        f"  [!] {filename}: StartList dışı {unmatched_skipped} sonuç satırı eklenmedi "
+                        f"(logs/unmatched_result_records.jsonl dosyasına kaydedildi)."
+                    )
 
             return records_added
 

@@ -39,7 +39,7 @@ class LocalStartListParser:
     """
 
     # Regex Tanımları
-    RE_SERI = re.compile(r"^\s*Seri\s+(\d+)(?:\s*(?:/|of)\s*(\d+))?", re.IGNORECASE)
+    RE_SERI = re.compile(r"^\s*Seri\s+(\d+|None)(?:\s*(?:/|of)\s*(\d+))?", re.IGNORECASE)
     RE_TABLE_HEADER = re.compile(r"^(Kulvar|Sporcu|D\.Yılı|Kulüp|Giriş|YB|Sıra|Lane|Heat)$", re.IGNORECASE)
     RE_PAGE_FOOTER = re.compile(
         r"^(Sayfa\s+\d+/\d+|\d{2}[./-]\d{2}[./-]\d{4}\s+\d{2}:\d{2}\s*-\s*Sayfa\s+\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
@@ -276,16 +276,21 @@ class LocalStartListParser:
                         idx += 1
                         continue
 
-                # Seri Başlığı kontrolü (Örn: "Seri 1/9" veya "Seri 1 of 31")
+                # Seri Başlığı kontrolü (Örn: "Seri 1/9", "Seri 1 of 31" veya "Seri None/11")
                 m_seri = self.RE_SERI.match(line)
                 if m_seri:
                     has_seen_seri_or_lane = True
-                    current_seri_no = int(m_seri.group(1))
-                    if m_seri.group(2):
-                        toplam_seri = int(m_seri.group(2))
-                        current_seri = f"Seri {current_seri_no}/{toplam_seri}"
+                    raw_seri_no = m_seri.group(1)
+                    if raw_seri_no.lower() == "none":
+                        current_seri_no = None
+                        current_seri = None
                     else:
-                        current_seri = f"Seri {current_seri_no}"
+                        current_seri_no = int(raw_seri_no)
+                        if m_seri.group(2):
+                            toplam_seri = int(m_seri.group(2))
+                            current_seri = f"Seri {current_seri_no}/{toplam_seri}"
+                        else:
+                            current_seri = f"Seri {current_seri_no}"
                     idx += 1
                     continue
 
@@ -423,6 +428,42 @@ class LocalStartListParser:
                         "kulvar": None,
                         "sporcu": club,
                         "dogum_yili": None,
+                        "kulup": club,
+                        "giris_derecesi": entry_time,
+                    })
+                    continue
+
+                # Tip 4: Kulvarsız Bireysel Sporcu Satırı (ör. "Seri None/11" altında tek yüzen/kulvarsız sporcu)
+                if (
+                    not is_relay
+                    and idx + 1 < n_lines
+                    and not self.RE_TIME.match(line)
+                    and not self.RE_NUMERIC_ONLY.match(line)
+                    and not self.RE_YEAR.match(line)
+                    and self.RE_YEAR.match(lines[idx + 1])
+                ):
+                    athlete_name = line
+                    idx += 1
+                    athlete_name, birth_year, idx = self._consume_birth_year_and_name(
+                        lines, idx, n_lines, athlete_name
+                    )
+                    club = None
+                    if idx < n_lines and self._is_valid_club_line(lines[idx]):
+                        club = lines[idx]
+                        idx += 1
+                    elif idx < n_lines and self.RE_NUMERIC_ONLY.match(lines[idx]):
+                        if idx + 1 < n_lines and self._is_valid_club_line(lines[idx + 1]) and not self.RE_TIME.match(lines[idx + 1]):
+                            idx += 1
+                            club = lines[idx]
+                            idx += 1
+                        else:
+                            idx += 1
+                    entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
+                    swimmers.append({
+                        "seri": current_seri,
+                        "kulvar": None,
+                        "sporcu": athlete_name,
+                        "dogum_yili": birth_year,
                         "kulup": club,
                         "giris_derecesi": entry_time,
                     })
