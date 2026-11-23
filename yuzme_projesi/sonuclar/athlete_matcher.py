@@ -303,15 +303,10 @@ def match_masked_athlete_exact(
             .prefetch_related("kulup_tarihcesi__kulup")
         )
 
-    # 1. Aşama: Öncelikle katı (strict=True) 1-e-1 eşleştirme dene
+    # 1. Aşama: İsim + Cinsiyet + Yaş (önce katı, yoksa toleranslı, yoksa +-1 yıl)
     matched_cands = _search_in_pool(target_year, target_gender, strict=True)
-
-    # 2. Aşama: Katı eşleşme bulunamazsa Türkçe karakter uzunluk toleranslı (strict=False) dene
-    # (Örn: 'Hanzade **o**n' -> 'Hanzade DOĞAN' veya 'Melek Tuğba **o**n' -> 'Melek Tuğba DOĞAN')
     if not matched_cands:
         matched_cands = _search_in_pool(target_year, target_gender, strict=False)
-
-    # Hedef yılda bulunamadıysa ve hedef yıl belirtilmişse +-1 yıl toleransı ile tekrar dene
     if not matched_cands and target_year:
         for alt_year in [target_year - 1, target_year + 1]:
             matched_cands = _search_in_pool(alt_year, target_gender, strict=True)
@@ -319,6 +314,17 @@ def match_masked_athlete_exact(
                 matched_cands = _search_in_pool(alt_year, target_gender, strict=False)
             if matched_cands:
                 break
+
+    # 4. Aşama (Fallback): Yaş/cinsiyet ile hiç aday yoksa yalnızca isim üzerinden ara
+    if not matched_cands and (target_year or target_gender):
+        matched_cands = _search_in_pool(None, None, strict=True)
+        if not matched_cands:
+            matched_cands = _search_in_pool(None, None, strict=False)
+
+    def _cand_clubs_for(sp: Sporcu) -> List[str]:
+        clubs = [normalize_tr(sp.birincil_kulup.kulup_adi)] if sp.birincil_kulup else []
+        clubs.extend([normalize_tr(h.kulup.kulup_adi) for h in sp.kulup_tarihcesi.all()])
+        return clubs
 
     if len(matched_cands) == 1:
         sp = matched_cands[0]
@@ -331,16 +337,14 @@ def match_masked_athlete_exact(
             "sorgu": sorgu_info
         }
     elif len(matched_cands) > 1:
-        # Birden fazla aday varsa kulüp filtresi uygula
         if norm_club:
-            club_matched = []
-            for sp in matched_cands:
-                cand_clubs = [normalize_tr(sp.birincil_kulup.kulup_adi)] if sp.birincil_kulup else []
-                cand_clubs.extend([normalize_tr(h.kulup.kulup_adi) for h in sp.kulup_tarihcesi.all()])
-                if any(c and (norm_club in c or c in norm_club) for c in cand_clubs):
-                    club_matched.append(sp)
-            if len(club_matched) == 1:
-                sp = club_matched[0]
+            # 1. Adım: Takım birebir eşleşmesi
+            exact_club_matched = [
+                sp for sp in matched_cands
+                if any(c and (norm_club in c or c in norm_club) for c in _cand_clubs_for(sp))
+            ]
+            if len(exact_club_matched) == 1:
+                sp = exact_club_matched[0]
                 return {
                     "durum": "basarili",
                     "sonuc": "tam_eslesme",
@@ -349,8 +353,34 @@ def match_masked_athlete_exact(
                     "muhtemel_eslesmeler": [],
                     "sorgu": sorgu_info
                 }
-            elif len(club_matched) > 1:
-                matched_cands = club_matched
+
+            # 2. Adım: Takım benzeşmesi (GENCLIK, VE, SPOR, KULUBU vb. ekleri soyarak)
+            _CLUB_FILLER = {"GENCLIK", "VE", "SPOR", "KULUBU", "KULUP", "SK", "GSK"}
+            core_target = [t for t in norm_club.split() if t not in _CLUB_FILLER]
+            core_club_matched = []
+            if core_target:
+                core_club_matched = [
+                    sp for sp in matched_cands
+                    if any(
+                        c and [t for t in c.split() if t not in _CLUB_FILLER] == core_target
+                        for c in _cand_clubs_for(sp)
+                    )
+                ]
+                if len(core_club_matched) == 1:
+                    sp = core_club_matched[0]
+                    return {
+                        "durum": "basarili",
+                        "sonuc": "tam_eslesme",
+                        "bulunan_id": sp.id,
+                        "sporcu": _serialize_sporcu(sp, 100.0),
+                        "muhtemel_eslesmeler": [],
+                        "sorgu": sorgu_info
+                    }
+
+            if len(exact_club_matched) > 1:
+                matched_cands = exact_club_matched
+            elif len(core_club_matched) > 1:
+                matched_cands = core_club_matched
 
         return {
             "durum": "basarili",
