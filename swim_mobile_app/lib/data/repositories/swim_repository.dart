@@ -27,6 +27,31 @@ class SwimRepository {
     return list.map((e) => MeetSummary.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Gelişmiş müsabaka arama (yıl, il, takım, sporcu, cinsiyet filtreli)
+  Future<List<MeetSummary>> searchMeets({
+    int page = 1,
+    String? year,
+    String? city,
+    String? q,
+    String? club,
+    String? athlete,
+    String? gender,
+  }) async {
+    final query = <String, dynamic>{'page': page};
+    if (year != null && year.isNotEmpty) query['year'] = year;
+    if (city != null && city.isNotEmpty) query['city'] = city;
+    if (q != null && q.isNotEmpty) query['q'] = q;
+    if (club != null && club.isNotEmpty) query['club'] = club;
+    if (athlete != null && athlete.isNotEmpty) query['athlete'] = athlete;
+    if (gender != null && gender.isNotEmpty) query['gender'] = gender;
+
+    final res = await apiClient.get('/meets/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list
+        .map((e) => MeetSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Müsabaka genel detay ve yarış programı
   Future<MeetDetail> getMeetDetail(int meetId) async {
     final res = await apiClient.get('/meets/$meetId/');
@@ -132,11 +157,41 @@ class SwimRepository {
     String? status,
   }) async {
     final query = <String, dynamic>{};
-    if (eventNo != null && eventNo.isNotEmpty) query['event_no'] = eventNo;
+    if (eventNo != null && eventNo.isNotEmpty) {
+      query['event_no'] = eventNo;
+      query['include_events'] = '0';
+    }
     if (status != null && status != 'all') query['status'] = status;
 
     final res = await apiClient.get('/live/$liveId/feed/', queryParameters: query);
     return res.data as Map<String, dynamic>;
+  }
+
+  /// Canlı müsabaka yarış başlıkları (sonuç satırları olmadan hafif liste)
+  Future<LiveFeedResponse> getLiveEvents(int liveId) async {
+    final res = await apiClient.get(
+      '/live/$liveId/feed/',
+      queryParameters: {'events_only': '1'},
+    );
+    return LiveFeedResponse.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// Canlı müsabaka özet akışı (yarış başlıkları + her yarışın ilk 3'ü + seçili kulüp/sporcu)
+  Future<LiveFeedResponse> getLiveSummary(
+    int liveId, {
+    int? clubId,
+    String? clubName,
+    String? athleteName,
+  }) async {
+    final query = <String, dynamic>{'summary': '1'};
+    if (clubId != null) query['club_id'] = clubId;
+    if (clubName != null && clubName.isNotEmpty) query['club_name'] = clubName;
+    if (athleteName != null && athleteName.isNotEmpty) {
+      query['athlete_name'] = athleteName;
+    }
+
+    final res = await apiClient.get('/live/$liveId/feed/', queryParameters: query);
+    return LiveFeedResponse.fromJson(res.data as Map<String, dynamic>);
   }
 
   /// Canlı yarış akışı (Typed LiveFeedResponse)

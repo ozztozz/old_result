@@ -3,6 +3,7 @@ from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
 from django.db.models import Case, When, Value, IntegerField
 from django.db.models.functions import Cast
+from django.utils import timezone
 from sonuclar.models import Event, YarisSonucu
 from .utils import (
     api_response,
@@ -12,6 +13,7 @@ from .utils import (
     map_stroke,
     parse_qualifying_standard,
     detect_course,
+    compute_age_group_info,
 )
 
 
@@ -19,6 +21,7 @@ from .utils import (
 def get_meets_list(request):
     """Müsabakalar listesi uç noktası (Sayfalı ve filtreli)."""
     qs = Event.objects.all().order_by('-yaris_tarihi_baslangic', '-id')
+    needs_distinct = False
 
     year = (request.GET.get('year') or '').strip()
     if year.isdigit():
@@ -31,6 +34,37 @@ def get_meets_list(request):
     q = (request.GET.get('q') or '').strip()
     if q:
         qs = qs.filter(musabaka_adi__icontains=q)
+
+    club_id = (request.GET.get('club_id') or '').strip()
+    club = (request.GET.get('club') or '').strip()
+    if club_id.isdigit():
+        qs = qs.filter(yaris_sonuclari__kulup_id=int(club_id))
+        needs_distinct = True
+    elif club:
+        qs = qs.filter(yaris_sonuclari__kulup__kulup_adi__icontains=club)
+        needs_distinct = True
+
+    athlete_id = (request.GET.get('athlete_id') or '').strip()
+    athlete = (request.GET.get('athlete') or '').strip()
+    if athlete_id.isdigit():
+        qs = qs.filter(yaris_sonuclari__sporcu_id=int(athlete_id))
+        needs_distinct = True
+    elif athlete:
+        qs = qs.filter(yaris_sonuclari__sporcu__sporcu_adi__icontains=athlete)
+        needs_distinct = True
+
+    gender = (request.GET.get('gender') or '').strip().lower()
+    if gender in ('erkek', 'e', 'men', 'male', 'm'):
+        qs = qs.filter(yaris_sonuclari__cinsiyet__in=['Erkek', 'ERKEK', 'Erkekler'])
+        needs_distinct = True
+    elif gender in ('kadın', 'kadin', 'k', 'bayan', 'women', 'female', 'f'):
+        qs = qs.filter(
+            yaris_sonuclari__cinsiyet__in=['Kadın', 'KADIN', 'Kadınlar', 'Kadin', 'Kızlar']
+        )
+        needs_distinct = True
+
+    if needs_distinct:
+        qs = qs.distinct()
 
     page_size = min(int(request.GET.get('page_size', 20)), 50)
     page_num = int(request.GET.get('page', 1))
@@ -234,6 +268,14 @@ def get_meet_results(request, meet_id: int):
     paginator = Paginator(qs, page_size)
     page_obj = paginator.get_page(page_num)
 
+    event_year = None
+    if meet.yaris_tarihi_baslangic and len(str(meet.yaris_tarihi_baslangic)) >= 4:
+        yr_str = str(meet.yaris_tarihi_baslangic)[:4]
+        if yr_str.isdigit():
+            event_year = int(yr_str)
+    if not event_year:
+        event_year = timezone.now().year
+
     results_data = []
     for r in page_obj:
         time_cs = seconds_to_cs(r.derece_saniye or r.derece)
@@ -241,6 +283,7 @@ def get_meet_results(request, meet_id: int):
         res_status = map_result_status(r.derece, r.sira)
         standard = parse_qualifying_standard(r.baraj)
         source = 'live' if (r.kaynak_turu or '').upper() == 'CANLI' else 'official'
+        age_group_label, age_group_order = compute_age_group_info(r, event_year)
 
         results_data.append({
             'id': r.id,
@@ -259,6 +302,8 @@ def get_meet_results(request, meet_id: int):
             'points': r.puan if (r.puan and r.puan > 0) else None,
             'qualifying_standard': standard,
             'source': source,
+            'age_group': age_group_label,
+            'age_group_order': age_group_order,
             'athlete': {
                 'id': r.sporcu_id,
                 'name': r.sporcu.sporcu_adi if r.sporcu else '',

@@ -473,7 +473,7 @@ class _RankingsScreenState extends State<RankingsScreen> {
     final isPodium = rank <= 3;
     final athId = item['athlete_id'] as int;
     final rawName = item['athlete_name'] as String? ?? '';
-    final athleteName = StringUtils.toTitleCase(rawName);
+    final athleteName = StringUtils.formatAthleteName(rawName);
 
     final rawClub = (item['club_name'] as String? ?? '').trim();
     final clubName = rawClub.isNotEmpty

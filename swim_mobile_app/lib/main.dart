@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/network/api_client.dart';
 import 'core/services/favorite_athletes_service.dart';
+import 'core/services/favorite_live_meets_service.dart';
 import 'core/services/selected_club_service.dart';
 import 'core/services/theme_service.dart';
 import 'data/repositories/swim_repository.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
     ThemeService.instance.init(),
     SelectedClubService.instance.init(),
     FavoriteAthletesService.instance.init(),
+    FavoriteLiveMeetsService.instance.init(),
   ]);
 
   // Merkezi HTTP ve Veri Deposu

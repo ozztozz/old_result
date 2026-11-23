@@ -204,4 +204,234 @@ void main() {
       expect(find.text('Sonuç bulunamadı'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'LiveRaceResultsScreen applies rank+time vs heat/lane+seedTime rule per row',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+
+      final mixedResults = <RaceResult>[
+        RaceResult(
+          id: 1,
+          eventNo: '1',
+          distance: 100,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '1',
+          lane: 4,
+          rank: '1',
+          time: '52.40',
+          timeCs: 5240,
+          seedTime: '53.10',
+          seedTimeCs: 5310,
+          resultStatus: 'OK',
+          source: 'live',
+          athleteId: 101,
+          athleteName: 'DENİZ KAYA',
+          clubName: 'TEST KULÜBÜ',
+        ),
+        RaceResult(
+          id: 2,
+          eventNo: '1',
+          distance: 100,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '2',
+          lane: 3,
+          rank: '',
+          time: null,
+          timeCs: null,
+          seedTime: '54.25',
+          seedTimeCs: 5425,
+          resultStatus: 'WAITING',
+          source: 'live',
+          athleteId: 102,
+          athleteName: 'EFE YILMAZ',
+          clubName: 'TEST KULÜBÜ',
+        ),
+        RaceResult(
+          id: 3,
+          eventNo: '1',
+          distance: 100,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '2',
+          lane: 5,
+          rank: '',
+          time: '-',
+          timeCs: null,
+          seedTime: '55.00',
+          seedTimeCs: 5500,
+          resultStatus: 'OK',
+          source: 'live',
+          athleteId: 103,
+          athleteName: 'MERT DEMİR',
+          clubName: 'TEST KULÜBÜ',
+        ),
+        RaceResult(
+          id: 4,
+          eventNo: '1',
+          distance: 100,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '3',
+          lane: 1,
+          rank: '',
+          time: null,
+          timeCs: null,
+          seedTime: null,
+          seedTimeCs: null,
+          resultStatus: 'WAITING',
+          source: 'live',
+          athleteId: 104,
+          athleteName: 'CAN ARSLAN',
+          clubName: 'TEST KULÜBÜ',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const CoolSophisticatedLightPalette()),
+          home: LiveRaceResultsScreen(
+            live: _sampleLive(),
+            event: _sampleEvent(),
+            repository: _FakeLiveRaceRepository(mixedResults),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // Sonucu olan satır: sıralama + sonuç
+      expect(find.text('1.'), findsOneWidget);
+      expect(find.text('52.40'), findsOneWidget);
+      // Sonucu olmayan satırlar (WAITING veya '-' dereceli): seri/sıra + giriş derecesi
+      expect(find.text('2/3'), findsOneWidget);
+      expect(find.text('54.25'), findsOneWidget);
+      expect(find.text('2/5'), findsOneWidget);
+      expect(find.text('55.00'), findsOneWidget);
+      expect(find.text('Giriş derecesi'), findsNWidgets(2));
+      // Giriş derecesi de olmayan satır: seri/sıra + Bekleniyor
+      expect(find.text('3/1'), findsOneWidget);
+      expect(find.text('Bekleniyor'), findsOneWidget);
+      // '-' metni asla büyük derece olarak basılmamalı
+      expect(find.text('-'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'LiveRaceResultsScreen splits multiple 1./2. rankings locally into separate categories',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+
+      final multiRankResults = <RaceResult>[
+        RaceResult(
+          id: 1,
+          eventNo: '1',
+          distance: 200,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '1',
+          lane: 4,
+          rank: '1',
+          time: '02:16.69',
+          timeCs: 13669,
+          resultStatus: 'OK',
+          source: 'live',
+          athleteId: 201,
+          athleteName: 'MÜNEVVER MAYA TURGUT',
+          age: 11,
+          clubName: 'MURATPAŞA BELEDİYESİ',
+        ),
+        RaceResult(
+          id: 2,
+          eventNo: '1',
+          distance: 200,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '1',
+          lane: 3,
+          rank: '1',
+          time: '02:17.86',
+          timeCs: 13786,
+          resultStatus: 'OK',
+          source: 'live',
+          athleteId: 202,
+          athleteName: 'AZRA CAMBAZOĞLU',
+          age: 10,
+          clubName: 'MANAVGAT BARLAS',
+        ),
+        RaceResult(
+          id: 3,
+          eventNo: '1',
+          distance: 200,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '1',
+          lane: 5,
+          rank: '2',
+          time: '02:18.14',
+          timeCs: 13814,
+          resultStatus: 'OK',
+          source: 'live',
+          athleteId: 203,
+          athleteName: 'ZEYNEP ADA SADIKLAR',
+          age: 11,
+          clubName: 'ANTALYA FAROZ',
+        ),
+        RaceResult(
+          id: 4,
+          eventNo: '1',
+          distance: 200,
+          stroke: 'Freestyle',
+          strokeLabel: 'Serbest',
+          heat: '1',
+          lane: 6,
+          rank: '2',
+          time: '02:22.31',
+          timeCs: 14231,
+          resultStatus: 'OK',
+          source: 'live',
+          athleteId: 204,
+          athleteName: 'YAĞMUR ADALIYILMAZ',
+          age: 10,
+          clubName: 'MURATPAŞA BELEDİYESİ',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const CoolSophisticatedLightPalette()),
+          home: LiveRaceResultsScreen(
+            live: _sampleLive(),
+            event: _sampleEvent(),
+            repository: _FakeLiveRaceRepository(multiRankResults),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // Varsayılan olarak tüm gruplar açık ve yaşlar karışmadan ayrı başlıklarla görünür
+      expect(find.text('10 Yaş'), findsOneWidget);
+      expect(find.text('Azra Cambazoğlu'), findsOneWidget);
+
+      // Başlığa tıklayınca kapanır, tekrar tıklayınca açılır
+      await tester.tap(find.text('10 Yaş'));
+      await tester.pumpAndSettle();
+      expect(find.text('Azra Cambazoğlu'), findsNothing);
+
+      await tester.tap(find.text('10 Yaş'));
+      await tester.pumpAndSettle();
+      expect(find.text('Azra Cambazoğlu'), findsOneWidget);
+
+      await tester.drag(find.byType(ListView).first, const Offset(0, -350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('11 Yaş'), findsOneWidget);
+      expect(find.text('1.'), findsWidgets);
+    },
+  );
 }

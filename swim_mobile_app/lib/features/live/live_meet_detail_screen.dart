@@ -4,6 +4,7 @@ import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/services/favorite_live_meets_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/utils/race_result_sorter.dart';
 import '../../core/utils/string_utils.dart';
@@ -73,16 +74,52 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
       _errorMessage = null;
     });
     try {
-      final feed = await widget.repository.getLiveFeedResponse(widget.live.id);
+      final LiveFeedResponse feed;
+      if (widget.live.id > 0) {
+        feed = await widget.repository.getLiveEvents(widget.live.id);
+      } else if (widget.live.meetId != null) {
+        final detail =
+            await widget.repository.getMeetDetail(widget.live.meetId!);
+        final mappedEvents = detail.events.map((e) {
+          final isDone = !e.isPending ||
+              e.status.toLowerCase().contains('tamam') ||
+              e.status.toLowerCase().contains('sonuc');
+          return LiveEventProgramItem(
+            eventNo: e.eventNo,
+            name: '${e.distance != null ? '${e.distance}m ' : ''}${e.strokeLabel}'
+                .trim(),
+            distance: e.distance,
+            stroke: e.stroke,
+            strokeLabel: e.strokeLabel,
+            gender: e.gender,
+            isPending: !isDone,
+            status: e.status,
+          );
+        }).toList();
+        feed = LiveFeedResponse(
+          liveId: 0,
+          status: 'TAMAMLANDI',
+          events: mappedEvents,
+          data: const [],
+        );
+      } else {
+        feed = LiveFeedResponse(
+          liveId: 0,
+          status: widget.live.status,
+          events: const [],
+          data: const [],
+        );
+      }
       _lastFeedResponse = feed;
 
-      // Müsabakadaki tüm katılımcı kulüpleri ayıkla
-      _availableClubs = feed.results
-          .map((r) => r.clubName.trim())
-          .where((c) => c.isNotEmpty && !c.toLowerCase().startsWith('ferdi'))
-          .toSet()
-          .toList()
-        ..sort((a, b) => a.compareTo(b));
+      if (feed.results.isNotEmpty) {
+        _availableClubs = feed.results
+            .map((r) => r.clubName.trim())
+            .where((c) => c.isNotEmpty && !c.toLowerCase().startsWith('ferdi'))
+            .toSet()
+            .toList()
+          ..sort((a, b) => a.compareTo(b));
+      }
 
       _rebuildRacesFromFeed(feed);
     } catch (_) {
@@ -147,7 +184,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
                   : '');
           if (topTime.isNotEmpty && !RaceResultSorter.isDisqualified(top)) {
             winner =
-                '🥇 1. ${StringUtils.toTitleCase(top.athleteName)} • $topTime';
+                '🥇 1. ${StringUtils.formatAthleteName(top.athleteName)} • $topTime';
           }
         }
       }
@@ -489,11 +526,37 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
               AppSpacing.hSm,
               Transform.translate(
                 offset: const Offset(0, _liveMeetActionButtonOffset),
-                child: GlassCircleButton(
-                  icon: Icons.refresh_rounded,
-                  iconColor: palette.textTertiary,
-                  tooltip: 'Yenile',
-                  onTap: _loadFeedData,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListenableBuilder(
+                      listenable: FavoriteLiveMeetsService.instance,
+                      builder: (context, _) {
+                        final isFav = FavoriteLiveMeetsService.instance
+                            .isFavorite(widget.live.id);
+                        return GlassCircleButton(
+                          icon: isFav
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          iconColor: isFav
+                              ? palette.statusWarning
+                              : palette.textTertiary,
+                          tooltip: isFav
+                              ? 'Favorilerden çıkar'
+                              : 'Favori canlı yarışa ekle',
+                          onTap: () => FavoriteLiveMeetsService.instance
+                              .toggleFavorite(widget.live.id),
+                        );
+                      },
+                    ),
+                    AppSpacing.hSm,
+                    GlassCircleButton(
+                      icon: Icons.refresh_rounded,
+                      iconColor: palette.textTertiary,
+                      tooltip: 'Yenile',
+                      onTap: _loadFeedData,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -524,6 +587,26 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
           vertical: AppSpacing.sm,
         ),
         onTap: () async {
+          if (_availableClubs.isEmpty && widget.live.meetId != null) {
+            try {
+              final participants = await widget.repository
+                  .getMeetParticipants(widget.live.meetId!);
+              if (mounted) {
+                setState(() {
+                  _availableClubs = participants.clubs
+                      .map((c) => c.name.trim())
+                      .where((c) =>
+                          c.isNotEmpty && !c.toLowerCase().startsWith('ferdi'))
+                      .toSet()
+                      .toList()
+                    ..sort((a, b) => a.compareTo(b));
+                });
+              }
+            } catch (_) {
+              // Kulüp listesi alınamazsa mevcut boş listeyle devam edilir
+            }
+          }
+          if (!context.mounted) return;
           await ClubSelectionSheet.show(
             context,
             availableClubs: _availableClubs,
@@ -620,20 +703,30 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
               ),
               AppSpacing.hXs,
               Text(
-                'CANLI SEANS',
+                widget.live.id > 0 ? 'CANLI SEANS' : 'MÜSABAKA PROGRAMI',
                 style: AppTextStyles.labelMuted.copyWith(
                   color: palette.textSecondary,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.6,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '$resProcessed / $resTotal Tamamlandı (%$resPercent)',
-                style: AppTextStyles.categorySeries.copyWith(
-                  color: palette.textSecondary,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              AppSpacing.hSm,
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '$resProcessed / $resTotal Tamamlandı (%$resPercent)',
+                      maxLines: 1,
+                      softWrap: false,
+                      style: AppTextStyles.categorySeries.copyWith(
+                        color: palette.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

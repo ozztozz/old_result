@@ -289,7 +289,7 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
                                   ListTile(
                                     dense: true,
                                     title: Text(
-                                      StringUtils.toTitleCase(item.name),
+                                      StringUtils.formatAthleteName(item.name),
                                       style: TextStyle(
                                         fontFamily: AppTextStyles.fontFamily,
                                         fontSize: 14,
@@ -484,7 +484,7 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
                     right: onClear == null ? AppSpacing.sm : 0,
                   ),
                   child: Text(
-                    StringUtils.toTitleCase(a.name),
+                    StringUtils.formatAthleteName(a.name),
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
                       fontSize: 14.5,

@@ -7,6 +7,7 @@ import '../../core/components/ambient_canvas.dart';
 import '../../core/components/app_bottom_sheet.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
+import '../../core/services/favorite_live_meets_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
@@ -67,6 +68,7 @@ class _LiveScreenState extends State<LiveScreen> {
   bool _isFeedLoading = false;
   LiveFeedResponse? _selectedFeed;
   final Map<int, LiveFeedResponse> _feedCache = {};
+  final Map<int, String> _computedMeetAgeRanges = {};
   int _feedTabIndex = 0;
   String? _selectedAthleteName;
   bool _onlySelectedFocus = false;
@@ -78,6 +80,7 @@ class _LiveScreenState extends State<LiveScreen> {
   void initState() {
     super.initState();
     SelectedClubService.instance.addListener(_onSelectedClubChanged);
+    FavoriteLiveMeetsService.instance.addListener(_onFavoriteLiveMeetsChanged);
     widget.selectedMeetIdListenable?.addListener(_onRequestedMeetIdChanged);
     _autoRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
@@ -90,9 +93,19 @@ class _LiveScreenState extends State<LiveScreen> {
   void dispose() {
     _autoRefreshTimer?.cancel();
     widget.selectedMeetIdListenable?.removeListener(_onRequestedMeetIdChanged);
+    FavoriteLiveMeetsService.instance
+        .removeListener(_onFavoriteLiveMeetsChanged);
     SelectedClubService.instance.removeListener(_onSelectedClubChanged);
     _feedPageController.dispose();
     super.dispose();
+  }
+
+  void _onFavoriteLiveMeetsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _liveMeets =
+          FavoriteLiveMeetsService.instance.sortWithFavoritesFirst(_liveMeets);
+    });
   }
 
   void _onRequestedMeetIdChanged() {
@@ -114,12 +127,27 @@ class _LiveScreenState extends State<LiveScreen> {
       _errorMessage = null;
     });
     try {
-      final list = await widget.repository.getLiveMeets();
+      await FavoriteLiveMeetsService.instance.init();
+      final rawList = await widget.repository.getLiveMeets();
+      final list =
+          FavoriteLiveMeetsService.instance.sortWithFavoritesFirst(rawList);
       if (mounted) {
         final requestedId = widget.selectedMeetIdListenable?.value;
         LiveMeetSummary? initial = requestedId == null
             ? null
             : list.where((m) => m.id == requestedId).firstOrNull;
+        if (initial == null) {
+          final favs = list.where(
+            (m) => FavoriteLiveMeetsService.instance.isFavorite(m.id),
+          );
+          for (final m in favs) {
+            if (_statusOf(m).live) {
+              initial = m;
+              break;
+            }
+          }
+          initial ??= favs.firstOrNull;
+        }
         if (initial == null) {
           for (final m in list) {
             if (_statusOf(m).live) {
@@ -138,6 +166,7 @@ class _LiveScreenState extends State<LiveScreen> {
         if (initial != null) {
           _loadSelectedFeed(initial.id);
         }
+        _prefetchMissingAgeRanges(list);
       }
     } catch (_) {
       if (mounted) {
@@ -175,6 +204,59 @@ class _LiveScreenState extends State<LiveScreen> {
     await _loadSelectedFeed(meetId, forceRefresh: true, silent: true);
   }
 
+  Future<void> _prefetchMissingAgeRanges(List<LiveMeetSummary> meets) async {
+    final missing = meets
+        .where((m) =>
+            (m.ageRange == null || m.ageRange!.trim().isEmpty) &&
+            m.meetId != null &&
+            !_computedMeetAgeRanges.containsKey(m.id))
+        .take(12)
+        .toList();
+    if (missing.isEmpty) return;
+
+    final currentYear = DateTime.now().year;
+    await Future.wait(
+      missing.map((m) async {
+        try {
+          final participants =
+              await widget.repository.getMeetParticipants(m.meetId!);
+          final isoMatch = RegExp(r'(\d{4})').firstMatch(m.date);
+          final meetYear = int.tryParse(isoMatch?.group(1) ?? '') ?? currentYear;
+          final ages = participants.athletes
+              .map((a) => a.birthYear)
+              .whereType<int>()
+              .where((by) => by > 1900 && by < meetYear)
+              .map((by) => meetYear - by)
+              .where((age) => age > 0 && age < 100)
+              .toList();
+          if (ages.isNotEmpty && mounted) {
+            final counts = <int, int>{};
+            for (final age in ages) {
+              counts[age] = (counts[age] ?? 0) + 1;
+            }
+            final total = ages.length;
+            final threshold =
+                total < 10 ? 1 : (total * 0.03).floor().clamp(3, total);
+            var valid = counts.entries
+                .where((e) => e.value >= threshold)
+                .map((e) => e.key)
+                .toList();
+            if (valid.isEmpty) valid = counts.keys.toList();
+            valid.sort();
+            final label = valid.first == valid.last
+                ? '${valid.first} Yaş'
+                : '${valid.first}–${valid.last} Yaş';
+            setState(() {
+              _computedMeetAgeRanges[m.id] = label;
+            });
+          }
+        } catch (_) {
+          // Katılımcı listesi alınamazsa sessizce atla
+        }
+      }),
+    );
+  }
+
   Future<void> _loadSelectedFeed(
     int liveMeetId, {
     bool forceRefresh = false,
@@ -193,7 +275,13 @@ class _LiveScreenState extends State<LiveScreen> {
       setState(() => _isFeedLoading = true);
     }
     try {
-      final feed = await widget.repository.getLiveFeedResponse(liveMeetId);
+      final clubService = SelectedClubService.instance;
+      final feed = await widget.repository.getLiveSummary(
+        liveMeetId,
+        clubId: clubService.clubId,
+        clubName: clubService.clubName,
+        athleteName: _selectedAthleteName,
+      );
       _feedCache[liveMeetId] = feed;
       if (mounted && _selectedStoryMeetId == liveMeetId) {
         setState(() {
@@ -218,6 +306,122 @@ class _LiveScreenState extends State<LiveScreen> {
         ),
       ),
     );
+  }
+
+  static const List<String> _trMonthsShort = [
+    'Oca',
+    'Şub',
+    'Mar',
+    'Nis',
+    'May',
+    'Haz',
+    'Tem',
+    'Ağu',
+    'Eyl',
+    'Eki',
+    'Kas',
+    'Ara',
+  ];
+
+  static String _formatBadgeStartDate(String rawDate, String fallbackName) {
+    final trimmed = rawDate.trim();
+    if (trimmed.isEmpty || trimmed == '-') {
+      return _toTurkishTitleCase(fallbackName);
+    }
+    final isoMatch = RegExp(r'(\d{4})-(\d{2})-(\d{2})').firstMatch(trimmed);
+    if (isoMatch != null) {
+      final day = int.tryParse(isoMatch.group(3) ?? '') ?? 1;
+      final month = int.tryParse(isoMatch.group(2) ?? '') ?? 1;
+      final mAbbr =
+          (month >= 1 && month <= 12) ? _trMonthsShort[month - 1] : '';
+      return mAbbr.isNotEmpty ? '$day $mAbbr' : trimmed;
+    }
+    final dotMatch = RegExp(r'(\d{1,2})\.(\d{1,2})\.(\d{4})').firstMatch(trimmed);
+    if (dotMatch != null) {
+      final day = int.tryParse(dotMatch.group(1) ?? '') ?? 1;
+      final month = int.tryParse(dotMatch.group(2) ?? '') ?? 1;
+      final mAbbr =
+          (month >= 1 && month <= 12) ? _trMonthsShort[month - 1] : '';
+      return mAbbr.isNotEmpty ? '$day $mAbbr' : trimmed;
+    }
+    final textMatch = RegExp(
+      r'^(\d{1,2})(?:\s*[-–]\s*\d{1,2})?\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)',
+    ).firstMatch(trimmed);
+    if (textMatch != null) {
+      final day = textMatch.group(1)!;
+      final monthWord = textMatch.group(2)!;
+      final shortMonth =
+          monthWord.length >= 3 ? monthWord.substring(0, 3) : monthWord;
+      return '$day $shortMonth';
+    }
+    return trimmed;
+  }
+
+  String? _extractBadgeAgeRange(LiveMeetSummary meet) {
+    final apiRange = meet.ageRange?.trim() ?? '';
+    if (apiRange.isNotEmpty) return apiRange;
+
+    final computed = _computedMeetAgeRanges[meet.id];
+    if (computed != null && computed.isNotEmpty) return computed;
+
+    final cachedResults = _feedCache[meet.id]?.results;
+    if (cachedResults != null && cachedResults.isNotEmpty) {
+      final currentYear = DateTime.now().year;
+      final ages = <int>[];
+      for (final r in cachedResults) {
+        if (r.age != null && r.age! > 0 && r.age! < 100) {
+          ages.add(r.age!);
+        } else if (r.birthYear != null && r.birthYear! > 1900) {
+          final calc = currentYear - r.birthYear!;
+          if (calc > 0 && calc < 100) ages.add(calc);
+        }
+      }
+      if (ages.isNotEmpty) {
+        ages.sort();
+        final minA = ages.first;
+        final maxA = ages.last;
+        return minA == maxA ? '$minA Yaş' : '$minA–$maxA Yaş';
+      }
+    }
+
+    final name = meet.name.trim();
+    if (name.isEmpty) return null;
+
+    final listMatch = RegExp(
+      r'(\d{1,2}(?:\s*[-–,/]\s*\d{1,2})+)\s*yaş',
+      caseSensitive: false,
+    ).firstMatch(name);
+    if (listMatch != null) {
+      final nums = RegExp(r'\d{1,2}')
+          .allMatches(listMatch.group(1)!)
+          .map((m) => int.tryParse(m.group(0)!))
+          .whereType<int>()
+          .toList()
+        ..sort();
+      if (nums.isNotEmpty) {
+        return nums.first == nums.last
+            ? '${nums.first} Yaş'
+            : '${nums.first}–${nums.last} Yaş';
+      }
+    }
+
+    final plusMatch = RegExp(
+      r'(\d{1,2}\s*\+)\s*yaş',
+      caseSensitive: false,
+    ).firstMatch(name);
+    if (plusMatch != null) {
+      return '${plusMatch.group(1)!.replaceAll(' ', '')} Yaş';
+    }
+
+    final singleMatch = RegExp(
+      r'(\d{1,2})\s*yaş',
+      caseSensitive: false,
+    ).firstMatch(name);
+    if (singleMatch != null) {
+      return '${singleMatch.group(1)} Yaş';
+    }
+
+    return null;
   }
 
   static String _toTurkishTitleCase(String input) {
@@ -390,7 +594,7 @@ class _LiveScreenState extends State<LiveScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 110,
+          height: 112,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -467,6 +671,29 @@ class _LiveScreenState extends State<LiveScreen> {
                                 ),
                               ),
                             ),
+                            if (FavoriteLiveMeetsService.instance
+                                .isFavorite(meet.id))
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: palette.statusWarning,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: palette.surface,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.star_rounded,
+                                    size: 10,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             if (st.live)
                               Positioned(
                                 right: 1,
@@ -488,22 +715,59 @@ class _LiveScreenState extends State<LiveScreen> {
                         ),
                         const SizedBox(height: 8),
                         Expanded(
-                          child: Text(
-                            _toTurkishTitleCase(meet.name),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 11,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              height: 1.15,
-                              color: isSelected
-                                  ? palette.textPrimary
-                                  : palette.textSecondary,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _formatBadgeStartDate(meet.date, meet.name),
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 11,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                      height: 1.15,
+                                      color: isSelected
+                                          ? palette.textPrimary
+                                          : palette.textSecondary,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (_extractBadgeAgeRange(meet) != null) ...[
+                                const SizedBox(height: 2),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      _extractBadgeAgeRange(meet)!,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.fontFamily,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.1,
+                                        color: palette.textSecondary,
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ],
@@ -577,85 +841,121 @@ class _LiveScreenState extends State<LiveScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            key: const ValueKey('selected_story_meet_header'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _openLiveDetail(meet),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_rounded,
-                      size: 13.5,
-                      color: palette.accent,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        city,
-                        maxLines: 1,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  key: const ValueKey('selected_story_meet_header'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _openLiveDetail(meet),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 13.5,
+                            color: palette.accent,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: palette.accent,
+                              ),
+                            ),
+                          ),
+                          if (meet.date.trim().isNotEmpty) ...[
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                '·',
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: palette.textMuted,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 11.5,
+                              color: palette.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                meet.date.trim(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: palette.textSecondary,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _toTurkishTitleCase(meet.name),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: palette.accent,
-                        ),
-                      ),
-                    ),
-                    if (meet.date.trim().isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          '·',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: palette.textMuted,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        size: 11.5,
-                        color: palette.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          meet.date.trim(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: palette.textSecondary,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                          fontFamily: AppTextStyles.displayFontFamily,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                          color: palette.textPrimary,
                         ),
                       ),
                     ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _toTurkishTitleCase(meet.name),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.displayFontFamily,
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                    color: palette.textPrimary,
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 6),
+              Builder(
+                builder: (context) {
+                  final isFav =
+                      FavoriteLiveMeetsService.instance.isFavorite(meet.id);
+                  return IconButton(
+                    key: ValueKey('favorite_live_meet_${meet.id}'),
+                    onPressed: () => FavoriteLiveMeetsService.instance
+                        .toggleFavorite(meet.id),
+                    tooltip:
+                        isFav ? 'Favorilerden çıkar' : 'Favori canlı yarışa ekle',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 34,
+                      minHeight: 34,
+                    ),
+                    icon: Icon(
+                      isFav ? Icons.star_rounded : Icons.star_outline_rounded,
+                      size: 21,
+                      color: isFav
+                          ? palette.statusWarning
+                          : palette.textSecondary,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Divider(
@@ -1238,9 +1538,11 @@ class _LiveScreenState extends State<LiveScreen> {
                     .where((a) => a.toLowerCase().contains(trimmed))
                     .toList();
 
-            return SizedBox(
-              height: MediaQuery.of(ctx).size.height * 0.65,
-              child: Column(
+            return AppBottomSheet(
+              scrollable: false,
+              child: SizedBox(
+                height: MediaQuery.of(ctx).size.height * 0.65,
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
@@ -1364,11 +1666,12 @@ class _LiveScreenState extends State<LiveScreen> {
                                   setState(() => _selectedAthleteName = name);
                                   Navigator.pop(sheetCtx);
                                 },
-                              );
-                            },
-                          ),
-                  ),
-                ],
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
               ),
             );
           },

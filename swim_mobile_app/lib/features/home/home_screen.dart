@@ -16,7 +16,7 @@ import '../../shared/widgets/component_gallery_screen.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../clubs/relay_simulator_screen.dart';
 import '../live/live_meet_detail_screen.dart';
-import '../meets/meet_detail_screen.dart';
+import '../meets/meet_search_screen.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../rankings/rankings_screen.dart';
 
@@ -94,6 +94,14 @@ class _HomeScreenState extends State<HomeScreen> {
     showSearch(
       context: context,
       delegate: _SwimSearchDelegate(repository: widget.repository),
+    );
+  }
+
+  void _openMeetSearch() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MeetSearchScreen(repository: widget.repository),
+      ),
     );
   }
 
@@ -253,6 +261,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: _openMeetSearch,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: palette.accentSoft,
+                                            borderRadius: AppRadius.full,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.tune_rounded,
+                                                size: 14,
+                                                color: palette.accent,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Yarış Ara',
+                                                style: TextStyle(
+                                                  fontFamily:
+                                                      AppTextStyles.fontFamily,
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: palette.accent,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -574,7 +616,29 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         SectionHeader(
           title: 'Güncel Müsabakalar',
-          trailingText: '${_recentMeets.length} Müsabaka',
+          trailing: SoftGlassPanel(
+            level: 3,
+            height: 28,
+            borderRadius: BorderRadius.circular(999),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            onTap: _openMeetSearch,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search_rounded, size: 14, color: palette.accent),
+                const SizedBox(width: 4),
+                Text(
+                  'Tümünü Ara',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: palette.accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         for (final meet in items) _buildUnifiedMeetRow(meet, palette),
@@ -600,9 +664,8 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => MeetDetailScreen(
-                meetId: meet.id,
-                meetTitle: meet.name,
+              builder: (_) => LiveMeetDetailScreen(
+                live: LiveMeetSummary.fromMeetSummary(meet),
                 repository: widget.repository,
               ),
             ),
@@ -704,8 +767,9 @@ class _HomeScreenState extends State<HomeScreen> {
               final std = h['qualifying_standard'] as Map<String, dynamic>?;
               final bool hasStd = std != null && std['passed'] == true;
               final athId = h['athlete_id'] as int;
-              final athleteName =
-                  StringUtils.toTitleCase(h['athlete_name'] as String? ?? '');
+              final athleteName = StringUtils.formatAthleteName(
+                h['athlete_name'] as String? ?? '',
+              );
               final eventLabel =
                   '${h['distance'] ?? ''}m ${h['stroke_label'] ?? ''}'.trim();
               final city = StringUtils.toTitleCase(
@@ -890,7 +954,7 @@ class _SwimSearchDelegate extends SearchDelegate {
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       child: const Icon(Icons.person, color: Colors.white, size: 20),
                     ),
-                    title: Text(a.name),
+                    title: Text(StringUtils.formatAthleteName(a.name)),
                     subtitle: Text(
                       '${a.birthYear ?? '-'} · ${a.clubName}',
                     ),

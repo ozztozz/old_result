@@ -496,7 +496,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   ) {
     final latest = fav.latestRace;
     final topPerf = fav.topPerformance;
-    final athleteName = StringUtils.toTitleCase(fav.name);
+    final athleteName = StringUtils.formatAthleteName(fav.name);
     final clubName = StringUtils.toTitleCase(fav.clubName);
     final branchInfo = latest != null
         ? '${latest.distance}m ${StringUtils.toTitleCase(latest.stroke)}'

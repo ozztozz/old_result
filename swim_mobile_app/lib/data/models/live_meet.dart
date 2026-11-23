@@ -1,3 +1,4 @@
+import 'meet.dart';
 import 'race_result.dart';
 
 /// Canlı Yarış Takip Modelleri
@@ -27,6 +28,7 @@ class LiveMeetSummary {
   final LiveProgress startListProgress;
   final LiveProgress resultListProgress;
   final String? lastActivity;
+  final String? ageRange;
 
   LiveMeetSummary({
     required this.id,
@@ -39,6 +41,7 @@ class LiveMeetSummary {
     required this.startListProgress,
     required this.resultListProgress,
     this.lastActivity,
+    this.ageRange,
   });
 
   factory LiveMeetSummary.fromJson(Map<String, dynamic> json) {
@@ -56,6 +59,28 @@ class LiveMeetSummary {
       startListProgress: LiveProgress.fromJson(startProg),
       resultListProgress: LiveProgress.fromJson(resultProg),
       lastActivity: json['last_activity'] as String?,
+      ageRange: json['age_range'] as String?,
+    );
+  }
+
+  /// Arşiv / arama müsabakasını tekil canlı detay ekranında açmak için dönüştürür.
+  factory LiveMeetSummary.fromMeetSummary(MeetSummary meet) {
+    return LiveMeetSummary(
+      id: 0,
+      meetId: meet.id,
+      name: meet.name,
+      city: meet.city,
+      date: meet.startDate,
+      status: 'TAMAMLANDI',
+      totalAthletes: meet.totalAthletes,
+      startListProgress: LiveProgress(
+        processed: meet.totalRaces,
+        total: meet.totalRaces,
+      ),
+      resultListProgress: LiveProgress(
+        processed: meet.totalRaces,
+        total: meet.totalRaces,
+      ),
     );
   }
 }

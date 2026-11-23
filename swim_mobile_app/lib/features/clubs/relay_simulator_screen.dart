@@ -827,7 +827,7 @@ class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
   }) {
     final athId = leg['athlete_id'] as int;
     final rawName = leg['athlete_name'] as String? ?? '';
-    final athleteName = StringUtils.toTitleCase(rawName);
+    final athleteName = StringUtils.formatAthleteName(rawName);
     final strokeLabel = StringUtils.toTitleCase(
       leg['stroke_label'] as String? ?? '',
     );

@@ -56,10 +56,10 @@ class AppBottomSheet extends StatelessWidget {
 
     final sheetFill = palette.isDark
         ? Color.alphaBlend(
-            Colors.white.withValues(alpha: 0.12),
-            palette.background.withValues(alpha: 0.88),
+            Colors.white.withValues(alpha: 0.08),
+            palette.surface.withValues(alpha: 0.94),
           )
-        : Colors.white.withValues(alpha: 0.60);
+        : palette.surface.withValues(alpha: 0.94);
 
     final sheet = Padding(
       padding: EdgeInsets.only(bottom: viewInsetsBottom),

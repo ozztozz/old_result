@@ -14,6 +14,7 @@ import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/collapsible_result_group.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/status_badge.dart';
 import '../athletes/athlete_profile_screen.dart';
@@ -51,6 +52,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
   int? _selectedClubId;
   int? _selectedAthleteId;
   String _selectedStatus = 'all';
+  final Set<String> _collapsedGroupKeys = {};
 
   @override
   void initState() {
@@ -179,28 +181,9 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                                     ),
                                   )
                                 else
-                                  SoftGlassPanel(
-                                    level: 2,
-                                    borderRadius: AppRadius.cardRadius,
-                                    padding: EdgeInsets.zero,
-                                    child: Column(
-                                      children: _results
-                                          .asMap()
-                                          .entries
-                                          .map((entry) {
-                                        final index = entry.key;
-                                        final r = entry.value;
-                                        final isLast =
-                                            index == _results.length - 1;
-                                        return _buildResultRow(
-                                          context,
-                                          palette,
-                                          result: r,
-                                          rankIndex: index + 1,
-                                          showDivider: !isLast,
-                                        );
-                                      }).toList(),
-                                    ),
+                                  ..._buildGroupedMeetResultsPanels(
+                                    context,
+                                    palette,
                                   ),
                               ],
                             ),
@@ -211,6 +194,68 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildGroupedMeetResultsPanels(
+    BuildContext context,
+    AppColorPalette palette,
+  ) {
+    final groups = RaceResultSorter.splitMultipleRankings(
+      _results,
+      preferRankFirst: false,
+    );
+    final isMultiGroup = groups.length > 1;
+    final widgets = <Widget>[];
+
+    for (var gIdx = 0; gIdx < groups.length; gIdx++) {
+      final group = groups[gIdx];
+      final panel = SoftGlassPanel(
+        level: 2,
+        borderRadius: AppRadius.cardRadius,
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: group.results.asMap().entries.map((entry) {
+            final index = entry.key;
+            final r = entry.value;
+            final isLast = index == group.results.length - 1;
+            return _buildResultRow(
+              context,
+              palette,
+              result: r,
+              rankIndex: index + 1,
+              showDivider: !isLast,
+            );
+          }).toList(),
+        ),
+      );
+
+      if (isMultiGroup && group.title != null) {
+        if (gIdx > 0) widgets.add(AppSpacing.vMd);
+        final groupKey = '${gIdx}_${group.title}';
+        final isExpanded = !_collapsedGroupKeys.contains(groupKey);
+        widgets.add(
+          CollapsibleResultGroup(
+            title: group.title!,
+            count: group.results.length,
+            isExpanded: isExpanded,
+            onToggle: () {
+              setState(() {
+                if (isExpanded) {
+                  _collapsedGroupKeys.add(groupKey);
+                } else {
+                  _collapsedGroupKeys.remove(groupKey);
+                }
+              });
+            },
+            child: panel,
+          ),
+        );
+      } else {
+        widgets.add(panel);
+      }
+    }
+
+    return widgets;
   }
 
   Widget _buildInitialLoadingSkeleton(BuildContext context) {

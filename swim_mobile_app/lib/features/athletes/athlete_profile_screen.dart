@@ -215,7 +215,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
             ? StringUtils.toTitleCase(rawClub)
             : rawClub)
         : 'Ferdi Sporcu';
-    final athleteName = StringUtils.toTitleCase(a.name);
+    final athleteName = StringUtils.formatAthleteName(a.name);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -315,7 +315,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
 
   /// Level 1 Profil Hero Paneli
   Widget _buildProfileHero(AppColorPalette palette, AthleteDetail a) {
-    final athleteName = StringUtils.toTitleCase(a.name);
+    final athleteName = StringUtils.formatAthleteName(a.name);
     final initials = athleteName
         .split(' ')
         .where((w) => w.isNotEmpty)
@@ -913,7 +913,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                     ),
                   ),
                   child: Text(
-                    a.scoutNote,
+                    StringUtils.cleanMaskedText(a.scoutNote),
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
                       fontSize: 13.5,

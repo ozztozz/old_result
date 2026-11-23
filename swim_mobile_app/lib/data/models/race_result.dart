@@ -38,6 +38,8 @@ class RaceResult {
   final int? clubId;
   final String clubName;
   final Map<String, String>? splitTimes;
+  final String? ageGroup;
+  final int? ageGroupOrder;
 
   RaceResult({
     required this.id,
@@ -63,6 +65,8 @@ class RaceResult {
     this.clubId,
     required this.clubName,
     this.splitTimes,
+    this.ageGroup,
+    this.ageGroupOrder,
   });
 
   factory RaceResult.fromJson(Map<String, dynamic> json) {
@@ -101,6 +105,8 @@ class RaceResult {
       clubId: clubObj?['id'] as int?,
       clubName: clubObj?['name'] as String? ?? 'Ferdi',
       splitTimes: parsedSplits,
+      ageGroup: json['age_group'] as String?,
+      ageGroupOrder: json['age_group_order'] as int?,
     );
   }
 }

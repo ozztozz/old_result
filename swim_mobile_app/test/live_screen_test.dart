@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:swim_mobile_app/core/services/favorite_live_meets_service.dart';
 import 'package:swim_mobile_app/core/theme/app_theme.dart';
 import 'package:swim_mobile_app/data/models/live_meet.dart';
 import 'package:swim_mobile_app/data/repositories/swim_repository.dart';
@@ -10,6 +11,9 @@ import 'package:swim_mobile_app/shared/widgets/modern_filter_chips.dart';
 
 class _FakeLiveScreenRepository implements SwimRepository {
   final List<LiveMeetSummary> meets;
+  int getLiveEventsCalls = 0;
+  int getLiveSummaryCalls = 0;
+  int getLiveFeedFullCalls = 0;
 
   _FakeLiveScreenRepository(this.meets);
 
@@ -17,11 +21,53 @@ class _FakeLiveScreenRepository implements SwimRepository {
   Future<List<LiveMeetSummary>> getLiveMeets() async => meets;
 
   @override
+  Future<LiveFeedResponse> getLiveSummary(
+    int liveMeetId, {
+    int? clubId,
+    String? clubName,
+    String? athleteName,
+  }) async {
+    getLiveSummaryCalls++;
+    return LiveFeedResponse(
+      liveId: liveMeetId,
+      status: 'CANLI',
+      events: const [],
+      data: const [],
+    );
+  }
+
+  @override
+  Future<LiveFeedResponse> getLiveEvents(int liveMeetId) async {
+    getLiveEventsCalls++;
+    return LiveFeedResponse(
+      liveId: liveMeetId,
+      status: 'CANLI',
+      events: [
+        LiveEventProgramItem(
+          eventNo: '1',
+          name: '100m Serbest',
+          distance: 100,
+          stroke: 'free',
+          strokeLabel: 'Serbest',
+          gender: 'Erkekler',
+          isPending: false,
+          status: 'Sonuçlandı',
+          totalAthletes: 16,
+        ),
+      ],
+      data: const [],
+    );
+  }
+
+  @override
   Future<LiveFeedResponse> getLiveFeedResponse(
     int liveMeetId, {
     String? eventNo,
     String? status,
   }) async {
+    if (eventNo == null || eventNo.isEmpty) {
+      getLiveFeedFullCalls++;
+    }
     return LiveFeedResponse(
       liveId: liveMeetId,
       status: 'CANLI',
@@ -110,6 +156,8 @@ void main() {
             ? AppTheme.dark(const CoolSophisticatedDarkPalette())
             : AppTheme.light(const CoolSophisticatedLightPalette());
 
+        final repo = _FakeLiveScreenRepository(_sampleMeets());
+
         await tester.pumpWidget(
           MaterialApp(
             theme: theme,
@@ -121,7 +169,7 @@ void main() {
                 padding: EdgeInsets.only(top: 24, bottom: 16),
               ),
               child: LiveScreen(
-                repository: _FakeLiveScreenRepository(_sampleMeets()),
+                repository: repo,
               ),
             ),
           ),
@@ -154,6 +202,10 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('selected_story_meet_header')));
         await tester.pumpAndSettle();
         expect(find.byType(LiveMeetDetailScreen), findsOneWidget);
+        expect(repo.getLiveSummaryCalls, greaterThanOrEqualTo(1));
+        expect(repo.getLiveFeedFullCalls, 0);
+        expect(repo.getLiveEventsCalls, 1);
+        expect(find.textContaining('Serbest'), findsWidgets);
         tester.takeException();
       },
     );
@@ -225,6 +277,44 @@ void main() {
       await tester.drag(find.byType(ListView).first, const Offset(0, -500));
       await tester.pump(const Duration(milliseconds: 250));
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'LiveScreen prioritizes favorited live meet on open and persists toggle',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'favorite_live_meet_ids': ['2'],
+      });
+      await FavoriteLiveMeetsService.instance.clearAll();
+      SharedPreferences.setMockInitialValues({
+        'favorite_live_meet_ids': ['2'],
+      });
+
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const CoolSophisticatedLightPalette()),
+          home: LiveScreen(
+            repository: _FakeLiveScreenRepository(_sampleMeets()),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // Meet id=2 (Ankara İl Birinciliği) should be prioritized & selected first
+      expect(find.byKey(const ValueKey('favorite_live_meet_2')), findsOneWidget);
+      expect(find.textContaining('Ankara İl Birinciliği'), findsWidgets);
+
+      // Unfavorite meet id=2
+      await tester.tap(find.byKey(const ValueKey('favorite_live_meet_2')));
+      await tester.pumpAndSettle();
+      expect(FavoriteLiveMeetsService.instance.isFavorite(2), isFalse);
     },
   );
 }

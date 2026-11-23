@@ -14,6 +14,7 @@ import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_result.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/collapsible_result_group.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/status_badge.dart';
 import '../athletes/athlete_profile_screen.dart';
@@ -83,6 +84,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
   String _searchQuery = '';
   int _detailTabIndex = 0; // 0: Seriler, 1: İstatistik
   final Set<String> _expandedSplitKeys = {};
+  final Set<String> _collapsedGroupKeys = {};
   final TextEditingController _searchController = TextEditingController();
   late final FocusNode _searchFocusNode;
   bool _isSearchFocused = false;
@@ -134,12 +136,28 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     }
 
     try {
-      final feed = await widget.repository.getLiveFeedResponse(
-        widget.live.id,
-        eventNo: widget.event.eventNo,
-      );
-
-      final list = feed.results;
+      final List<RaceResult> list;
+      if (widget.live.id > 0) {
+        final feed = await widget.repository.getLiveFeedResponse(
+          widget.live.id,
+          eventNo: widget.event.eventNo,
+        );
+        list = List<RaceResult>.from(feed.results);
+      } else if (widget.live.meetId != null) {
+        final collected = <RaceResult>[];
+        for (var page = 1; page <= 5; page++) {
+          final batch = await widget.repository.getMeetResults(
+            widget.live.meetId!,
+            eventNo: widget.event.eventNo,
+            page: page,
+          );
+          collected.addAll(batch);
+          if (batch.length < 50) break;
+        }
+        list = collected;
+      } else {
+        list = [];
+      }
       RaceResultSorter.sort(list);
 
       if (mounted) {
@@ -160,27 +178,45 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     }
   }
 
+  bool _hasValidRaceTime(RaceResult r) {
+    if ((r.timeCs ?? 0) > 0) return true;
+    final trimmed = r.time?.trim() ?? '';
+    if (trimmed.isEmpty ||
+        trimmed == '-' ||
+        trimmed == '0' ||
+        trimmed == '00:00.00') {
+      return false;
+    }
+    final upper = trimmed.toUpperCase();
+    return upper != 'DNS' &&
+        upper != 'DNF' &&
+        upper != 'DQ' &&
+        upper != 'DSQ' &&
+        upper != 'WAITING' &&
+        upper != 'BEKLENİYOR' &&
+        upper != 'BEKLENIYOR';
+  }
+
   void _applyFilter() {
     var filtered = List<RaceResult>.from(_allResults);
 
     // Durum filtresi
     if (_selectedStatus == 'finished') {
       filtered = filtered.where((r) {
-        final isWait = r.resultStatus == 'WAITING';
-        final isDq = r.resultStatus == 'DQ' ||
-            r.resultStatus == 'DNS' ||
-            r.resultStatus == 'DNF' ||
-            r.rank.toUpperCase().startsWith('DQ');
-        final hasTime = (r.timeCs != null && r.timeCs! > 0) ||
-            (r.time != null && r.time!.isNotEmpty);
-        return !isWait && !isDq && hasTime;
+        final rawStatus = r.resultStatus.trim().toUpperCase();
+        final isWait = rawStatus == 'WAITING';
+        final isDq = rawStatus == 'DQ' ||
+            rawStatus == 'DSQ' ||
+            rawStatus == 'DNS' ||
+            rawStatus == 'DNF' ||
+            r.rank.toUpperCase().startsWith('DQ') ||
+            r.rank.toUpperCase().startsWith('DSQ');
+        return !isWait && !isDq && _hasValidRaceTime(r);
       }).toList();
     } else if (_selectedStatus == 'pending') {
       filtered = filtered.where((r) {
-        final isWait = r.resultStatus == 'WAITING';
-        final hasNoTime = (r.timeCs == null || r.timeCs == 0) &&
-            (r.time == null || r.time!.isEmpty);
-        return isWait || hasNoTime;
+        final isWait = r.resultStatus.trim().toUpperCase() == 'WAITING';
+        return isWait || !_hasValidRaceTime(r);
       }).toList();
     }
 
@@ -408,42 +444,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                                 ),
                               )
                             else
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: palette.surface,
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: palette.textPrimary
-                                          .withValues(alpha: 0.05),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: Column(
-                                    children: _filteredResults
-                                        .asMap()
-                                        .entries
-                                        .map((entry) {
-                                      final index = entry.key;
-                                      final result = entry.value;
-                                      final isLast =
-                                          index == _filteredResults.length - 1;
-
-                                      return _buildResultRow(
-                                        context,
-                                        palette,
-                                        result: result,
-                                        rankIndex: index + 1,
-                                        showDivider: !isLast,
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                              ),
+                              ..._buildGroupedResultsPanels(palette),
                             ],
                           ],
     );
@@ -1179,6 +1180,73 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     );
   }
 
+  List<Widget> _buildGroupedResultsPanels(AppColorPalette palette) {
+    final groups = RaceResultSorter.splitMultipleRankings(_filteredResults);
+    final isMultiGroup = groups.length > 1;
+    final widgets = <Widget>[];
+
+    for (var gIdx = 0; gIdx < groups.length; gIdx++) {
+      final group = groups[gIdx];
+      final panel = Container(
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: palette.textPrimary.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Column(
+            children: group.results.asMap().entries.map((entry) {
+              final index = entry.key;
+              final result = entry.value;
+              final isLast = index == group.results.length - 1;
+              return _buildResultRow(
+                context,
+                palette,
+                result: result,
+                rankIndex:
+                    isMultiGroup ? (index + 1) : _getOverallRank(result),
+                showDivider: !isLast,
+              );
+            }).toList(),
+          ),
+        ),
+      );
+
+      if (isMultiGroup && group.title != null) {
+        if (gIdx > 0) widgets.add(AppSpacing.vMd);
+        final groupKey = '${gIdx}_${group.title}';
+        final isExpanded = !_collapsedGroupKeys.contains(groupKey);
+        widgets.add(
+          CollapsibleResultGroup(
+            title: group.title!,
+            count: group.results.length,
+            isExpanded: isExpanded,
+            onToggle: () {
+              setState(() {
+                if (isExpanded) {
+                  _collapsedGroupKeys.add(groupKey);
+                } else {
+                  _collapsedGroupKeys.remove(groupKey);
+                }
+              });
+            },
+            child: panel,
+          ),
+        );
+      } else {
+        widgets.add(panel);
+      }
+    }
+    return widgets;
+  }
+
   Widget _buildLoadingSkeleton() {
     return const Column(
       children: [
@@ -1396,15 +1464,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
     final isNonFinish = isDns || isDnf || isDsq;
     final isSwimming = rawStatus == 'SWIMMING' || rawStatus == 'HAVUZDA';
 
-    final hasValidTime = (result.timeCs ?? 0) > 0 ||
-        (result.time != null &&
-            result.time!.trim().isNotEmpty &&
-            result.time!.trim() != '-' &&
-            result.time!.trim().toUpperCase() != 'DNS' &&
-            result.time!.trim().toUpperCase() != 'DNF' &&
-            result.time!.trim().toUpperCase() != 'DQ' &&
-            result.time!.trim().toUpperCase() != 'DSQ' &&
-            result.time!.trim().toUpperCase() != 'WAITING');
+    final hasValidTime = _hasValidRaceTime(result);
 
     final isCompleted = !isWaiting && !isNonFinish && !isSwimming && hasValidTime;
 
@@ -1556,18 +1616,6 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
           ),
         ),
       );
-    } else if (isWaiting) {
-      trailingWidget = Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const StatusBadge.neutral(label: 'Bekleniyor'),
-          if (seedDisplay != null && seedDisplay.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            buildSeedRow(compare: false),
-          ],
-        ],
-      );
     } else if (isSwimming) {
       trailingWidget = Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -1580,6 +1628,44 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
           ],
         ],
       );
+    } else if (!isCompleted) {
+      // Satır bazında yarış sonucu yoksa: seri/sıra solda, giriş derecesi sağda.
+      if (seedDisplay != null && seedDisplay.isNotEmpty) {
+        trailingWidget = Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              seedDisplay,
+              maxLines: 1,
+              softWrap: false,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontFamily: AppTextStyles.displayFontFamily,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: palette.textSecondary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Giriş derecesi',
+              maxLines: 1,
+              softWrap: false,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: palette.textSecondary,
+              ),
+            ),
+          ],
+        );
+      } else {
+        trailingWidget = const StatusBadge.neutral(label: 'Bekleniyor');
+      }
     } else {
       trailingWidget = Column(
         crossAxisAlignment: CrossAxisAlignment.end,

@@ -82,32 +82,47 @@ abstract final class StringUtils {
     }
   }
 
-  /// "Maskeli Sporcu (...)" ön ekini ve dış parantezleri kaldırarak
+  /// "Maskeli Sporcu (...)" ön ekini ve parantezleri kaldırarak
   /// ayrıştırılmış sporcu adını Başlık Düzenine çevirir.
   static String formatAthleteName(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return trimmed;
 
-    final parenMatch = RegExp(
-      r'^\s*maskel[iıİ]\s+sporcu\s*(?:\(([^)]*)\))?\s*$',
-      caseSensitive: false,
-    ).firstMatch(trimmed);
-    if (parenMatch != null) {
-      final inner = (parenMatch.group(1) ?? '').trim();
-      if (inner.isNotEmpty) {
-        return toTitleCase(inner);
-      }
-    }
+    var cleaned = trimmed.replaceAll(
+      RegExp(
+        r'(?:maskel[iİı]\s+sporcu|MASKEL[İI]\s+SPORCU)\s*[-–:]?\s*',
+        caseSensitive: false,
+      ),
+      '',
+    );
 
-    final stripped = trimmed
-        .replaceFirst(
-          RegExp(
-            r'^\s*maskel[iıİ]\s+sporcu\s*[-–:]?\s*',
-            caseSensitive: false,
-          ),
-          '',
-        )
-        .trim();
-    return toTitleCase(stripped.isNotEmpty ? stripped : trimmed);
+    // "Maskeli sporcu (Ad Soyad)" veya "(Ad Soyad)" parantezlerini temizle
+    cleaned = cleaned.replaceAll('(', '').replaceAll(')', '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+
+    if (cleaned.isEmpty) return 'İsimsiz Sporcu';
+    return toTitleCase(cleaned);
+  }
+
+  /// Cümle/not içindeki "Maskeli sporcu (Ad Soyad)" ifadelerini ve parantezleri
+  /// cümle düzenini bozmadan temizler.
+  static String cleanMaskedText(String text) {
+    if (text.isEmpty) return text;
+    return text.replaceAllMapped(
+      RegExp(
+        r'(?:maskel[iİı]\s+sporcu|MASKEL[İI]\s+SPORCU)\s*\(([^)]*)\)',
+        caseSensitive: false,
+      ),
+      (m) {
+        final inner = (m.group(1) ?? '').trim();
+        return inner.isNotEmpty ? toTitleCase(inner) : 'İsimsiz Sporcu';
+      },
+    ).replaceAll(
+      RegExp(
+        r'(?:maskel[iİı]\s+sporcu|MASKEL[İI]\s+SPORCU)\s*[-–:]?\s*',
+        caseSensitive: false,
+      ),
+      '',
+    );
   }
 }

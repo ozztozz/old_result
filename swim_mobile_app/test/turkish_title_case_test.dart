@@ -62,6 +62,18 @@ void main() {
         StringUtils.toTitleCase('TYF UGP FINA SEM TYB TUR'),
         'TYF UGP FINA SEM TYB TUR',
       );
+      expect(
+        StringUtils.formatAthleteName('Maskeli sporcu (E*** Y***)'),
+        'E*** Y***',
+      );
+      expect(
+        StringUtils.formatAthleteName('MASKELİ SPORCU (AHMET ŞAHİN)'),
+        'Ahmet Şahin',
+      );
+      expect(
+        StringUtils.formatAthleteName('Maskeli sporcu (Ali Veli) (2014)'),
+        'Ali Veli 2014',
+      );
     });
   });
 }

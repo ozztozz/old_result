@@ -98,6 +98,42 @@ def detect_course(text_or_event: Any) -> str:
     return 'LC'  # TYF varsayılanı genellikle 50m'dir
 
 
+def compute_age_group_info(result: Any, event_year: Optional[int] = None) -> Tuple[str, int]:
+    """
+    Sonuç satırı için yaş grubu adını ve sıralama anahtarını döndürür.
+    Web müsabaka detayındaki (sonuclar/views.py) mantıkla aynıdır:
+    hesaplanan_yas -> (event_year - dogum_yili) -> sporcu_yas -> yas_grubu.
+    """
+    raw_age: Optional[int] = None
+    h_yas = getattr(result, 'hesaplanan_yas', None)
+    if h_yas is not None and h_yas > 0:
+        raw_age = int(h_yas)
+    else:
+        sporcu = getattr(result, 'sporcu', None)
+        dogum_yili = getattr(sporcu, 'dogum_yili', None) if sporcu else None
+        if dogum_yili and dogum_yili > 1900 and event_year:
+            calc = int(event_year) - int(dogum_yili)
+            if calc > 0:
+                raw_age = calc
+
+    if raw_age is None:
+        s_yas = str(getattr(result, 'sporcu_yas', '') or '').strip()
+        if s_yas.isdigit() and int(s_yas) > 0:
+            raw_age = int(s_yas)
+
+    raw_group = str(getattr(result, 'yas_grubu', '') or '').strip()
+    if raw_age is None and raw_group.isdigit() and int(raw_group) > 0:
+        raw_age = int(raw_group)
+
+    if raw_age is not None and 13 <= raw_age < 900:
+        return ('13+ Yaş Grubu', 13)
+    if raw_age is not None and 0 < raw_age < 13:
+        return (f'{raw_age} Yaş Grubu', raw_age)
+    if raw_group:
+        return (raw_group, 900)
+    return ('Genel Sıralama', 999)
+
+
 def api_response(data: Any, status: int = 200, request=None, cache_seconds: int = 0) -> HttpResponse:
     """
     Standart Mobil API JSON yanıtı üretir.
