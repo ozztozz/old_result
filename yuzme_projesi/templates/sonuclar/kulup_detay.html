@@ -44,7 +44,7 @@
         <div class="swim-card h-full flex flex-col">
             <div class="swim-card-header py-2.5 px-4">
                 <h2 class="text-sm font-bold swim-text-main flex items-center gap-2">
-                    <i class="bi bi-bar-chart-line swim-text-primary"></i> Kulüp Özeti ve Branş Dağılımı
+                    <i class="bi bi-bar-chart-line swim-text-primary"></i> Kulüp Özeti ve Aktif Yaş Dağılımı
                 </h2>
             </div>
             <div class="p-4 space-y-3.5 flex-1">
@@ -88,33 +88,20 @@
                     </div>
                 </div>
 
-                {% if ozet.stil_dagilimi %}
+                {% if ozet.yas_dagilimi %}
                 <div>
-                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Branş Dağılımı</div>
+                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Aktif Sporcu Yaş Dağılımı</div>
                     <div class="space-y-2">
-                        {% for st in ozet.stil_dagilimi %}
+                        {% for y in ozet.yas_dagilimi %}
                         <div>
                             <div class="flex justify-between text-[0.72rem] mb-0.5">
-                                <span class="font-semibold swim-text-main">{{ st.stil }}</span>
-                                <span class="font-mono swim-text-muted">{{ st.yaris_sayisi|intcomma }} (%{{ st.oran }})</span>
+                                <span class="font-semibold swim-text-main">{{ y.grup }}</span>
+                                <span class="font-mono swim-text-muted">{{ y.sayi|intcomma }} sporcu (%{{ y.oran }})</span>
                             </div>
                             <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                <div class="h-full rounded-full bg-blue-600 dark:bg-blue-500" style="width: {{ st.oran }}%"></div>
+                                <div class="h-full rounded-full bg-blue-600 dark:bg-blue-500" style="width: {{ y.oran }}%"></div>
                             </div>
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if ozet.sehir_dagilimi %}
-                <div>
-                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-1.5">En Çok Yarışılan İller</div>
-                    <div class="flex flex-wrap gap-1">
-                        {% for sh in ozet.sehir_dagilimi %}
-                        <span class="swim-badge swim-badge-neutral text-[0.68rem]">
-                            {{ sh.il }} <strong class="ml-1 font-mono">{{ sh.yaris_sayisi|intcomma }}</strong>
-                        </span>
                         {% endfor %}
                     </div>
                 </div>

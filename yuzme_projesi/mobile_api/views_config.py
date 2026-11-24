@@ -286,23 +286,9 @@ def get_club_detail(request, club_id):
             'silver': ozet['gumus'],
             'bronze': ozet['bronz'],
             'total_medals': ozet['toplam_madalya'],
-            'strokes': [
-                {'name': s['stil'], 'races': s['yaris_sayisi'], 'pct': s['oran']}
-                for s in ozet['stil_dagilimi']
-            ],
-            'cities': [
-                {'name': c['il'], 'races': c['yaris_sayisi']}
-                for c in ozet['sehir_dagilimi']
-            ],
-            'recent_meets': [
-                {
-                    'id': m['event_id'],
-                    'name': m['event__musabaka_adi'],
-                    'city': m['sehir_norm'],
-                    'date': m['event__yaris_tarihi_baslangic'] or '',
-                    'races': m['yaris_sayisi'],
-                }
-                for m in ozet['son_musabakalar']
+            'age_groups': [
+                {'label': y['grup'], 'count': y['sayi'], 'pct': y['oran']}
+                for y in ozet['yas_dagilimi']
             ],
         },
     }, request=request, cache_seconds=120)

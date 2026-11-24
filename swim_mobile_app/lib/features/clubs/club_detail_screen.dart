@@ -232,7 +232,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
             _buildContactCard(palette, club),
           ],
           AppSpacing.vLg,
-          SectionHeader(title: 'Kulüp Özeti ve Branş Dağılımı'),
+          SectionHeader(title: 'Kulüp Özeti ve Aktif Yaş Dağılımı'),
           AppSpacing.vSm,
           _buildSummaryCard(palette, club.summary),
         ],
@@ -921,10 +921,10 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                 ),
             ],
           ),
-          if (summary.strokes.isNotEmpty) ...[
+          if (summary.ageGroups.isNotEmpty) ...[
             AppSpacing.vMd,
             Text(
-              'BRANŞ DAĞILIMI',
+              'AKTİF SPORCU YAŞ DAĞILIMI',
               style: TextStyle(
                 fontFamily: AppTextStyles.fontFamily,
                 fontSize: 10.5,
@@ -934,8 +934,8 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
               ),
             ),
             AppSpacing.vSm,
-            ...summary.strokes.map(
-              (st) => Padding(
+            ...summary.ageGroups.map(
+              (ag) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -944,7 +944,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          st.name,
+                          ag.label,
                           style: TextStyle(
                             fontFamily: AppTextStyles.fontFamily,
                             fontSize: 12.5,
@@ -953,7 +953,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                           ),
                         ),
                         Text(
-                          '${st.races} yarış (%${st.pct})',
+                          '${ag.count} sporcu (%${ag.pct})',
                           style: TextStyle(
                             fontFamily: AppTextStyles.monoFontFamily,
                             fontSize: 11.5,
@@ -966,7 +966,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(99),
                       child: LinearProgressIndicator(
-                        value: (st.pct.clamp(0, 100)) / 100.0,
+                        value: (ag.pct.clamp(0, 100)) / 100.0,
                         minHeight: 6,
                         backgroundColor: palette.border,
                         valueColor: AlwaysStoppedAnimation<Color>(palette.accent),
@@ -975,22 +975,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                   ],
                 ),
               ),
-            ),
-          ],
-          if (summary.cities.isNotEmpty) ...[
-            AppSpacing.vSm,
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: summary.cities
-                  .map(
-                    (c) => _InfoChip(
-                      icon: Icons.location_on_outlined,
-                      label: '${c.name} (${c.races})',
-                      color: palette.textSecondary,
-                    ),
-                  )
-                  .toList(),
             ),
           ],
         ],

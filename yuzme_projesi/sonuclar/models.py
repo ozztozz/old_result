@@ -75,13 +75,14 @@ class Kulup(models.Model):
         return self.kulup_adi
 
     def build_summary(self) -> dict:
-        """Sporcu adları olmadan kulübün performans, branş, şehir ve müsabaka özetini döner."""
-        from collections import Counter
+        """Sporcu adları olmadan kulübün performans ve aktif sporcu yaş dağılımı özetini döner."""
+        from datetime import date
         from django.db.models import Avg, Count, Max
         from .sqlite_tr import normalize_il_adi
 
         th_qs = self.sporcu_tarihcesi.select_related('sporcu')
-        aktif_sporcu = th_qs.filter(aktif_kulup_mu=1).count()
+        aktif_qs = th_qs.filter(aktif_kulup_mu=1)
+        aktif_sporcu = aktif_qs.count()
         toplam_th = th_qs.count()
         gecmis_sporcu = max(0, toplam_th - aktif_sporcu)
 
@@ -104,51 +105,47 @@ class Kulup(models.Model):
         gumus = sira_counts.get('2', 0) + sira_counts.get('2.', 0)
         bronz = sira_counts.get('3', 0) + sira_counts.get('3.', 0)
 
-        stil_raw = list(
-            ys_qs.exclude(stil__isnull=True)
-            .exclude(stil='')
-            .values('stil')
-            .annotate(c=Count('id'))
-            .order_by('-c')[:6]
-        )
-        stil_toplam = sum(r['c'] for r in stil_raw) or 1
-        stil_dagilimi = [
-            {
-                'stil': r['stil'],
-                'yaris_sayisi': r['c'],
-                'oran': round((r['c'] / stil_toplam) * 100),
-            }
-            for r in stil_raw
-        ]
-
-        sehir_counter = Counter()
-        for raw_sehir, cnt in (
+        sehir_set = set()
+        for (raw_sehir,) in (
             ys_qs.filter(event__sehir__isnull=False)
             .exclude(event__sehir='')
             .values_list('event__sehir')
-            .annotate(c=Count('id'))
+            .distinct()
         ):
             norm = normalize_il_adi(raw_sehir)
             if norm:
-                sehir_counter[norm] += cnt
-        sehir_dagilimi = [
-            {'il': il, 'yaris_sayisi': cnt}
-            for il, cnt in sehir_counter.most_common(6)
-        ]
+                sehir_set.add(norm)
 
-        son_musabakalar = list(
-            ys_qs.filter(event__isnull=False)
-            .values(
-                'event_id',
-                'event__musabaka_adi',
-                'event__sehir',
-                'event__yaris_tarihi_baslangic',
-            )
-            .annotate(yaris_sayisi=Count('id'))
-            .order_by('-event__yaris_tarihi_baslangic', '-event_id')[:10]
-        )
-        for m in son_musabakalar:
-            m['sehir_norm'] = normalize_il_adi(m.get('event__sehir') or '') or (m.get('event__sehir') or '-')
+        current_year = date.today().year
+        age_buckets = [
+            ('10 Yaş ve Altı', 0, 10),
+            ('11-12 Yaş', 11, 12),
+            ('13-14 Yaş', 13, 14),
+            ('15-17 Yaş', 15, 17),
+            ('18+ Yaş', 18, 120),
+        ]
+        bucket_counts = [0] * len(age_buckets)
+        for dy, cnt in (
+            aktif_qs.filter(sporcu__dogum_yili__isnull=False)
+            .values_list('sporcu__dogum_yili')
+            .annotate(c=Count('id'))
+        ):
+            age = current_year - dy
+            for idx, (_, low, high) in enumerate(age_buckets):
+                if low <= age <= high:
+                    bucket_counts[idx] += cnt
+                    break
+
+        yas_toplam = sum(bucket_counts) or 1
+        yas_dagilimi = [
+            {
+                'grup': label,
+                'sayi': bucket_counts[idx],
+                'oran': round((bucket_counts[idx] / yas_toplam) * 100),
+            }
+            for idx, (label, _, _) in enumerate(age_buckets)
+            if bucket_counts[idx] > 0
+        ]
 
         return {
             'aktif_sporcu_sayisi': aktif_sporcu,
@@ -156,16 +153,14 @@ class Kulup(models.Model):
             'erkek_sayisi': erkek_sayisi,
             'kadin_sayisi': kadin_sayisi,
             'musabaka_sayisi': agg['musabaka_sayisi'] or 0,
-            'farkli_il_sayisi': len(sehir_counter),
+            'farkli_il_sayisi': len(sehir_set),
             'max_puan': agg['max_puan'],
             'avg_puan': round(agg['avg_puan']) if agg['avg_puan'] else None,
             'altin': altin,
             'gumus': gumus,
             'bronz': bronz,
             'toplam_madalya': altin + gumus + bronz,
-            'stil_dagilimi': stil_dagilimi,
-            'sehir_dagilimi': sehir_dagilimi,
-            'son_musabakalar': son_musabakalar,
+            'yas_dagilimi': yas_dagilimi,
         }
 
 
