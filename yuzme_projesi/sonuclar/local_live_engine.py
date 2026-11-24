@@ -917,6 +917,10 @@ class LocalLiveEngine:
             all_start_count = len(current_start_names)
             all_result_count = len(current_result_names)
 
+            removed_files_cnt, removed_results_cnt = self._cleanup_removed_files(
+                yaris, known_files, current_start_names | current_result_names
+            )
+
             def _count_processed_current():
                 s_cnt = (
                     CanliYarisDosya.objects.filter(
@@ -937,20 +941,33 @@ class LocalLiveEngine:
             # Yeni dosya yoksa: çok günlük yarış bitiş tarihi geçtiyse TAMAMLANDI'ya al, değilse sessizce çık
             if not pending_starts and not pending_results:
                 islenen_start, islenen_sonuc = _count_processed_current()
-                if _should_mark_meet_completed(
+                is_completed = _should_mark_meet_completed(
                     yaris, event, all_start_count, islenen_start, all_result_count, islenen_sonuc, has_errors=False
-                ):
-                    if yaris.durum != "TAMAMLANDI":
-                        yaris.durum = "TAMAMLANDI"
-                        yaris.toplam_start_listesi = all_start_count
-                        yaris.islenen_start_listesi = islenen_start
-                        yaris.toplam_sonuc_listesi = all_result_count
-                        yaris.islenen_sonuc_listesi = islenen_sonuc
-                        db_retry(lambda: yaris.save(update_fields=[
-                            "durum", "toplam_start_listesi", "islenen_start_listesi",
-                            "toplam_sonuc_listesi", "islenen_sonuc_listesi"
-                        ]))
-                        logger.info(f"  [✔] #{yaris.id} Müsabaka bitiş tarihi geçtiği ve tüm dosyalar işlendiği için TAMAMLANDI olarak kapatıldı.")
+                )
+                if is_completed and yaris.durum != "TAMAMLANDI":
+                    yaris.durum = "TAMAMLANDI"
+                    yaris.toplam_start_listesi = all_start_count
+                    yaris.islenen_start_listesi = islenen_start
+                    yaris.toplam_sonuc_listesi = all_result_count
+                    yaris.islenen_sonuc_listesi = islenen_sonuc
+                    yaris.eklenen_kayit_sayisi = YarisSonucu.objects.filter(event=event).count()
+                    db_retry(lambda: yaris.save(update_fields=[
+                        "durum", "toplam_start_listesi", "islenen_start_listesi",
+                        "toplam_sonuc_listesi", "islenen_sonuc_listesi", "eklenen_kayit_sayisi",
+                    ]))
+                    logger.info(f"  [✔] #{yaris.id} Müsabaka bitiş tarihi geçtiği ve tüm dosyalar işlendiği için TAMAMLANDI olarak kapatıldı.")
+                elif removed_files_cnt > 0:
+                    yaris.durum = "TAMAMLANDI" if is_completed else "ISLENIYOR"
+                    yaris.toplam_start_listesi = all_start_count
+                    yaris.islenen_start_listesi = islenen_start
+                    yaris.toplam_sonuc_listesi = all_result_count
+                    yaris.islenen_sonuc_listesi = islenen_sonuc
+                    yaris.eklenen_kayit_sayisi = YarisSonucu.objects.filter(event=event).count()
+                    yaris.son_islem_tarihi = timezone.now()
+                    db_retry(lambda: yaris.save(update_fields=[
+                        "durum", "toplam_start_listesi", "islenen_start_listesi",
+                        "toplam_sonuc_listesi", "islenen_sonuc_listesi", "eklenen_kayit_sayisi", "son_islem_tarihi",
+                    ]))
                 return stats
 
             logger.info(
@@ -1009,7 +1026,7 @@ class LocalLiveEngine:
             yaris.islenen_start_listesi = islenen_start
             yaris.toplam_sonuc_listesi = all_result_count
             yaris.islenen_sonuc_listesi = islenen_sonuc
-            yaris.eklenen_kayit_sayisi = (yaris.eklenen_kayit_sayisi or 0) + stats["eklenen_kayit"]
+            yaris.eklenen_kayit_sayisi = YarisSonucu.objects.filter(event=event).count()
             yaris.son_islem_tarihi = timezone.now()
 
             if stats["hatalar"]:
@@ -1040,6 +1057,35 @@ class LocalLiveEngine:
                 pass
 
         return stats
+
+    def _cleanup_removed_files(
+        self,
+        yaris: CanliYaris,
+        known_files: Dict[str, CanliYarisDosya],
+        current_names: set,
+    ) -> Tuple[int, int]:
+        """TYF canlı sayfasından kaldırılan eski StartList/ResultList dosyalarını ve bağlı kayıtlarını temizler."""
+        if not current_names or not known_files:
+            return 0, 0
+        removed_names = [fname for fname in list(known_files.keys()) if fname not in current_names]
+        if not removed_names:
+            return 0, 0
+        removed_ids = [known_files[fname].id for fname in removed_names]
+
+        def _do_delete() -> Tuple[int, int]:
+            with transaction.atomic():
+                deleted_results, _ = YarisSonucu.objects.filter(canli_dosya_id__in=removed_ids).delete()
+                deleted_files, _ = CanliYarisDosya.objects.filter(id__in=removed_ids).delete()
+                return deleted_files, deleted_results
+
+        deleted_files, deleted_results = db_retry(_do_delete)
+        for fname in removed_names:
+            known_files.pop(fname, None)
+        logger.info(
+            f"  [-] #{yaris.id} TYF sayfasından kaldırılan {deleted_files} eski dosya "
+            f"ve {deleted_results} kayıt temizlendi."
+        )
+        return deleted_files, deleted_results
 
     def _download_and_parse_pdf(self, item: Dict[str, str], doc_type: str) -> Dict[str, Any]:
         """PDF'i indirip yerel PyMuPDF parser ile çözer (thread-safe, DB yazmaz)."""

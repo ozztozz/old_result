@@ -16,6 +16,7 @@ Bu kılavuz, Oracle Cloud üzerinde çalışan **Yüzme Projesi (Sonuçlar & Can
 Bilgisayarınızın terminalinden (PowerShell veya Bash):
 ```bash
 ssh -i /path/to/your-private-key.key ubuntu@130.61.177.72
+ssh -i .\ssh-key-2026-10-28.key  ubuntu@130.61.177.72  
 ```
 
 ---

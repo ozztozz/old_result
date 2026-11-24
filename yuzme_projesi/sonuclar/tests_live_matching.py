@@ -362,4 +362,50 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertEqual(res.get("sonuc"), "tam_eslesme")
         self.assertEqual(res.get("bulunan_id"), self.sp_elif.id)
 
+    def test_cleanup_removed_files_from_tyf(self):
+        # Eski StartList ve ResultList kayıtları oluştur
+        self._run_prefetched(
+            "StartList_old.pdf",
+            "start_listesi",
+            "1",
+            [{"seri": "1", "kulvar": 4, "sporcu": "Zeynep KAYA", "dogum_yili": 2018, "kulup": "Nova Akademi Spor Kulübü", "giris_derecesi": "50.00"}],
+        )
+        self._run_prefetched(
+            "ResultList_old.pdf",
+            "sonuc_listesi",
+            "2",
+            [{"seri": "1", "kulvar": 5, "sporcu": "Elif Öykü Bostan", "dogum_yili": 2018, "kulup": "Ankara Üniversitesi S.K.", "derece": "45.00", "sira": "1"}],
+        )
+        self._run_prefetched(
+            "StartList_new.pdf",
+            "start_listesi",
+            "3",
+            [{"seri": "1", "kulvar": 3, "sporcu": "Zeynep KAYA", "dogum_yili": 2018, "kulup": "Nova Akademi Spor Kulübü", "giris_derecesi": "49.00"}],
+        )
+        self.assertEqual(CanliYarisDosya.objects.filter(canli_yaris=self.yaris).count(), 3)
+        self.assertEqual(YarisSonucu.objects.filter(event=self.event).count(), 3)
+
+        # TYF kataloğu artık yalnızca StartList_new.pdf içeriyor -> eski 2 dosya ve 2 kayıt temizlenmeli
+        meta = {"musabaka_adi": self.event.musabaka_adi, "sehir": "Ankara", "tarih": "", "start_date": "", "end_date": ""}
+        items = [{"filename": "StartList_new.pdf", "url": "https://canli.tyf.gov.tr/live/2026/9999999/StartList_new.pdf?v=1", "doc_type": "start_listesi", "yaris_no": "3"}]
+        with patch.object(self.engine, "fetch_meet_pdf_catalog", return_value=(meta, items)):
+            self.engine.process_meet(self.yaris, prefetched_catalog=(meta, items))
+
+        remaining_files = list(CanliYarisDosya.objects.filter(canli_yaris=self.yaris).values_list("dosya_adi", flat=True))
+        self.assertEqual(remaining_files, ["StartList_new.pdf"])
+        self.assertEqual(YarisSonucu.objects.filter(event=self.event).count(), 1)
+        self.yaris.refresh_from_db()
+        self.assertEqual(self.yaris.toplam_start_listesi, 1)
+        self.assertEqual(self.yaris.islenen_start_listesi, 1)
+        self.assertEqual(self.yaris.toplam_sonuc_listesi, 0)
+        self.assertEqual(self.yaris.islenen_sonuc_listesi, 0)
+        self.assertEqual(self.yaris.eklenen_kayit_sayisi, 1)
+
+        # Güvenlik: boş katalog (ör. geçici TYF hatası) geldiğinde mevcut dosyalar silinmemeli
+        known = {d.dosya_adi: d for d in CanliYarisDosya.objects.filter(canli_yaris=self.yaris)}
+        removed_f, removed_r = self.engine._cleanup_removed_files(self.yaris, known, set())
+        self.assertEqual((removed_f, removed_r), (0, 0))
+        self.assertEqual(CanliYarisDosya.objects.filter(canli_yaris=self.yaris).count(), 1)
+
+
 
