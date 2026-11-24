@@ -47,6 +47,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
     super.initState();
     _kind = widget.initialKind;
     _loadMapClubs();
+    _centerOnUser(silent: true);
   }
 
   @override
@@ -80,13 +81,13 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
     }
   }
 
-  Future<void> _centerOnUser() async {
+  Future<void> _centerOnUser({bool silent = false}) async {
     if (_isLocating) return;
     setState(() => _isLocating = true);
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
       if (!enabled) {
-        if (mounted) {
+        if (!silent && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Konum servisi kapalı.')),
           );
@@ -99,7 +100,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
       }
       if (perm == LocationPermission.denied ||
           perm == LocationPermission.deniedForever) {
-        if (mounted) {
+        if (!silent && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Konum izni gerekli.')),
           );
@@ -115,9 +116,9 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
       if (!mounted) return;
       final point = LatLng(pos.latitude, pos.longitude);
       setState(() => _userLocation = point);
-      _mapController.move(point, 11.5);
+      _mapController.move(point, 12.5);
     } catch (_) {
-      if (mounted) {
+      if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Konum alınamadı.')),
         );
