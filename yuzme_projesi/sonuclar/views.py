@@ -416,7 +416,7 @@ def kulup_listesi(request):
     else:
         qs = Kulup.objects.all()
         if q:
-            qs = qs.filter(kulup_adi__icontains=q)
+            qs = qs.filter(Q(kulup_adi__icontains=q) | Q(il__icontains=q))
 
         if sirala == 'sporcu':
             qs = qs.order_by('-toplam_sporcu_sayisi')

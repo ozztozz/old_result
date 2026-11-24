@@ -30,6 +30,7 @@ class SporcuApiTests(TestCase):
             CREATE TABLE IF NOT EXISTS kulupler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 kulup_adi TEXT NOT NULL UNIQUE,
+                il TEXT,
                 toplam_sporcu_sayisi INTEGER DEFAULT 0,
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
@@ -92,6 +93,7 @@ class SporcuApiTests(TestCase):
             CREATE TABLE IF NOT EXISTS kulupler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 kulup_adi TEXT NOT NULL UNIQUE,
+                il TEXT,
                 toplam_sporcu_sayisi INTEGER DEFAULT 0,
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
@@ -244,6 +246,7 @@ class SporcuApiTests(TestCase):
             CREATE TABLE IF NOT EXISTS kulupler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 kulup_adi TEXT NOT NULL UNIQUE,
+                il TEXT,
                 toplam_sporcu_sayisi INTEGER DEFAULT 0,
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
@@ -987,6 +990,7 @@ class CanliYarisTests(TestCase):
             CREATE TABLE IF NOT EXISTS kulupler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 kulup_adi TEXT NOT NULL UNIQUE,
+                il TEXT,
                 toplam_sporcu_sayisi INTEGER DEFAULT 0,
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
@@ -1206,6 +1210,7 @@ class MusabakaAnalizTests(TestCase):
             CREATE TABLE IF NOT EXISTS kulupler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 kulup_adi TEXT NOT NULL UNIQUE,
+                il TEXT,
                 toplam_sporcu_sayisi INTEGER DEFAULT 0,
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
@@ -1394,3 +1399,182 @@ class MusabakaAnalizTests(TestCase):
         content_analiz = res_analiz.content.decode('utf-8')
         self.assertNotIn('>HAYIR<', content_analiz)
         self.assertNotIn('>Hayır<', content_analiz)
+
+
+class KulupIlTests(TestCase):
+    """Kulüp il bilgisi normalizasyonu, DB doldurma betiği ve görünüm testleri."""
+
+    def test_normalize_il_adi(self):
+        from sonuclar.sqlite_tr import normalize_il_adi
+
+        self.assertEqual(normalize_il_adi("Deni\u0307zli\u0307"), "Denizli")
+        self.assertEqual(normalize_il_adi("Eski\u0307şehi\u0307r"), "Eskişehir")
+        self.assertEqual(normalize_il_adi("Di\u0307yarbakir"), "Diyarbakır")
+        self.assertEqual(normalize_il_adi("İstanbul Avrupa Yakasi"), "İstanbul")
+        self.assertEqual(normalize_il_adi("Alanya"), "Antalya")
+        self.assertEqual(normalize_il_adi("Yüzme Yarişlari Muğla"), "Muğla")
+        self.assertEqual(normalize_il_adi("LİVE"), "")
+        self.assertEqual(normalize_il_adi(""), "")
+
+    def test_populate_kulup_il_picks_most_competed_province(self):
+        import os
+        import sqlite3
+        import sys
+        import tempfile
+
+        scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        from populate_kulup_il import populate_kulup_il
+
+        fd, tmp_db = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        try:
+            conn = sqlite3.connect(tmp_db)
+            cur = conn.cursor()
+            cur.execute("CREATE TABLE kulupler (id INTEGER PRIMARY KEY AUTOINCREMENT, kulup_adi TEXT UNIQUE, okul_mu INTEGER DEFAULT 0);")
+            cur.execute("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, musabaka_adi TEXT, sehir TEXT, yaris_tarihi_baslangic TEXT);")
+            cur.execute("CREATE TABLE yaris_sonuclari (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER, kulup_id INTEGER);")
+
+            cur.execute(
+                "INSERT INTO kulupler (id, kulup_adi, okul_mu) VALUES "
+                "(1, 'Test Denizli SK', 0), "
+                "(2, 'Test Bos SK', 0), "
+                "(3, 'FERDİ', 0), "
+                "(4, 'Atatürk Ortaokulu', 1), "
+                "(5, 'Tek İl İlkokulu', 1);"
+            )
+            cur.execute("INSERT INTO events (id, musabaka_adi, sehir, yaris_tarihi_baslangic) VALUES (10, 'M1', 'Denizli', '2025-01-01'), (11, 'M2', 'Deni\u0307zli\u0307', '2025-02-01'), (12, 'M3', 'Ankara', '2025-03-01');")
+            # Kulüp 1: 2 Denizli + 2 Deni̇zli̇ = 4 Denizli vs 3 Ankara -> Denizli seçilmeli
+            for eid in (10, 10, 11, 11, 12, 12, 12):
+                cur.execute("INSERT INTO yaris_sonuclari (event_id, kulup_id) VALUES (?, 1)", (eid,))
+            # FERDİ -> il=None kalmalı
+            cur.execute("INSERT INTO yaris_sonuclari (event_id, kulup_id) VALUES (10, 3), (12, 3)")
+            # Çok illi okul -> il=None kalmalı
+            cur.execute("INSERT INTO yaris_sonuclari (event_id, kulup_id) VALUES (10, 4), (12, 4)")
+            # Tek illi okul -> Ankara atanmalı
+            cur.execute("INSERT INTO yaris_sonuclari (event_id, kulup_id) VALUES (12, 5)")
+            conn.commit()
+            conn.close()
+
+            stats = populate_kulup_il(tmp_db, dry_run=False)
+            self.assertTrue(stats["column_added"])
+            self.assertEqual(stats["updated_clubs"], 2)
+            self.assertEqual(stats["excluded_ferdi"], 1)
+            self.assertEqual(stats["excluded_multi_city_school"], 1)
+
+            conn = sqlite3.connect(tmp_db)
+            rows = dict(conn.execute("SELECT id, il FROM kulupler").fetchall())
+            conn.close()
+            self.assertEqual(rows[1], "Denizli")
+            self.assertIsNone(rows[2])
+            self.assertIsNone(rows[3])
+            self.assertIsNone(rows[4])
+            self.assertEqual(rows[5], "Ankara")
+
+            # İkinci çalıştırma idempotent olmalı
+            stats2 = populate_kulup_il(tmp_db, dry_run=False)
+            self.assertFalse(stats2["column_added"])
+        finally:
+            if os.path.exists(tmp_db):
+                os.remove(tmp_db)
+
+    def test_kulup_model_and_views_with_il(self):
+        with connection.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS kulupler (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kulup_adi TEXT NOT NULL UNIQUE,
+                il TEXT,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                okul_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcular (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_adi TEXT NOT NULL,
+                dogum_yili INTEGER,
+                yas_dogum_yili TEXT,
+                cinsiyet TEXT,
+                birincil_kulup_id INTEGER,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS sporcu_kulup_tarihce (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sporcu_id INTEGER NOT NULL,
+                kulup_id INTEGER NOT NULL,
+                ilk_yaris_tarihi TEXT,
+                son_yaris_tarihi TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                donem_sirasi INTEGER DEFAULT 1,
+                aktif_kulup_mu INTEGER DEFAULT 0
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                musabaka_adi TEXT NOT NULL,
+                sehir TEXT,
+                yaris_tarihi_ham TEXT,
+                yaris_tarihi_baslangic TEXT,
+                yaris_tarihi_bitis TEXT,
+                kaynak_turu TEXT,
+                toplam_yaris_sayisi INTEGER DEFAULT 0,
+                toplam_sporcu_sayisi INTEGER DEFAULT 0,
+                olusturulma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+                guncellenme_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS yaris_sonuclari (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                sporcu_id INTEGER NOT NULL,
+                kulup_id INTEGER,
+                sporcu_kulup_tarihce_id INTEGER,
+                canli_dosya_id INTEGER,
+                kaynak_turu TEXT,
+                dosya_adi TEXT,
+                sayfa_no INTEGER,
+                satir_no INTEGER,
+                yaris_no TEXT,
+                cinsiyet TEXT,
+                mesafe INTEGER,
+                stil TEXT,
+                yas_grubu TEXT,
+                sporcu_yas TEXT,
+                hesaplanan_yas INTEGER,
+                sira TEXT,
+                seri TEXT,
+                kulvar INTEGER,
+                giris_derecesi TEXT,
+                derece TEXT,
+                derece_saniye REAL,
+                puan INTEGER,
+                baraj TEXT,
+                beraberlik_mi TEXT,
+                zaman_kontrolu TEXT,
+                uyari_notu TEXT,
+                ham_satir TEXT,
+                sporcu_maskeli TEXT,
+                ara_dereceler TEXT
+            );
+            """)
+
+        kulup = Kulup.objects.create(kulup_adi="Ege Yüzme SK", il="İzmir")
+        res_list = self.client.get(reverse('sonuclar:kulup_listesi'), {'q': 'İzmir'})
+        self.assertEqual(res_list.status_code, 200)
+        self.assertIn("Ege Yüzme SK", res_list.content.decode('utf-8'))
+
+        res_detay = self.client.get(reverse('sonuclar:kulup_detay', args=[kulup.id]))
+        self.assertEqual(res_detay.status_code, 200)
+        self.assertIn("İzmir", res_detay.content.decode('utf-8'))
+

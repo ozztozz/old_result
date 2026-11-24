@@ -27,6 +27,9 @@
                     <td class="swim-td font-semibold">
                         <a href="{% url 'sonuclar:kulup_detay' kl.id %}" class="swim-text-main hover:swim-text-primary transition flex items-center gap-2">
                             <i class="bi bi-shield-shaded swim-text-primary"></i>{{ kl.kulup_adi }}
+                            {% if kl.il %}
+                                <span class="swim-badge swim-badge-neutral text-[0.65rem] font-normal">{{ kl.il }}</span>
+                            {% endif %}
                         </a>
                     </td>
                     <td class="swim-td text-center text-xs">

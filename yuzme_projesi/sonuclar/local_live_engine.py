@@ -1433,7 +1433,11 @@ class LocalLiveEngine:
                         ck_key = (club_lookup_str, is_school)
                         if ck_key in club_cache:
                             return club_cache[ck_key]
-                        c_obj, _ = get_or_resolve_canonical_club(club_lookup_str, is_school=is_school)
+                        c_obj, _ = get_or_resolve_canonical_club(
+                            club_lookup_str,
+                            is_school=is_school,
+                            il=event.sehir,
+                        )
                         club_cache[ck_key] = c_obj
                         return c_obj
 

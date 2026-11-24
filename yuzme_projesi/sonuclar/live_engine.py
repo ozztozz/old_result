@@ -1048,24 +1048,38 @@ def clean_and_expand_club_name(name: str) -> str:
     return re.sub(r"\s+", " ", name.strip())
 
 
-def get_or_resolve_canonical_club(raw_club_name: str, is_school: bool = False) -> Tuple[Kulup, bool]:
+def get_or_resolve_canonical_club(
+    raw_club_name: str,
+    is_school: bool = False,
+    il: Optional[str] = None,
+) -> Tuple[Kulup, bool]:
+    from .sqlite_tr import is_ferdi_club, normalize_il_adi
+
     c_name = clean_club_name_tags(raw_club_name) if raw_club_name else "FERDİ"
     if not c_name:
         c_name = "FERDİ"
     c_name = re.sub(r"\s+", " ", c_name)
     is_school_flag = 1 if (is_school or is_school_team(c_name)) else 0
+    norm_il = "" if is_ferdi_club(c_name) else (normalize_il_adi(il) if il else "")
 
     club = Kulup.objects.filter(kulup_adi__iexact=c_name).first()
     if club:
+        if norm_il and not club.il:
+            club.il = norm_il
+            club.save(update_fields=["il"])
         return club, False
 
     clean_name = clean_and_expand_club_name(c_name)
     club = Kulup.objects.filter(kulup_adi__iexact=clean_name).first()
     if club:
+        if norm_il and not club.il:
+            club.il = norm_il
+            club.save(update_fields=["il"])
         return club, False
 
     club = Kulup.objects.create(
         kulup_adi=clean_name or c_name,
+        il=norm_il or None,
         okul_mu=is_school_flag,
     )
     return club, True

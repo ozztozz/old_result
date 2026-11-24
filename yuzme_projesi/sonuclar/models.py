@@ -50,6 +50,7 @@ def is_school_team(club_name: str) -> bool:
 
 class Kulup(models.Model):
     kulup_adi = models.CharField(max_length=255, unique=True, verbose_name="Kulüp Adı")
+    il = models.CharField(max_length=100, blank=True, null=True, verbose_name="İl")
     toplam_sporcu_sayisi = models.IntegerField(default=0, verbose_name="Toplam Sporcu Sayısı")
     toplam_yaris_sayisi = models.IntegerField(default=0, verbose_name="Toplam Yarış Sayısı")
     ilk_yaris_tarihi = models.CharField(max_length=20, blank=True, null=True, verbose_name="İlk Yarış Tarihi")

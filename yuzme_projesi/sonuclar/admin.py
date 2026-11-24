@@ -32,8 +32,9 @@ class CanliYarisAdmin(admin.ModelAdmin):
 
 @admin.register(Kulup)
 class KulupAdmin(admin.ModelAdmin):
-    list_display = ('kulup_adi', 'toplam_sporcu_sayisi', 'toplam_yaris_sayisi', 'ilk_yaris_tarihi', 'son_yaris_tarihi')
-    search_fields = ('kulup_adi',)
+    list_display = ('kulup_adi', 'il', 'toplam_sporcu_sayisi', 'toplam_yaris_sayisi', 'ilk_yaris_tarihi', 'son_yaris_tarihi')
+    search_fields = ('kulup_adi', 'il')
+    list_filter = ('il', 'okul_mu')
     ordering = ('-toplam_yaris_sayisi',)
     readonly_fields = ('toplam_sporcu_sayisi', 'toplam_yaris_sayisi', 'ilk_yaris_tarihi', 'son_yaris_tarihi')
 
