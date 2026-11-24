@@ -407,5 +407,31 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertEqual((removed_f, removed_r), (0, 0))
         self.assertEqual(CanliYarisDosya.objects.filter(canli_yaris=self.yaris).count(), 1)
 
+    def test_filter_due_meets_skips_more_than_two_days_away(self):
+        y_far = CanliYaris.objects.create(
+            musabaka_adi="Uzak Yarış",
+            canli_url="https://canli.tyf.gov.tr/live/2026/1000001/",
+            tarih="27.11.2026 - 29.11.2026",
+            durum="BEKLIYOR",
+        )
+        y_near = CanliYaris.objects.create(
+            musabaka_adi="Yakın Yarış",
+            canli_url="https://canli.tyf.gov.tr/live/2026/1000002/",
+            tarih="26.11.2026 - 28.11.2026",
+            durum="BEKLIYOR",
+        )
+        y_nodate = CanliYaris.objects.create(
+            musabaka_adi="Tarihsiz Yarış",
+            canli_url="https://canli.tyf.gov.tr/live/2026/1000003/",
+            tarih="",
+            durum="BEKLIYOR",
+        )
+        due = self.engine.filter_due_meets([y_far, y_near, y_nodate], "2026-11-24")
+        due_ids = [y.id for y in due]
+        self.assertNotIn(y_far.id, due_ids)
+        self.assertIn(y_near.id, due_ids)
+        self.assertIn(y_nodate.id, due_ids)
+
+
 
 

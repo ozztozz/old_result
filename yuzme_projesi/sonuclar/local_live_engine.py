@@ -31,7 +31,7 @@ import tempfile
 import logging
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone as dt_timezone, timedelta
+from datetime import date, datetime, timezone as dt_timezone, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from urllib.parse import urljoin
 
@@ -554,11 +554,18 @@ class LocalLiveEngine:
         return found_id
 
     def filter_due_meets(self, meets: List[CanliYaris], today_iso: str) -> List[CanliYaris]:
-        """Başlangıç tarihi gelecekte olan ve start listeleri tamamlanmış yarışları 5 dk'da bir tarar."""
+        """Başlangıcına 2 günden fazla kalan yarışları atlar; yaklaşan ve start listesi tamamlanmış gelecek yarışları 5 dk'da bir tarar."""
         now_ts = time.time()
+        today_date = date.fromisoformat(today_iso[:10])
         due: List[CanliYaris] = []
         for y in meets:
             start_iso, _ = _get_meet_date_bounds(y, y.event)
+            if start_iso:
+                try:
+                    if (date.fromisoformat(start_iso[:10]) - today_date).days > 2:
+                        continue
+                except ValueError:
+                    pass
             if (
                 start_iso
                 and today_iso < start_iso
