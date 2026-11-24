@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -684,30 +685,41 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: palette.accent,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.25),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
+                          Transform.rotate(
+                            angle: -math.pi / 4,
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: palette.accent,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(999),
+                                  topRight: Radius.circular(999),
+                                  bottomRight: Radius.circular(999),
+                                  bottomLeft: Radius.circular(4),
                                 ),
-                              ],
-                            ),
-                            child: Icon(
-                              club.isSchool
-                                  ? Icons.school_rounded
-                                  : Icons.shield_rounded,
-                              size: 18,
-                              color: Colors.white,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                    blurRadius: 8,
+                                    offset: const Offset(-2, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Transform.rotate(
+                                angle: math.pi / 4,
+                                child: Icon(
+                                  club.isSchool
+                                      ? Icons.school_rounded
+                                      : Icons.shield_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 6),

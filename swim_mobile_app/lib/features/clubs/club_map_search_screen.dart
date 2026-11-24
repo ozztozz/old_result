@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -217,33 +218,44 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 160),
-                              width: size,
-                              height: size,
-                              decoration: BoxDecoration(
-                                color: pinColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(
-                                      alpha: isSelected ? 0.30 : 0.20,
-                                    ),
-                                    blurRadius: isSelected ? 10 : 6,
-                                    offset: const Offset(0, 3),
+                            Transform.rotate(
+                              angle: -math.pi / 4,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                width: size,
+                                height: size,
+                                decoration: BoxDecoration(
+                                  color: pinColor,
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(999),
+                                    topRight: Radius.circular(999),
+                                    bottomRight: Radius.circular(999),
+                                    bottomLeft: Radius.circular(4),
                                   ),
-                                ],
-                              ),
-                              child: Icon(
-                                club.isSchool
-                                    ? Icons.school_rounded
-                                    : Icons.shield_rounded,
-                                size: isSelected ? 20 : 15,
-                                color: Colors.white,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: isSelected ? 0.32 : 0.22,
+                                      ),
+                                      blurRadius: isSelected ? 10 : 6,
+                                      offset: const Offset(-2, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Transform.rotate(
+                                  angle: math.pi / 4,
+                                  child: Icon(
+                                    club.isSchool
+                                        ? Icons.school_rounded
+                                        : Icons.shield_rounded,
+                                    size: isSelected ? 18 : 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
                             if (showLabel) ...[

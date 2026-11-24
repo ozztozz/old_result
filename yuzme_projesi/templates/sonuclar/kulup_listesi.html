@@ -79,26 +79,38 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
 <style>
+    #clubSearchMap {
+        cursor: grab;
+    }
+    #clubSearchMap:active {
+        cursor: grabbing;
+    }
     .swim-map-pin {
         width: 30px;
         height: 30px;
-        border-radius: 9999px;
-        background: #2563eb;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         border: 2.5px solid #ffffff;
-        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.28);
+        box-shadow: -2px 3px 8px rgba(15, 23, 42, 0.32);
         display: flex;
         align-items: center;
         justify-content: center;
         color: #ffffff;
-        font-size: 13px;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        font-size: 12px;
+        cursor: pointer;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+    .swim-map-pin i {
+        transform: rotate(45deg);
+        display: block;
     }
     .swim-map-pin:hover {
-        transform: scale(1.15);
-        box-shadow: 0 5px 14px rgba(37, 99, 235, 0.4);
+        transform: rotate(-45deg) scale(1.14);
+        box-shadow: -3px 5px 14px rgba(37, 99, 235, 0.45);
     }
     .swim-map-pin.is-school {
-        background: #0891b2;
+        background: linear-gradient(135deg, #06b6d4, #0e7490);
     }
     .swim-map-cluster {
         width: 38px;
@@ -230,15 +242,15 @@
                     const icon = L.divIcon({
                         html: iconHtml,
                         className: '',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15],
-                        popupAnchor: [0, -14]
+                        iconSize: [30, 36],
+                        iconAnchor: [15, 34],
+                        popupAnchor: [0, -32]
                     });
                     const marker = L.marker([c.latitude, c.longitude], { icon: icon });
                     marker.bindTooltip(shortClubLabel(c.name), {
                         permanent: true,
                         direction: 'right',
-                        offset: [16, 0],
+                        offset: [18, -16],
                         className: 'swim-map-label'
                     });
                     marker.bindPopup(
