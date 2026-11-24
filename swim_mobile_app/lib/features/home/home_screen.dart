@@ -14,6 +14,7 @@ import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
+import '../clubs/club_search_screen.dart';
 import '../clubs/relay_simulator_screen.dart';
 import '../live/live_meet_detail_screen.dart';
 import '../meets/meet_search_screen.dart';
@@ -24,11 +25,13 @@ import '../rankings/rankings_screen.dart';
 class HomeScreen extends StatefulWidget {
   final SwimRepository repository;
   final ValueChanged<int>? onOpenLiveMeet;
+  final ValueChanged<MeetSummary>? onOpenMeetInLive;
 
   const HomeScreen({
     super.key,
     required this.repository,
     this.onOpenLiveMeet,
+    this.onOpenMeetInLive,
   });
 
   @override
@@ -93,14 +96,31 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSearchModal() {
     showSearch(
       context: context,
-      delegate: _SwimSearchDelegate(repository: widget.repository),
+      delegate: _SwimSearchDelegate(
+        repository: widget.repository,
+        onMeetSelected: widget.onOpenMeetInLive,
+      ),
+    );
+  }
+
+  void _openClubSearch() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ClubSearchScreen(
+          repository: widget.repository,
+          onMeetSelected: widget.onOpenMeetInLive,
+        ),
+      ),
     );
   }
 
   void _openMeetSearch() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => MeetSearchScreen(repository: widget.repository),
+        builder: (_) => MeetSearchScreen(
+          repository: widget.repository,
+          onMeetSelected: widget.onOpenMeetInLive,
+        ),
       ),
     );
   }
@@ -507,43 +527,119 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUnifiedToolGrid(AppColorPalette palette) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildMicroBadgeToolCard(
-            palette,
-            title: 'Bayrak Simülatörü',
-            subtitle: 'En hızlı 4x50 / 4x100',
-            icon: Icons.groups_outlined,
-            badgeColor: palette.accent,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      RelaySimulatorScreen(repository: widget.repository),
-                ),
-              );
-            },
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMicroBadgeToolCard(
+                palette,
+                title: 'Bayrak Simülatörü',
+                subtitle: 'En hızlı 4x50 / 4x100',
+                icon: Icons.groups_outlined,
+                badgeColor: palette.accent,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RelaySimulatorScreen(repository: widget.repository),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMicroBadgeToolCard(
+                palette,
+                title: 'Top 25 Sıralama',
+                subtitle: 'Branş & il en iyileri',
+                icon: Icons.leaderboard_outlined,
+                badgeColor: palette.infoCyan,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RankingsScreen(repository: widget.repository),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildMicroBadgeToolCard(
-            palette,
-            title: 'Top 25 Sıralama',
-            subtitle: 'Branş & il en iyileri',
-            icon: Icons.leaderboard_outlined,
-            badgeColor: palette.infoCyan,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => RankingsScreen(repository: widget.repository),
+        const SizedBox(height: 12),
+        ListenableBuilder(
+          listenable: SelectedClubService.instance,
+          builder: (context, _) {
+            final clubService = SelectedClubService.instance;
+            final subtitle = clubService.hasSelectedClub
+                ? 'Seçili: ${StringUtils.toTitleCase(clubService.clubName!)}'
+                : 'Kulüp ara, takımını seç veya yarışlarını gör';
+            return _KheloOnTapScale(
+              onTap: _openClubSearch,
+              child: SoftGlassPanel(
+                level: 2,
+                borderRadius: BorderRadius.circular(18),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: palette.primary.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.shield_outlined,
+                        size: 18,
+                        color: palette.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kulüp Ara',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: palette.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 12,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: palette.textTertiary,
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -660,6 +756,10 @@ class _HomeScreenState extends State<HomeScreen> {
               .firstOrNull;
           if (matchingLive != null && widget.onOpenLiveMeet != null) {
             widget.onOpenLiveMeet!(matchingLive.id);
+            return;
+          }
+          if (widget.onOpenMeetInLive != null) {
+            widget.onOpenMeetInLive!(meet);
             return;
           }
           Navigator.of(context).push(
@@ -891,8 +991,12 @@ class _HomeScreenState extends State<HomeScreen> {
 /// Arama Delegesi
 class _SwimSearchDelegate extends SearchDelegate {
   final SwimRepository repository;
+  final ValueChanged<MeetSummary>? onMeetSelected;
 
-  _SwimSearchDelegate({required this.repository});
+  _SwimSearchDelegate({
+    required this.repository,
+    this.onMeetSelected,
+  });
 
   @override
   String get searchFieldLabel => 'Sporcu veya kulüp ara...';
@@ -985,7 +1089,13 @@ class _SwimSearchDelegate extends SearchDelegate {
                     title: Text(c.name),
                     subtitle: Text('${c.athleteCount} Kayıtlı Sporcu'),
                     onTap: () {
-                      // Kulüp detay Faz 4
+                      close(context, null);
+                      ClubSearchScreen.showClubActionsSheet(
+                        context,
+                        club: c,
+                        repository: repository,
+                        onMeetSelected: onMeetSelected,
+                      );
                     },
                   )),
             ],

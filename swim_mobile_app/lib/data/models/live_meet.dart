@@ -63,10 +63,10 @@ class LiveMeetSummary {
     );
   }
 
-  /// Arşiv / arama müsabakasını tekil canlı detay ekranında açmak için dönüştürür.
+  /// Arşiv / arama müsabakasını canlı sekmesinde veya detay ekranında açmak için dönüştürür.
   factory LiveMeetSummary.fromMeetSummary(MeetSummary meet) {
     return LiveMeetSummary(
-      id: 0,
+      id: meet.id > 0 ? -meet.id : 0,
       meetId: meet.id,
       name: meet.name,
       city: meet.city,

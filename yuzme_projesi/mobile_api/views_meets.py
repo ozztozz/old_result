@@ -264,9 +264,26 @@ def get_meet_results(request, meet_id: int):
 
     page_size = min(int(request.GET.get('page_size', 50)), 100)
     page_num = int(request.GET.get('page', 1))
+    summary_only = (request.GET.get('summary') or '').strip().lower() in ('1', 'true', 'yes')
 
-    paginator = Paginator(qs, page_size)
-    page_obj = paginator.get_page(page_num)
+    if summary_only and not event_no:
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for r in qs:
+            grouped[str(r.yaris_no or '').strip()].append(r)
+        summarized = []
+        for eno in sorted(grouped.keys(), key=lambda x: int(x) if x.isdigit() else 999999):
+            summarized.extend(grouped[eno][:3])
+        page_obj = summarized
+        total_pages = 1
+        total_count = len(summarized)
+        has_next = False
+    else:
+        paginator = Paginator(qs, page_size)
+        page_obj = paginator.get_page(page_num)
+        total_pages = paginator.num_pages
+        total_count = paginator.count
+        has_next = page_obj.has_next()
 
     event_year = None
     if meet.yaris_tarihi_baslangic and len(str(meet.yaris_tarihi_baslangic)) >= 4:
@@ -319,8 +336,8 @@ def get_meet_results(request, meet_id: int):
     return api_response({
         'data': results_data,
         'page': page_num,
-        'total_pages': paginator.num_pages,
-        'total_count': paginator.count,
-        'has_next': page_obj.has_next(),
+        'total_pages': total_pages,
+        'total_count': total_count,
+        'has_next': has_next,
     }, request=request, cache_seconds=15)
 

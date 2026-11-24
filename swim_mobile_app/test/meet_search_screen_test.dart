@@ -72,6 +72,7 @@ class _FakeMeetSearchRepository implements SwimRepository {
     int? athleteId,
     String? status,
     int page = 1,
+    bool summary = false,
   }) async =>
       const [];
 
@@ -122,6 +123,42 @@ void main() {
       await tester.tap(find.textContaining('Antalya 9-10-11-12'));
       await tester.pumpAndSettle();
       expect(find.byType(LiveMeetDetailScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'MeetSearchScreen invokes onMeetSelected without pushing a second detail page',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repo = _FakeMeetSearchRepository();
+      MeetSummary? selectedMeet;
+
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const CoolSophisticatedLightPalette()),
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(360, 780)),
+            child: MeetSearchScreen(
+              repository: repo,
+              onMeetSelected: (meet) => selectedMeet = meet,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('Antalya 9-10-11-12'));
+      await tester.pumpAndSettle();
+
+      expect(selectedMeet?.id, 766);
+      expect(find.byType(LiveMeetDetailScreen), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

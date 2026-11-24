@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swim_mobile_app/core/services/favorite_live_meets_service.dart';
 import 'package:swim_mobile_app/core/theme/app_theme.dart';
 import 'package:swim_mobile_app/data/models/live_meet.dart';
+import 'package:swim_mobile_app/data/models/meet.dart';
+import 'package:swim_mobile_app/data/models/race_result.dart';
 import 'package:swim_mobile_app/data/repositories/swim_repository.dart';
 import 'package:swim_mobile_app/features/live/live_meet_detail_screen.dart';
 import 'package:swim_mobile_app/features/live/live_screen.dart';
@@ -14,8 +16,50 @@ class _FakeLiveScreenRepository implements SwimRepository {
   int getLiveEventsCalls = 0;
   int getLiveSummaryCalls = 0;
   int getLiveFeedFullCalls = 0;
+  int getMeetDetailCalls = 0;
+  int getMeetResultsCalls = 0;
 
   _FakeLiveScreenRepository(this.meets);
+
+  @override
+  Future<MeetDetail> getMeetDetail(int meetId) async {
+    getMeetDetailCalls++;
+    return MeetDetail(
+      id: meetId,
+      name: 'ANTALYA BAHAR KUPASI',
+      city: 'Antalya',
+      startDate: '2026-04-12',
+      endDate: '2026-04-14',
+      course: 'LC',
+      totalRaces: 1,
+      totalAthletes: 120,
+      events: [
+        MeetEvent(
+          eventNo: '1',
+          distance: 50,
+          stroke: 'free',
+          strokeLabel: 'Serbest',
+          gender: 'Kadın',
+          status: 'Sonuçlandı',
+          isPending: false,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<List<RaceResult>> getMeetResults(
+    int meetId, {
+    String? eventNo,
+    int? clubId,
+    int? athleteId,
+    String? status,
+    int page = 1,
+    bool summary = false,
+  }) async {
+    getMeetResultsCalls++;
+    return const [];
+  }
 
   @override
   Future<List<LiveMeetSummary>> getLiveMeets() async => meets;
@@ -315,6 +359,52 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('favorite_live_meet_2')));
       await tester.pumpAndSettle();
       expect(FavoriteLiveMeetsService.instance.isFavorite(2), isFalse);
+    },
+  );
+
+  testWidgets(
+    'LiveScreen opens archived MeetSummary via selectedMeetListenable without a second detail page',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final repo = _FakeLiveScreenRepository(_sampleMeets());
+      final selectedMeet = ValueNotifier<LiveMeetSummary?>(null);
+      addTearDown(selectedMeet.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(const CoolSophisticatedLightPalette()),
+          home: LiveScreen(
+            repository: repo,
+            selectedMeetListenable: selectedMeet,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      final archivedMeet = MeetSummary(
+        id: 766,
+        name: 'ANTALYA BAHAR KUPASI',
+        city: 'Antalya',
+        startDate: '2026-04-12',
+        endDate: '2026-04-14',
+        course: 'LC',
+        totalRaces: 1,
+        totalAthletes: 120,
+      );
+      selectedMeet.value = LiveMeetSummary.fromMeetSummary(archivedMeet);
+      await tester.pumpAndSettle();
+
+      expect(repo.getMeetDetailCalls, 1);
+      expect(repo.getMeetResultsCalls, 1);
+      expect(find.textContaining('Antalya'), findsWidgets);
+      expect(find.textContaining('Serbest'), findsWidgets);
+      expect(find.byType(LiveMeetDetailScreen), findsNothing);
+      expect(tester.takeException(), isNull);
     },
   );
 }

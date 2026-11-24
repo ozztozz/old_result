@@ -72,12 +72,14 @@ class SwimRepository {
     int? athleteId,
     String? status,
     int page = 1,
+    bool summary = false,
   }) async {
     final query = <String, dynamic>{'page': page};
     if (eventNo != null && eventNo.isNotEmpty) query['event_no'] = eventNo;
     if (clubId != null) query['club_id'] = clubId;
     if (athleteId != null) query['athlete_id'] = athleteId;
     if (status != null && status != 'all') query['status'] = status;
+    if (summary) query['summary'] = '1';
 
     final res = await apiClient.get('/meets/$meetId/results/', queryParameters: query);
     final list = res.data['data'] as List<dynamic>? ?? [];
@@ -204,9 +206,36 @@ class SwimRepository {
     return LiveFeedResponse.fromJson(map);
   }
 
+  /// Sayfalı ve alfabetik/il filtreli kulüp arama
+  Future<List<ClubSearchItem>> searchClubs({
+    int page = 1,
+    String? q,
+    String? city,
+    String? letter,
+  }) async {
+    final query = <String, dynamic>{'page': page};
+    if (q != null && q.trim().isNotEmpty) query['q'] = q.trim();
+    if (city != null && city.trim().isNotEmpty) query['city'] = city.trim();
+    if (letter != null && letter.trim().isNotEmpty) {
+      query['letter'] = letter.trim();
+    }
+    final res = await apiClient.get('/clubs/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list
+        .map((e) => ClubSearchItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Genel arama (Autocomplete)
-  Future<GlobalSearchResult> searchGlobal(String q) async {
-    final res = await apiClient.get('/search/', queryParameters: {'q': q});
+  Future<GlobalSearchResult> searchGlobal(
+    String q, {
+    String type = 'all',
+    String? city,
+  }) async {
+    final query = <String, dynamic>{'q': q};
+    if (type != 'all') query['type'] = type;
+    if (city != null && city.trim().isNotEmpty) query['city'] = city.trim();
+    final res = await apiClient.get('/search/', queryParameters: query);
     return GlobalSearchResult.fromJson(res.data as Map<String, dynamic>);
   }
 

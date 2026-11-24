@@ -5,6 +5,8 @@ import 'core/services/favorite_athletes_service.dart';
 import 'core/services/favorite_live_meets_service.dart';
 import 'core/services/selected_club_service.dart';
 import 'core/services/theme_service.dart';
+import 'data/models/live_meet.dart';
+import 'data/models/meet.dart';
 import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
 import 'features/live/live_screen.dart';
@@ -82,6 +84,8 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
   int _currentIndex = 1; // Canlı Takip ile açılış
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
   final ValueNotifier<int?> _requestedLiveMeetId = ValueNotifier<int?>(null);
+  final ValueNotifier<LiveMeetSummary?> _requestedLiveMeet =
+      ValueNotifier<LiveMeetSummary?>(null);
 
   @override
   void initState() {
@@ -96,11 +100,28 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
   @override
   void dispose() {
     _requestedLiveMeetId.dispose();
+    _requestedLiveMeet.dispose();
     super.dispose();
   }
 
   void _openLiveMeetInLiveTab(int liveMeetId) {
+    if (_requestedLiveMeetId.value == liveMeetId) {
+      _requestedLiveMeetId.value = null;
+    }
     _requestedLiveMeetId.value = liveMeetId;
+    if (_currentIndex != 1) {
+      setState(() => _currentIndex = 1);
+    }
+    _navigatorKeys[1].currentState?.popUntil((route) => route.isFirst);
+  }
+
+  void _openMeetInLiveTab(MeetSummary meet) {
+    final live = LiveMeetSummary.fromMeetSummary(meet);
+    if (_requestedLiveMeet.value?.id == live.id &&
+        _requestedLiveMeet.value?.meetId == live.meetId) {
+      _requestedLiveMeet.value = null;
+    }
+    _requestedLiveMeet.value = live;
     if (_currentIndex != 1) {
       setState(() => _currentIndex = 1);
     }
@@ -152,6 +173,7 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
             HomeScreen(
               repository: widget.repository,
               onOpenLiveMeet: _openLiveMeetInLiveTab,
+              onOpenMeetInLive: _openMeetInLiveTab,
             ),
           ),
           _buildTabNavigator(
@@ -159,6 +181,7 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
             LiveScreen(
               repository: widget.repository,
               selectedMeetIdListenable: _requestedLiveMeetId,
+              selectedMeetListenable: _requestedLiveMeet,
             ),
           ),
           _buildTabNavigator(2, FavoritesScreen(repository: widget.repository)),

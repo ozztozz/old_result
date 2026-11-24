@@ -13,6 +13,7 @@ import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
+import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
 import '../../shared/widgets/club_selection_sheet.dart';
 import 'live_meet_detail_screen.dart';
@@ -23,11 +24,13 @@ import 'live_race_results_screen.dart';
 class LiveScreen extends StatefulWidget {
   final SwimRepository repository;
   final ValueListenable<int?>? selectedMeetIdListenable;
+  final ValueListenable<LiveMeetSummary?>? selectedMeetListenable;
 
   const LiveScreen({
     super.key,
     required this.repository,
     this.selectedMeetIdListenable,
+    this.selectedMeetListenable,
   });
 
   @override
@@ -82,6 +85,7 @@ class _LiveScreenState extends State<LiveScreen> {
     SelectedClubService.instance.addListener(_onSelectedClubChanged);
     FavoriteLiveMeetsService.instance.addListener(_onFavoriteLiveMeetsChanged);
     widget.selectedMeetIdListenable?.addListener(_onRequestedMeetIdChanged);
+    widget.selectedMeetListenable?.addListener(_onRequestedMeetChanged);
     _autoRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _autoRefreshSelectedFeed(),
@@ -92,6 +96,7 @@ class _LiveScreenState extends State<LiveScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    widget.selectedMeetListenable?.removeListener(_onRequestedMeetChanged);
     widget.selectedMeetIdListenable?.removeListener(_onRequestedMeetIdChanged);
     FavoriteLiveMeetsService.instance
         .removeListener(_onFavoriteLiveMeetsChanged);
@@ -117,6 +122,35 @@ class _LiveScreenState extends State<LiveScreen> {
     }
   }
 
+  void _onRequestedMeetChanged() {
+    final requestedMeet = widget.selectedMeetListenable?.value;
+    if (requestedMeet == null || !mounted || _isLoading) return;
+    _selectOrInsertMeet(requestedMeet);
+  }
+
+  LiveMeetSummary? _findMatchingMeet(
+    List<LiveMeetSummary> meets,
+    LiveMeetSummary target,
+  ) {
+    return meets.where((m) {
+      if (target.id > 0 && m.id == target.id) return true;
+      if (target.meetId != null && m.meetId == target.meetId) return true;
+      return m.id == target.id;
+    }).firstOrNull;
+  }
+
+  void _selectOrInsertMeet(LiveMeetSummary requestedMeet) {
+    final match = _findMatchingMeet(_liveMeets, requestedMeet);
+    if (match != null) {
+      _selectStoryMeet(match);
+      return;
+    }
+    setState(() {
+      _liveMeets = [requestedMeet, ..._liveMeets];
+    });
+    _selectStoryMeet(requestedMeet);
+  }
+
   void _onSelectedClubChanged() {
     if (mounted) setState(() {});
   }
@@ -132,8 +166,17 @@ class _LiveScreenState extends State<LiveScreen> {
       final list =
           FavoriteLiveMeetsService.instance.sortWithFavoritesFirst(rawList);
       if (mounted) {
+        final requestedMeet = widget.selectedMeetListenable?.value;
         final requestedId = widget.selectedMeetIdListenable?.value;
-        LiveMeetSummary? initial = requestedId == null
+        LiveMeetSummary? initial;
+        if (requestedMeet != null) {
+          initial = _findMatchingMeet(list, requestedMeet);
+          if (initial == null) {
+            list.insert(0, requestedMeet);
+            initial = requestedMeet;
+          }
+        }
+        initial ??= requestedId == null
             ? null
             : list.where((m) => m.id == requestedId).firstOrNull;
         if (initial == null) {
@@ -195,7 +238,7 @@ class _LiveScreenState extends State<LiveScreen> {
 
   Future<void> _autoRefreshSelectedFeed() async {
     final meetId = _selectedStoryMeetId;
-    if (!mounted || meetId == null || _isFeedLoading) return;
+    if (!mounted || meetId == null || meetId <= 0 || _isFeedLoading) return;
     final meet = _liveMeets.where((m) => m.id == meetId).firstOrNull;
     if (meet == null) return;
     final total = meet.resultListProgress.total;
@@ -276,12 +319,75 @@ class _LiveScreenState extends State<LiveScreen> {
     }
     try {
       final clubService = SelectedClubService.instance;
-      final feed = await widget.repository.getLiveSummary(
-        liveMeetId,
-        clubId: clubService.clubId,
-        clubName: clubService.clubName,
-        athleteName: _selectedAthleteName,
-      );
+      final LiveFeedResponse feed;
+      final meet = _liveMeets.where((m) => m.id == liveMeetId).firstOrNull;
+      if (meet != null && meet.id <= 0 && meet.meetId != null) {
+        final responses = await Future.wait([
+          widget.repository.getMeetDetail(meet.meetId!),
+          widget.repository.getMeetResults(
+            meet.meetId!,
+            page: 1,
+            summary: true,
+          ),
+        ]);
+        final detail = responses[0] as MeetDetail;
+        var results = List<RaceResult>.from(responses[1] as List<RaceResult>);
+        final mappedEvents = detail.events.map((e) {
+          final lowerStatus = e.status.toLowerCase();
+          final isDone = !e.isPending ||
+              lowerStatus.contains('tamam') ||
+              lowerStatus.contains('sonuc') ||
+              lowerStatus.contains('sonuç');
+          return LiveEventProgramItem(
+            eventNo: e.eventNo,
+            name: '${e.distance != null ? '${e.distance}m ' : ''}${e.strokeLabel}'
+                .trim(),
+            distance: e.distance,
+            stroke: e.stroke,
+            strokeLabel: e.strokeLabel,
+            gender: e.gender,
+            isPending: !isDone,
+            status: e.status,
+          );
+        }).toList();
+
+        // Eğer sunucu summary=1 desteklemiyorsa, ilk sayfada eksik kalan
+        // tamamlanmış yarışların ilk sonuçlarını yarış bazında çek.
+        if (results.isNotEmpty) {
+          final coveredEvents =
+              results.map((r) => r.eventNo.trim()).where((e) => e.isNotEmpty).toSet();
+          final missingEvents = mappedEvents
+              .where((ev) => !ev.isPending && !coveredEvents.contains(ev.eventNo.trim()))
+              .toList();
+          for (var i = 0; i < missingEvents.length; i += 6) {
+            final chunk = missingEvents.skip(i).take(6).toList();
+            final chunkResults = await Future.wait(
+              chunk.map(
+                (ev) => widget.repository
+                    .getMeetResults(meet.meetId!, eventNo: ev.eventNo, page: 1)
+                    .catchError((_) => <RaceResult>[]),
+              ),
+            );
+            for (final list in chunkResults) {
+              results.addAll(list.take(3));
+            }
+          }
+        }
+
+        feed = LiveFeedResponse(
+          liveId: meet.id,
+          status: 'TAMAMLANDI',
+          events: mappedEvents,
+          data: results,
+        );
+      } else {
+        feed = await widget.repository.getLiveSummary(
+          liveMeetId,
+          clubId: clubService.clubId,
+          clubName: clubService.clubName,
+          athleteName: _selectedAthleteName,
+        );
+      }
       _feedCache[liveMeetId] = feed;
       if (mounted && _selectedStoryMeetId == liveMeetId) {
         setState(() {

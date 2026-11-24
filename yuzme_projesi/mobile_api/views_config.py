@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.views.decorators.http import require_GET
 from django.db.models import Q
 from sonuclar.models import Sporcu, Kulup, Event, MobilUygulamaSurumu
@@ -42,16 +44,17 @@ def search_global(request):
     Parametreler: q (en az 2 karakter), type (all / athlete / club / meet)
     """
     q = (request.GET.get('q') or '').strip()
+    city = (request.GET.get('city') or request.GET.get('il') or '').strip()
     search_type = (request.GET.get('type') or 'all').strip().lower()
 
-    if len(q) < 2:
+    if len(q) < 2 and not (search_type == 'club' and len(city) >= 2):
         return api_response({'athletes': [], 'clubs': [], 'meets': []}, request=request)
 
     res_athletes = []
     res_clubs = []
     res_meets = []
 
-    if search_type in ('all', 'athlete'):
+    if search_type in ('all', 'athlete') and len(q) >= 2:
         athletes_qs = (
             Sporcu.objects.filter(sporcu_adi__icontains=q)
             .select_related('birincil_kulup')
@@ -66,18 +69,23 @@ def search_global(request):
             })
 
     if search_type in ('all', 'club'):
-        clubs_qs = (
-            Kulup.objects.filter(kulup_adi__icontains=q)
-            .only('id', 'kulup_adi', 'toplam_sporcu_sayisi')[:10]
-        )
+        clubs_qs = Kulup.objects.all()
+        if len(q) >= 2:
+            clubs_qs = clubs_qs.filter(kulup_adi__icontains=q)
+        if city:
+            clubs_qs = clubs_qs.filter(il__icontains=city)
+        clubs_qs = clubs_qs.order_by('-toplam_sporcu_sayisi', 'kulup_adi').only(
+            'id', 'kulup_adi', 'il', 'toplam_sporcu_sayisi'
+        )[:30 if city else 10]
         for c in clubs_qs:
             res_clubs.append({
                 'id': c.id,
                 'name': c.kulup_adi,
+                'city': c.il or '',
                 'athlete_count': c.toplam_sporcu_sayisi or 0,
             })
 
-    if search_type in ('all', 'meet'):
+    if search_type in ('all', 'meet') and len(q) >= 2:
         meets_qs = (
             Event.objects.filter(musabaka_adi__icontains=q)
             .only('id', 'musabaka_adi', 'sehir', 'yaris_tarihi_baslangic')
@@ -96,3 +104,60 @@ def search_global(request):
         'clubs': res_clubs,
         'meets': res_meets,
     }, request=request, cache_seconds=30)
+
+
+_TR_LETTER_CASES = {
+    'Ç': ('Ç', 'ç'),
+    'Ğ': ('Ğ', 'ğ'),
+    'I': ('I', 'ı'),
+    'İ': ('İ', 'i'),
+    'Ö': ('Ö', 'ö'),
+    'Ş': ('Ş', 'ş'),
+    'Ü': ('Ü', 'ü'),
+}
+
+
+@require_GET
+def get_clubs_list(request):
+    """Sayfalı ve alfabetik/il filtreli kulüp listesi."""
+    q = (request.GET.get('q') or '').strip()
+    city = (request.GET.get('city') or request.GET.get('il') or '').strip()
+    letter = (request.GET.get('letter') or '').strip()
+
+    qs = Kulup.objects.all()
+    if q:
+        qs = qs.filter(kulup_adi__icontains=q)
+    if city:
+        qs = qs.filter(il__icontains=city)
+    if letter:
+        ch = letter[0]
+        upper_ch = ch if ch in _TR_LETTER_CASES else ch.upper()
+        u_form, l_form = _TR_LETTER_CASES.get(upper_ch, (ch.upper(), ch.lower()))
+        qs = qs.filter(Q(kulup_adi__startswith=u_form) | Q(kulup_adi__startswith=l_form))
+
+    qs = qs.order_by('kulup_adi' if letter else '-toplam_sporcu_sayisi', 'kulup_adi').only(
+        'id', 'kulup_adi', 'il', 'toplam_sporcu_sayisi'
+    )
+
+    page_size = min(int(request.GET.get('page_size', 25)), 50)
+    page_num = int(request.GET.get('page', 1))
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page_num)
+
+    clubs_data = [
+        {
+            'id': c.id,
+            'name': c.kulup_adi,
+            'city': c.il or '',
+            'athlete_count': c.toplam_sporcu_sayisi or 0,
+        }
+        for c in page_obj
+    ]
+
+    return api_response({
+        'data': clubs_data,
+        'page': page_num,
+        'total_pages': paginator.num_pages,
+        'total_count': paginator.count,
+        'has_next': page_obj.has_next(),
+    }, request=request, cache_seconds=60)

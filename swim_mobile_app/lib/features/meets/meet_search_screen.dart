@@ -16,10 +16,14 @@ import '../live/live_meet_detail_screen.dart';
 /// Keşfet — Gelişmiş Müsabaka / Yarış Arama ve Filtreleme Ekranı
 class MeetSearchScreen extends StatefulWidget {
   final SwimRepository repository;
+  final ValueChanged<MeetSummary>? onMeetSelected;
+  final String? initialClub;
 
   const MeetSearchScreen({
     super.key,
     required this.repository,
+    this.onMeetSelected,
+    this.initialClub,
   });
 
   @override
@@ -62,6 +66,9 @@ class _MeetSearchScreenState extends State<MeetSearchScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialClub != null && widget.initialClub!.trim().isNotEmpty) {
+      _clubController.text = widget.initialClub!.trim();
+    }
     _fetchMeets(reset: true);
   }
 
@@ -153,6 +160,10 @@ class _MeetSearchScreenState extends State<MeetSearchScreen> {
   }
 
   void _openMeetDetail(MeetSummary meet) {
+    if (widget.onMeetSelected != null) {
+      widget.onMeetSelected!(meet);
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => LiveMeetDetailScreen(

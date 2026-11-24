@@ -257,18 +257,22 @@ class AthleteSearchItem {
 class ClubSearchItem {
   final int? id;
   final String name;
+  final String? city;
   final int athleteCount;
 
   ClubSearchItem({
     this.id,
     required this.name,
+    this.city,
     required this.athleteCount,
   });
 
   factory ClubSearchItem.fromJson(Map<String, dynamic> json) {
+    final rawCity = (json['city'] ?? json['il'])?.toString().trim();
     return ClubSearchItem(
       id: json['id'] as int?,
       name: json['name'] as String? ?? '',
+      city: (rawCity != null && rawCity.isNotEmpty) ? rawCity : null,
       athleteCount: json['athlete_count'] as int? ?? 0,
     );
   }
