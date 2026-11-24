@@ -75,13 +75,14 @@ def search_global(request):
         if city:
             clubs_qs = clubs_qs.filter(il__icontains=city)
         clubs_qs = clubs_qs.order_by('-toplam_sporcu_sayisi', 'kulup_adi').only(
-            'id', 'kulup_adi', 'il', 'toplam_sporcu_sayisi'
+            'id', 'kulup_adi', 'il', 'okul_mu', 'toplam_sporcu_sayisi'
         )[:30 if city else 10]
         for c in clubs_qs:
             res_clubs.append({
                 'id': c.id,
                 'name': c.kulup_adi,
                 'city': c.il or '',
+                'is_school': bool(c.okul_mu == 1),
                 'athlete_count': c.toplam_sporcu_sayisi or 0,
             })
 
@@ -119,12 +120,17 @@ _TR_LETTER_CASES = {
 
 @require_GET
 def get_clubs_list(request):
-    """Sayfalı ve alfabetik/il filtreli kulüp listesi."""
+    """Sayfalı ve alfabetik/il/tür filtreli kulüp listesi."""
     q = (request.GET.get('q') or '').strip()
     city = (request.GET.get('city') or request.GET.get('il') or '').strip()
     letter = (request.GET.get('letter') or '').strip()
+    kind = (request.GET.get('kind') or 'all').strip().lower()
 
     qs = Kulup.objects.all()
+    if kind == 'club':
+        qs = qs.filter(okul_mu=0)
+    elif kind == 'school':
+        qs = qs.filter(okul_mu=1)
     if q:
         qs = qs.filter(kulup_adi__icontains=q)
     if city:
@@ -136,7 +142,7 @@ def get_clubs_list(request):
         qs = qs.filter(Q(kulup_adi__startswith=u_form) | Q(kulup_adi__startswith=l_form))
 
     qs = qs.order_by('kulup_adi' if letter else '-toplam_sporcu_sayisi', 'kulup_adi').only(
-        'id', 'kulup_adi', 'il', 'toplam_sporcu_sayisi'
+        'id', 'kulup_adi', 'il', 'okul_mu', 'toplam_sporcu_sayisi'
     )
 
     page_size = min(int(request.GET.get('page_size', 25)), 50)
@@ -149,6 +155,7 @@ def get_clubs_list(request):
             'id': c.id,
             'name': c.kulup_adi,
             'city': c.il or '',
+            'is_school': bool(c.okul_mu == 1),
             'athlete_count': c.toplam_sporcu_sayisi or 0,
         }
         for c in page_obj
