@@ -142,7 +142,8 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.kulvar.swim_mobile_app',
               ),
               MarkerLayer(
@@ -150,13 +151,19 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                   if (_userLocation != null)
                     Marker(
                       point: _userLocation!,
-                      width: 26,
-                      height: 26,
+                      width: 24,
+                      height: 24,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.blue,
+                          color: const Color(0xFF2563EB),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF2563EB).withValues(alpha: 0.4),
+                              blurRadius: 8,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -164,10 +171,16 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                       .where((c) => c.latitude != null && c.longitude != null)
                       .map((club) {
                     final isSelected = _selectedClub?.id == club.id;
+                    final pinColor = isSelected
+                        ? palette.accent
+                        : (club.isSchool
+                            ? palette.infoCyan
+                            : const Color(0xFF2563EB));
+                    final size = isSelected ? 40.0 : 32.0;
                     return Marker(
                       point: LatLng(club.latitude!, club.longitude!),
-                      width: isSelected ? 44 : 34,
-                      height: isSelected ? 44 : 34,
+                      width: size,
+                      height: size,
                       child: GestureDetector(
                         onTap: () {
                           setState(() => _selectedClub = club);
@@ -178,14 +191,29 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                                 : _mapController.camera.zoom,
                           );
                         },
-                        child: Icon(
-                          Icons.location_pin,
-                          size: isSelected ? 42 : 32,
-                          color: isSelected
-                              ? palette.accent
-                              : (club.isSchool
-                                  ? palette.infoCyan
-                                  : const Color(0xFFEA4335)),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          decoration: BoxDecoration(
+                            color: pinColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: isSelected ? 0.30 : 0.20,
+                                ),
+                                blurRadius: isSelected ? 10 : 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            club.isSchool
+                                ? Icons.school_rounded
+                                : Icons.shield_rounded,
+                            size: isSelected ? 20 : 15,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     );

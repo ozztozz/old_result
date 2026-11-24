@@ -681,19 +681,35 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.kulvar.swim_mobile_app',
                 ),
                 MarkerLayer(
                   markers: [
                     Marker(
                       point: point,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(
-                        Icons.location_pin,
-                        size: 38,
-                        color: Color(0xFFEA4335),
+                      width: 38,
+                      height: 38,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: palette.accent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          club.isSchool
+                              ? Icons.school_rounded
+                              : Icons.shield_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ],

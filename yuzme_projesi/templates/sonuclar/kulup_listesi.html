@@ -76,11 +76,65 @@
 </div>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
+<style>
+    .swim-map-pin {
+        width: 30px;
+        height: 30px;
+        border-radius: 9999px;
+        background: #2563eb;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.28);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 13px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .swim-map-pin:hover {
+        transform: scale(1.15);
+        box-shadow: 0 5px 14px rgba(37, 99, 235, 0.4);
+    }
+    .swim-map-pin.is-school {
+        background: #0891b2;
+    }
+    .swim-map-cluster {
+        width: 38px;
+        height: 38px;
+        border-radius: 9999px;
+        background: rgba(37, 99, 235, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .swim-map-cluster-inner {
+        width: 28px;
+        height: 28px;
+        border-radius: 9999px;
+        background: #2563eb;
+        border: 2px solid #ffffff;
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    }
+    .leaflet-popup-content-wrapper {
+        border-radius: 14px !important;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.14) !important;
+        padding: 2px !important;
+    }
+</style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script>
 (function () {
     let mapInstance = null;
-    let markersLayer = null;
+    let clusterGroup = null;
 
     window.toggleClubMap = function () {
         const wrapper = document.getElementById('clubMapWrapper');
@@ -98,11 +152,23 @@
 
     function initAndLoadMap() {
         if (!mapInstance) {
-            mapInstance = L.map('clubSearchMap').setView([39.0, 35.0], 6);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap'
+            mapInstance = L.map('clubSearchMap', { zoomControl: true }).setView([39.0, 35.0], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                maxZoom: 19
             }).addTo(mapInstance);
-            markersLayer = L.layerGroup().addTo(mapInstance);
+            clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 45,
+                showCoverageOnHover: false,
+                iconCreateFunction: function (cluster) {
+                    return L.divIcon({
+                        html: '<div class="swim-map-cluster"><div class="swim-map-cluster-inner">' + cluster.getChildCount() + '</div></div>',
+                        className: '',
+                        iconSize: [38, 38]
+                    });
+                }
+            });
+            mapInstance.addLayer(clusterGroup);
         }
         setTimeout(() => mapInstance.invalidateSize(), 100);
         loadMapClubs();
@@ -115,21 +181,29 @@
         fetch(url)
             .then(r => r.json())
             .then(res => {
-                if (!markersLayer) return;
-                markersLayer.clearLayers();
+                if (!clusterGroup) return;
+                clusterGroup.clearLayers();
                 const items = res.data || [];
                 document.getElementById('clubMapCount').textContent = items.length + ' kulüp';
                 items.forEach(c => {
                     if (c.latitude == null || c.longitude == null) return;
-                    const marker = L.marker([c.latitude, c.longitude]);
+                    const iconHtml = `<div class="swim-map-pin ${c.is_school ? 'is-school' : ''}"><i class="bi ${c.is_school ? 'bi-mortarboard-fill' : 'bi-shield-fill'}"></i></div>`;
+                    const icon = L.divIcon({
+                        html: iconHtml,
+                        className: '',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15],
+                        popupAnchor: [0, -14]
+                    });
+                    const marker = L.marker([c.latitude, c.longitude], { icon: icon });
                     marker.bindPopup(
-                        `<div style="min-width:170px">` +
-                        `<div style="font-weight:700;margin-bottom:4px">${c.name}</div>` +
-                        `<div style="font-size:12px;color:#64748b;margin-bottom:6px">${c.city || '-'} · ${c.athlete_count} sporcu</div>` +
-                        `<a href="/kulupler/${c.id}/" style="font-size:12px;font-weight:600;color:#2563eb;text-decoration:none">Kulüp Detay &rarr;</a>` +
+                        `<div style="min-width:190px;font-family:Inter,system-ui,sans-serif;padding:2px 4px">` +
+                        `<div style="font-weight:700;font-size:13px;color:#0f172a;margin-bottom:3px">${c.name}</div>` +
+                        `<div style="font-size:11.5px;color:#64748b;margin-bottom:8px">${c.city || '-'} · ${c.athlete_count} sporcu</div>` +
+                        `<a href="/kulupler/${c.id}/" style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#ffffff;background:#2563eb;padding:4px 10px;border-radius:9999px;text-decoration:none">Kulüp Detay &rarr;</a>` +
                         `</div>`
                     );
-                    marker.addTo(markersLayer);
+                    clusterGroup.addLayer(marker);
                 });
             });
     }
