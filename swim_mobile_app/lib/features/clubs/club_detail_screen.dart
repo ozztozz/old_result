@@ -16,7 +16,6 @@ import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../meets/meet_detail_screen.dart';
 import '../meets/meet_search_screen.dart';
 
 /// Kulüp Profili, İletişim/Sosyal Medya Kartı ve Sporcuları
@@ -236,15 +235,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
           SectionHeader(title: 'Kulüp Özeti ve Branş Dağılımı'),
           AppSpacing.vSm,
           _buildSummaryCard(palette, club.summary),
-          if (club.summary.recentMeets.isNotEmpty) ...[
-            AppSpacing.vLg,
-            SectionHeader(
-              title: 'Son Katıldığı Müsabakalar',
-              trailingText: '${club.summary.meetCount} müsabaka',
-            ),
-            AppSpacing.vSm,
-            ...club.summary.recentMeets.map((m) => _buildRecentMeetTile(palette, m)),
-          ],
         ],
       ),
     );
@@ -1004,83 +994,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildRecentMeetTile(AppColorPalette palette, ClubRecentMeet meet) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SoftGlassPanel(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => MeetDetailScreen(
-                meetId: meet.id,
-                meetTitle: meet.name,
-                repository: widget.repository,
-              ),
-            ),
-          );
-        },
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    meet.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    [
-                      if (meet.city.isNotEmpty) meet.city,
-                      if (meet.date.isNotEmpty) meet.date,
-                    ].join(' · '),
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 12,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: palette.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${meet.races} yarış',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.monoFontFamily,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: palette.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: palette.textMuted,
-            ),
-          ],
-        ),
       ),
     );
   }

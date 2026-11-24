@@ -1,242 +1,104 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}{{ kulup.kulup_adi }} - Kulüp Profili ve Sporcuları{% endblock %}
+{% block title %}{{ kulup.kulup_adi }} - Kulüp Profili{% endblock %}
 
 {% block content %}
 <!-- Kulüp Başlığı -->
-<div class="swim-card p-4 sm:p-6 mb-4">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="swim-card p-4 mb-3">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-            <div class="flex flex-wrap items-center gap-2 mb-2">
+            <div class="flex flex-wrap items-center gap-2 mb-1.5">
                 <span class="swim-badge swim-badge-success">
-                    <i class="bi bi-shield-check me-1"></i> Resmî Kulüp Kaydı #{{ kulup.id }}
+                    <i class="bi bi-shield-check me-1"></i> Resmî Kulüp #{{ kulup.id }}
                 </span>
                 {% if kulup.il %}
                 <span class="swim-badge swim-badge-info">
                     <i class="bi bi-geo-alt me-1"></i> {{ kulup.il }}
                 </span>
                 {% endif %}
+                <span class="text-xs swim-text-muted flex items-center gap-1">
+                    <i class="bi bi-calendar3 swim-text-primary"></i>
+                    <strong class="swim-text-main">{{ kulup.ilk_yaris_tarihi|default:"-" }}</strong> &rarr; <strong class="swim-text-main">{{ kulup.son_yaris_tarihi|default:"-" }}</strong>
+                </span>
             </div>
-            <h1 class="text-xl sm:text-3xl font-extrabold swim-text-main tracking-tight">{{ kulup.kulup_adi }}</h1>
-            <p class="text-xs sm:text-sm swim-text-muted mt-1 flex items-center gap-1.5">
-                <i class="bi bi-calendar3 swim-text-primary"></i> Faaliyet Aralığı: 
-                <strong class="swim-text-main">{{ kulup.ilk_yaris_tarihi|default:"Bilinmiyor" }}</strong> &rarr; <strong class="swim-text-main">{{ kulup.son_yaris_tarihi|default:"Bilinmiyor" }}</strong>
-            </p>
+            <h1 class="text-lg sm:text-2xl font-extrabold swim-text-main tracking-tight">{{ kulup.kulup_adi }}</h1>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <div class="swim-stat-box p-3 min-w-[100px] ">
-                <div class="swim-stat-val text-xl swim-text-primary">{{ kulup.toplam_sporcu_sayisi|intcomma }}</div>
-                <div class="swim-stat-lbl text-[0.68rem]">Sporcu</div>
+            <div class="swim-stat-box px-3 py-2 min-w-[88px]">
+                <div class="swim-stat-val text-lg swim-text-primary">{{ kulup.toplam_sporcu_sayisi|intcomma }}</div>
+                <div class="swim-stat-lbl text-[0.65rem]">Sporcu</div>
             </div>
-            <div class="swim-stat-box p-3 min-w-[100px] ">
-                <div class="swim-stat-val text-xl swim-text-success">{{ kulup.toplam_yaris_sayisi|intcomma }}</div>
-                <div class="swim-stat-lbl text-[0.68rem]">Toplam Yarış</div>
+            <div class="swim-stat-box px-3 py-2 min-w-[88px]">
+                <div class="swim-stat-val text-lg swim-text-success">{{ kulup.toplam_yaris_sayisi|intcomma }}</div>
+                <div class="swim-stat-lbl text-[0.65rem]">Toplam Yarış</div>
             </div>
         </div>
     </div>
 </div>
 
-{% if kulup.adres or kulup.telefon or kulup.web_sitesi or kulup.google_maps_url or kulup.instagram or kulup.facebook %}
-<!-- İletişim ve Sosyal Medya Kartı -->
-<div class="swim-card mb-4">
-    <div class="swim-card-header flex items-center justify-between gap-2">
-        <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
-            <i class="bi bi-card-list swim-text-primary"></i> İletişim ve Sosyal Medya
-        </h2>
-        {% if kulup.iletisim_guncellenme_tarihi %}
-        <span class="text-[0.68rem] swim-text-subtle font-mono">
-            Güncelleme: {{ kulup.iletisim_guncellenme_tarihi|slice:":10" }}
-        </span>
-        {% endif %}
-    </div>
-    <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-        {% if kulup.adres or kulup.google_maps_url %}
-        <div class="md:col-span-5 flex items-start gap-3">
-            <div class="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-                <i class="bi bi-geo-alt-fill"></i>
-            </div>
-            <div class="min-w-0">
-                <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-0.5">Adres</div>
-                {% if kulup.adres %}
-                <p class="text-xs sm:text-sm swim-text-main leading-relaxed break-words">{{ kulup.adres }}</p>
-                {% endif %}
-                {% if kulup.google_maps_url %}
-                <a href="{{ kulup.google_maps_url }}" target="_blank" rel="noopener noreferrer"
-                   class="inline-flex items-center gap-1.5 mt-1.5 text-xs font-semibold swim-text-primary hover:underline">
-                    <i class="bi bi-map"></i> Google Maps'te Aç
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if kulup.telefon %}
-        <div class="md:col-span-3 flex items-start gap-3">
-            <div class="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                <i class="bi bi-telephone-fill"></i>
-            </div>
-            <div class="min-w-0">
-                <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-0.5">Telefon</div>
-                <a href="tel:{{ kulup.telefon }}" class="text-xs sm:text-sm font-semibold swim-text-main hover:swim-text-primary transition font-mono break-all">
-                    {{ kulup.telefon }}
-                </a>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if kulup.web_sitesi or kulup.instagram or kulup.facebook %}
-        <div class="{% if kulup.adres or kulup.google_maps_url or kulup.telefon %}md:col-span-4{% else %}md:col-span-12{% endif %} flex items-start gap-3">
-            <div class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
-                <i class="bi bi-share-fill"></i>
-            </div>
-            <div class="min-w-0 flex-1">
-                <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-1.5">Bağlantılar</div>
-                <div class="flex flex-wrap gap-2">
-                    {% if kulup.web_sitesi %}
-                    <a href="{{ kulup.web_sitesi }}" target="_blank" rel="noopener noreferrer"
-                       class="swim-btn-outline-primary swim-btn-sm swim-btn-pill inline-flex items-center gap-1.5 text-xs">
-                        <i class="bi bi-globe2"></i> Web Sitesi
-                    </a>
-                    {% endif %}
-                    {% if kulup.instagram %}
-                    <a href="{{ kulup.instagram }}" target="_blank" rel="noopener noreferrer"
-                       class="swim-btn-sm swim-btn-pill inline-flex items-center gap-1.5 text-xs border border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/40 transition">
-                        <i class="bi bi-instagram"></i> Instagram
-                    </a>
-                    {% endif %}
-                    {% if kulup.facebook %}
-                    <a href="{{ kulup.facebook }}" target="_blank" rel="noopener noreferrer"
-                       class="swim-btn-sm swim-btn-pill inline-flex items-center gap-1.5 text-xs border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
-                        <i class="bi bi-facebook"></i> Facebook
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    {% if kulup.enlem and kulup.boylam or instagram_username %}
-    <div class="px-4 sm:px-5 pb-4 sm:pb-5 pt-1 grid grid-cols-1 {% if kulup.enlem and kulup.boylam and instagram_username %}md:grid-cols-12{% endif %} gap-4 items-stretch">
-        {% if kulup.enlem and kulup.boylam %}
-        <div class="{% if instagram_username %}md:col-span-6{% endif %} rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex flex-col">
-            <div class="px-3 py-2 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
-                <span class="text-xs font-semibold swim-text-main flex items-center gap-1.5">
-                    <i class="bi bi-geo-alt-fill text-red-500"></i> Konum Haritası
-                </span>
-                <a href="{{ kulup.google_maps_url|default:'https://www.google.com/maps/search/?api=1&query=' }}{% if not kulup.google_maps_url %}{{ kulup.enlem|stringformat:'f' }},{{ kulup.boylam|stringformat:'f' }}{% endif %}"
-                   target="_blank" rel="noopener noreferrer"
-                   class="text-[0.7rem] font-semibold swim-text-primary hover:underline flex items-center gap-1">
-                    Büyük Haritada Aç <i class="bi bi-box-arrow-up-right"></i>
-                </a>
-            </div>
-            <iframe
-                title="{{ kulup.kulup_adi }} Konumu"
-                src="https://maps.google.com/maps?q={{ kulup.enlem|stringformat:'f' }},{{ kulup.boylam|stringformat:'f' }}&z=15&output=embed"
-                class="w-full h-80 sm:h-96 border-0 block flex-1"
-                loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"
-                allowfullscreen>
-            </iframe>
-        </div>
-        {% endif %}
-
-        {% if instagram_username %}
-        <div class="{% if kulup.enlem and kulup.boylam %}md:col-span-6{% endif %} rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 flex flex-col">
-            <div class="px-3 py-2 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60">
-                <span class="text-xs font-semibold swim-text-main flex items-center gap-1.5">
-                    <i class="bi bi-instagram text-pink-600 dark:text-pink-400"></i> {{ instagram_handle }}
-                </span>
-                <a href="{{ kulup.instagram }}" target="_blank" rel="noopener noreferrer"
-                   class="text-[0.7rem] font-semibold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1">
-                    Instagram'da Aç <i class="bi bi-box-arrow-up-right"></i>
-                </a>
-            </div>
-            <iframe
-                title="{{ kulup.kulup_adi }} Instagram"
-                src="https://www.instagram.com/{{ instagram_username }}/embed/"
-                class="w-full h-80 sm:h-96 border-0 block bg-white flex-1"
-                loading="lazy"
-                allowtransparency="true">
-            </iframe>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
-    <!-- Kulüp Performans ve Branş Özeti -->
-    <div class="lg:col-span-7">
+<!-- Ana Kompakt Grid: Sol Kulüp Özeti, Sağ İletişim / Harita / Sosyal -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 mb-4">
+    <!-- Kulüp Özeti ve Branş Dağılımı -->
+    <div class="{% if kulup.adres or kulup.telefon or kulup.web_sitesi or kulup.google_maps_url or kulup.instagram or kulup.facebook or kulup.enlem and kulup.boylam %}lg:col-span-6{% else %}lg:col-span-12{% endif %}">
         <div class="swim-card h-full flex flex-col">
-            <div class="swim-card-header">
-                <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+            <div class="swim-card-header py-2.5 px-4">
+                <h2 class="text-sm font-bold swim-text-main flex items-center gap-2">
                     <i class="bi bi-bar-chart-line swim-text-primary"></i> Kulüp Özeti ve Branş Dağılımı
                 </h2>
             </div>
-            <div class="p-4 sm:p-5 space-y-5 flex-1">
-                <!-- Temel Sayısal Özet -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div class="swim-stat-box p-3">
-                        <div class="swim-stat-val text-lg swim-text-primary">{{ ozet.musabaka_sayisi|intcomma }}</div>
-                        <div class="swim-stat-lbl text-[0.68rem]">Müsabaka</div>
+            <div class="p-4 space-y-3.5 flex-1">
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="swim-stat-box p-2">
+                        <div class="swim-stat-val text-base swim-text-primary">{{ ozet.musabaka_sayisi|intcomma }}</div>
+                        <div class="swim-stat-lbl text-[0.64rem]">Müsabaka</div>
                     </div>
-                    <div class="swim-stat-box p-3">
-                        <div class="swim-stat-val text-lg swim-text-main">{{ ozet.farkli_il_sayisi|intcomma }}</div>
-                        <div class="swim-stat-lbl text-[0.68rem]">Farklı İl</div>
+                    <div class="swim-stat-box p-2">
+                        <div class="swim-stat-val text-base swim-text-main">{{ ozet.farkli_il_sayisi|intcomma }}</div>
+                        <div class="swim-stat-lbl text-[0.64rem]">Farklı İl</div>
                     </div>
-                    <div class="swim-stat-box p-3">
-                        <div class="swim-stat-val text-lg swim-text-success">{{ ozet.aktif_sporcu_sayisi|intcomma }}</div>
-                        <div class="swim-stat-lbl text-[0.68rem]">Aktif Sporcu</div>
+                    <div class="swim-stat-box p-2">
+                        <div class="swim-stat-val text-base swim-text-success">{{ ozet.aktif_sporcu_sayisi|intcomma }}</div>
+                        <div class="swim-stat-lbl text-[0.64rem]">Aktif</div>
                     </div>
-                    <div class="swim-stat-box p-3">
-                        <div class="swim-stat-val text-lg text-amber-500">{{ ozet.max_puan|default:"-" }}</div>
-                        <div class="swim-stat-lbl text-[0.68rem]">En Yüksek FINA</div>
+                    <div class="swim-stat-box p-2">
+                        <div class="swim-stat-val text-base text-amber-500">{{ ozet.max_puan|default:"-" }}</div>
+                        <div class="swim-stat-lbl text-[0.64rem]">Max FINA</div>
                     </div>
                 </div>
 
-                <!-- Kürsü / Madalya & Cinsiyet Dağılımı -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-3.5 bg-slate-50/60 dark:bg-slate-900/30">
-                        <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Kürsü Dereceleri</div>
-                        <div class="flex items-center gap-3 text-xs font-semibold">
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                                🥇 {{ ozet.altin|intcomma }}
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-200/80 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200">
-                                🥈 {{ ozet.gumus|intcomma }}
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-100/80 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-                                🥉 {{ ozet.bronz|intcomma }}
-                            </span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="rounded-lg border border-slate-200/80 dark:border-slate-700/80 p-2.5 bg-slate-50/60 dark:bg-slate-900/30">
+                        <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-1.5">Kürsü Dereceleri</div>
+                        <div class="flex items-center gap-2 text-xs font-semibold">
+                            <span class="px-2 py-0.5 rounded-full bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">🥇 {{ ozet.altin|intcomma }}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200">🥈 {{ ozet.gumus|intcomma }}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-orange-100/80 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">🥉 {{ ozet.bronz|intcomma }}</span>
                         </div>
                     </div>
-                    <div class="rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-3.5 bg-slate-50/60 dark:bg-slate-900/30">
-                        <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Kadro Dağılımı</div>
-                        <div class="flex flex-wrap items-center gap-2 text-xs">
-                            <span class="swim-badge swim-badge-info">Erkek: {{ ozet.erkek_sayisi|intcomma }}</span>
-                            <span class="swim-badge swim-badge-neutral">Kadın: {{ ozet.kadin_sayisi|intcomma }}</span>
+                    <div class="rounded-lg border border-slate-200/80 dark:border-slate-700/80 p-2.5 bg-slate-50/60 dark:bg-slate-900/30">
+                        <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-1.5">Kadro & FINA</div>
+                        <div class="flex flex-wrap items-center gap-1.5 text-[0.7rem]">
+                            <span class="swim-badge swim-badge-info">E: {{ ozet.erkek_sayisi|intcomma }}</span>
+                            <span class="swim-badge swim-badge-neutral">K: {{ ozet.kadin_sayisi|intcomma }}</span>
                             {% if ozet.avg_puan %}
-                            <span class="swim-badge swim-badge-success">Ort. FINA: {{ ozet.avg_puan }}</span>
+                            <span class="swim-badge swim-badge-success">Ort: {{ ozet.avg_puan }}</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Branş (Stil) Dağılımı -->
                 {% if ozet.stil_dagilimi %}
                 <div>
-                    <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2.5">Branş Dağılımı</div>
-                    <div class="space-y-2.5">
+                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Branş Dağılımı</div>
+                    <div class="space-y-2">
                         {% for st in ozet.stil_dagilimi %}
                         <div>
-                            <div class="flex justify-between text-xs mb-1">
+                            <div class="flex justify-between text-[0.72rem] mb-0.5">
                                 <span class="font-semibold swim-text-main">{{ st.stil }}</span>
-                                <span class="font-mono swim-text-muted">{{ st.yaris_sayisi|intcomma }} yarış (%{{ st.oran }})</span>
+                                <span class="font-mono swim-text-muted">{{ st.yaris_sayisi|intcomma }} (%{{ st.oran }})</span>
                             </div>
-                            <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                            <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                                 <div class="h-full rounded-full bg-blue-600 dark:bg-blue-500" style="width: {{ st.oran }}%"></div>
                             </div>
                         </div>
@@ -245,14 +107,13 @@
                 </div>
                 {% endif %}
 
-                <!-- En Çok Yarışılan İller -->
                 {% if ozet.sehir_dagilimi %}
                 <div>
-                    <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">En Çok Yarışılan İller</div>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-1.5">En Çok Yarışılan İller</div>
+                    <div class="flex flex-wrap gap-1">
                         {% for sh in ozet.sehir_dagilimi %}
-                        <span class="swim-badge swim-badge-neutral text-xs">
-                            <i class="bi bi-geo-alt mr-1 swim-text-primary"></i>{{ sh.il }} <strong class="ml-1 font-mono">{{ sh.yaris_sayisi|intcomma }}</strong>
+                        <span class="swim-badge swim-badge-neutral text-[0.68rem]">
+                            {{ sh.il }} <strong class="ml-1 font-mono">{{ sh.yaris_sayisi|intcomma }}</strong>
                         </span>
                         {% endfor %}
                     </div>
@@ -262,45 +123,95 @@
         </div>
     </div>
 
-    <!-- Son Katıldığı Müsabakalar -->
-    <div class="lg:col-span-5">
-        <div class="swim-card h-full flex flex-col justify-between">
-            <div class="swim-card-header">
-                <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
-                    <i class="bi bi-trophy swim-text-primary"></i> Son Katıldığı Müsabakalar
+    {% if kulup.adres or kulup.telefon or kulup.web_sitesi or kulup.google_maps_url or kulup.instagram or kulup.facebook or kulup.enlem and kulup.boylam %}
+    <!-- İletişim, Harita ve Sosyal Medya -->
+    <div class="lg:col-span-6">
+        <div class="swim-card h-full flex flex-col">
+            <div class="swim-card-header py-2.5 px-4 flex items-center justify-between gap-2">
+                <h2 class="text-sm font-bold swim-text-main flex items-center gap-2">
+                    <i class="bi bi-card-list swim-text-primary"></i> İletişim ve Konum
                 </h2>
+                <div class="flex flex-wrap gap-1.5">
+                    {% if kulup.web_sitesi %}
+                    <a href="{{ kulup.web_sitesi }}" target="_blank" rel="noopener noreferrer"
+                       class="swim-btn-outline-primary swim-btn-sm swim-btn-pill text-[0.7rem] py-0.5 px-2.5">
+                        <i class="bi bi-globe2"></i> Web
+                    </a>
+                    {% endif %}
+                    {% if kulup.instagram %}
+                    <a href="{{ kulup.instagram }}" target="_blank" rel="noopener noreferrer"
+                       class="swim-btn-sm swim-btn-pill text-[0.7rem] py-0.5 px-2.5 border border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300">
+                        <i class="bi bi-instagram"></i> IG
+                    </a>
+                    {% endif %}
+                    {% if kulup.facebook %}
+                    <a href="{{ kulup.facebook }}" target="_blank" rel="noopener noreferrer"
+                       class="swim-btn-sm swim-btn-pill text-[0.7rem] py-0.5 px-2.5 border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                        <i class="bi bi-facebook"></i> FB
+                    </a>
+                    {% endif %}
+                </div>
             </div>
-            <div class="swim-table-wrapper border-0 rounded-none flex-1">
-                <table class="swim-table">
-                    <thead class="swim-thead">
-                        <tr>
-                            <th class="swim-th">Müsabaka</th>
-                            <th class="swim-th">İl</th>
-                            <th class="swim-th text-right">Yarış</th>
-                            <th class="swim-th text-right">Tarih</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m in ozet.son_musabakalar %}
-                        <tr class="swim-tr">
-                            <td class="swim-td font-medium text-xs">
-                                <a href="{% url 'sonuclar:musabaka_detay' m.event_id %}" class="swim-text-main hover:swim-text-primary transition line-clamp-2">
-                                    {{ m.event__musabaka_adi }}
-                                </a>
-                            </td>
-                            <td class="swim-td text-xs swim-text-muted whitespace-nowrap">{{ m.sehir_norm }}</td>
-                            <td class="swim-td text-right font-bold font-mono swim-text-primary text-xs">{{ m.yaris_sayisi }}</td>
-                            <td class="swim-td text-right text-xs swim-text-subtle font-mono whitespace-nowrap">{{ m.event__yaris_tarihi_baslangic|default:"-" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="swim-td text-center py-8 swim-text-muted">Müsabaka kaydı bulunamadı.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="p-4 space-y-3 flex-1 flex flex-col">
+                {% if kulup.adres or kulup.telefon %}
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs">
+                    {% if kulup.adres %}
+                    <div class="{% if kulup.telefon %}sm:col-span-8{% else %}sm:col-span-12{% endif %} flex items-start gap-2">
+                        <i class="bi bi-geo-alt-fill text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"></i>
+                        <span class="swim-text-main leading-snug">{{ kulup.adres }}</span>
+                    </div>
+                    {% endif %}
+                    {% if kulup.telefon %}
+                    <div class="{% if kulup.adres %}sm:col-span-4{% else %}sm:col-span-12{% endif %} flex items-center gap-2 sm:justify-end">
+                        <i class="bi bi-telephone-fill text-emerald-600 dark:text-emerald-400 shrink-0"></i>
+                        <a href="tel:{{ kulup.telefon }}" class="font-semibold font-mono swim-text-main hover:swim-text-primary">{{ kulup.telefon }}</a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if kulup.enlem and kulup.boylam or instagram_username %}
+                <div class="grid grid-cols-1 {% if kulup.enlem and kulup.boylam and instagram_username %}sm:grid-cols-2{% endif %} gap-3 flex-1">
+                    {% if kulup.enlem and kulup.boylam %}
+                    <div class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
+                        <div class="px-2.5 py-1.5 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                            <span class="text-[0.7rem] font-semibold swim-text-main"><i class="bi bi-geo-alt-fill text-red-500"></i> Harita</span>
+                            <a href="{{ kulup.google_maps_url|default:'https://www.google.com/maps/search/?api=1&query=' }}{% if not kulup.google_maps_url %}{{ kulup.enlem|stringformat:'f' }},{{ kulup.boylam|stringformat:'f' }}{% endif %}"
+                               target="_blank" rel="noopener noreferrer"
+                               class="text-[0.68rem] font-semibold swim-text-primary hover:underline">Aç <i class="bi bi-box-arrow-up-right"></i></a>
+                        </div>
+                        <iframe
+                            title="{{ kulup.kulup_adi }} Konumu"
+                            src="https://maps.google.com/maps?q={{ kulup.enlem|stringformat:'f' }},{{ kulup.boylam|stringformat:'f' }}&z=15&output=embed"
+                            class="w-full h-56 border-0 block flex-1"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    {% endif %}
+
+                    {% if instagram_username %}
+                    <div class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
+                        <div class="px-2.5 py-1.5 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                            <span class="text-[0.7rem] font-semibold swim-text-main"><i class="bi bi-instagram text-pink-600"></i> {{ instagram_handle }}</span>
+                            <a href="{{ kulup.instagram }}" target="_blank" rel="noopener noreferrer"
+                               class="text-[0.68rem] font-semibold text-pink-600 hover:underline">Aç <i class="bi bi-box-arrow-up-right"></i></a>
+                        </div>
+                        <iframe
+                            title="{{ kulup.kulup_adi }} Instagram"
+                            src="https://www.instagram.com/{{ instagram_username }}/embed/"
+                            class="w-full h-56 border-0 block bg-white flex-1"
+                            loading="lazy"
+                            allowtransparency="true">
+                        </iframe>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
