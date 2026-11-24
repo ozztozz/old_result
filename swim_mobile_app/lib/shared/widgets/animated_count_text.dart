@@ -23,7 +23,7 @@ class AnimatedCountText extends StatelessWidget {
     this.maxLines,
     this.overflow,
     this.softWrap,
-    this.duration = const Duration(milliseconds: 650),
+    this.duration = const Duration(milliseconds: 1100),
   });
 
   @override
