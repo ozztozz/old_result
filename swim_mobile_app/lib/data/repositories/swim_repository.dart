@@ -227,6 +227,12 @@ class SwimRepository {
         .toList();
   }
 
+  /// Kulüp Profili, İletişim/Sosyal Medya ve Sporcu Özeti
+  Future<ClubDetailModel> getClubDetail(int clubId) async {
+    final res = await apiClient.get('/clubs/$clubId/');
+    return ClubDetailModel.fromJson(res.data as Map<String, dynamic>);
+  }
+
   /// Genel arama (Autocomplete)
   Future<GlobalSearchResult> searchGlobal(
     String q, {

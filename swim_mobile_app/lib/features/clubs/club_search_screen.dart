@@ -13,6 +13,7 @@ import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../meets/meet_search_screen.dart';
+import 'club_detail_screen.dart';
 import 'relay_simulator_screen.dart';
 
 /// Keşfet — Kulüp Arama ve Takım Seçim Ekranı
@@ -93,6 +94,28 @@ class ClubSearchScreen extends StatefulWidget {
               ],
             ),
             AppSpacing.vLg,
+            if (club.id != null) ...[
+              _ClubActionTile(
+                icon: Icons.info_outline_rounded,
+                iconColor: palette.primary,
+                title: 'Kulüp Profili ve İletişim',
+                subtitle: 'Adres, telefon, sosyal medya ve sporcuları gör',
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClubDetailScreen(
+                        clubId: club.id!,
+                        clubName: club.name,
+                        repository: repository,
+                        onMeetSelected: onMeetSelected,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              AppSpacing.vSm,
+            ],
             _ClubActionTile(
               icon: isSelected
                   ? Icons.star_rounded

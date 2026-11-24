@@ -281,6 +281,107 @@ class ClubSearchItem {
   }
 }
 
+class ClubSwimmerSummary {
+  final int id;
+  final String name;
+  final int? birthYear;
+  final bool isActive;
+  final int raceCount;
+
+  ClubSwimmerSummary({
+    required this.id,
+    required this.name,
+    this.birthYear,
+    this.isActive = false,
+    required this.raceCount,
+  });
+
+  factory ClubSwimmerSummary.fromJson(Map<String, dynamic> json) {
+    return ClubSwimmerSummary(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      birthYear: json['birth_year'] as int?,
+      isActive: json['is_active'] as bool? ?? false,
+      raceCount: json['race_count'] as int? ?? 0,
+    );
+  }
+}
+
+class ClubDetailModel {
+  final int id;
+  final String name;
+  final String? city;
+  final bool isSchool;
+  final int athleteCount;
+  final int raceCount;
+  final String? firstRaceDate;
+  final String? lastRaceDate;
+  final String? address;
+  final String? phone;
+  final String? website;
+  final String? googleMapsUrl;
+  final String? instagram;
+  final String? facebook;
+  final String? contactUpdatedAt;
+  final List<ClubSwimmerSummary> swimmers;
+
+  ClubDetailModel({
+    required this.id,
+    required this.name,
+    this.city,
+    this.isSchool = false,
+    required this.athleteCount,
+    required this.raceCount,
+    this.firstRaceDate,
+    this.lastRaceDate,
+    this.address,
+    this.phone,
+    this.website,
+    this.googleMapsUrl,
+    this.instagram,
+    this.facebook,
+    this.contactUpdatedAt,
+    this.swimmers = const [],
+  });
+
+  bool get hasContactInfo =>
+      (address != null && address!.isNotEmpty) ||
+      (phone != null && phone!.isNotEmpty) ||
+      (website != null && website!.isNotEmpty) ||
+      (googleMapsUrl != null && googleMapsUrl!.isNotEmpty) ||
+      (instagram != null && instagram!.isNotEmpty) ||
+      (facebook != null && facebook!.isNotEmpty);
+
+  static String? _nonEmpty(dynamic val) {
+    final s = val?.toString().trim();
+    return (s != null && s.isNotEmpty) ? s : null;
+  }
+
+  factory ClubDetailModel.fromJson(Map<String, dynamic> json) {
+    final swimmersRaw = json['swimmers'] as List<dynamic>? ?? [];
+    return ClubDetailModel(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      city: _nonEmpty(json['city'] ?? json['il']),
+      isSchool: json['is_school'] as bool? ?? (json['okul_mu'] == 1),
+      athleteCount: json['athlete_count'] as int? ?? 0,
+      raceCount: json['race_count'] as int? ?? 0,
+      firstRaceDate: _nonEmpty(json['first_race_date']),
+      lastRaceDate: _nonEmpty(json['last_race_date']),
+      address: _nonEmpty(json['address']),
+      phone: _nonEmpty(json['phone']),
+      website: _nonEmpty(json['website']),
+      googleMapsUrl: _nonEmpty(json['google_maps_url']),
+      instagram: _nonEmpty(json['instagram']),
+      facebook: _nonEmpty(json['facebook']),
+      contactUpdatedAt: _nonEmpty(json['contact_updated_at']),
+      swimmers: swimmersRaw
+          .map((e) => ClubSwimmerSummary.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 class GlobalSearchResult {
   final List<AthleteSearchItem> athletes;
   final List<ClubSearchItem> clubs;

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
-from django.db.models import Q
-from sonuclar.models import Sporcu, Kulup, Event, MobilUygulamaSurumu
+from sonuclar.models import Sporcu, Kulup, SporcuKulupTarihce, Event, MobilUygulamaSurumu
 from .utils import api_response, api_error
 
 
@@ -168,3 +168,42 @@ def get_clubs_list(request):
         'total_count': paginator.count,
         'has_next': page_obj.has_next(),
     }, request=request, cache_seconds=60)
+
+
+@require_GET
+def get_club_detail(request, club_id):
+    """Tekil kulüp profili, iletişim/sosyal medya bilgileri ve sporcu özeti."""
+    club = get_object_or_404(Kulup, pk=club_id)
+    tarihce_qs = (
+        SporcuKulupTarihce.objects.filter(kulup=club)
+        .select_related('sporcu')
+        .order_by('-aktif_kulup_mu', '-toplam_yaris_sayisi')[:25]
+    )
+    swimmers = [
+        {
+            'id': t.sporcu_id,
+            'name': t.sporcu.sporcu_adi,
+            'birth_year': t.sporcu.dogum_yili,
+            'is_active': bool(t.aktif_kulup_mu),
+            'race_count': t.toplam_yaris_sayisi or 0,
+        }
+        for t in tarihce_qs
+    ]
+    return api_response({
+        'id': club.id,
+        'name': club.kulup_adi,
+        'city': club.il or '',
+        'is_school': bool(club.okul_mu == 1),
+        'athlete_count': club.toplam_sporcu_sayisi or 0,
+        'race_count': club.toplam_yaris_sayisi or 0,
+        'first_race_date': club.ilk_yaris_tarihi or '',
+        'last_race_date': club.son_yaris_tarihi or '',
+        'address': club.adres or '',
+        'phone': club.telefon or '',
+        'website': club.web_sitesi or '',
+        'google_maps_url': club.google_maps_url or '',
+        'instagram': club.instagram or '',
+        'facebook': club.facebook or '',
+        'contact_updated_at': club.iletisim_guncellenme_tarihi or '',
+        'swimmers': swimmers,
+    }, request=request, cache_seconds=120)
