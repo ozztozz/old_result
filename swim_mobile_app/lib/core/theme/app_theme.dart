@@ -193,11 +193,11 @@ abstract final class AppTheme {
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.android: _SmoothFadeSlidePageTransitionsBuilder(),
+          TargetPlatform.iOS: _SmoothFadeSlidePageTransitionsBuilder(),
+          TargetPlatform.windows: _SmoothFadeSlidePageTransitionsBuilder(),
+          TargetPlatform.macOS: _SmoothFadeSlidePageTransitionsBuilder(),
+          TargetPlatform.linux: _SmoothFadeSlidePageTransitionsBuilder(),
         },
       ),
 
@@ -213,6 +213,48 @@ abstract final class AppTheme {
       extensions: [
         AppPaletteExtension(palette: palette),
       ],
+    );
+  }
+}
+
+/// Sayfa geçişlerinde yumuşak fade + hafif yatay kayma animasyonu sağlar.
+class _SmoothFadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _SmoothFadeSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final primaryCurve = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    final secondaryCurve = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: Offset.zero,
+        end: const Offset(-0.03, 0),
+      ).animate(secondaryCurve),
+      child: FadeTransition(
+        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(primaryCurve),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.04, 0),
+            end: Offset.zero,
+          ).animate(primaryCurve),
+          child: child,
+        ),
+      ),
     );
   }
 }

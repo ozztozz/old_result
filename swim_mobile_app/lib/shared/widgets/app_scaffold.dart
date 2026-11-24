@@ -21,8 +21,8 @@ class AppScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: palette.background,
-      body: IndexedStack(
-        index: currentIndex,
+      body: _AnimatedTabStack(
+        currentIndex: currentIndex,
         children: screens,
       ),
       bottomNavigationBar: DecoratedBox(
@@ -94,10 +94,26 @@ class AppScaffold extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  size: 22,
-                  color: isSelected ? activeColor : inactiveColor,
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  width: isSelected ? 20 : 0,
+                  height: 2.5,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? activeColor : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                AnimatedScale(
+                  scale: isSelected ? 1.08 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutBack,
+                  child: Icon(
+                    isSelected ? activeIcon : icon,
+                    size: 22,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -115,6 +131,81 @@ class AppScaffold extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sekme durumlarını korurken (`IndexedStack`) geçişlerde yumuşak fade + yönlü kayma uygular.
+class _AnimatedTabStack extends StatefulWidget {
+  final int currentIndex;
+  final List<Widget> children;
+
+  const _AnimatedTabStack({
+    required this.currentIndex,
+    required this.children,
+  });
+
+  @override
+  State<_AnimatedTabStack> createState() => _AnimatedTabStackState();
+}
+
+class _AnimatedTabStackState extends State<_AnimatedTabStack>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      value: 1.0,
+    );
+    _configureAnimations(forward: true);
+  }
+
+  void _configureAnimations({required bool forward}) {
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.35, end: 1.0).animate(curved);
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(forward ? 0.03 : -0.03, 0),
+      end: Offset.zero,
+    ).animate(curved);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedTabStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentIndex != oldWidget.currentIndex) {
+      _configureAnimations(
+        forward: widget.currentIndex > oldWidget.currentIndex,
+      );
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: IndexedStack(
+          index: widget.currentIndex,
+          children: widget.children,
         ),
       ),
     );
