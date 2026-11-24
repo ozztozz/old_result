@@ -54,6 +54,13 @@ class Kulup(models.Model):
     ilk_yaris_tarihi = models.CharField(max_length=20, blank=True, null=True, verbose_name="İlk Yarış Tarihi")
     son_yaris_tarihi = models.CharField(max_length=20, blank=True, null=True, verbose_name="Son Yarış Tarihi")
     okul_mu = models.IntegerField(default=0, verbose_name="Okul mu?")
+    adres = models.TextField(blank=True, null=True, verbose_name="Adres")
+    telefon = models.CharField(max_length=100, blank=True, null=True, verbose_name="Telefon")
+    web_sitesi = models.CharField(max_length=500, blank=True, null=True, verbose_name="Web Sitesi")
+    google_maps_url = models.CharField(max_length=500, blank=True, null=True, verbose_name="Google Maps URL")
+    instagram = models.CharField(max_length=500, blank=True, null=True, verbose_name="Instagram")
+    facebook = models.CharField(max_length=500, blank=True, null=True, verbose_name="Facebook")
+    iletisim_guncellenme_tarihi = models.CharField(max_length=30, blank=True, null=True, verbose_name="İletişim Güncellenme Tarihi")
 
     class Meta:
         managed = False
