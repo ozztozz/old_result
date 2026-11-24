@@ -11,6 +11,7 @@ import 'data/repositories/swim_repository.dart';
 import 'features/home/home_screen.dart';
 import 'features/live/live_screen.dart';
 import 'features/favorites/favorites_screen.dart';
+import 'features/splash/splash_screen.dart';
 import 'shared/widgets/app_scaffold.dart';
 
 Future<void> main() async {
@@ -63,7 +64,7 @@ class SwimApp extends StatelessWidget {
             theme: themeService.lightTheme,
             darkTheme: themeService.darkTheme,
             themeMode: themeService.themeMode,
-            home: MainNavigationContainer(repository: repository),
+            home: SplashScreen(repository: repository),
           ),
         );
       },
