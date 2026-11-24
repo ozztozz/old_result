@@ -252,23 +252,9 @@ def get_clubs_map(request):
 
 @require_GET
 def get_club_detail(request, club_id):
-    """Tekil kulüp profili, iletişim/sosyal medya bilgileri ve sporcu özeti."""
+    """Tekil kulüp profili, iletişim/sosyal medya bilgileri ve performans özeti."""
     club = get_object_or_404(Kulup, pk=club_id)
-    tarihce_qs = (
-        SporcuKulupTarihce.objects.filter(kulup=club)
-        .select_related('sporcu')
-        .order_by('-aktif_kulup_mu', '-toplam_yaris_sayisi')[:25]
-    )
-    swimmers = [
-        {
-            'id': t.sporcu_id,
-            'name': t.sporcu.sporcu_adi,
-            'birth_year': t.sporcu.dogum_yili,
-            'is_active': bool(t.aktif_kulup_mu),
-            'race_count': t.toplam_yaris_sayisi or 0,
-        }
-        for t in tarihce_qs
-    ]
+    ozet = club.build_summary()
     return api_response({
         'id': club.id,
         'name': club.kulup_adi,
@@ -287,5 +273,36 @@ def get_club_detail(request, club_id):
         'latitude': club.enlem,
         'longitude': club.boylam,
         'contact_updated_at': club.iletisim_guncellenme_tarihi or '',
-        'swimmers': swimmers,
+        'summary': {
+            'active_athletes': ozet['aktif_sporcu_sayisi'],
+            'past_athletes': ozet['gecmis_sporcu_sayisi'],
+            'male_athletes': ozet['erkek_sayisi'],
+            'female_athletes': ozet['kadin_sayisi'],
+            'meet_count': ozet['musabaka_sayisi'],
+            'city_count': ozet['farkli_il_sayisi'],
+            'max_fina': ozet['max_puan'],
+            'avg_fina': ozet['avg_puan'],
+            'gold': ozet['altin'],
+            'silver': ozet['gumus'],
+            'bronze': ozet['bronz'],
+            'total_medals': ozet['toplam_madalya'],
+            'strokes': [
+                {'name': s['stil'], 'races': s['yaris_sayisi'], 'pct': s['oran']}
+                for s in ozet['stil_dagilimi']
+            ],
+            'cities': [
+                {'name': c['il'], 'races': c['yaris_sayisi']}
+                for c in ozet['sehir_dagilimi']
+            ],
+            'recent_meets': [
+                {
+                    'id': m['event_id'],
+                    'name': m['event__musabaka_adi'],
+                    'city': m['sehir_norm'],
+                    'date': m['event__yaris_tarihi_baslangic'] or '',
+                    'races': m['yaris_sayisi'],
+                }
+                for m in ozet['son_musabakalar']
+            ],
+        },
     }, request=request, cache_seconds=120)

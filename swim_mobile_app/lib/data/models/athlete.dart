@@ -291,28 +291,124 @@ class ClubSearchItem {
   }
 }
 
-class ClubSwimmerSummary {
-  final int id;
+class ClubStrokeStat {
   final String name;
-  final int? birthYear;
-  final bool isActive;
-  final int raceCount;
+  final int races;
+  final int pct;
 
-  ClubSwimmerSummary({
-    required this.id,
+  ClubStrokeStat({
     required this.name,
-    this.birthYear,
-    this.isActive = false,
-    required this.raceCount,
+    required this.races,
+    required this.pct,
   });
 
-  factory ClubSwimmerSummary.fromJson(Map<String, dynamic> json) {
-    return ClubSwimmerSummary(
-      id: json['id'] as int,
+  factory ClubStrokeStat.fromJson(Map<String, dynamic> json) {
+    return ClubStrokeStat(
       name: json['name'] as String? ?? '',
-      birthYear: json['birth_year'] as int?,
-      isActive: json['is_active'] as bool? ?? false,
-      raceCount: json['race_count'] as int? ?? 0,
+      races: json['races'] as int? ?? 0,
+      pct: json['pct'] as int? ?? 0,
+    );
+  }
+}
+
+class ClubCityStat {
+  final String name;
+  final int races;
+
+  ClubCityStat({required this.name, required this.races});
+
+  factory ClubCityStat.fromJson(Map<String, dynamic> json) {
+    return ClubCityStat(
+      name: json['name'] as String? ?? '',
+      races: json['races'] as int? ?? 0,
+    );
+  }
+}
+
+class ClubRecentMeet {
+  final int id;
+  final String name;
+  final String city;
+  final String date;
+  final int races;
+
+  ClubRecentMeet({
+    required this.id,
+    required this.name,
+    required this.city,
+    required this.date,
+    required this.races,
+  });
+
+  factory ClubRecentMeet.fromJson(Map<String, dynamic> json) {
+    return ClubRecentMeet(
+      id: json['id'] as int? ?? 0,
+      name: json['name'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      date: json['date'] as String? ?? '',
+      races: json['races'] as int? ?? 0,
+    );
+  }
+}
+
+class ClubSummaryModel {
+  final int activeAthletes;
+  final int pastAthletes;
+  final int maleAthletes;
+  final int femaleAthletes;
+  final int meetCount;
+  final int cityCount;
+  final int? maxFina;
+  final int? avgFina;
+  final int gold;
+  final int silver;
+  final int bronze;
+  final int totalMedals;
+  final List<ClubStrokeStat> strokes;
+  final List<ClubCityStat> cities;
+  final List<ClubRecentMeet> recentMeets;
+
+  ClubSummaryModel({
+    this.activeAthletes = 0,
+    this.pastAthletes = 0,
+    this.maleAthletes = 0,
+    this.femaleAthletes = 0,
+    this.meetCount = 0,
+    this.cityCount = 0,
+    this.maxFina,
+    this.avgFina,
+    this.gold = 0,
+    this.silver = 0,
+    this.bronze = 0,
+    this.totalMedals = 0,
+    this.strokes = const [],
+    this.cities = const [],
+    this.recentMeets = const [],
+  });
+
+  factory ClubSummaryModel.fromJson(Map<String, dynamic> json) {
+    return ClubSummaryModel(
+      activeAthletes: json['active_athletes'] as int? ?? 0,
+      pastAthletes: json['past_athletes'] as int? ?? 0,
+      maleAthletes: json['male_athletes'] as int? ?? 0,
+      femaleAthletes: json['female_athletes'] as int? ?? 0,
+      meetCount: json['meet_count'] as int? ?? 0,
+      cityCount: json['city_count'] as int? ?? 0,
+      maxFina: json['max_fina'] as int?,
+      avgFina: json['avg_fina'] as int?,
+      gold: json['gold'] as int? ?? 0,
+      silver: json['silver'] as int? ?? 0,
+      bronze: json['bronze'] as int? ?? 0,
+      totalMedals: json['total_medals'] as int? ?? 0,
+      strokes: (json['strokes'] as List<dynamic>? ?? [])
+          .map((e) => ClubStrokeStat.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      cities: (json['cities'] as List<dynamic>? ?? [])
+          .map((e) => ClubCityStat.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      recentMeets: (json['recent_meets'] as List<dynamic>? ?? [])
+          .map((e) => ClubRecentMeet.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -335,7 +431,7 @@ class ClubDetailModel {
   final double? latitude;
   final double? longitude;
   final String? contactUpdatedAt;
-  final List<ClubSwimmerSummary> swimmers;
+  final ClubSummaryModel summary;
 
   ClubDetailModel({
     required this.id,
@@ -355,7 +451,7 @@ class ClubDetailModel {
     this.latitude,
     this.longitude,
     this.contactUpdatedAt,
-    this.swimmers = const [],
+    required this.summary,
   });
 
   bool get hasContactInfo =>
@@ -372,7 +468,7 @@ class ClubDetailModel {
   }
 
   factory ClubDetailModel.fromJson(Map<String, dynamic> json) {
-    final swimmersRaw = json['swimmers'] as List<dynamic>? ?? [];
+    final summaryRaw = json['summary'] as Map<String, dynamic>? ?? {};
     return ClubDetailModel(
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
@@ -391,9 +487,7 @@ class ClubDetailModel {
       latitude: (json['latitude'] is num) ? (json['latitude'] as num).toDouble() : null,
       longitude: (json['longitude'] is num) ? (json['longitude'] as num).toDouble() : null,
       contactUpdatedAt: _nonEmpty(json['contact_updated_at']),
-      swimmers: swimmersRaw
-          .map((e) => ClubSwimmerSummary.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      summary: ClubSummaryModel.fromJson(summaryRaw),
     );
   }
 }

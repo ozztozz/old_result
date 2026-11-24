@@ -168,113 +168,133 @@
 {% endif %}
 
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
-    <!-- Kulübün Sporcuları -->
+    <!-- Kulüp Performans ve Branş Özeti -->
     <div class="lg:col-span-7">
-        <div class="swim-card h-full flex flex-col justify-between">
+        <div class="swim-card h-full flex flex-col">
             <div class="swim-card-header">
                 <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
-                    <i class="bi bi-people swim-text-primary"></i> Kulüp Sporcuları ({{ total_swimmers }})
+                    <i class="bi bi-bar-chart-line swim-text-primary"></i> Kulüp Özeti ve Branş Dağılımı
                 </h2>
             </div>
-            <div class="swim-table-wrapper border-0 rounded-none flex-1">
-                <table class="swim-table">
-                    <thead class="swim-thead">
-                        <tr>
-                            <th class="swim-th">Sporcu</th>
-                            <th class="swim-th">D.Yılı</th>
-                            <th class="swim-th">Dönem</th>
-                            <th class="swim-th text-center">Durum</th>
-                            <th class="swim-th text-right">Yarış Sayısı</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for t in page_obj %}
-                        <tr class="swim-tr">
-                            <td class="swim-td font-semibold">
-                                <a href="{% url 'sonuclar:sporcu_detay' t.sporcu.id %}" class="swim-text-main hover:swim-text-primary transition">
-                                    {{ t.sporcu.sporcu_adi }}
-                                </a>
-                            </td>
-                            <td class="swim-td text-xs swim-text-muted font-mono">
-                                <span class="swim-badge swim-badge-neutral">{{ t.sporcu.dogum_yili|default:t.sporcu.yas_dogum_yili|default:"-" }}</span>
-                            </td>
-                            <td class="swim-td text-xs swim-text-muted font-mono">
-                                {{ t.ilk_yaris_tarihi|slice:":4" }} - {{ t.son_yaris_tarihi|slice:":4" }}
-                            </td>
-                            <td class="swim-td text-center">
-                                {% if t.aktif_kulup_mu %}
-                                    <span class="swim-badge swim-badge-success text-[0.68rem]">AKTİF</span>
-                                {% else %}
-                                    <span class="swim-badge swim-badge-neutral text-[0.68rem]">GEÇMİŞ</span>
-                                {% endif %}
-                            </td>
-                            <td class="swim-td text-right font-bold font-mono swim-text-primary">{{ t.toplam_yaris_sayisi }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="swim-td text-center py-8 swim-text-muted">Kayıtlı sporcu bulunamadı.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Sayfalama -->
-            {% if page_obj.has_other_pages %}
-            <div class="swim-card-footer">
-                <span class="text-xs swim-text-muted">Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-                <div class="flex items-center gap-1">
-                    {% if page_obj.has_previous %}
-                        <a class="swim-btn-secondary swim-btn-sm" href="?page=1">&laquo;</a>
-                        <a class="swim-btn-secondary swim-btn-sm" href="?page={{ page_obj.previous_page_number }}">Önceki</a>
-                    {% endif %}
-                    <span class="swim-btn-primary swim-btn-sm font-bold">{{ page_obj.number }}</span>
-                    {% if page_obj.has_next %}
-                        <a class="swim-btn-secondary swim-btn-sm" href="?page={{ page_obj.next_page_number }}">Sonraki</a>
-                        <a class="swim-btn-secondary swim-btn-sm" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
-                    {% endif %}
+            <div class="p-4 sm:p-5 space-y-5 flex-1">
+                <!-- Temel Sayısal Özet -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div class="swim-stat-box p-3">
+                        <div class="swim-stat-val text-lg swim-text-primary">{{ ozet.musabaka_sayisi|intcomma }}</div>
+                        <div class="swim-stat-lbl text-[0.68rem]">Müsabaka</div>
+                    </div>
+                    <div class="swim-stat-box p-3">
+                        <div class="swim-stat-val text-lg swim-text-main">{{ ozet.farkli_il_sayisi|intcomma }}</div>
+                        <div class="swim-stat-lbl text-[0.68rem]">Farklı İl</div>
+                    </div>
+                    <div class="swim-stat-box p-3">
+                        <div class="swim-stat-val text-lg swim-text-success">{{ ozet.aktif_sporcu_sayisi|intcomma }}</div>
+                        <div class="swim-stat-lbl text-[0.68rem]">Aktif Sporcu</div>
+                    </div>
+                    <div class="swim-stat-box p-3">
+                        <div class="swim-stat-val text-lg text-amber-500">{{ ozet.max_puan|default:"-" }}</div>
+                        <div class="swim-stat-lbl text-[0.68rem]">En Yüksek FINA</div>
+                    </div>
                 </div>
+
+                <!-- Kürsü / Madalya & Cinsiyet Dağılımı -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-3.5 bg-slate-50/60 dark:bg-slate-900/30">
+                        <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Kürsü Dereceleri</div>
+                        <div class="flex items-center gap-3 text-xs font-semibold">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                                🥇 {{ ozet.altin|intcomma }}
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-200/80 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200">
+                                🥈 {{ ozet.gumus|intcomma }}
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-100/80 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+                                🥉 {{ ozet.bronz|intcomma }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200/80 dark:border-slate-700/80 p-3.5 bg-slate-50/60 dark:bg-slate-900/30">
+                        <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Kadro Dağılımı</div>
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="swim-badge swim-badge-info">Erkek: {{ ozet.erkek_sayisi|intcomma }}</span>
+                            <span class="swim-badge swim-badge-neutral">Kadın: {{ ozet.kadin_sayisi|intcomma }}</span>
+                            {% if ozet.avg_puan %}
+                            <span class="swim-badge swim-badge-success">Ort. FINA: {{ ozet.avg_puan }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Branş (Stil) Dağılımı -->
+                {% if ozet.stil_dagilimi %}
+                <div>
+                    <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2.5">Branş Dağılımı</div>
+                    <div class="space-y-2.5">
+                        {% for st in ozet.stil_dagilimi %}
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-semibold swim-text-main">{{ st.stil }}</span>
+                                <span class="font-mono swim-text-muted">{{ st.yaris_sayisi|intcomma }} yarış (%{{ st.oran }})</span>
+                            </div>
+                            <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                <div class="h-full rounded-full bg-blue-600 dark:bg-blue-500" style="width: {{ st.oran }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- En Çok Yarışılan İller -->
+                {% if ozet.sehir_dagilimi %}
+                <div>
+                    <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">En Çok Yarışılan İller</div>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for sh in ozet.sehir_dagilimi %}
+                        <span class="swim-badge swim-badge-neutral text-xs">
+                            <i class="bi bi-geo-alt mr-1 swim-text-primary"></i>{{ sh.il }} <strong class="ml-1 font-mono">{{ sh.yaris_sayisi|intcomma }}</strong>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 
-    <!-- Son Yarış Sonuçları -->
+    <!-- Son Katıldığı Müsabakalar -->
     <div class="lg:col-span-5">
         <div class="swim-card h-full flex flex-col justify-between">
             <div class="swim-card-header">
                 <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
-                    <i class="bi bi-clock-history swim-text-primary"></i> Son Yarış Sonuçları
+                    <i class="bi bi-trophy swim-text-primary"></i> Son Katıldığı Müsabakalar
                 </h2>
             </div>
             <div class="swim-table-wrapper border-0 rounded-none flex-1">
                 <table class="swim-table">
                     <thead class="swim-thead">
                         <tr>
-                            <th class="swim-th">Sporcu</th>
-                            <th class="swim-th">Branş</th>
-                            <th class="swim-th text-right">Derece</th>
+                            <th class="swim-th">Müsabaka</th>
+                            <th class="swim-th">İl</th>
+                            <th class="swim-th text-right">Yarış</th>
                             <th class="swim-th text-right">Tarih</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r in son_sonuclar %}
+                        {% for m in ozet.son_musabakalar %}
                         <tr class="swim-tr">
                             <td class="swim-td font-medium text-xs">
-                                <a href="{% url 'sonuclar:sporcu_detay' r.sporcu.id %}" class="swim-text-main hover:swim-text-primary transition truncate block max-w-[120px]">
-                                    {{ r.sporcu.sporcu_adi }}
+                                <a href="{% url 'sonuclar:musabaka_detay' m.event_id %}" class="swim-text-main hover:swim-text-primary transition line-clamp-2">
+                                    {{ m.event__musabaka_adi }}
                                 </a>
                             </td>
-                            <td class="swim-td text-xs">
-                                <span class="swim-badge swim-badge-neutral text-[0.68rem] mr-1">{{ r.mesafe }}m</span>
-                                {{ r.stil }}
-                            </td>
-                            <td class="swim-td text-right font-bold font-mono swim-text-primary text-xs">{{ r.derece }}</td>
-                            <td class="swim-td text-right text-xs swim-text-subtle font-mono whitespace-nowrap">{{ r.yaris_tarihi_baslangic }}</td>
+                            <td class="swim-td text-xs swim-text-muted whitespace-nowrap">{{ m.sehir_norm }}</td>
+                            <td class="swim-td text-right font-bold font-mono swim-text-primary text-xs">{{ m.yaris_sayisi }}</td>
+                            <td class="swim-td text-right text-xs swim-text-subtle font-mono whitespace-nowrap">{{ m.event__yaris_tarihi_baslangic|default:"-" }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="swim-td text-center py-8 swim-text-muted">Kayıtlı yarış bulunamadı.</td>
+                            <td colspan="4" class="swim-td text-center py-8 swim-text-muted">Müsabaka kaydı bulunamadı.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

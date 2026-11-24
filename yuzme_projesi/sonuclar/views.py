@@ -443,18 +443,9 @@ def kulup_listesi(request):
 
 
 def kulup_detay(request, pk):
-    """Kulüp detay sayfası: Kulüp profili, Sporcuları ve Son Yarış Sonuçları."""
+    """Kulüp detay sayfası: Kulüp profili, iletişim/harita bilgileri ve anonim performans özeti."""
     kulup = get_object_or_404(Kulup, pk=pk)
-
-    # Bu kulüpte yarışmış sporcular (Aktif olanlar ve tümü)
-    tarihce_qs = SporcuKulupTarihce.objects.filter(kulup=kulup).select_related('sporcu').order_by('-aktif_kulup_mu', '-toplam_yaris_sayisi')
-    
-    paginator = Paginator(tarihce_qs, 40)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    # Kulübün son yarış sonuçları
-    son_sonuclar = kulup.yaris_sonuclari.select_related('sporcu', 'event').order_by('-event__yaris_tarihi_baslangic')[:25]
+    ozet = kulup.build_summary()
 
     instagram_username = ""
     instagram_handle = ""
@@ -467,11 +458,9 @@ def kulup_detay(request, pk):
 
     context = {
         'kulup': kulup,
+        'ozet': ozet,
         'instagram_username': instagram_username,
         'instagram_handle': instagram_handle,
-        'page_obj': page_obj,
-        'son_sonuclar': son_sonuclar,
-        'total_swimmers': paginator.count,
     }
     return render(request, 'sonuclar/kulup_detay.html', context)
 

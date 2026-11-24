@@ -15,7 +15,7 @@ import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../athletes/athlete_profile_screen.dart';
+import '../meets/meet_detail_screen.dart';
 import '../meets/meet_search_screen.dart';
 
 /// Kulüp Profili, İletişim/Sosyal Medya Kartı ve Sporcuları
@@ -232,28 +232,18 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
             _buildContactCard(palette, club),
           ],
           AppSpacing.vLg,
-          SectionHeader(
-            title: 'Kulüp Sporcuları',
-            trailingText: club.swimmers.isNotEmpty
-                ? 'En aktif ${club.swimmers.length} sporcu'
-                : null,
-          ),
+          SectionHeader(title: 'Kulüp Özeti ve Branş Dağılımı'),
           AppSpacing.vSm,
-          if (club.swimmers.isEmpty)
-            SoftGlassPanel(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                'Kayıtlı sporcu bulunamadı.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 13,
-                  color: palette.textMuted,
-                ),
-              ),
-            )
-          else
-            ...club.swimmers.map((s) => _buildSwimmerTile(palette, s)),
+          _buildSummaryCard(palette, club.summary),
+          if (club.summary.recentMeets.isNotEmpty) ...[
+            AppSpacing.vLg,
+            SectionHeader(
+              title: 'Son Katıldığı Müsabakalar',
+              trailingText: '${club.summary.meetCount} müsabaka',
+            ),
+            AppSpacing.vSm,
+            ...club.summary.recentMeets.map((m) => _buildRecentMeetTile(palette, m)),
+          ],
         ],
       ),
     );
@@ -870,7 +860,143 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
-  Widget _buildSwimmerTile(AppColorPalette palette, ClubSwimmerSummary swimmer) {
+  Widget _buildSummaryCard(AppColorPalette palette, ClubSummaryModel summary) {
+    return SoftGlassPanel(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _StatBox(
+                  label: 'Müsabaka',
+                  value: '${summary.meetCount}',
+                  color: palette.primary,
+                  palette: palette,
+                ),
+              ),
+              AppSpacing.hSm,
+              Expanded(
+                child: _StatBox(
+                  label: 'Farklı İl',
+                  value: '${summary.cityCount}',
+                  color: palette.infoCyan,
+                  palette: palette,
+                ),
+              ),
+              AppSpacing.hSm,
+              Expanded(
+                child: _StatBox(
+                  label: 'Max FINA',
+                  value: summary.maxFina != null ? '${summary.maxFina}' : '-',
+                  color: palette.statusWarning,
+                  palette: palette,
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.vMd,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoChip(
+                icon: Icons.emoji_events_outlined,
+                label: '🥇 ${summary.gold}  🥈 ${summary.silver}  🥉 ${summary.bronze}',
+                color: palette.statusWarning,
+              ),
+              _InfoChip(
+                icon: Icons.groups_outlined,
+                label: 'Aktif ${summary.activeAthletes} · E ${summary.maleAthletes} / K ${summary.femaleAthletes}',
+                color: palette.primary,
+              ),
+              if (summary.avgFina != null)
+                _InfoChip(
+                  icon: Icons.speed_rounded,
+                  label: 'Ort. FINA: ${summary.avgFina}',
+                  color: palette.statusSuccess,
+                ),
+            ],
+          ),
+          if (summary.strokes.isNotEmpty) ...[
+            AppSpacing.vMd,
+            Text(
+              'BRANŞ DAĞILIMI',
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+                color: palette.textMuted,
+              ),
+            ),
+            AppSpacing.vSm,
+            ...summary.strokes.map(
+              (st) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          st.name,
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${st.races} yarış (%${st.pct})',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.monoFontFamily,
+                            fontSize: 11.5,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: (st.pct.clamp(0, 100)) / 100.0,
+                        minHeight: 6,
+                        backgroundColor: palette.border,
+                        valueColor: AlwaysStoppedAnimation<Color>(palette.accent),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (summary.cities.isNotEmpty) ...[
+            AppSpacing.vSm,
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: summary.cities
+                  .map(
+                    (c) => _InfoChip(
+                      icon: Icons.location_on_outlined,
+                      label: '${c.name} (${c.races})',
+                      color: palette.textSecondary,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentMeetTile(AppColorPalette palette, ClubRecentMeet meet) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: SoftGlassPanel(
@@ -878,9 +1004,9 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => AthleteProfileScreen(
-                athleteId: swimmer.id,
-                athleteName: swimmer.name,
+              builder: (_) => MeetDetailScreen(
+                meetId: meet.id,
+                meetTitle: meet.name,
                 repository: widget.repository,
               ),
             ),
@@ -893,12 +1019,12 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    StringUtils.toTitleCase(swimmer.name),
-                    maxLines: 1,
+                    meet.name,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 14,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: palette.textPrimary,
                     ),
@@ -906,8 +1032,8 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                   const SizedBox(height: 2),
                   Text(
                     [
-                      if (swimmer.birthYear != null) '${swimmer.birthYear}',
-                      swimmer.isActive ? 'Aktif' : 'Geçmiş',
+                      if (meet.city.isNotEmpty) meet.city,
+                      if (meet.date.isNotEmpty) meet.date,
                     ].join(' · '),
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
@@ -918,6 +1044,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
@@ -925,7 +1052,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${swimmer.raceCount} yarış',
+                '${meet.races} yarış',
                 style: TextStyle(
                   fontFamily: AppTextStyles.monoFontFamily,
                   fontSize: 11.5,

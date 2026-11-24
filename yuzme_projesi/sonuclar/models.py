@@ -74,6 +74,100 @@ class Kulup(models.Model):
     def __str__(self):
         return self.kulup_adi
 
+    def build_summary(self) -> dict:
+        """Sporcu adları olmadan kulübün performans, branş, şehir ve müsabaka özetini döner."""
+        from collections import Counter
+        from django.db.models import Avg, Count, Max
+        from .sqlite_tr import normalize_il_adi
+
+        th_qs = self.sporcu_tarihcesi.select_related('sporcu')
+        aktif_sporcu = th_qs.filter(aktif_kulup_mu=1).count()
+        toplam_th = th_qs.count()
+        gecmis_sporcu = max(0, toplam_th - aktif_sporcu)
+
+        erkek_sayisi = th_qs.filter(sporcu__cinsiyet__iexact='Erkek').count()
+        kadin_sayisi = th_qs.filter(sporcu__cinsiyet__iregex=r'^(kad[ıi]n|k|bayan)$').count()
+
+        ys_qs = self.yaris_sonuclari
+        agg = ys_qs.aggregate(
+            max_puan=Max('puan'),
+            avg_puan=Avg('puan'),
+            musabaka_sayisi=Count('event_id', distinct=True),
+        )
+
+        sira_counts = dict(
+            ys_qs.filter(sira__in=['1', '1.', '2', '2.', '3', '3.'])
+            .values_list('sira')
+            .annotate(c=Count('id'))
+        )
+        altin = sira_counts.get('1', 0) + sira_counts.get('1.', 0)
+        gumus = sira_counts.get('2', 0) + sira_counts.get('2.', 0)
+        bronz = sira_counts.get('3', 0) + sira_counts.get('3.', 0)
+
+        stil_raw = list(
+            ys_qs.exclude(stil__isnull=True)
+            .exclude(stil='')
+            .values('stil')
+            .annotate(c=Count('id'))
+            .order_by('-c')[:6]
+        )
+        stil_toplam = sum(r['c'] for r in stil_raw) or 1
+        stil_dagilimi = [
+            {
+                'stil': r['stil'],
+                'yaris_sayisi': r['c'],
+                'oran': round((r['c'] / stil_toplam) * 100),
+            }
+            for r in stil_raw
+        ]
+
+        sehir_counter = Counter()
+        for raw_sehir, cnt in (
+            ys_qs.filter(event__sehir__isnull=False)
+            .exclude(event__sehir='')
+            .values_list('event__sehir')
+            .annotate(c=Count('id'))
+        ):
+            norm = normalize_il_adi(raw_sehir)
+            if norm:
+                sehir_counter[norm] += cnt
+        sehir_dagilimi = [
+            {'il': il, 'yaris_sayisi': cnt}
+            for il, cnt in sehir_counter.most_common(6)
+        ]
+
+        son_musabakalar = list(
+            ys_qs.filter(event__isnull=False)
+            .values(
+                'event_id',
+                'event__musabaka_adi',
+                'event__sehir',
+                'event__yaris_tarihi_baslangic',
+            )
+            .annotate(yaris_sayisi=Count('id'))
+            .order_by('-event__yaris_tarihi_baslangic', '-event_id')[:10]
+        )
+        for m in son_musabakalar:
+            m['sehir_norm'] = normalize_il_adi(m.get('event__sehir') or '') or (m.get('event__sehir') or '-')
+
+        return {
+            'aktif_sporcu_sayisi': aktif_sporcu,
+            'gecmis_sporcu_sayisi': gecmis_sporcu,
+            'erkek_sayisi': erkek_sayisi,
+            'kadin_sayisi': kadin_sayisi,
+            'musabaka_sayisi': agg['musabaka_sayisi'] or 0,
+            'farkli_il_sayisi': len(sehir_counter),
+            'max_puan': agg['max_puan'],
+            'avg_puan': round(agg['avg_puan']) if agg['avg_puan'] else None,
+            'altin': altin,
+            'gumus': gumus,
+            'bronz': bronz,
+            'toplam_madalya': altin + gumus + bronz,
+            'stil_dagilimi': stil_dagilimi,
+            'sehir_dagilimi': sehir_dagilimi,
+            'son_musabakalar': son_musabakalar,
+        }
+
 
 class Sporcu(models.Model):
     sporcu_adi = models.CharField(max_length=255, verbose_name="Sporcu Adı")
