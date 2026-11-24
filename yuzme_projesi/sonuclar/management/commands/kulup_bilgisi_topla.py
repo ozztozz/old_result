@@ -32,16 +32,23 @@ def _load_env_key(key_name: str) -> str:
 
 
 def _serper_post(endpoint: str, query: str, serper_key: str, num: int = 10) -> dict:
-    resp = requests.post(
-        f"https://google.serper.dev/{endpoint}",
-        headers={"X-API-KEY": serper_key, "Content-Type": "application/json"},
-        json={"q": query, "gl": "tr", "hl": "tr", "num": num},
-        timeout=15,
-    )
-    if resp.status_code in (400, 401, 402, 403, 429):
-        raise RuntimeError(f"SERPER_STOP:{resp.status_code}:{resp.text[:200]}")
-    resp.raise_for_status()
-    return resp.json()
+    last_err = None
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                f"https://google.serper.dev/{endpoint}",
+                headers={"X-API-KEY": serper_key, "Content-Type": "application/json"},
+                json={"q": query, "gl": "tr", "hl": "tr", "num": num},
+                timeout=25,
+            )
+            if resp.status_code in (400, 401, 402, 403, 429):
+                raise RuntimeError(f"SERPER_STOP:{resp.status_code}:{resp.text[:200]}")
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last_err = e
+            time.sleep(2 ** (attempt + 1))
+    raise last_err
 
 
 def _fetch_page_text(url: str, max_chars: int = 4000) -> str:
@@ -232,6 +239,7 @@ class Command(BaseCommand):
                 processed += 1
                 found = [k for k in ("adres", "telefon", "web_sitesi", "google_maps_url", "instagram", "facebook") if data.get(k)]
                 self.stdout.write(f"[{idx}/{len(rows)}] {cname} ({cil}, {son_tarih}) -> {found}")
+                self.stdout.flush()
                 time.sleep(delay)
             except RuntimeError as e:
                 if str(e).startswith("SERPER_STOP:"):
