@@ -17,7 +17,7 @@ DEFAULT_JSONL = ROOT_DIR / "database" / "kulup_bilgileri.jsonl"
 DEFAULT_JSON = ROOT_DIR / "database" / "kulup_bilgileri.json"
 
 
-def load_env_key(key_name: str) -> str:
+def load_env_key(key_name: str, required: bool = True) -> str:
     for fname in (".env", "env"):
         p = ROOT_DIR / fname
         if not p.exists():
@@ -30,23 +30,44 @@ def load_env_key(key_name: str) -> str:
                     val = v.strip().strip('"').strip("'")
         if val:
             return val
-    return os.environ[key_name]
+    if os.environ.get(key_name):
+        return os.environ[key_name]
+    if required:
+        raise KeyError(key_name)
+    return ""
 
 
-def serper_post(endpoint: str, query: str, serper_key: str, num: int = 10) -> dict:
-    resp = requests.post(
-        f"https://google.serper.dev/{endpoint}",
-        headers={
-            "X-API-KEY": serper_key,
-            "Content-Type": "application/json",
-        },
-        json={"q": query, "gl": "tr", "hl": "tr", "num": num},
-        timeout=15,
-    )
-    if resp.status_code in (400, 401, 402, 403, 429):
-        raise RuntimeError(f"SERPER_STOP:{resp.status_code}:{resp.text[:200]}")
-    resp.raise_for_status()
-    return resp.json()
+def load_serper_keys() -> list[str]:
+    keys = []
+    for name in ("SERPER_API_KEY", "SERPER_API_KEY2"):
+        val = load_env_key(name, required=(name == "SERPER_API_KEY"))
+        if val and val not in keys:
+            keys.append(val)
+    return keys
+
+
+def serper_post(endpoint: str, query: str, serper_keys: str | list[str], num: int = 10) -> dict:
+    keys = [serper_keys] if isinstance(serper_keys, str) else serper_keys
+    while keys:
+        active_key = keys[0]
+        resp = requests.post(
+            f"https://google.serper.dev/{endpoint}",
+            headers={
+                "X-API-KEY": active_key,
+                "Content-Type": "application/json",
+            },
+            json={"q": query, "gl": "tr", "hl": "tr", "num": num},
+            timeout=15,
+        )
+        if resp.status_code in (400, 401, 402, 403, 429):
+            if isinstance(serper_keys, list) and len(keys) > 1:
+                print(f"[UYARI] Serper anahtarı kota/erişim hatası ({resp.status_code}), yedek anahtara (SERPER_API_KEY2) geçiliyor...")
+                keys.pop(0)
+                continue
+            raise RuntimeError(f"SERPER_STOP:{resp.status_code}:{resp.text[:200]}")
+        resp.raise_for_status()
+        return resp.json()
+    raise RuntimeError("SERPER_STOP:EXHAUSTED:Tüm Serper API anahtarları tükendi.")
 
 
 def fetch_page_text(url: str, max_chars: int = 4000) -> str:
@@ -77,7 +98,7 @@ def kulup_bilgisi_getir(
     kulup_id: int,
     kulup_adi: str,
     sehir: str | None,
-    serper_key: str,
+    serper_keys: str | list[str],
     client: genai.Client,
 ) -> dict:
     sehir_str = (sehir or "").strip()
@@ -91,8 +112,8 @@ def kulup_bilgisi_getir(
     q_search = f"{core_name} {sehir_str} yüzme instagram facebook iletişim".strip()
     q_places = f"{core_name} {sehir_str} yüzme".strip()
 
-    search_data = serper_post("search", q_search, serper_key, num=10)
-    places_data = serper_post("places", q_places, serper_key, num=5)
+    search_data = serper_post("search", q_search, serper_keys, num=10)
+    places_data = serper_post("places", q_places, serper_keys, num=5)
 
     organic = search_data.get("organic", [])
     places = places_data.get("places", [])
@@ -221,7 +242,7 @@ def main():
         export_summary_json(args.output_jsonl, args.output_json)
         return
 
-    serper_key = load_env_key("SERPER_API_KEY")
+    serper_keys = load_serper_keys()
     client = genai.Client(api_key=load_env_key("GEMINI_API_KEY"))
 
     processed = 0
@@ -231,7 +252,7 @@ def main():
             cname = c["kulup_adi"]
             cil = c.get("il")
             try:
-                res = kulup_bilgisi_getir(cid, cname, cil, serper_key, client)
+                res = kulup_bilgisi_getir(cid, cname, cil, serper_keys, client)
                 res["son_yaris_tarihi"] = c.get("son_yaris_tarihi")
                 res["toplam_sporcu_sayisi"] = c.get("toplam_sporcu_sayisi")
                 f.write(json.dumps(res, ensure_ascii=False) + "\n")

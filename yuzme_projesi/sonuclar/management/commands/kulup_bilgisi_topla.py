@@ -13,7 +13,7 @@ from google import genai
 from google.genai import types
 
 
-def _load_env_key(key_name: str) -> str:
+def _load_env_key(key_name: str, required: bool = True) -> str:
     if os.environ.get(key_name):
         return os.environ[key_name]
     base = Path(__file__).resolve().parents[4]  # /home/ubuntu/app or repo root
@@ -28,27 +28,51 @@ def _load_env_key(key_name: str) -> str:
                     val = v.strip().strip('"').strip("'")
         if val:
             return val
-    raise RuntimeError(f"{key_name} bulunamadı (.env veya ortam değişkenlerinde tanımlayın)")
+    if required:
+        raise RuntimeError(f"{key_name} bulunamadı (.env veya ortam değişkenlerinde tanımlayın)")
+    return ""
 
 
-def _serper_post(endpoint: str, query: str, serper_key: str, num: int = 10) -> dict:
-    last_err = None
-    for attempt in range(3):
-        try:
-            resp = requests.post(
-                f"https://google.serper.dev/{endpoint}",
-                headers={"X-API-KEY": serper_key, "Content-Type": "application/json"},
-                json={"q": query, "gl": "tr", "hl": "tr", "num": num},
-                timeout=25,
-            )
-            if resp.status_code in (400, 401, 402, 403, 429):
-                raise RuntimeError(f"SERPER_STOP:{resp.status_code}:{resp.text[:200]}")
-            resp.raise_for_status()
-            return resp.json()
-        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-            last_err = e
-            time.sleep(2 ** (attempt + 1))
-    raise last_err
+def _load_serper_keys() -> list[str]:
+    keys = []
+    for name in ("SERPER_API_KEY", "SERPER_API_KEY2"):
+        val = _load_env_key(name, required=(name == "SERPER_API_KEY"))
+        if val and val not in keys:
+            keys.append(val)
+    return keys
+
+
+def _serper_post(endpoint: str, query: str, serper_keys: str | list[str], num: int = 10) -> dict:
+    keys = [serper_keys] if isinstance(serper_keys, str) else serper_keys
+    if not keys:
+        raise RuntimeError("SERPER_STOP:NO_KEY:Kullanılabilir Serper API anahtarı kalmadı.")
+
+    while keys:
+        active_key = keys[0]
+        last_err = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(
+                    f"https://google.serper.dev/{endpoint}",
+                    headers={"X-API-KEY": active_key, "Content-Type": "application/json"},
+                    json={"q": query, "gl": "tr", "hl": "tr", "num": num},
+                    timeout=25,
+                )
+                if resp.status_code in (400, 401, 402, 403, 429):
+                    if isinstance(serper_keys, list) and len(keys) > 1:
+                        print(f"[UYARI] Serper anahtarı kota/erişim hatası ({resp.status_code}), yedek anahtara (SERPER_API_KEY2) geçiliyor...")
+                        keys.pop(0)
+                        last_err = None
+                        break
+                    raise RuntimeError(f"SERPER_STOP:{resp.status_code}:{resp.text[:200]}")
+                resp.raise_for_status()
+                return resp.json()
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                last_err = e
+                time.sleep(2 ** (attempt + 1))
+        if last_err is not None:
+            raise last_err
+    raise RuntimeError("SERPER_STOP:EXHAUSTED:Tüm Serper API anahtarları tükendi.")
 
 
 def _fetch_page_text(url: str, max_chars: int = 4000) -> str:
@@ -75,7 +99,7 @@ def _fetch_page_text(url: str, max_chars: int = 4000) -> str:
         return ""
 
 
-def _fetch_club_info(kulup_adi: str, sehir: str | None, serper_key: str, client: genai.Client) -> dict:
+def _fetch_club_info(kulup_adi: str, sehir: str | None, serper_keys: str | list[str], client: genai.Client) -> dict:
     sehir_str = (sehir or "").strip()
     core_name = re.sub(
         r"\b(Gençlik\s+Ve\s+Spor\s+Kulübü|Spor\s+Kulübü\s+Derneği|Spor\s+Kulübü|Kulübü|Derneği)\b",
@@ -87,8 +111,8 @@ def _fetch_club_info(kulup_adi: str, sehir: str | None, serper_key: str, client:
     q_search = f"{core_name} {sehir_str} yüzme instagram facebook iletişim".strip()
     q_places = f"{core_name} {sehir_str} yüzme".strip()
 
-    search_data = _serper_post("search", q_search, serper_key, num=10)
-    places_data = _serper_post("places", q_places, serper_key, num=5)
+    search_data = _serper_post("search", q_search, serper_keys, num=10)
+    places_data = _serper_post("places", q_places, serper_keys, num=5)
 
     organic = search_data.get("organic", [])
     places = places_data.get("places", [])
@@ -189,7 +213,7 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", help="Daha önce güncellenmiş kulüpleri de yeniden tara")
 
     def handle(self, *args, **options):
-        serper_key = _load_env_key("SERPER_API_KEY")
+        serper_keys = _load_serper_keys()
         gemini_key = _load_env_key("GEMINI_API_KEY")
         client = genai.Client(api_key=gemini_key)
 
@@ -220,7 +244,7 @@ class Command(BaseCommand):
         processed = 0
         for idx, (cid, cname, cil, sp_cnt, son_tarih) in enumerate(rows, 1):
             try:
-                data = _fetch_club_info(cname, cil, serper_key, client)
+                data = _fetch_club_info(cname, cil, serper_keys, client)
                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 with connection.cursor() as cur:
                     cur.execute(
