@@ -116,6 +116,8 @@ def _fetch_club_info(kulup_adi: str, sehir: str | None, serper_key: str, client:
                 "phoneNumber": p.get("phoneNumber"),
                 "website": p.get("website"),
                 "cid": p.get("cid"),
+                "latitude": p.get("latitude"),
+                "longitude": p.get("longitude"),
                 "google_maps_url": f"https://www.google.com/maps?cid={p['cid']}" if p.get("cid") else None,
             }
             for p in places[:5]
@@ -163,7 +165,14 @@ Yanıtı sadece aşağıdaki JSON formatında ver:
                         response_mime_type="application/json",
                     ),
                 )
-                return json.loads(response.text)
+                parsed = json.loads(response.text)
+                maps_url = parsed.get("google_maps_url") or ""
+                for p in context_payload["places"]:
+                    if p.get("google_maps_url") and p["google_maps_url"] == maps_url:
+                        parsed["enlem"] = p.get("latitude")
+                        parsed["boylam"] = p.get("longitude")
+                        break
+                return parsed
             except Exception as e:
                 last_err = e
                 time.sleep(2 ** (attempt + 1))
@@ -223,6 +232,8 @@ class Command(BaseCommand):
                             google_maps_url = %s,
                             instagram = %s,
                             facebook = %s,
+                            enlem = %s,
+                            boylam = %s,
                             iletisim_guncellenme_tarihi = %s
                         WHERE id = %s
                         """,
@@ -233,6 +244,8 @@ class Command(BaseCommand):
                             data.get("google_maps_url"),
                             data.get("instagram"),
                             data.get("facebook"),
+                            data.get("enlem"),
+                            data.get("boylam"),
                             now_str,
                             cid,
                         ],

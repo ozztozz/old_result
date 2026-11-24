@@ -260,6 +260,7 @@ class ClubSearchItem {
   final String? city;
   final bool isSchool;
   final int athleteCount;
+  final double? distanceKm;
 
   ClubSearchItem({
     this.id,
@@ -267,16 +268,19 @@ class ClubSearchItem {
     this.city,
     this.isSchool = false,
     required this.athleteCount,
+    this.distanceKm,
   });
 
   factory ClubSearchItem.fromJson(Map<String, dynamic> json) {
     final rawCity = (json['city'] ?? json['il'])?.toString().trim();
+    final rawDist = json['distance_km'];
     return ClubSearchItem(
       id: json['id'] as int?,
       name: json['name'] as String? ?? '',
       city: (rawCity != null && rawCity.isNotEmpty) ? rawCity : null,
       isSchool: json['is_school'] as bool? ?? (json['okul_mu'] == 1),
       athleteCount: json['athlete_count'] as int? ?? 0,
+      distanceKm: rawDist is num ? rawDist.toDouble() : null,
     );
   }
 }

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import math
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -118,13 +119,33 @@ _TR_LETTER_CASES = {
 }
 
 
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """İki koordinat arasındaki kuş uçuşu mesafeyi (km) döner."""
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
 @require_GET
 def get_clubs_list(request):
-    """Sayfalı ve alfabetik/il/tür filtreli kulüp listesi."""
+    """Sayfalı ve alfabetik/il/tür/konum filtreli kulüp listesi."""
     q = (request.GET.get('q') or '').strip()
     city = (request.GET.get('city') or request.GET.get('il') or '').strip()
     letter = (request.GET.get('letter') or '').strip()
     kind = (request.GET.get('kind') or 'all').strip().lower()
+    raw_lat = request.GET.get('lat')
+    raw_lon = request.GET.get('lon') or request.GET.get('lng')
+
+    user_lat = user_lon = None
+    if raw_lat is not None and raw_lon is not None:
+        try:
+            user_lat = float(raw_lat)
+            user_lon = float(raw_lon)
+        except (TypeError, ValueError):
+            user_lat = user_lon = None
 
     qs = Kulup.objects.all()
     if kind == 'club':
@@ -141,25 +162,48 @@ def get_clubs_list(request):
         u_form, l_form = _TR_LETTER_CASES.get(upper_ch, (ch.upper(), ch.lower()))
         qs = qs.filter(Q(kulup_adi__startswith=u_form) | Q(kulup_adi__startswith=l_form))
 
-    qs = qs.order_by('kulup_adi' if letter else '-toplam_sporcu_sayisi', 'kulup_adi').only(
-        'id', 'kulup_adi', 'il', 'okul_mu', 'toplam_sporcu_sayisi'
-    )
-
     page_size = min(int(request.GET.get('page_size', 25)), 50)
     page_num = int(request.GET.get('page', 1))
-    paginator = Paginator(qs, page_size)
-    page_obj = paginator.get_page(page_num)
 
-    clubs_data = [
-        {
-            'id': c.id,
-            'name': c.kulup_adi,
-            'city': c.il or '',
-            'is_school': bool(c.okul_mu == 1),
-            'athlete_count': c.toplam_sporcu_sayisi or 0,
-        }
-        for c in page_obj
-    ]
+    if user_lat is not None and user_lon is not None:
+        qs = qs.filter(enlem__isnull=False, boylam__isnull=False).only(
+            'id', 'kulup_adi', 'il', 'okul_mu', 'toplam_sporcu_sayisi', 'enlem', 'boylam'
+        )
+        scored = []
+        for c in qs:
+            dist = _haversine_km(user_lat, user_lon, c.enlem, c.boylam)
+            scored.append((dist, c))
+        scored.sort(key=lambda x: (x[0], -(x[1].toplam_sporcu_sayisi or 0)))
+
+        paginator = Paginator(scored, page_size)
+        page_obj = paginator.get_page(page_num)
+        clubs_data = [
+            {
+                'id': c.id,
+                'name': c.kulup_adi,
+                'city': c.il or '',
+                'is_school': bool(c.okul_mu == 1),
+                'athlete_count': c.toplam_sporcu_sayisi or 0,
+                'distance_km': round(dist, 1),
+            }
+            for dist, c in page_obj
+        ]
+    else:
+        qs = qs.order_by('kulup_adi' if letter else '-toplam_sporcu_sayisi', 'kulup_adi').only(
+            'id', 'kulup_adi', 'il', 'okul_mu', 'toplam_sporcu_sayisi'
+        )
+        paginator = Paginator(qs, page_size)
+        page_obj = paginator.get_page(page_num)
+        clubs_data = [
+            {
+                'id': c.id,
+                'name': c.kulup_adi,
+                'city': c.il or '',
+                'is_school': bool(c.okul_mu == 1),
+                'athlete_count': c.toplam_sporcu_sayisi or 0,
+            }
+            for c in page_obj
+        ]
 
     return api_response({
         'data': clubs_data,
@@ -167,7 +211,7 @@ def get_clubs_list(request):
         'total_pages': paginator.num_pages,
         'total_count': paginator.count,
         'has_next': page_obj.has_next(),
-    }, request=request, cache_seconds=60)
+    }, request=request, cache_seconds=30 if user_lat is not None else 60)
 
 
 @require_GET
@@ -204,6 +248,8 @@ def get_club_detail(request, club_id):
         'google_maps_url': club.google_maps_url or '',
         'instagram': club.instagram or '',
         'facebook': club.facebook or '',
+        'latitude': club.enlem,
+        'longitude': club.boylam,
         'contact_updated_at': club.iletisim_guncellenme_tarihi or '',
         'swimmers': swimmers,
     }, request=request, cache_seconds=120)

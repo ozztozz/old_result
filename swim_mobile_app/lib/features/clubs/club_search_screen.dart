@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/app_bottom_sheet.dart';
 import '../../core/components/app_skeleton.dart';
@@ -197,6 +198,9 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
   int _page = 1;
   String? _selectedLetter;
   String _selectedKind = 'Takım';
+  double? _userLat;
+  double? _userLon;
+  bool _isLocating = false;
   String? _errorMessage;
   List<ClubSearchItem> _clubs = [];
 
@@ -274,13 +278,12 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
   bool get _hasSearchInput =>
       _queryController.text.trim().length >= 2 ||
       _cityController.text.trim().length >= 2 ||
-      _selectedLetter != null;
+      _selectedLetter != null ||
+      (_userLat != null && _userLon != null);
 
   void _onFiltersChanged() {
     _debounce?.cancel();
-    final q = _queryController.text.trim();
-    final city = _cityController.text.trim();
-    if (q.length < 2 && city.length < 2 && _selectedLetter == null) {
+    if (!_hasSearchInput) {
       setState(() {
         _isLoading = false;
         _isLoadingMore = false;
@@ -318,6 +321,68 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
     }
   }
 
+  Future<void> _toggleNearby() async {
+    if (_isLocating) return;
+    if (_userLat != null && _userLon != null) {
+      setState(() {
+        _userLat = null;
+        _userLon = null;
+      });
+      _onFiltersChanged();
+      return;
+    }
+
+    setState(() => _isLocating = true);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Konum servisi kapalı.')),
+          );
+        }
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Yakındaki kulüpler için konum izni gerekli.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _userLat = pos.latitude;
+        _userLon = pos.longitude;
+      });
+      _debounce?.cancel();
+      _fetchClubs(reset: true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Konum alınamadı, tekrar deneyin.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
   void _selectLetter(String letter) {
     _debounce?.cancel();
     setState(() {
@@ -347,6 +412,8 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
     final letter = _selectedLetter;
     final kindLabel = _selectedKind;
     final kindParam = _kindParam;
+    final userLat = _userLat;
+    final userLon = _userLon;
 
     if (reset) {
       setState(() {
@@ -368,12 +435,16 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
         city: city.isEmpty ? null : city,
         letter: letter,
         kind: kindParam,
+        lat: userLat,
+        lon: userLon,
       );
       if (!mounted ||
           _queryController.text.trim() != query ||
           _cityController.text.trim() != city ||
           _selectedLetter != letter ||
-          _selectedKind != kindLabel) {
+          _selectedKind != kindLabel ||
+          _userLat != userLat ||
+          _userLon != userLon) {
         return;
       }
       setState(() {
@@ -393,7 +464,9 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
           _queryController.text.trim() != query ||
           _cityController.text.trim() != city ||
           _selectedLetter != letter ||
-          _selectedKind != kindLabel) {
+          _selectedKind != kindLabel ||
+          _userLat != userLat ||
+          _userLon != userLon) {
         return;
       }
       setState(() {
@@ -446,7 +519,13 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                       onSelected: _selectKind,
                     ),
                     AppSpacing.vSm,
-                    _buildCityBar(palette),
+                    Row(
+                      children: [
+                        Expanded(child: _buildCityBar(palette)),
+                        AppSpacing.hSm,
+                        _buildNearbyButton(palette),
+                      ],
+                    ),
                     AppSpacing.vSm,
                     ModernFilterChipBar(
                       chips: _quickCities
@@ -653,6 +732,49 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
               visualDensity: VisualDensity.compact,
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNearbyButton(AppColorPalette palette) {
+    final active = _userLat != null && _userLon != null;
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: _toggleNearby,
+      child: SoftGlassPanel(
+        level: 2,
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isLocating)
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: palette.accent,
+                ),
+              )
+            else
+              Icon(
+                Icons.near_me_rounded,
+                size: 17,
+                color: active ? palette.accent : palette.textSecondary,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              active ? 'Yakınımda ✓' : 'Yakınımda',
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? palette.accent : palette.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -872,6 +994,8 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                   const SizedBox(height: 2),
                   Text(
                     [
+                      if (club.distanceKm != null)
+                        '${club.distanceKm!.toStringAsFixed(1)} km',
                       if (club.isSchool) 'Okul',
                       if (club.city != null)
                         StringUtils.toTitleCase(club.city!),

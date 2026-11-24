@@ -42,6 +42,8 @@ class SporcuApiTests(TestCase):
                 google_maps_url TEXT,
                 instagram TEXT,
                 facebook TEXT,
+                enlem REAL,
+                boylam REAL,
                 iletisim_guncellenme_tarihi TEXT
             );
             """)
@@ -112,6 +114,8 @@ class SporcuApiTests(TestCase):
                 google_maps_url TEXT,
                 instagram TEXT,
                 facebook TEXT,
+                enlem REAL,
+                boylam REAL,
                 iletisim_guncellenme_tarihi TEXT
             );
             """)
@@ -272,6 +276,8 @@ class SporcuApiTests(TestCase):
                 google_maps_url TEXT,
                 instagram TEXT,
                 facebook TEXT,
+                enlem REAL,
+                boylam REAL,
                 iletisim_guncellenme_tarihi TEXT
             );
             """)
@@ -1023,6 +1029,8 @@ class CanliYarisTests(TestCase):
                 google_maps_url TEXT,
                 instagram TEXT,
                 facebook TEXT,
+                enlem REAL,
+                boylam REAL,
                 iletisim_guncellenme_tarihi TEXT
             );
             """)
@@ -1250,6 +1258,8 @@ class MusabakaAnalizTests(TestCase):
                 google_maps_url TEXT,
                 instagram TEXT,
                 facebook TEXT,
+                enlem REAL,
+                boylam REAL,
                 iletisim_guncellenme_tarihi TEXT
             );
             """)
@@ -1532,6 +1542,8 @@ class KulupIlTests(TestCase):
                 google_maps_url TEXT,
                 instagram TEXT,
                 facebook TEXT,
+                enlem REAL,
+                boylam REAL,
                 iletisim_guncellenme_tarihi TEXT
             );
             """)

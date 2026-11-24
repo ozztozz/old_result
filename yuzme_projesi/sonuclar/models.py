@@ -60,6 +60,8 @@ class Kulup(models.Model):
     google_maps_url = models.CharField(max_length=500, blank=True, null=True, verbose_name="Google Maps URL")
     instagram = models.CharField(max_length=500, blank=True, null=True, verbose_name="Instagram")
     facebook = models.CharField(max_length=500, blank=True, null=True, verbose_name="Facebook")
+    enlem = models.FloatField(blank=True, null=True, verbose_name="Enlem (Latitude)")
+    boylam = models.FloatField(blank=True, null=True, verbose_name="Boylam (Longitude)")
     iletisim_guncellenme_tarihi = models.CharField(max_length=30, blank=True, null=True, verbose_name="İletişim Güncellenme Tarihi")
 
     class Meta:
