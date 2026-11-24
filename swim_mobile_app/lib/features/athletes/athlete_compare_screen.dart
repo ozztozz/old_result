@@ -9,6 +9,7 @@ import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/animated_count_text.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
 
 /// İki Sporcuyu Yan Yana Karşılaştırma Ekranı (Head-to-Head).
@@ -601,7 +602,7 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
                   ),
                   AppSpacing.hXs,
                 ],
-                Text(
+                AnimatedCountText(
                   '$value',
                   maxLines: 1,
                   softWrap: false,

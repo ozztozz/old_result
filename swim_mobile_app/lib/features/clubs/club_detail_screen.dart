@@ -16,6 +16,7 @@ import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/animated_count_text.dart';
 import '../meets/meet_search_screen.dart';
 
 /// Kulüp Profili, İletişim/Sosyal Medya Kartı ve Sporcuları
@@ -1077,7 +1078,7 @@ class _StatBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
+          AnimatedCountText(
             value,
             style: TextStyle(
               fontFamily: AppTextStyles.monoFontFamily,

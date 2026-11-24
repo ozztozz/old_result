@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/swim_colors.dart';
+import 'animated_count_text.dart';
 
 /// Yuvarlak ikon butonu (Geri, favori, ayarlar vb.)
 class RoundIconButton extends StatelessWidget {
@@ -192,7 +193,7 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
+            child: AnimatedCountText(
               value,
               textAlign: TextAlign.center,
               style: const TextStyle(
