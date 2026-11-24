@@ -37,6 +37,88 @@
     </div>
 </div>
 
+{% if kulup.adres or kulup.telefon or kulup.web_sitesi or kulup.google_maps_url or kulup.instagram or kulup.facebook %}
+<!-- İletişim ve Sosyal Medya Kartı -->
+<div class="swim-card mb-4">
+    <div class="swim-card-header flex items-center justify-between gap-2">
+        <h2 class="text-sm sm:text-base font-bold swim-text-main flex items-center gap-2">
+            <i class="bi bi-card-list swim-text-primary"></i> İletişim ve Sosyal Medya
+        </h2>
+        {% if kulup.iletisim_guncellenme_tarihi %}
+        <span class="text-[0.68rem] swim-text-subtle font-mono">
+            Güncelleme: {{ kulup.iletisim_guncellenme_tarihi|slice:":10" }}
+        </span>
+        {% endif %}
+    </div>
+    <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+        {% if kulup.adres or kulup.google_maps_url %}
+        <div class="md:col-span-5 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                <i class="bi bi-geo-alt-fill"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-0.5">Adres</div>
+                {% if kulup.adres %}
+                <p class="text-xs sm:text-sm swim-text-main leading-relaxed break-words">{{ kulup.adres }}</p>
+                {% endif %}
+                {% if kulup.google_maps_url %}
+                <a href="{{ kulup.google_maps_url }}" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1.5 mt-1.5 text-xs font-semibold swim-text-primary hover:underline">
+                    <i class="bi bi-map"></i> Google Maps'te Aç
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kulup.telefon %}
+        <div class="md:col-span-3 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                <i class="bi bi-telephone-fill"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-0.5">Telefon</div>
+                <a href="tel:{{ kulup.telefon }}" class="text-xs sm:text-sm font-semibold swim-text-main hover:swim-text-primary transition font-mono break-all">
+                    {{ kulup.telefon }}
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kulup.web_sitesi or kulup.instagram or kulup.facebook %}
+        <div class="{% if kulup.adres or kulup.google_maps_url or kulup.telefon %}md:col-span-4{% else %}md:col-span-12{% endif %} flex items-start gap-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                <i class="bi bi-share-fill"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="text-[0.7rem] uppercase tracking-wider font-semibold swim-text-subtle mb-1.5">Bağlantılar</div>
+                <div class="flex flex-wrap gap-2">
+                    {% if kulup.web_sitesi %}
+                    <a href="{{ kulup.web_sitesi }}" target="_blank" rel="noopener noreferrer"
+                       class="swim-btn-outline-primary swim-btn-sm swim-btn-pill inline-flex items-center gap-1.5 text-xs">
+                        <i class="bi bi-globe2"></i> Web Sitesi
+                    </a>
+                    {% endif %}
+                    {% if kulup.instagram %}
+                    <a href="{{ kulup.instagram }}" target="_blank" rel="noopener noreferrer"
+                       class="swim-btn-sm swim-btn-pill inline-flex items-center gap-1.5 text-xs border border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-pink-900/40 transition">
+                        <i class="bi bi-instagram"></i> Instagram
+                    </a>
+                    {% endif %}
+                    {% if kulup.facebook %}
+                    <a href="{{ kulup.facebook }}" target="_blank" rel="noopener noreferrer"
+                       class="swim-btn-sm swim-btn-pill inline-flex items-center gap-1.5 text-xs border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
+                        <i class="bi bi-facebook"></i> Facebook
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-6">
     <!-- Kulübün Sporcuları -->
     <div class="lg:col-span-7">

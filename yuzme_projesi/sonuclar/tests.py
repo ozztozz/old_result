@@ -35,7 +35,14 @@ class SporcuApiTests(TestCase):
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
                 son_yaris_tarihi TEXT,
-                okul_mu INTEGER DEFAULT 0
+                okul_mu INTEGER DEFAULT 0,
+                adres TEXT,
+                telefon TEXT,
+                web_sitesi TEXT,
+                google_maps_url TEXT,
+                instagram TEXT,
+                facebook TEXT,
+                iletisim_guncellenme_tarihi TEXT
             );
             """)
             cur.execute("""
@@ -98,7 +105,14 @@ class SporcuApiTests(TestCase):
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
                 son_yaris_tarihi TEXT,
-                okul_mu INTEGER DEFAULT 0
+                okul_mu INTEGER DEFAULT 0,
+                adres TEXT,
+                telefon TEXT,
+                web_sitesi TEXT,
+                google_maps_url TEXT,
+                instagram TEXT,
+                facebook TEXT,
+                iletisim_guncellenme_tarihi TEXT
             );
             """)
             cur.execute("""
@@ -251,7 +265,14 @@ class SporcuApiTests(TestCase):
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
                 son_yaris_tarihi TEXT,
-                okul_mu INTEGER DEFAULT 0
+                okul_mu INTEGER DEFAULT 0,
+                adres TEXT,
+                telefon TEXT,
+                web_sitesi TEXT,
+                google_maps_url TEXT,
+                instagram TEXT,
+                facebook TEXT,
+                iletisim_guncellenme_tarihi TEXT
             );
             """)
             cur.execute("""
@@ -995,7 +1016,14 @@ class CanliYarisTests(TestCase):
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
                 son_yaris_tarihi TEXT,
-                okul_mu INTEGER DEFAULT 0
+                okul_mu INTEGER DEFAULT 0,
+                adres TEXT,
+                telefon TEXT,
+                web_sitesi TEXT,
+                google_maps_url TEXT,
+                instagram TEXT,
+                facebook TEXT,
+                iletisim_guncellenme_tarihi TEXT
             );
             """)
             cur.execute("""
@@ -1215,7 +1243,14 @@ class MusabakaAnalizTests(TestCase):
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
                 son_yaris_tarihi TEXT,
-                okul_mu INTEGER DEFAULT 0
+                okul_mu INTEGER DEFAULT 0,
+                adres TEXT,
+                telefon TEXT,
+                web_sitesi TEXT,
+                google_maps_url TEXT,
+                instagram TEXT,
+                facebook TEXT,
+                iletisim_guncellenme_tarihi TEXT
             );
             """)
             cur.execute("""
@@ -1490,7 +1525,14 @@ class KulupIlTests(TestCase):
                 toplam_yaris_sayisi INTEGER DEFAULT 0,
                 ilk_yaris_tarihi TEXT,
                 son_yaris_tarihi TEXT,
-                okul_mu INTEGER DEFAULT 0
+                okul_mu INTEGER DEFAULT 0,
+                adres TEXT,
+                telefon TEXT,
+                web_sitesi TEXT,
+                google_maps_url TEXT,
+                instagram TEXT,
+                facebook TEXT,
+                iletisim_guncellenme_tarihi TEXT
             );
             """)
             cur.execute("""
@@ -1569,14 +1611,28 @@ class KulupIlTests(TestCase):
             );
             """)
 
-        kulup = Kulup.objects.create(kulup_adi="Ege Yüzme SK", il="İzmir")
+        kulup = Kulup.objects.create(
+            kulup_adi="Ege Yüzme SK",
+            il="İzmir",
+            adres="Alsancak Mah. 123. Sok. No:4 Konak/İzmir",
+            telefon="0232 123 45 67",
+            web_sitesi="https://egeyuzme.example.com",
+            google_maps_url="https://maps.google.com/?q=38.42,27.14",
+            instagram="https://instagram.com/egeyuzme",
+            facebook="https://facebook.com/egeyuzme",
+        )
         res_list = self.client.get(reverse('sonuclar:kulup_listesi'), {'q': 'İzmir'})
         self.assertEqual(res_list.status_code, 200)
         self.assertIn("Ege Yüzme SK", res_list.content.decode('utf-8'))
 
         res_detay = self.client.get(reverse('sonuclar:kulup_detay', args=[kulup.id]))
         self.assertEqual(res_detay.status_code, 200)
-        self.assertIn("İzmir", res_detay.content.decode('utf-8'))
+        detay_html = res_detay.content.decode('utf-8')
+        self.assertIn("İzmir", detay_html)
+        self.assertIn("Alsancak Mah. 123. Sok. No:4 Konak/İzmir", detay_html)
+        self.assertIn("0232 123 45 67", detay_html)
+        self.assertIn("https://instagram.com/egeyuzme", detay_html)
+        self.assertIn("https://facebook.com/egeyuzme", detay_html)
 
         # Canlı parser kulüp çözümlemesi aynı il + aynı kök eşleşmesini yakalamalı
         from sonuclar.live_engine import get_or_resolve_canonical_club
