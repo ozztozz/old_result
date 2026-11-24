@@ -131,6 +131,24 @@
     .leaflet-tile-pane {
         filter: saturate(0.78) brightness(1.02) contrast(0.97);
     }
+    .swim-map-label {
+        background: rgba(255, 255, 255, 0.94) !important;
+        border: 1px solid rgba(148, 163, 184, 0.45) !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14) !important;
+        color: #0f172a !important;
+        font-family: Inter, system-ui, sans-serif !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        padding: 2px 8px !important;
+        white-space: nowrap !important;
+    }
+    .swim-map-label::before {
+        display: none !important;
+    }
+    .club-map-hide-labels .swim-map-label {
+        display: none !important;
+    }
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
@@ -172,9 +190,27 @@
                 }
             });
             mapInstance.addLayer(clusterGroup);
+            const updateLabelVisibility = function () {
+                const el = document.getElementById('clubSearchMap');
+                if (!el) return;
+                if (mapInstance.getZoom() >= 11) {
+                    el.classList.remove('club-map-hide-labels');
+                } else {
+                    el.classList.add('club-map-hide-labels');
+                }
+            };
+            mapInstance.on('zoomend', updateLabelVisibility);
+            updateLabelVisibility();
         }
         setTimeout(() => mapInstance.invalidateSize(), 100);
         loadMapClubs();
+    }
+
+    function shortClubLabel(name) {
+        if (!name) return '';
+        let s = name.replace(/\b(Gençlik\s+Ve\s+Spor\s+Kulübü|Spor\s+Kulübü\s+Derneği|Spor\s+Kulübü|Kulübü|Derneği)\b/gi, '').trim();
+        if (!s) s = name;
+        return s.length > 26 ? s.slice(0, 25) + '…' : s;
     }
 
     function loadMapClubs() {
@@ -199,6 +235,12 @@
                         popupAnchor: [0, -14]
                     });
                     const marker = L.marker([c.latitude, c.longitude], { icon: icon });
+                    marker.bindTooltip(shortClubLabel(c.name), {
+                        permanent: true,
+                        direction: 'right',
+                        offset: [16, 0],
+                        className: 'swim-map-label'
+                    });
                     marker.bindPopup(
                         `<div style="min-width:190px;font-family:Inter,system-ui,sans-serif;padding:2px 4px">` +
                         `<div style="font-weight:700;font-size:13px;color:#0f172a;margin-bottom:3px">${c.name}</div>` +

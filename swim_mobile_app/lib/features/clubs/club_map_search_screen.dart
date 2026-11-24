@@ -38,6 +38,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
   List<ClubSearchItem> _clubs = [];
   ClubSearchItem? _selectedClub;
   LatLng? _userLocation;
+  double _currentZoom = 5.7;
   late String _kind;
 
   @override
@@ -139,6 +140,14 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
               initialCenter: const LatLng(39.0, 35.0),
               initialZoom: 5.7,
               onTap: (_, __) => setState(() => _selectedClub = null),
+              onPositionChanged: (camera, _) {
+                final z = camera.zoom;
+                if ((z >= 11) != (_currentZoom >= 11)) {
+                  setState(() => _currentZoom = z);
+                } else {
+                  _currentZoom = z;
+                }
+              },
             ),
             children: [
               TileLayer(
@@ -171,16 +180,30 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                       .where((c) => c.latitude != null && c.longitude != null)
                       .map((club) {
                     final isSelected = _selectedClub?.id == club.id;
+                    final showLabel = isSelected || _currentZoom >= 11;
                     final pinColor = isSelected
                         ? palette.accent
                         : (club.isSchool
                             ? palette.infoCyan
                             : const Color(0xFF2563EB));
                     final size = isSelected ? 40.0 : 32.0;
+                    final shortName = StringUtils.toTitleCase(club.name)
+                        .replaceAll(
+                          RegExp(
+                            r'\b(Gençlik Ve Spor Kulübü|Spor Kulübü Derneği|Spor Kulübü|Kulübü)\b',
+                            caseSensitive: false,
+                          ),
+                          '',
+                        )
+                        .trim();
+                    final labelText = shortName.isNotEmpty
+                        ? shortName
+                        : StringUtils.toTitleCase(club.name);
                     return Marker(
                       point: LatLng(club.latitude!, club.longitude!),
-                      width: size,
+                      width: showLabel ? 190 : size,
                       height: size,
+                      alignment: showLabel ? Alignment.centerLeft : Alignment.center,
                       child: GestureDetector(
                         onTap: () {
                           setState(() => _selectedClub = club);
@@ -191,29 +214,74 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                                 : _mapController.camera.zoom,
                           );
                         },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 160),
-                          decoration: BoxDecoration(
-                            color: pinColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(
-                                  alpha: isSelected ? 0.30 : 0.20,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
+                              width: size,
+                              height: size,
+                              decoration: BoxDecoration(
+                                color: pinColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2.5,
                                 ),
-                                blurRadius: isSelected ? 10 : 6,
-                                offset: const Offset(0, 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: isSelected ? 0.30 : 0.20,
+                                    ),
+                                    blurRadius: isSelected ? 10 : 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                club.isSchool
+                                    ? Icons.school_rounded
+                                    : Icons.shield_rounded,
+                                size: isSelected ? 20 : 15,
+                                color: Colors.white,
+                              ),
+                            ),
+                            if (showLabel) ...[
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.94),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.black.withValues(alpha: 0.12),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.12),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    labelText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                          child: Icon(
-                            club.isSchool
-                                ? Icons.school_rounded
-                                : Icons.shield_rounded,
-                            size: isSelected ? 20 : 15,
-                            color: Colors.white,
-                          ),
+                          ],
                         ),
                       ),
                     );
