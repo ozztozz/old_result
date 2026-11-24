@@ -206,3 +206,15 @@ def is_ferdi_club(club_name: str) -> bool:
     return folded == "ferdi" or folded.startswith("ferdi ")
 
 
+def safe_club_stem(name: str) -> str:
+    """Ek/unvan kelimelerini temizleyerek güvenli kulüp kökünü döner."""
+    s = unicodedata.normalize("NFC", name or "").replace("\u0307", "")
+    s = tr_fold(s)
+    s = re.sub(r"[.\-,/()]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"\bbelediye\s+spor\b", "belediyespor", s)
+    for w in ("genclik", "ve", "spor", "kulubu", "kulup", "dernegi", "dernek", "sk", "gsk", "ysk"):
+        s = re.sub(r"\b" + w + r"\b", "", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+

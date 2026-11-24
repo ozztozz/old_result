@@ -1053,7 +1053,7 @@ def get_or_resolve_canonical_club(
     is_school: bool = False,
     il: Optional[str] = None,
 ) -> Tuple[Kulup, bool]:
-    from .sqlite_tr import is_ferdi_club, normalize_il_adi
+    from .sqlite_tr import is_ferdi_club, normalize_il_adi, safe_club_stem
 
     c_name = clean_club_name_tags(raw_club_name) if raw_club_name else "FERDİ"
     if not c_name:
@@ -1064,7 +1064,7 @@ def get_or_resolve_canonical_club(
 
     club = Kulup.objects.filter(kulup_adi__iexact=c_name).first()
     if club:
-        if norm_il and not club.il:
+        if norm_il and not club.il and not is_ferdi_club(club.kulup_adi):
             club.il = norm_il
             club.save(update_fields=["il"])
         return club, False
@@ -1072,10 +1072,29 @@ def get_or_resolve_canonical_club(
     clean_name = clean_and_expand_club_name(c_name)
     club = Kulup.objects.filter(kulup_adi__iexact=clean_name).first()
     if club:
-        if norm_il and not club.il:
+        if norm_il and not club.il and not is_ferdi_club(club.kulup_adi):
             club.il = norm_il
             club.save(update_fields=["il"])
         return club, False
+
+    if is_school_flag == 0:
+        target_stem = safe_club_stem(clean_name or c_name)
+        if target_stem and len(target_stem) >= 3 and not target_stem.isdigit():
+            stem_matches = [
+                k for k in Kulup.objects.filter(okul_mu=0).order_by("-toplam_yaris_sayisi", "id")
+                if safe_club_stem(k.kulup_adi) == target_stem
+            ]
+            if stem_matches:
+                if norm_il:
+                    same_il = [k for k in stem_matches if (k.il or "") == norm_il]
+                    if same_il:
+                        return same_il[0], False
+                if len(stem_matches) == 1:
+                    matched = stem_matches[0]
+                    if norm_il and not matched.il and not is_ferdi_club(matched.kulup_adi):
+                        matched.il = norm_il
+                        matched.save(update_fields=["il"])
+                    return matched, False
 
     club = Kulup.objects.create(
         kulup_adi=clean_name or c_name,
@@ -1178,7 +1197,7 @@ def _process_single_race_payload(payload: dict) -> dict:
             gender = cinsiyet or s.get("cinsiyet")
             raw_club = s.get("kulup") or ""
             clean_club_str = clean_club_name_tags(raw_club)
-            club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school)
+            club, _ = get_or_resolve_canonical_club(clean_club_str or raw_club, is_school=is_school, il=event.sehir)
 
             # 2. Sporcuyu bul veya 1-e-1 maskeli eşleştir
             match_res = match_athlete(clean_name, birth_year_or_date=birth_year, club=clean_club_str or raw_club, gender=gender)

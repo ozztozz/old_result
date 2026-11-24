@@ -1578,3 +1578,15 @@ class KulupIlTests(TestCase):
         self.assertEqual(res_detay.status_code, 200)
         self.assertIn("İzmir", res_detay.content.decode('utf-8'))
 
+        # Canlı parser kulüp çözümlemesi aynı il + aynı kök eşleşmesini yakalamalı
+        from sonuclar.live_engine import get_or_resolve_canonical_club
+        Kulup.objects.create(kulup_adi="Denizli Büyükşehir Belediyespor Kulübü", il="Denizli", okul_mu=0)
+        matched, created = get_or_resolve_canonical_club("Denizli Büyükşehir Belediye Spor Kulübü", il="Denizli")
+        self.assertFalse(created)
+        self.assertEqual(matched.kulup_adi, "Denizli Büyükşehir Belediyespor Kulübü")
+
+        # Deplasmanda da tekil eşleşme varsa yeni kulüp açmamalı
+        matched_away, created_away = get_or_resolve_canonical_club("Denizli Büyükşehir Belediye Spor Kulübü", il="Ankara")
+        self.assertFalse(created_away)
+        self.assertEqual(matched_away.id, matched.id)
+
