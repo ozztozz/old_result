@@ -44,6 +44,7 @@ class LiveScreen extends StatefulWidget {
 class _MeetStatus {
   final bool completed;
   final bool live;
+  final bool future;
   final double ratio;
   final int percent;
   final int total;
@@ -52,6 +53,7 @@ class _MeetStatus {
   const _MeetStatus({
     required this.completed,
     required this.live,
+    required this.future,
     required this.ratio,
     required this.percent,
     required this.total,
@@ -540,26 +542,62 @@ class _LiveScreenState extends State<LiveScreen> {
     return StringUtils.formatAthleteName(raw);
   }
 
+  static bool _isFutureDate(String rawDate) {
+    final trimmed = rawDate.trim();
+    DateTime? parsed;
+    final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(trimmed);
+    if (iso != null) {
+      parsed = DateTime.tryParse(
+        '${iso.group(1)}-${iso.group(2)}-${iso.group(3)}',
+      );
+    } else {
+      final dot =
+          RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})').firstMatch(trimmed);
+      if (dot != null) {
+        final d = int.tryParse(dot.group(1)!);
+        final m = int.tryParse(dot.group(2)!);
+        final y = int.tryParse(dot.group(3)!);
+        if (d != null && m != null && y != null) {
+          parsed = DateTime(y, m, d);
+        }
+      }
+    }
+    if (parsed == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return parsed.isAfter(today);
+  }
+
   _MeetStatus _statusOf(LiveMeetSummary meet) {
     final total = meet.resultListProgress.total;
     final processed = meet.resultListProgress.processed;
     final ratio = total > 0 ? (processed / total).clamp(0.0, 1.0) : 0.0;
     final percent = (ratio * 100).round().clamp(0, 100);
-    final completed = total > 0 && percent >= 100;
     final s = meet.status.toLowerCase();
+    final completed =
+        (total > 0 && percent >= 100) || (total == 0 && s.contains('tamam'));
     final live = !completed &&
         (s.contains('canl') ||
             s.contains('isleniyor') ||
             s.contains('devam') ||
             s.contains('live'));
+    final future = !completed && !live && _isFutureDate(meet.date);
     return _MeetStatus(
       completed: completed,
       live: live,
+      future: future,
       ratio: ratio,
       percent: percent,
       total: total,
       processed: processed,
     );
+  }
+
+  Color _statusColor(AppColorPalette palette, _MeetStatus st) {
+    if (st.live) return palette.statusLive;
+    if (st.completed) return palette.statusSuccess;
+    if (st.future) return palette.infoCyan;
+    return palette.statusWarning;
   }
 
   @override
@@ -714,9 +752,7 @@ class _LiveScreenState extends State<LiveScreen> {
               final initials = city.length >= 3
                   ? city.substring(0, 3).toUpperCase()
                   : city.toUpperCase();
-              final ringColor = st.live
-                  ? palette.statusLive
-                  : (st.completed ? palette.statusSuccess : palette.accent);
+              final statusColor = _statusColor(palette, st);
 
               return Padding(
                 padding: EdgeInsets.only(
@@ -743,19 +779,16 @@ class _LiveScreenState extends State<LiveScreen> {
                                 color: palette.surface,
                                 border: Border.all(
                                   color: isSelected
-                                      ? ringColor
-                                      : palette.border.withValues(alpha: 0.6),
-                                  width: isSelected ? 2.2 : 1,
+                                      ? statusColor
+                                      : statusColor.withValues(alpha: 0.72),
+                                  width: isSelected ? 2.4 : 1.6,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isSelected
-                                            ? ringColor
-                                            : palette.textPrimary)
-                                        .withValues(
-                                      alpha: isSelected ? 0.22 : 0.06,
+                                    color: statusColor.withValues(
+                                      alpha: isSelected ? 0.26 : 0.10,
                                     ),
-                                    blurRadius: isSelected ? 14 : 10,
+                                    blurRadius: isSelected ? 14 : 8,
                                     offset: const Offset(0, 4),
                                   ),
                                 ],
@@ -763,7 +796,7 @@ class _LiveScreenState extends State<LiveScreen> {
                               child: CircleAvatar(
                                 backgroundColor: isSelected
                                     ? palette.surfaceContrast
-                                    : palette.surfaceSecondary,
+                                    : statusColor.withValues(alpha: 0.12),
                                 child: Text(
                                   initials,
                                   style: TextStyle(
@@ -1083,11 +1116,7 @@ class _LiveScreenState extends State<LiveScreen> {
                         width: 7,
                         height: 7,
                         decoration: BoxDecoration(
-                          color: st.live
-                              ? palette.statusLive
-                              : (st.completed
-                                  ? palette.statusSuccess
-                                  : palette.accent),
+                          color: _statusColor(palette, st),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -1095,7 +1124,9 @@ class _LiveScreenState extends State<LiveScreen> {
                       Text(
                         st.live
                             ? 'Canlı'
-                            : (st.completed ? 'Tamamlandı' : 'Yaklaşan'),
+                            : (st.completed
+                                ? 'Tamamlandı'
+                                : (st.future ? 'İleri Tarihli' : 'Bekliyor')),
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
                           fontSize: 11.5,
@@ -1153,7 +1184,7 @@ class _LiveScreenState extends State<LiveScreen> {
                 minHeight: 5,
                 backgroundColor: palette.progressTrack,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  st.completed ? palette.statusSuccess : palette.accent,
+                  _statusColor(palette, st),
                 ),
               ),
             ),

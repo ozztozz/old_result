@@ -58,7 +58,7 @@ class SwimApp extends StatelessWidget {
                 isDark ? Brightness.light : Brightness.dark,
           ),
           child: MaterialApp(
-            title: 'TYF Yüzme Sonuçları',
+            title: 'Kulvar',
             debugShowCheckedModeBanner: false,
             theme: themeService.lightTheme,
             darkTheme: themeService.darkTheme,

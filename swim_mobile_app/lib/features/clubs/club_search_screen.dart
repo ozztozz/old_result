@@ -173,10 +173,29 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
   bool _hasMore = false;
   int _page = 1;
   String? _selectedLetter;
+  String _selectedKind = 'Takım';
   String? _errorMessage;
   List<ClubSearchItem> _clubs = [];
 
   static const int _pageSize = 25;
+
+  static const List<String> _kindOptions = [
+    'Takım',
+    'Okul',
+    'Tümü',
+  ];
+
+  String get _kindParam {
+    switch (_selectedKind) {
+      case 'Okul':
+        return 'school';
+      case 'Tümü':
+        return 'all';
+      case 'Takım':
+      default:
+        return 'club';
+    }
+  }
 
   static const List<String> _quickCities = [
     'Tümü',
@@ -267,6 +286,15 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
     _onFiltersChanged();
   }
 
+  void _selectKind(String kind) {
+    if (_selectedKind == kind) return;
+    setState(() => _selectedKind = kind);
+    if (_hasSearchInput) {
+      _debounce?.cancel();
+      _fetchClubs(reset: true);
+    }
+  }
+
   void _selectLetter(String letter) {
     _debounce?.cancel();
     setState(() {
@@ -294,6 +322,8 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
     final query = _queryController.text.trim();
     final city = _cityController.text.trim();
     final letter = _selectedLetter;
+    final kindLabel = _selectedKind;
+    final kindParam = _kindParam;
 
     if (reset) {
       setState(() {
@@ -314,11 +344,13 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
         q: query.isEmpty ? null : query,
         city: city.isEmpty ? null : city,
         letter: letter,
+        kind: kindParam,
       );
       if (!mounted ||
           _queryController.text.trim() != query ||
           _cityController.text.trim() != city ||
-          _selectedLetter != letter) {
+          _selectedLetter != letter ||
+          _selectedKind != kindLabel) {
         return;
       }
       setState(() {
@@ -337,7 +369,8 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
       if (!mounted ||
           _queryController.text.trim() != query ||
           _cityController.text.trim() != city ||
-          _selectedLetter != letter) {
+          _selectedLetter != letter ||
+          _selectedKind != kindLabel) {
         return;
       }
       setState(() {
@@ -381,6 +414,14 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                   ),
                   children: [
                     _buildSearchBar(palette),
+                    AppSpacing.vSm,
+                    ModernFilterChipBar(
+                      chips: _kindOptions
+                          .map((k) => FilterChipItem(label: k))
+                          .toList(),
+                      selectedChip: _selectedKind,
+                      onSelected: _selectKind,
+                    ),
                     AppSpacing.vSm,
                     _buildCityBar(palette),
                     AppSpacing.vSm,
@@ -784,7 +825,7 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                Icons.shield_outlined,
+                club.isSchool ? Icons.school_outlined : Icons.shield_outlined,
                 size: 20,
                 color: palette.accent,
               ),
@@ -807,9 +848,12 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    club.city != null
-                        ? '${StringUtils.toTitleCase(club.city!)} · ${club.athleteCount} Kayıtlı Sporcu'
-                        : '${club.athleteCount} Kayıtlı Sporcu',
+                    [
+                      if (club.isSchool) 'Okul',
+                      if (club.city != null)
+                        StringUtils.toTitleCase(club.city!),
+                      '${club.athleteCount} Kayıtlı Sporcu',
+                    ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
-        android:label="TYF Yüzme"
+        android:label="Kulvar"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Emülatör donma sorununu (Width is zero / Impeller GLES freeze) önlemek için Skia motoru -->

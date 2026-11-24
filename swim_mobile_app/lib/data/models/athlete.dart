@@ -258,12 +258,14 @@ class ClubSearchItem {
   final int? id;
   final String name;
   final String? city;
+  final bool isSchool;
   final int athleteCount;
 
   ClubSearchItem({
     this.id,
     required this.name,
     this.city,
+    this.isSchool = false,
     required this.athleteCount,
   });
 
@@ -273,6 +275,7 @@ class ClubSearchItem {
       id: json['id'] as int?,
       name: json['name'] as String? ?? '',
       city: (rawCity != null && rawCity.isNotEmpty) ? rawCity : null,
+      isSchool: json['is_school'] as bool? ?? (json['okul_mu'] == 1),
       athleteCount: json['athlete_count'] as int? ?? 0,
     );
   }

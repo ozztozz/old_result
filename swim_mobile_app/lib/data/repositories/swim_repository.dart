@@ -206,14 +206,15 @@ class SwimRepository {
     return LiveFeedResponse.fromJson(map);
   }
 
-  /// Sayfalı ve alfabetik/il filtreli kulüp arama
+  /// Sayfalı ve alfabetik/il/tür filtreli kulüp arama
   Future<List<ClubSearchItem>> searchClubs({
     int page = 1,
     String? q,
     String? city,
     String? letter,
+    String kind = 'club',
   }) async {
-    final query = <String, dynamic>{'page': page};
+    final query = <String, dynamic>{'page': page, 'kind': kind};
     if (q != null && q.trim().isNotEmpty) query['q'] = q.trim();
     if (city != null && city.trim().isNotEmpty) query['city'] = city.trim();
     if (letter != null && letter.trim().isNotEmpty) {

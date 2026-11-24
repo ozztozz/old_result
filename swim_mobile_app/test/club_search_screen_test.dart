@@ -15,6 +15,7 @@ class _FakeClubSearchRepository implements SwimRepository {
   String? lastType;
   String? lastCity;
   String? lastLetter;
+  String? lastKind;
   int lastPage = 1;
   bool returnFullPage = false;
 
@@ -24,11 +25,13 @@ class _FakeClubSearchRepository implements SwimRepository {
     String? q,
     String? city,
     String? letter,
+    String kind = 'club',
   }) async {
     lastPage = page;
     lastQuery = q;
     lastCity = city;
     lastLetter = letter;
+    lastKind = kind;
     if (returnFullPage) {
       if (page == 1) {
         return List.generate(
@@ -235,8 +238,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repo.lastLetter, 'B');
+      expect(repo.lastKind, 'club');
       expect(repo.lastPage, 1);
       expect(find.text('Bursa Kulübü 1'), findsOneWidget);
+
+      await tester.tap(find.text('Okul'));
+      await tester.pumpAndSettle();
+      expect(repo.lastKind, 'school');
+
+      await tester.tap(find.text('Takım'));
+      await tester.pumpAndSettle();
+      expect(repo.lastKind, 'club');
 
       await tester.ensureVisible(find.text('Daha Fazla Yükle'));
       await tester.pumpAndSettle();
