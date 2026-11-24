@@ -456,8 +456,16 @@ def kulup_detay(request, pk):
     # Kulübün son yarış sonuçları
     son_sonuclar = kulup.yaris_sonuclari.select_related('sporcu', 'event').order_by('-event__yaris_tarihi_baslangic')[:25]
 
+    instagram_handle = ""
+    if kulup.instagram:
+        ig_clean = kulup.instagram.strip().rstrip('/')
+        ig_part = ig_clean.split('?')[0].split('/')[-1].lstrip('@')
+        if ig_part and 'instagram.com' not in ig_part.lower():
+            instagram_handle = f"@{ig_part}"
+
     context = {
         'kulup': kulup,
+        'instagram_handle': instagram_handle,
         'page_obj': page_obj,
         'son_sonuclar': son_sonuclar,
         'total_swimmers': paginator.count,

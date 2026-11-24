@@ -116,6 +116,64 @@
         </div>
         {% endif %}
     </div>
+
+    {% if kulup.enlem and kulup.boylam or kulup.instagram %}
+    <div class="px-4 sm:px-5 pb-4 sm:pb-5 pt-1 grid grid-cols-1 {% if kulup.enlem and kulup.boylam and kulup.instagram %}md:grid-cols-12{% endif %} gap-4">
+        {% if kulup.enlem and kulup.boylam %}
+        <div class="{% if kulup.instagram %}md:col-span-7{% endif %} rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
+            <div class="px-3 py-2 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
+                <span class="text-xs font-semibold swim-text-main flex items-center gap-1.5">
+                    <i class="bi bi-geo-alt-fill text-red-500"></i> Konum Haritası
+                </span>
+                <a href="{{ kulup.google_maps_url|default:'https://www.google.com/maps/search/?api=1&query=' }}{% if not kulup.google_maps_url %}{{ kulup.enlem|stringformat:'f' }},{{ kulup.boylam|stringformat:'f' }}{% endif %}"
+                   target="_blank" rel="noopener noreferrer"
+                   class="text-[0.7rem] font-semibold swim-text-primary hover:underline flex items-center gap-1">
+                    Büyük Haritada Aç <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+            </div>
+            <iframe
+                title="{{ kulup.kulup_adi }} Konumu"
+                src="https://maps.google.com/maps?q={{ kulup.enlem|stringformat:'f' }},{{ kulup.boylam|stringformat:'f' }}&z=15&output=embed"
+                class="w-full h-48 sm:h-52 border-0 block"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen>
+            </iframe>
+        </div>
+        {% endif %}
+
+        {% if kulup.instagram %}
+        <div class="{% if kulup.enlem and kulup.boylam %}md:col-span-5{% endif %} rounded-xl border border-pink-200/80 dark:border-pink-900/50 bg-gradient-to-br from-pink-50/70 via-white to-purple-50/70 dark:from-pink-950/20 dark:via-slate-900/60 dark:to-purple-950/20 p-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-pink-700 dark:text-pink-300 flex items-center gap-1.5">
+                        <i class="bi bi-instagram"></i> Instagram Hesabı
+                    </span>
+                    <span class="text-[0.65rem] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300 font-semibold">Resmî Profil</span>
+                </div>
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 shrink-0">
+                        <div class="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center">
+                            <i class="bi bi-instagram text-lg text-pink-600 dark:text-pink-400"></i>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-sm font-bold swim-text-main truncate">{{ instagram_handle|default:kulup.kulup_adi }}</div>
+                        <div class="text-xs swim-text-muted truncate">{{ kulup.kulup_adi }}</div>
+                    </div>
+                </div>
+                <p class="text-[0.72rem] swim-text-muted leading-relaxed mb-3">
+                    Kulübün güncel duyuruları, antrenman paylaşımları ve yarış fotoğrafları için resmi Instagram profilini ziyaret edin.
+                </p>
+            </div>
+            <a href="{{ kulup.instagram }}" target="_blank" rel="noopener noreferrer"
+               class="w-full py-2 px-3 rounded-lg text-center text-xs font-bold text-white bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:opacity-95 transition flex items-center justify-center gap-1.5 shadow-sm">
+                <i class="bi bi-instagram"></i> Instagram'da Görüntüle <i class="bi bi-box-arrow-up-right text-[0.65rem]"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 

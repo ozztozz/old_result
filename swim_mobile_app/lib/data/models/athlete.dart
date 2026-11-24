@@ -326,6 +326,8 @@ class ClubDetailModel {
   final String? googleMapsUrl;
   final String? instagram;
   final String? facebook;
+  final double? latitude;
+  final double? longitude;
   final String? contactUpdatedAt;
   final List<ClubSwimmerSummary> swimmers;
 
@@ -344,6 +346,8 @@ class ClubDetailModel {
     this.googleMapsUrl,
     this.instagram,
     this.facebook,
+    this.latitude,
+    this.longitude,
     this.contactUpdatedAt,
     this.swimmers = const [],
   });
@@ -378,6 +382,8 @@ class ClubDetailModel {
       googleMapsUrl: _nonEmpty(json['google_maps_url']),
       instagram: _nonEmpty(json['instagram']),
       facebook: _nonEmpty(json['facebook']),
+      latitude: (json['latitude'] is num) ? (json['latitude'] as num).toDouble() : null,
+      longitude: (json['longitude'] is num) ? (json['longitude'] as num).toDouble() : null,
       contactUpdatedAt: _nonEmpty(json['contact_updated_at']),
       swimmers: swimmersRaw
           .map((e) => ClubSwimmerSummary.fromJson(e as Map<String, dynamic>))

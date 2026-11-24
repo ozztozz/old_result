@@ -588,7 +588,163 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
               ],
             ),
           ],
+          if (club.latitude != null && club.longitude != null) ...[
+            AppSpacing.vMd,
+            _buildMiniMapBox(palette, club),
+          ],
+          if (club.instagram != null) ...[
+            AppSpacing.vSm,
+            _buildInstagramPreviewBox(palette, club),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildMiniMapBox(AppColorPalette palette, ClubDetailModel club) {
+    final lat = club.latitude!.toStringAsFixed(5);
+    final lon = club.longitude!.toStringAsFixed(5);
+    final mapsTarget =
+        club.googleMapsUrl ?? 'https://www.google.com/maps/search/?api=1&query=$lat,$lon';
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _openExternalUrl(mapsTarget),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: palette.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: palette.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEA4335).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.pin_drop_rounded,
+                size: 22,
+                color: Color(0xFFEA4335),
+              ),
+            ),
+            AppSpacing.h12,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Google Maps Konumu',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$lat, $lon · Yol tarifi için dokunun',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.monoFontFamily,
+                      fontSize: 11.5,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.open_in_new_rounded, size: 17, color: palette.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstagramPreviewBox(
+    AppColorPalette palette,
+    ClubDetailModel club,
+  ) {
+    final igUrl = club.instagram!.trim();
+    final clean = igUrl.replaceAll(RegExp(r'/+$'), '').split('?').first;
+    final segment = clean.split('/').last.replaceFirst('@', '');
+    final handle =
+        (segment.isNotEmpty && !segment.toLowerCase().contains('instagram.com'))
+        ? '@$segment'
+        : StringUtils.toTitleCase(club.name);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _openExternalUrl(igUrl),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFFE1306C).withValues(alpha: 0.10),
+              const Color(0xFF833AB4).withValues(alpha: 0.08),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFFE1306C).withValues(alpha: 0.28),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFCAF45), Color(0xFFE1306C), Color(0xFF833AB4)],
+                ),
+              ),
+              child: const Icon(
+                Icons.camera_alt_rounded,
+                size: 20,
+                color: Colors.white,
+              ),
+            ),
+            AppSpacing.h12,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    handle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Resmî Instagram Profili',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 11.5,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.open_in_new_rounded,
+              size: 17,
+              color: Color(0xFFE1306C),
+            ),
+          ],
+        ),
       ),
     );
   }
