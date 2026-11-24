@@ -432,6 +432,72 @@ class StartResultMatchingTests(TransactionTestCase):
         self.assertIn(y_near.id, due_ids)
         self.assertIn(y_nodate.id, due_ids)
 
+    def test_cleanup_far_future_meets(self):
+        from datetime import timedelta
+        from sonuclar.local_live_engine import cleanup_far_future_meets, get_current_tr_time
+
+        today_d = get_current_tr_time().date()
+        far_start = today_d + timedelta(days=5)
+        near_start = today_d + timedelta(days=1)
+
+        ev_far = Event.objects.create(
+            musabaka_adi="Uzak Müsabaka",
+            sehir="Ankara",
+            yaris_tarihi_baslangic=far_start.isoformat(),
+            yaris_tarihi_bitis=(far_start + timedelta(days=1)).isoformat(),
+            kaynak_turu="CANLI_TAKIP",
+        )
+        y_far = CanliYaris.objects.create(
+            event=ev_far,
+            musabaka_adi="Uzak Müsabaka",
+            canli_url="https://canli.tyf.gov.tr/live/2026/1000010/",
+            durum="ISLENIYOR",
+            toplam_start_listesi=1,
+            islenen_start_listesi=1,
+            eklenen_kayit_sayisi=1,
+        )
+        d_far = CanliYarisDosya.objects.create(
+            event=ev_far,
+            canli_yaris=y_far,
+            dosya_adi="StartList_far.pdf",
+            dosya_url="https://canli.tyf.gov.tr/live/2026/1000010/StartList_far.pdf",
+            dosya_turu="START_LISTESI",
+            durum="ISLENDI",
+        )
+        YarisSonucu.objects.create(
+            event=ev_far,
+            canli_dosya=d_far,
+            sporcu=self.sp_elif,
+            mesafe=50,
+            stil="Serbest",
+            cinsiyet="Kadın",
+            seri="1",
+            kulvar=4,
+            derece="Bekleniyor",
+            kaynak_turu="CANLI_START_LISTESI",
+        )
+
+        # Yakın yarışa dokunulmamalı
+        self.event.yaris_tarihi_baslangic = near_start.isoformat()
+        self.event.save(update_fields=["yaris_tarihi_baslangic"])
+        self._run_prefetched(
+            "StartList_near.pdf",
+            "start_listesi",
+            "1",
+            [{"seri": "1", "kulvar": 4, "sporcu": "Zeynep KAYA", "dogum_yili": 2018, "kulup": "Nova Akademi Spor Kulübü", "giris_derecesi": "50.00"}],
+        )
+
+        cleaned = cleanup_far_future_meets(min_days_ahead=2)
+        self.assertEqual(cleaned, 1)
+        self.assertEqual(CanliYarisDosya.objects.filter(canli_yaris=y_far).count(), 0)
+        self.assertEqual(YarisSonucu.objects.filter(event=ev_far).count(), 0)
+        y_far.refresh_from_db()
+        self.assertEqual(y_far.durum, "BEKLIYOR")
+        self.assertEqual(y_far.eklenen_kayit_sayisi, 0)
+        # Yakın yarış korunmalı
+        self.assertEqual(CanliYarisDosya.objects.filter(canli_yaris=self.yaris).count(), 1)
+
+
 
 
 

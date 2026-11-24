@@ -2359,6 +2359,57 @@ def deduplicate_live_results(event_id: Optional[int] = None) -> int:
     return deleted_count
 
 
+def cleanup_far_future_meets(min_days_ahead: int = 2) -> int:
+    """Başlangıcına `min_days_ahead` günden fazla süre olan yarışların geçici dosya ve sonuç kayıtlarını temizler."""
+    today_date = get_current_tr_time().date()
+    active_meets = list(
+        CanliYaris.objects.filter(durum__in=["ISLENIYOR", "BEKLEMEDE", "BEKLIYOR"]).select_related("event")
+    )
+    cleaned_meets = 0
+    for y in active_meets:
+        start_iso, _ = _get_meet_date_bounds(y, y.event)
+        if not start_iso:
+            continue
+        try:
+            days_left = (date.fromisoformat(start_iso[:10]) - today_date).days
+        except ValueError:
+            continue
+        if days_left <= min_days_ahead:
+            continue
+
+        def _clear_one():
+            with transaction.atomic():
+                res_q = Q(canli_dosya__canli_yaris=y)
+                if y.event and y.event.kaynak_turu == "CANLI_TAKIP":
+                    res_q |= Q(event=y.event)
+                del_res, _ = YarisSonucu.objects.filter(res_q).delete()
+                del_files, _ = CanliYarisDosya.objects.filter(canli_yaris=y).delete()
+                y.durum = "BEKLIYOR"
+                y.toplam_start_listesi = 0
+                y.islenen_start_listesi = 0
+                y.toplam_sonuc_listesi = 0
+                y.islenen_sonuc_listesi = 0
+                y.eklenen_kayit_sayisi = 0
+                y.hata_mesaji = ""
+                y.son_islem_tarihi = None
+                y.save(update_fields=[
+                    "durum", "toplam_start_listesi", "islenen_start_listesi",
+                    "toplam_sonuc_listesi", "islenen_sonuc_listesi",
+                    "eklenen_kayit_sayisi", "hata_mesaji", "son_islem_tarihi",
+                ])
+                return del_files, del_res
+
+        del_files, del_res = db_retry(_clear_one)
+        cleaned_meets += 1
+        logger.info(
+            f"  [-] #{y.id} ({y.musabaka_adi}) başlangıca {days_left} gün olduğu için temizlendi: "
+            f"{del_files} dosya, {del_res} kayıt silindi."
+        )
+
+    logger.info(f"[✔] Uzak tarihli yarış temizliği tamamlandı: {cleaned_meets} yarış sıfırlandı.")
+    return cleaned_meets
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -2375,6 +2426,7 @@ if __name__ == "__main__":
     parser.add_argument("--geri", type=int, default=DEFAULT_SCAN_BACK_LOOK, help=f"En yüksek ID'den geriye taranacak ID sayısı (varsayılan: {DEFAULT_SCAN_BACK_LOOK})")
     parser.add_argument("--ileri", type=int, default=DEFAULT_SCAN_WINDOW, help=f"En yüksek ID'den ileriye taranacak ID sayısı (varsayılan: {DEFAULT_SCAN_WINDOW})")
     parser.add_argument("--temizle", nargs="?", const=-1, type=int, help="Mükerrer seri/kulvar sonuçlarını temizle (isteğe bağlı Event ID)")
+    parser.add_argument("--temizle-uzak", action="store_true", help="Başlangıcına 2 günden fazla kalan yarışların geçici dosya ve sonuçlarını temizle")
 
     args = parser.parse_args()
 
@@ -2386,6 +2438,8 @@ if __name__ == "__main__":
             print(f"[+] 5 Saniyelik Canlı Takipçi AKTİF çalışıyor (PID: {pid}).")
         else:
             print("[-] Canlı Takipçi şu anda ÇALIŞMIYOR.")
+    elif args.temizle_uzak:
+        cleanup_far_future_meets()
     elif args.temizle is not None:
         ev_id = args.temizle if args.temizle > 0 else None
         deduplicate_live_results(event_id=ev_id)
