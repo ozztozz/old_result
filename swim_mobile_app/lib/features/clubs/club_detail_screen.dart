@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/app_skeleton.dart';
 import '../../core/components/empty_state_widget.dart';
@@ -711,80 +713,99 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     final igUrl = club.instagram!.trim();
     final clean = igUrl.replaceAll(RegExp(r'/+$'), '').split('?').first;
     final segment = clean.split('/').last.replaceFirst('@', '');
+    final hasUsername =
+        segment.isNotEmpty && !segment.toLowerCase().contains('instagram.com');
     final handle =
-        (segment.isNotEmpty && !segment.toLowerCase().contains('instagram.com'))
-        ? '@$segment'
-        : StringUtils.toTitleCase(club.name);
+        hasUsername ? '@$segment' : StringUtils.toTitleCase(club.name);
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => _openExternalUrl(igUrl),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFFE1306C).withValues(alpha: 0.10),
-              const Color(0xFF833AB4).withValues(alpha: 0.08),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 16,
+                      color: Color(0xFFE1306C),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      handle,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  onTap: () => _openExternalUrl(igUrl),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Instagram\'da Aç',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFE1306C),
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 14,
+                        color: Color(0xFFE1306C),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: const Color(0xFFE1306C).withValues(alpha: 0.28),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFCAF45), Color(0xFFE1306C), Color(0xFF833AB4)],
+          if (hasUsername && !kIsWeb)
+            _InstagramEmbedWebView(username: segment)
+          else
+            InkWell(
+              onTap: () => _openExternalUrl(igUrl),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.open_in_new_rounded,
+                      size: 16,
+                      color: Color(0xFFE1306C),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Profili Instagram\'da Görüntüle',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: const Icon(
-                Icons.camera_alt_rounded,
-                size: 20,
-                color: Colors.white,
-              ),
             ),
-            AppSpacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    handle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Resmî Instagram Profili',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 11.5,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.open_in_new_rounded,
-              size: 17,
-              color: Color(0xFFE1306C),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -862,6 +883,37 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InstagramEmbedWebView extends StatefulWidget {
+  final String username;
+
+  const _InstagramEmbedWebView({required this.username});
+
+  @override
+  State<_InstagramEmbedWebView> createState() => _InstagramEmbedWebViewState();
+}
+
+class _InstagramEmbedWebViewState extends State<_InstagramEmbedWebView> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(
+        Uri.parse('https://www.instagram.com/${widget.username}/embed/'),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 360,
+      child: WebViewWidget(controller: _controller),
     );
   }
 }
