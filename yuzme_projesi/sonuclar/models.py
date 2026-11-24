@@ -10,25 +10,23 @@ def is_school_team(club_name: str) -> bool:
     temsili mi olduğunu belirler.
     Örn:
       - 'Mehmet Aker İlkokulu' -> True (Okul)
+      - '12 HAZİRAN ANADOLU LİSESİ' -> True (Okul)
       - 'Ted Ankara Koleji Vakfı Özel Ortaokulu' -> True (Okul)
-      - 'Beytepe Ortaokulu' -> True (Okul)
-      - 'Özel Bademli Sınav Koleji' -> True (Okul)
       - 'İTÜ Geliştirme Vakfı Okulları Spor Kulübü' -> False (Resmi Spor Kulübü)
       - 'Ted Ankara Kolejliler Spor Kulübü' -> False (Resmi Spor Kulübü)
-      - 'Bursa Kolejliler' -> False (Resmi Spor Kulübü)
       - 'Enka Spor Kulübü' -> False (Resmi Spor Kulübü)
     """
     if not club_name:
         return False
     name = club_name.strip()
-    name_lower = name.lower()
+    name_lower = name.replace("\u0307", "").replace("İ", "i").replace("I", "ı").lower()
 
-    if name_lower == 'ferdi':
+    if name_lower in ("ferdi", "bireysel"):
         return False
 
     # Resmi tescilli kulüp belirteçleri (bu ekler varsa okulla ilişkili olsa dahi resmi kulüptür)
     has_club_suffix = bool(re.search(
-        r'(?:spor\s*kul[uü]b[uü]|(?:\b|[_\s])sk\b|(?:\b|[_\s])gsk\b|(?:\b|[_\s])skd\b|y[uü]zme\s*kul[uü]b[uü]|ihtisas|derne[gğ]i|belediye\s*spor|belediyespor|kolejliler)',
+        r'(?:spor\s*kul[uü]b[uü]|(?:\b|[_\s])sk\b|(?:\b|[_\s])gsk\b|(?:\b|[_\s])skd\b|y[uü]zme\s*kul[uü]b[uü]|ihtisas|derne[gğ]i|belediye\s*spor|belediyespor|kolejliler|su\s*sporlar[ıi]|gen[çc]lik\s*ve\s*spor)',
         name_lower
     ))
     if has_club_suffix:
@@ -36,13 +34,13 @@ def is_school_team(club_name: str) -> bool:
 
     # Okul / MEB anahtar kelimeleri
     has_school_word = bool(re.search(
-        r'(?:ilkokul|ortaokul|lise|imam\s*hatip|i\.?[oö]\.?okulu|kolej|okullar[ıi]|anaokul|bilsen|bilsem|kamp[uü]s)',
+        r'(?:[iı]lkokul|ortaokul|l[iı]se|imam\s*hatip|i\.?[oö]\.?okulu|a\.?i\.?h\.?l\.?|i\.?h\.?[ol]\.?|kolej|okull?ar[ıi]|anaokul|bilfen|bilsen|bilsem|kamp[uü]s|bilimler\s*akademisi)',
         name_lower
     ))
     if has_school_word:
         return True
 
-    if re.search(r'(?:okulu|lisesi|koleji)$', name_lower):
+    if re.search(r'(?:okulu|l[iı]ses[iı]|koleji|\bok|\bo\.?o\.?|\ba\.?l\.?|\bf\.?l\.?)$', name_lower):
         return True
 
     return False
