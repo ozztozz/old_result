@@ -924,7 +924,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
           if (summary.ageGroups.isNotEmpty) ...[
             AppSpacing.vMd,
             Text(
-              'AKTİF SPORCU YAŞ DAĞILIMI',
+              'SON 1 YILDA AKTİF SPORCU YAŞ & CİNSİYET DAĞILIMI',
               style: TextStyle(
                 fontFamily: AppTextStyles.fontFamily,
                 fontSize: 10.5,
@@ -953,7 +953,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                           ),
                         ),
                         Text(
-                          '${ag.count} sporcu (%${ag.pct})',
+                          'E: ${ag.male} · K: ${ag.female} · ${ag.count} (%${ag.pct})',
                           style: TextStyle(
                             fontFamily: AppTextStyles.monoFontFamily,
                             fontSize: 11.5,

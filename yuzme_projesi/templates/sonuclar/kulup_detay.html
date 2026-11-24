@@ -90,13 +90,13 @@
 
                 {% if ozet.yas_dagilimi %}
                 <div>
-                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Aktif Sporcu Yaş Dağılımı</div>
+                    <div class="text-[0.65rem] uppercase tracking-wider font-semibold swim-text-subtle mb-2">Son 1 Yılda Aktif Sporcu Yaş &amp; Cinsiyet Dağılımı</div>
                     <div class="space-y-2">
                         {% for y in ozet.yas_dagilimi %}
                         <div>
                             <div class="flex justify-between text-[0.72rem] mb-0.5">
                                 <span class="font-semibold swim-text-main">{{ y.grup }}</span>
-                                <span class="font-mono swim-text-muted">{{ y.sayi|intcomma }} sporcu (%{{ y.oran }})</span>
+                                <span class="font-mono swim-text-muted">E: {{ y.erkek }} · K: {{ y.kadin }} · <strong class="swim-text-main">{{ y.sayi|intcomma }}</strong> (%{{ y.oran }})</span>
                             </div>
                             <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                                 <div class="h-full rounded-full bg-blue-600 dark:bg-blue-500" style="width: {{ y.oran }}%"></div>

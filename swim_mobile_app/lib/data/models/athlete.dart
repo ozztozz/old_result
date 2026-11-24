@@ -294,11 +294,15 @@ class ClubSearchItem {
 class ClubAgeGroupStat {
   final String label;
   final int count;
+  final int male;
+  final int female;
   final int pct;
 
   ClubAgeGroupStat({
     required this.label,
     required this.count,
+    this.male = 0,
+    this.female = 0,
     required this.pct,
   });
 
@@ -306,6 +310,8 @@ class ClubAgeGroupStat {
     return ClubAgeGroupStat(
       label: json['label'] as String? ?? '',
       count: json['count'] as int? ?? 0,
+      male: json['male'] as int? ?? 0,
+      female: json['female'] as int? ?? 0,
       pct: json['pct'] as int? ?? 0,
     );
   }

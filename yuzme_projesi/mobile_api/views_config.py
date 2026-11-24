@@ -287,7 +287,7 @@ def get_club_detail(request, club_id):
             'bronze': ozet['bronz'],
             'total_medals': ozet['toplam_madalya'],
             'age_groups': [
-                {'label': y['grup'], 'count': y['sayi'], 'pct': y['oran']}
+                {'label': y['grup'], 'count': y['sayi'], 'male': y['erkek'], 'female': y['kadin'], 'pct': y['oran']}
                 for y in ozet['yas_dagilimi']
             ],
         },

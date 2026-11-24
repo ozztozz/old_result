@@ -75,19 +75,22 @@ class Kulup(models.Model):
         return self.kulup_adi
 
     def build_summary(self) -> dict:
-        """Sporcu adları olmadan kulübün performans ve aktif sporcu yaş dağılımı özetini döner."""
-        from datetime import date
+        """Sporcu adları olmadan kulübün performans ve son 1 yılda aktif sporcu yaş/cinsiyet özetini döner."""
+        from datetime import date, timedelta
         from django.db.models import Avg, Count, Max
         from .sqlite_tr import normalize_il_adi
 
+        today = date.today()
+        cutoff_str = (today - timedelta(days=365)).strftime('%Y-%m-%d')
+
         th_qs = self.sporcu_tarihcesi.select_related('sporcu')
-        aktif_qs = th_qs.filter(aktif_kulup_mu=1)
+        aktif_qs = th_qs.filter(aktif_kulup_mu=1, son_yaris_tarihi__gte=cutoff_str)
         aktif_sporcu = aktif_qs.count()
         toplam_th = th_qs.count()
         gecmis_sporcu = max(0, toplam_th - aktif_sporcu)
 
-        erkek_sayisi = th_qs.filter(sporcu__cinsiyet__iexact='Erkek').count()
-        kadin_sayisi = th_qs.filter(sporcu__cinsiyet__iregex=r'^(kad[ıi]n|k|bayan)$').count()
+        erkek_sayisi = aktif_qs.filter(sporcu__cinsiyet__iexact='Erkek').count()
+        kadin_sayisi = aktif_qs.filter(sporcu__cinsiyet__iregex=r'^(kad[ıi]n|k|bayan)$').count()
 
         ys_qs = self.yaris_sonuclari
         agg = ys_qs.aggregate(
@@ -116,7 +119,7 @@ class Kulup(models.Model):
             if norm:
                 sehir_set.add(norm)
 
-        current_year = date.today().year
+        current_year = today.year
         age_buckets = [
             ('10 Yaş ve Altı', 0, 10),
             ('11-12 Yaş', 11, 12),
@@ -124,27 +127,34 @@ class Kulup(models.Model):
             ('15-17 Yaş', 15, 17),
             ('18+ Yaş', 18, 120),
         ]
-        bucket_counts = [0] * len(age_buckets)
-        for dy, cnt in (
+        bucket_stats = [{'total': 0, 'erkek': 0, 'kadin': 0} for _ in age_buckets]
+        for dy, cins, cnt in (
             aktif_qs.filter(sporcu__dogum_yili__isnull=False)
-            .values_list('sporcu__dogum_yili')
+            .values_list('sporcu__dogum_yili', 'sporcu__cinsiyet')
             .annotate(c=Count('id'))
         ):
             age = current_year - dy
+            cins_u = (cins or '').strip().upper()
             for idx, (_, low, high) in enumerate(age_buckets):
                 if low <= age <= high:
-                    bucket_counts[idx] += cnt
+                    bucket_stats[idx]['total'] += cnt
+                    if cins_u in ('ERKEK', 'E'):
+                        bucket_stats[idx]['erkek'] += cnt
+                    elif cins_u in ('KADIN', 'KADİN', 'K', 'BAYAN'):
+                        bucket_stats[idx]['kadin'] += cnt
                     break
 
-        yas_toplam = sum(bucket_counts) or 1
+        yas_toplam = sum(b['total'] for b in bucket_stats) or 1
         yas_dagilimi = [
             {
                 'grup': label,
-                'sayi': bucket_counts[idx],
-                'oran': round((bucket_counts[idx] / yas_toplam) * 100),
+                'sayi': bucket_stats[idx]['total'],
+                'erkek': bucket_stats[idx]['erkek'],
+                'kadin': bucket_stats[idx]['kadin'],
+                'oran': round((bucket_stats[idx]['total'] / yas_toplam) * 100),
             }
             for idx, (label, _, _) in enumerate(age_buckets)
-            if bucket_counts[idx] > 0
+            if bucket_stats[idx]['total'] > 0
         ]
 
         return {
