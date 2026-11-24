@@ -233,6 +233,22 @@ class SwimRepository {
         .toList();
   }
 
+  /// Harita üzerinde gösterilecek koordinatlı kulüpler
+  Future<List<ClubSearchItem>> getMapClubs({
+    String? q,
+    String? city,
+    String kind = 'all',
+  }) async {
+    final query = <String, dynamic>{'kind': kind};
+    if (q != null && q.trim().isNotEmpty) query['q'] = q.trim();
+    if (city != null && city.trim().isNotEmpty) query['city'] = city.trim();
+    final res = await apiClient.get('/clubs/map/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list
+        .map((e) => ClubSearchItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Kulüp Profili, İletişim/Sosyal Medya ve Sporcu Özeti
   Future<ClubDetailModel> getClubDetail(int clubId) async {
     final res = await apiClient.get('/clubs/$clubId/');

@@ -261,6 +261,8 @@ class ClubSearchItem {
   final bool isSchool;
   final int athleteCount;
   final double? distanceKm;
+  final double? latitude;
+  final double? longitude;
 
   ClubSearchItem({
     this.id,
@@ -269,6 +271,8 @@ class ClubSearchItem {
     this.isSchool = false,
     required this.athleteCount,
     this.distanceKm,
+    this.latitude,
+    this.longitude,
   });
 
   factory ClubSearchItem.fromJson(Map<String, dynamic> json) {
@@ -281,6 +285,8 @@ class ClubSearchItem {
       isSchool: json['is_school'] as bool? ?? (json['okul_mu'] == 1),
       athleteCount: json['athlete_count'] as int? ?? 0,
       distanceKm: rawDist is num ? rawDist.toDouble() : null,
+      latitude: (json['latitude'] is num) ? (json['latitude'] as num).toDouble() : null,
+      longitude: (json['longitude'] is num) ? (json['longitude'] as num).toDouble() : null,
     );
   }
 }

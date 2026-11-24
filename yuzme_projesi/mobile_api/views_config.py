@@ -215,6 +215,42 @@ def get_clubs_list(request):
 
 
 @require_GET
+def get_clubs_map(request):
+    """Haritada gösterilecek koordinatlı kulüplerin listesini döner."""
+    q = (request.GET.get('q') or '').strip()
+    city = (request.GET.get('city') or request.GET.get('il') or '').strip()
+    kind = (request.GET.get('kind') or 'all').strip().lower()
+
+    qs = Kulup.objects.filter(enlem__isnull=False, boylam__isnull=False)
+    if kind == 'club':
+        qs = qs.filter(okul_mu=0)
+    elif kind == 'school':
+        qs = qs.filter(okul_mu=1)
+    if q:
+        qs = qs.filter(kulup_adi__icontains=q)
+    if city:
+        qs = qs.filter(il__icontains=city)
+
+    qs = qs.order_by('-toplam_sporcu_sayisi').only(
+        'id', 'kulup_adi', 'il', 'okul_mu', 'toplam_sporcu_sayisi', 'enlem', 'boylam'
+    )[:500]
+
+    data = [
+        {
+            'id': c.id,
+            'name': c.kulup_adi,
+            'city': c.il or '',
+            'is_school': bool(c.okul_mu == 1),
+            'athlete_count': c.toplam_sporcu_sayisi or 0,
+            'latitude': c.enlem,
+            'longitude': c.boylam,
+        }
+        for c in qs
+    ]
+    return api_response({'data': data, 'total_count': len(data)}, request=request, cache_seconds=60)
+
+
+@require_GET
 def get_club_detail(request, club_id):
     """Tekil kulüp profili, iletişim/sosyal medya bilgileri ve sporcu özeti."""
     club = get_object_or_404(Kulup, pk=club_id)

@@ -28,6 +28,7 @@ urlpatterns = [
 
     # 5. Bayrak Simülatörü, Sıralamalar & Özet Akışı
     path('clubs/', views_config.get_clubs_list, name='clubs_list'),
+    path('clubs/map/', views_config.get_clubs_map, name='clubs_map'),
     path('clubs/<int:club_id>/', views_config.get_club_detail, name='club_detail'),
     path('clubs/relay-simulator/', views_tools.get_relay_simulator, name='relay_simulator'),
     path('rankings/', views_tools.get_rankings, name='rankings'),

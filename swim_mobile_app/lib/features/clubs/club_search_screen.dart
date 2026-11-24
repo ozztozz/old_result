@@ -15,6 +15,7 @@ import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../meets/meet_search_screen.dart';
 import 'club_detail_screen.dart';
+import 'club_map_search_screen.dart';
 import 'relay_simulator_screen.dart';
 
 /// Keşfet — Kulüp Arama ve Takım Seçim Ekranı
@@ -675,6 +676,22 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                 ),
               ],
             ),
+          ),
+          AppSpacing.hSm,
+          GlassCircleButton(
+            icon: Icons.map_outlined,
+            tooltip: 'Haritada Ara',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ClubMapSearchScreen(
+                    repository: widget.repository,
+                    onMeetSelected: widget.onMeetSelected,
+                    initialKind: _kindParam,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
