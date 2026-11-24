@@ -152,20 +152,21 @@ Yanıtı sadece aşağıdaki JSON formatında ver:
 """
 
     last_err = None
-    for attempt in range(4):
-        try:
-            response = client.models.generate_content(
-                model="gemini-flash-lite-latest",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.0,
-                    response_mime_type="application/json",
-                ),
-            )
-            return json.loads(response.text)
-        except Exception as e:
-            last_err = e
-            time.sleep(2 ** (attempt + 1))
+    for model_name in ("gemini-flash-lite-latest", "gemini-flash-latest"):
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.0,
+                        response_mime_type="application/json",
+                    ),
+                )
+                return json.loads(response.text)
+            except Exception as e:
+                last_err = e
+                time.sleep(2 ** (attempt + 1))
     raise last_err
 
 
