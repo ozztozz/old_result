@@ -602,22 +602,6 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
               ],
             ),
           ),
-          AppSpacing.hSm,
-          GlassCircleButton(
-            icon: Icons.map_outlined,
-            tooltip: 'Haritada Ara',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ClubMapSearchScreen(
-                    repository: widget.repository,
-                    onMeetSelected: widget.onMeetSelected,
-                    initialKind: _kindParam,
-                  ),
-                ),
-              );
-            },
-          ),
         ],
       ),
     );
