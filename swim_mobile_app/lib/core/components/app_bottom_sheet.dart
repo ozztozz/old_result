@@ -30,8 +30,10 @@ class AppBottomSheet extends StatelessWidget {
       backgroundColor: Colors.transparent,
       barrierColor: palette.shadowTint.withValues(alpha: 0.35),
       sheetAnimationStyle: AnimationStyle(
-        duration: Duration(milliseconds: disableAnimations ? 150 : 260),
-        reverseDuration: Duration(milliseconds: disableAnimations ? 120 : 200),
+        duration: Duration(milliseconds: disableAnimations ? 150 : 300),
+        reverseDuration: Duration(milliseconds: disableAnimations ? 120 : 220),
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
       ),
       builder: builder,
     );
@@ -103,7 +105,7 @@ class AppBottomSheet extends StatelessWidget {
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 260),
+      duration: Duration(milliseconds: disableAnimations ? 150 : 300),
       curve: Curves.easeOutCubic,
       builder: (context, value, childWidget) {
         if (disableAnimations) {
@@ -112,8 +114,12 @@ class AppBottomSheet extends StatelessWidget {
         return Opacity(
           opacity: value,
           child: Transform.translate(
-            offset: Offset(0, (1 - value) * 16),
-            child: childWidget,
+            offset: Offset(0, (1 - value) * 20),
+            child: Transform.scale(
+              scale: 0.97 + (0.03 * value),
+              alignment: Alignment.bottomCenter,
+              child: childWidget,
+            ),
           ),
         );
       },

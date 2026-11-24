@@ -36,9 +36,9 @@ class ModernSegmentedTabBar extends StatelessWidget {
       height: height,
       padding: AppSpacing.paddingAllXs,
       borderRadius: AppRadius.chipRadius,
-      animationDuration: const Duration(milliseconds: 200),
+      animationDuration: const Duration(milliseconds: 240),
       child: AnimatedBuilder(
-        animation: controller,
+        animation: controller.animation ?? controller,
         builder: (context, _) {
           final tabCount = tabs.length;
           final animatedIndex = tabCount == 0
@@ -59,10 +59,25 @@ class ModernSegmentedTabBar extends StatelessWidget {
                       widthFactor: 1 / tabCount,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(
-                            alpha: palette.isDark ? 0.12 : 0.18,
-                          ),
+                          color: palette.isDark
+                              ? Colors.white.withValues(alpha: 0.14)
+                              : palette.surface.withValues(alpha: 0.92),
                           borderRadius: AppRadius.chipRadius,
+                          border: Border.all(
+                            color: palette.isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : palette.border.withValues(alpha: 0.7),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: palette.shadowTint.withValues(
+                                alpha: palette.isDark ? 0.24 : 0.08,
+                              ),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -81,40 +96,53 @@ class ModernSegmentedTabBar extends StatelessWidget {
                             borderRadius: AppRadius.chipRadius,
                             onTap: () => controller.animateTo(
                               index,
-                              duration: const Duration(milliseconds: 200),
+                              duration: const Duration(milliseconds: 260),
                               curve: Curves.easeOutCubic,
                             ),
                             child: Center(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (tabs[index].icon != null) ...[
-                                    Icon(
-                                      tabs[index].icon,
-                                      size: 16,
-                                      color: tabs[index].iconColor ??
-                                          palette.textSecondary,
+                              child: AnimatedScale(
+                                scale: controller.index == index ? 1.02 : 0.98,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOutCubic,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (tabs[index].icon != null) ...[
+                                      Icon(
+                                        tabs[index].icon,
+                                        size: 16,
+                                        color: tabs[index].iconColor ??
+                                            (controller.index == index
+                                                ? palette.accent
+                                                : palette.textSecondary),
+                                      ),
+                                      AppSpacing.hXs,
+                                    ],
+                                    Flexible(
+                                      child: AnimatedDefaultTextStyle(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        curve: Curves.easeOutCubic,
+                                        style: controller.index == index
+                                            ? AppTextStyles.tabSelected
+                                                .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: palette.textPrimary,
+                                              )
+                                            : AppTextStyles.tabUnselected
+                                                .copyWith(
+                                                fontWeight: FontWeight.w500,
+                                                color: palette.textSecondary,
+                                              ),
+                                        child: Text(
+                                          tabs[index].title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                     ),
-                                    AppSpacing.hXs,
                                   ],
-                                  Flexible(
-                                    child: Text(
-                                      tabs[index].title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: controller.index == index
-                                          ? AppTextStyles.tabSelected.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                              color: palette.textPrimary,
-                                            )
-                                          : AppTextStyles.tabUnselected
-                                              .copyWith(
-                                              fontWeight: FontWeight.w500,
-                                              color: palette.textSecondary,
-                                            ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),

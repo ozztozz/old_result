@@ -41,7 +41,7 @@ class AppDialog extends StatelessWidget {
       barrierDismissible: barrierDismissible,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: palette.shadowTint.withValues(alpha: 0.35),
-      transitionDuration: const Duration(milliseconds: 200),
+      transitionDuration: const Duration(milliseconds: 240),
       pageBuilder: (dialogContext, _, __) => AppDialog(
         title: title,
         body: body,
@@ -53,18 +53,30 @@ class AppDialog extends StatelessWidget {
       transitionBuilder: (dialogContext, animation, _, child) {
         final disableAnimations =
             MediaQuery.maybeOf(dialogContext)?.disableAnimations ?? false;
-        final curved = CurvedAnimation(
+        final fadeCurve = CurvedAnimation(
           parent: animation,
           curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
         );
         if (disableAnimations) {
-          return FadeTransition(opacity: curved, child: child);
+          return FadeTransition(opacity: fadeCurve, child: child);
         }
+        final scaleCurve = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
         return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1.0).animate(curved),
-            child: child,
+          opacity: fadeCurve,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.03),
+              end: Offset.zero,
+            ).animate(fadeCurve),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.94, end: 1.0).animate(scaleCurve),
+              child: child,
+            ),
           ),
         );
       },
