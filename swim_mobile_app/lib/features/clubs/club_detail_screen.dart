@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/app_skeleton.dart';
@@ -602,64 +604,102 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
   }
 
   Widget _buildMiniMapBox(AppColorPalette palette, ClubDetailModel club) {
-    final lat = club.latitude!.toStringAsFixed(5);
-    final lon = club.longitude!.toStringAsFixed(5);
+    final point = LatLng(club.latitude!, club.longitude!);
     final mapsTarget =
-        club.googleMapsUrl ?? 'https://www.google.com/maps/search/?api=1&query=$lat,$lon';
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => _openExternalUrl(mapsTarget),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: palette.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: palette.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEA4335).withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.pin_drop_rounded,
-                size: 22,
-                color: Color(0xFFEA4335),
-              ),
-            ),
-            AppSpacing.h12,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Google Maps Konumu',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textPrimary,
+        club.googleMapsUrl ??
+        'https://www.google.com/maps/search/?api=1&query=${club.latitude},${club.longitude}';
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.pin_drop_rounded,
+                      size: 16,
+                      color: Color(0xFFEA4335),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$lat, $lon · Yol tarifi için dokunun',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.monoFontFamily,
-                      fontSize: 11.5,
-                      color: palette.textSecondary,
+                    const SizedBox(width: 6),
+                    Text(
+                      'Konum Haritası',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
                     ),
+                  ],
+                ),
+                InkWell(
+                  onTap: () => _openExternalUrl(mapsTarget),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Yol Tarifi',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: palette.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 14,
+                        color: palette.primary,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Icon(Icons.open_in_new_rounded, size: 17, color: palette.primary),
-          ],
-        ),
+          ),
+          SizedBox(
+            height: 180,
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: point,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.kulvar.swim_mobile_app',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: point,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.location_pin,
+                        size: 38,
+                        color: Color(0xFFEA4335),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
