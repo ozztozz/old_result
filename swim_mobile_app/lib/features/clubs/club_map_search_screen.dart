@@ -143,7 +143,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
             children: [
               TileLayer(
                 urlTemplate:
-                    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.kulvar.swim_mobile_app',
               ),
               MarkerLayer(

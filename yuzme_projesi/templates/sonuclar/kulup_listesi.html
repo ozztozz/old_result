@@ -128,6 +128,9 @@
         box-shadow: 0 10px 25px rgba(15, 23, 42, 0.14) !important;
         padding: 2px !important;
     }
+    .leaflet-tile-pane {
+        filter: saturate(0.78) brightness(1.02) contrast(0.97);
+    }
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
@@ -153,8 +156,8 @@
     function initAndLoadMap() {
         if (!mapInstance) {
             mapInstance = L.map('clubSearchMap', { zoomControl: true }).setView([39.0, 35.0], 6);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
                 maxZoom: 19
             }).addTo(mapInstance);
             clusterGroup = L.markerClusterGroup({
