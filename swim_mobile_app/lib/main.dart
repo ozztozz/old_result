@@ -81,7 +81,7 @@ class MainNavigationContainer extends StatefulWidget {
 }
 
 class _MainNavigationContainerState extends State<MainNavigationContainer> {
-  int _currentIndex = 1; // Canlı Takip ile açılış
+  int _currentIndex = 0; // Ana Sayfa ile açılış
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
   final ValueNotifier<int?> _requestedLiveMeetId = ValueNotifier<int?>(null);
   final ValueNotifier<LiveMeetSummary?> _requestedLiveMeet =

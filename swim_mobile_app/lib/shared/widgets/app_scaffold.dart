@@ -44,9 +44,9 @@ class AppScaffold extends StatelessWidget {
                 _buildNavItem(
                   context,
                   0,
-                  'Keşfet',
-                  Icons.grid_view_outlined,
-                  Icons.grid_view_rounded,
+                  'Ana Sayfa',
+                  Icons.home_outlined,
+                  Icons.home_rounded,
                 ),
                 _buildNavItem(
                   context,
