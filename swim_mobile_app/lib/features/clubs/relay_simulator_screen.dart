@@ -417,72 +417,30 @@ class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
                         ),
                       )
                     else if (_simData != null) ...[
-                      // Tahmini Toplam Süre Kartı (Tek Level 1 Hero yüzey — yerel parlak cam override)
+                      // Tahmini Toplam Süre Kartı (Level 1 Hero cam yüzey)
                       SoftGlassPanel(
                         level: 1,
                         tier: GlassTier.hero,
                         ambientGlowBehind: true,
                         borderRadius: AppRadius.rounded,
-                        padding: EdgeInsets.zero,
-                        fillColorOverride: Colors.transparent,
-                        borderAlphaOverride: palette.isDark ? 0.26 : 0.60,
-                        shadowsOverride: palette.isDark
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color:
-                                      palette.shadowTint.withValues(alpha: 0.20),
-                                  blurRadius: 40,
-                                  offset: const Offset(0, 14),
-                                ),
-                              ],
+                        padding: const EdgeInsets.all(AppSpacing.s20),
                         artStyle: AmbientArtStyle.none,
-                        child: Stack(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            if (palette.isDark)
-                              Positioned.fill(
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: palette.accent.withValues(alpha: 0.10),
-                                  ),
-                                ),
-                              ),
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: palette.isDark
-                                      ? [
-                                          Colors.white.withValues(alpha: 0.24),
-                                          Colors.white.withValues(alpha: 0.10),
-                                        ]
-                                      : [
-                                          Colors.white.withValues(alpha: 0.58),
-                                          Colors.white.withValues(alpha: 0.28),
-                                        ],
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(AppSpacing.s20),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            complete
-                                                ? 'Tahmini En Hızlı Bayrak'
-                                                : 'Yeterli Sporcu Bulunamadı',
-                                            style: TextStyle(
-                                              fontFamily:
-                                                  AppTextStyles.fontFamily,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: complete
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    complete
+                                        ? 'Tahmini En Hızlı Bayrak'
+                                        : 'Yeterli Sporcu Bulunamadı',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: complete
                                                   ? palette.accent
                                                   : palette.statusWarning,
                                             ),
@@ -535,20 +493,6 @@ class _RelaySimulatorScreenState extends State<RelaySimulatorScreen> {
                                   ],
                                 ),
                               ),
-                            ),
-                            if (palette.isDark)
-                              Positioned(
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: 1,
-                                child: ColoredBox(
-                                  color: Colors.white.withValues(alpha: 0.32),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
                       AppSpacing.vMd,
 
                       // 4 Ayak Kadro Listesi (Level 2)

@@ -2,7 +2,9 @@
 import hashlib
 import json
 import re
+from functools import wraps
 from typing import Any, Dict, Optional, Tuple
+from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse
 
 
@@ -165,6 +167,47 @@ def api_response(data: Any, status: int = 200, request=None, cache_seconds: int 
 def api_error(code: str, message: str, status: int = 400) -> HttpResponse:
     """Standart hata nesnesi döndürür."""
     return api_response({'error': {'code': code, 'message': message}}, status=status)
+
+
+def cache_api_response(ttl: int):
+    """
+    GET endpoint'leri için sunucu tarafı LocMemCache önbellek dekoratörü.
+    Önbellekte veri varsa DB sorgusu ve JSON serileştirmesi yapmadan yanıt (veya 304) döner.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            if request.method != 'GET' or ttl <= 0:
+                return view_func(request, *args, **kwargs)
+
+            raw_key = f"{request.scheme}://{request.get_host()}{request.get_full_path()}"
+            cache_key = f"mobile_api:v1:{hashlib.md5(raw_key.encode('utf-8')).hexdigest()}"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                body_bytes, etag, status_code = cached
+                if etag and request.headers.get('If-None-Match') == etag:
+                    resp = HttpResponse(status=304)
+                    resp['ETag'] = etag
+                    resp['Access-Control-Allow-Origin'] = '*'
+                    resp['X-Cache'] = 'HIT'
+                    return resp
+                resp = HttpResponse(body_bytes, content_type='application/json; charset=utf-8', status=status_code)
+                if etag:
+                    resp['ETag'] = etag
+                resp['Access-Control-Allow-Origin'] = '*'
+                resp['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+                resp['Access-Control-Allow-Headers'] = 'X-App-Key, Content-Type, If-None-Match, Authorization'
+                resp['Cache-Control'] = f'public, max-age={ttl}'
+                resp['X-Cache'] = 'HIT'
+                return resp
+
+            resp = view_func(request, *args, **kwargs)
+            if resp.status_code == 200 and resp.content:
+                cache.set(cache_key, (resp.content, resp.get('ETag', ''), 200), ttl)
+                resp['X-Cache'] = 'MISS'
+            return resp
+        return _wrapped
+    return decorator
 
 
 class MobileApiCorsMiddleware:

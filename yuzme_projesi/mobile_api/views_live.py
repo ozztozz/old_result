@@ -9,6 +9,7 @@ from sonuclar.live_engine import parse_tr_date_range
 from .utils import (
     api_response,
     api_error,
+    cache_api_response,
     seconds_to_cs,
     map_result_status,
     map_stroke,
@@ -60,6 +61,7 @@ def _live_meet_sort_key(m: CanliYaris, today_iso: str = ""):
 
 
 @require_GET
+@cache_api_response(10)
 def get_live_meets(request):
     """Önümüzdeki 10 gün içinde başlayacak ve 1 haftadan eski olmayan (start listesi bulunan) canlı yarışlar."""
     today_tr = datetime.now(TR_TIMEZONE).date()
@@ -175,6 +177,7 @@ def get_live_meets(request):
 
 
 @require_GET
+@cache_api_response(8)
 def get_live_feed(request, live_id: int):
     """
     Belirli bir canlı yarışın start ve netice listesi akışı (Seri ve Kulvar detaylı).
@@ -202,76 +205,68 @@ def get_live_feed(request, live_id: int):
     filter_athlete_name = (request.GET.get('athlete_name') or '').strip().lower()
 
     events_prog = []
+    event_prog_map = {}
     if events_only or include_events:
-        # Mevcut yarışlar listesi (Mesafe, stil, cinsiyet ve yaş grubu detaylı)
-        from django.db.models import Count, Q
-
-        # Her yarış için durum özeti (tek sorguda!)
-        # Kullanıcı kuralı: "Bekliyor" statüsü sonucu olmayan yarış demek.
-        # Yarışa girmemiş tekil sporcular 'Bekleniyor' kalmış olabilir.
-        # Dolayısıyla yarışta en az 1 bitmiş derece varsa o yarış "Sonuçlandı" kabul edilir.
-        event_stats = {}
+        # Her yarış için durum ve metadata özeti tek sorguda
         try:
-            stats_qs = live.event.yaris_sonuclari.values('yaris_no').annotate(
-                total=Count('id'),
-                finished_count=Count(
-                    'id',
-                    filter=(Q(derece_saniye__gt=0) | (~Q(derece='Bekleniyor') & ~Q(derece='') & Q(derece__isnull=False)))
-                ),
+            event_rows = (
+                live.event.yaris_sonuclari.exclude(yaris_no__isnull=True)
+                .exclude(yaris_no='')
+                .values('yaris_no', 'mesafe', 'stil', 'cinsiyet', 'yas_grubu')
+                .annotate(
+                    total=Count('id'),
+                    finished_count=Count(
+                        'id',
+                        filter=(Q(derece_saniye__gt=0) | (~Q(derece='Bekleniyor') & ~Q(derece='') & Q(derece__isnull=False)))
+                    ),
+                )
             )
-            for row in stats_qs:
-                eno_key = str(row['yaris_no']).strip()
+            for row in event_rows:
+                eno = str(row['yaris_no']).strip()
+                if not eno:
+                    continue
                 total_cnt = row['total'] or 0
                 finished_cnt = row['finished_count'] or 0
-                # En az 1 bitmiş derece varsa yarış Sonuçlandı; 0 derece varsa Bekliyor
-                is_pending = (finished_cnt == 0)
-                event_stats[eno_key] = {
-                    'total': total_cnt,
-                    'finished': finished_cnt,
-                    'is_pending': is_pending,
-                }
+                dist = row.get('mesafe')
+                stil = (row.get('stil') or '').strip()
+                gender = (row.get('cinsiyet') or '').strip()
+                age_grp = (row.get('yas_grubu') or '').strip()
+
+                if eno not in event_prog_map:
+                    title_parts = []
+                    if dist:
+                        title_parts.append(f"{dist}m")
+                    if stil:
+                        title_parts.append(stil)
+                    name_str = " ".join(title_parts) if title_parts else "Yarış"
+                    is_pend = (finished_cnt == 0)
+                    event_prog_map[eno] = {
+                        'event_no': eno,
+                        'name': name_str,
+                        'distance': dist,
+                        'stroke': map_stroke(stil),
+                        'stroke_label': stil,
+                        'gender': gender,
+                        'age_group': age_grp,
+                        'is_pending': is_pend,
+                        'status': 'Bekliyor' if is_pend else 'Sonuçlandı',
+                        'total_athletes': total_cnt,
+                    }
+                else:
+                    entry = event_prog_map[eno]
+                    entry['total_athletes'] += total_cnt
+                    if finished_cnt > 0:
+                        entry['is_pending'] = False
+                        entry['status'] = 'Sonuçlandı'
+                    if not entry['distance'] and dist:
+                        entry['distance'] = dist
+                    if not entry['stroke_label'] and stil:
+                        entry['stroke'] = map_stroke(stil)
+                        entry['stroke_label'] = stil
         except Exception:
             pass
 
-        event_numbers = list(
-            live.event.yaris_sonuclari.exclude(yaris_no__isnull=True)
-            .exclude(yaris_no='')
-            .values('yaris_no', 'mesafe', 'stil', 'cinsiyet', 'yas_grubu')
-            .distinct()
-        )
-        seen_enos = set()
-        for e in event_numbers:
-            eno = str(e['yaris_no']).strip()
-            if eno not in seen_enos:
-                seen_enos.add(eno)
-                dist = e.get('mesafe')
-                stil = (e.get('stil') or '').strip()
-                gender = (e.get('cinsiyet') or '').strip()
-                age_grp = (e.get('yas_grubu') or '').strip()
-
-                title_parts = []
-                if dist:
-                    title_parts.append(f"{dist}m")
-                if stil:
-                    title_parts.append(stil)
-                name_str = " ".join(title_parts) if title_parts else "Yarış"
-
-                stat = event_stats.get(eno, {})
-                is_pend = stat.get('is_pending', True)
-
-                events_prog.append({
-                    'event_no': eno,
-                    'name': name_str,
-                    'distance': dist,
-                    'stroke': map_stroke(stil),
-                    'stroke_label': stil,
-                    'gender': gender,
-                    'age_group': age_grp,
-                    'is_pending': is_pend,
-                    'status': 'Bekliyor' if is_pend else 'Sonuçlandı',
-                    'total_athletes': stat.get('total', 0),
-                })
-
+        events_prog = list(event_prog_map.values())
         try:
             events_prog.sort(key=lambda x: int(x['event_no']) if x['event_no'].isdigit() else 9999)
         except Exception:
@@ -285,7 +280,17 @@ def get_live_feed(request, live_id: int):
             'data': [],
         }, request=request, cache_seconds=10)
 
-    qs = live.event.yaris_sonuclari.select_related('sporcu', 'kulup')
+    only_fields = [
+        'id', 'event_id', 'yaris_no', 'mesafe', 'stil', 'seri', 'kulvar', 'sira',
+        'derece', 'derece_saniye', 'giris_derecesi', 'puan',
+        'hesaplanan_yas', 'sporcu_yas', 'yas_grubu',
+        'sporcu_id', 'sporcu__sporcu_adi', 'sporcu__dogum_yili',
+        'kulup_id', 'kulup__kulup_adi',
+    ]
+    if not summary_only:
+        only_fields.append('ara_dereceler')
+
+    qs = live.event.yaris_sonuclari.select_related('sporcu', 'kulup').only(*only_fields)
 
     if event_no:
         qs = qs.filter(yaris_no=event_no)
@@ -311,11 +316,6 @@ def get_live_feed(request, live_id: int):
                 return default
         return default
 
-    # Sonuçları sırala:
-    # Kural: Sonuç yoksa önce seriye sonra kulvara göre (seri sayısal olarak sıralanır).
-    # Sonuç varsa sonuç sıralamasına / derecesine göre (DQ en sonda).
-    has_results = qs.filter(derece_saniye__gt=0).exists()
-
     def sort_entry(r):
         is_dq = (r.sira or '').strip().upper() in ('DQ', 'DNS', 'DNF') or (r.derece or '').strip().upper() in ('DQ', 'DNS', 'DNF')
         is_waiting = (r.derece or '').strip() == 'Bekleniyor'
@@ -336,6 +336,7 @@ def get_live_feed(request, live_id: int):
         return (parse_leading_int(r.seri, default=999), parse_leading_int(r.kulvar, default=999))
 
     results_raw = list(qs)
+    has_results = any((r.derece_saniye or 0) > 0 for r in results_raw)
     if event_no:
         if has_results:
             results_raw.sort(key=sort_entry)

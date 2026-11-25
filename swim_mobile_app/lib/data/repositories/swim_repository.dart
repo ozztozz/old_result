@@ -3,6 +3,9 @@ import '../models/meet.dart';
 import '../models/race_result.dart';
 import '../models/athlete.dart';
 import '../models/live_meet.dart';
+import '../models/tyf_news.dart';
+import '../models/calendar_event.dart';
+import '../models/baraj_rule.dart';
 
 /// Mobil API Servislerini Yöneten Ana Veri Deposu (Repository)
 class SwimRepository {
@@ -110,19 +113,18 @@ class SwimRepository {
     return list.map((e) => AthleteRaceHistoryItem.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// Sporcunun branş/mesafe bazlı hedef reglaman barajları
+  /// Sporcunun branş/mesafe bazlı veya tüm sezon hedef reglaman barajları
   Future<List<Map<String, dynamic>>> getAthleteBarajTargets(
     int athleteId, {
-    required String stroke,
-    required int distance,
-    required String course,
+    String? stroke,
+    int? distance,
+    String? course,
     int? pbCs,
   }) async {
-    final query = <String, dynamic>{
-      'stroke': stroke,
-      'distance': distance,
-      'course': course,
-    };
+    final query = <String, dynamic>{};
+    if (stroke != null && stroke.isNotEmpty) query['stroke'] = stroke;
+    if (distance != null) query['distance'] = distance;
+    if (course != null && course.isNotEmpty) query['course'] = course;
     if (pbCs != null) query['pb_cs'] = pbCs;
 
     final res = await apiClient.get(
@@ -327,6 +329,89 @@ class SwimRepository {
     final res = await apiClient.get('/highlights/', queryParameters: query);
     final list = res.data['data'] as List<dynamic>? ?? [];
     return list.cast<Map<String, dynamic>>();
+  }
+
+  /// TYF Takvim, Reglaman ve Milli Takım Kriterleri Haber Bandı
+  Future<List<TyfNewsItem>> getNewsFeed({String? type, int limit = 15}) async {
+    final query = <String, dynamic>{'limit': limit};
+    if (type != null && type.isNotEmpty) query['type'] = type;
+
+    final res = await apiClient.get('/news-feed/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list
+        .map((e) => TyfNewsItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Ulusal (TYF) ve İl Etkinlik Takvimi
+  Future<CalendarFeedResponse> getEventCalendar({
+    String scope = 'all',
+    String? city,
+    String? pool,
+    String? q,
+    bool includePast = false,
+  }) async {
+    final query = <String, dynamic>{'scope': scope};
+    if (city != null && city.isNotEmpty) query['city'] = city;
+    if (pool != null && pool.isNotEmpty) query['pool'] = pool;
+    if (q != null && q.isNotEmpty) query['q'] = q;
+    if (includePast) query['include_past'] = '1';
+
+    final res = await apiClient.get('/calendar/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    final meta = res.data['meta'] as Map<String, dynamic>? ?? {};
+    final citiesRaw = meta['cities'] as List<dynamic>? ?? [];
+    return CalendarFeedResponse(
+      events: list
+          .map((e) => CalendarEvent.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      cities: citiesRaw.map((c) => c.toString()).toList(),
+    );
+  }
+
+  /// Resmi TYF Katılım & Harcırah Barajları
+  Future<BarajFeedResponse> getBarajlar({
+    String? barajAdi,
+    int? eventId,
+    String? city,
+    String? month,
+    String? barajTuru,
+    String? havuz,
+    String? cinsiyet,
+    String? yas,
+    String? stil,
+  }) async {
+    final query = <String, dynamic>{};
+    if (eventId != null) query['event_id'] = eventId;
+    if (barajAdi != null && barajAdi.isNotEmpty) query['baraj_adi'] = barajAdi;
+    if (city != null && city.isNotEmpty) query['city'] = city;
+    if (month != null && month.isNotEmpty) query['month'] = month;
+    if (barajTuru != null && barajTuru.isNotEmpty) query['baraj_turu'] = barajTuru;
+    if (havuz != null && havuz.isNotEmpty) query['havuz'] = havuz;
+    if (cinsiyet != null && cinsiyet.isNotEmpty) query['cinsiyet'] = cinsiyet;
+    if (yas != null && yas.isNotEmpty) query['yas'] = yas;
+    if (stil != null && stil.isNotEmpty) query['stil'] = stil;
+
+    final res = await apiClient.get('/barajlar/', queryParameters: query);
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    final meta = res.data['meta'] as Map<String, dynamic>? ?? {};
+    final names = meta['baraj_names'] as List<dynamic>? ?? [];
+    final eventsRaw = meta['events'] as List<dynamic>? ?? [];
+    final citiesRaw = meta['cities'] as List<dynamic>? ?? [];
+    final monthsRaw = meta['months'] as List<dynamic>? ?? [];
+    final ages = meta['age_labels'] as List<dynamic>? ?? [];
+    return BarajFeedResponse(
+      rules: list
+          .map((e) => BarajRule.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      barajNames: names.map((e) => e.toString()).toList(),
+      events: eventsRaw
+          .map((e) => BarajEventOption.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      cities: citiesRaw.map((e) => e.toString()).toList(),
+      months: monthsRaw.map((e) => e.toString()).toList(),
+      ageLabels: ages.map((e) => e.toString()).toList(),
+    );
   }
 }
 

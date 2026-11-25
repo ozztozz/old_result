@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/components/ambient_canvas.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../main.dart';
@@ -68,30 +69,21 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
+                  SoftGlassPanel(
+                    level: 1,
                     width: 124,
                     height: 124,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: palette.primary.withValues(alpha: 0.16),
-                          blurRadius: 28,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
+                    padding: AppSpacing.paddingAllSm,
+                    borderRadius: AppRadius.radius28,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: AppRadius.large,
                       child: Image.asset(
                         'assets/images/app_logo.png',
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  AppSpacing.vLg,
                   Text(
                     'Kulvar 360',
                     style: TextStyle(

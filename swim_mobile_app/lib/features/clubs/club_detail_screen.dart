@@ -717,18 +717,18 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                           Flexible(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.94),
-                                borderRadius: BorderRadius.circular(10),
+                                color: palette.surface.withValues(alpha: 0.92),
+                                borderRadius: AppRadius.small,
                                 border: Border.all(
-                                  color: Colors.black.withValues(alpha: 0.12),
+                                  color: palette.border,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.12),
+                                    color: palette.shadowTint.withValues(alpha: 0.12),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   ),
@@ -738,10 +738,11 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
                                 StringUtils.toTitleCase(club.name),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
+                                  color: palette.textPrimary,
                                 ),
                               ),
                             ),

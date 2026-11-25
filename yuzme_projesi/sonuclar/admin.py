@@ -15,9 +15,9 @@ class CanliYarisDosyaAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('musabaka_adi', 'sehir', 'yaris_tarihi_baslangic', 'yaris_tarihi_bitis', 'toplam_yaris_sayisi', 'toplam_sporcu_sayisi', 'kaynak_turu')
-    search_fields = ('musabaka_adi', 'sehir')
-    list_filter = ('kaynak_turu', 'sehir')
+    list_display = ('musabaka_adi', 'sehir', 'yaris_tarihi_baslangic', 'yaris_tarihi_bitis', 'yas_grubu', 'havuz', 'toplam_yaris_sayisi', 'toplam_sporcu_sayisi', 'kaynak_turu')
+    search_fields = ('musabaka_adi', 'sehir', 'yas_grubu')
+    list_filter = ('kaynak_turu', 'havuz', 'sehir')
     ordering = ('-yaris_tarihi_baslangic',)
     readonly_fields = ('toplam_yaris_sayisi', 'toplam_sporcu_sayisi', 'olusturulma_tarihi', 'guncellenme_tarihi')
 
@@ -66,7 +66,7 @@ class YarisSonucuAdmin(admin.ModelAdmin):
     readonly_fields = ('sporcu', 'kulup', 'event', 'sporcu_kulup_tarihce', 'derece_saniye', 'ham_satir')
 
 
-from .models import MobilUygulamaSurumu
+from .models import MobilUygulamaSurumu, TyfBelge, BarajKurali
 
 @admin.register(MobilUygulamaSurumu)
 class MobilUygulamaSurumuAdmin(admin.ModelAdmin):
@@ -74,3 +74,19 @@ class MobilUygulamaSurumuAdmin(admin.ModelAdmin):
     list_filter = ('aktif', 'zorunlu_guncelleme')
     search_fields = ('surum_adi', 'degisiklik_notlari')
     readonly_fields = ('dosya_boyutu_mb', 'indirme_sayisi', 'olusturulma_tarihi', 'guncellenme_tarihi')
+
+
+@admin.register(TyfBelge)
+class TyfBelgeAdmin(admin.ModelAdmin):
+    list_display = ('baslik', 'belge_turu', 'revizyon_etiketi', 'baslangic_tarihi', 'yas_grubu', 'havuz', 'aktif', 'guncellenme_tarihi')
+    list_filter = ('belge_turu', 'aktif', 'havuz')
+    search_fields = ('baslik', 'ozet', 'sehir_yer', 'yas_grubu')
+    readonly_fields = ('content_hash', 'etag', 'last_modified', 'son_kontrol_tarihi', 'olusturulma_tarihi', 'guncellenme_tarihi')
+
+
+@admin.register(BarajKurali)
+class BarajKuraliAdmin(admin.ModelAdmin):
+    list_display = ('baraj_adi', 'baraj_turu', 'havuz', 'cinsiyet', 'yas_etiketi', 'mesafe', 'stil', 'sure')
+    list_filter = ('baraj_turu', 'havuz', 'cinsiyet', 'stil', 'mesafe')
+    search_fields = ('baraj_adi', 'yas_etiketi')
+    list_select_related = ('belge', 'event')

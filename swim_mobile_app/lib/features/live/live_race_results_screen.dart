@@ -681,7 +681,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: _detailTabIndex == tab.$1
-                              ? Colors.white
+                              ? Theme.of(context).colorScheme.onPrimary
                               : palette.textSecondary,
                         ),
                       ),

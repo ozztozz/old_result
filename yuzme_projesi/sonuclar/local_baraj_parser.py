@@ -46,13 +46,34 @@ def _fold_tr(text: str) -> str:
     return text.translate(replacements).lower().strip()
 
 
-def _parse_time_to_seconds(time_str: Optional[str]) -> Optional[float]:
+def _normalize_time_str(time_str: Optional[str]) -> str:
+    """PyMuPDF ve Gemini çıktılarındaki bozuk süre metinlerini ('00:29 99\\n,', '00:3099\\n,', '00:29;12', '00:29:99') düzeltir."""
     if not time_str:
-        return None
-    s = str(time_str).strip().replace(",", ".")
+        return ""
+    s = re.sub(r"[\r\n]+", " ", str(time_str)).strip()
+    if not s:
+        return ""
+    # '00:29:99' (iki nokta ile ayrılmış salise) -> '00:29.99'
+    m_colon3 = re.match(r"^(\d{1,2}):(\d{2}):(\d{1,2})$", s)
+    if m_colon3:
+        return f"{int(m_colon3.group(1)):02d}:{m_colon3.group(2)}.{m_colon3.group(3).ljust(2, '0')}"
+    # '00:29 99 ,' veya '00:3099 ,' -> virgül sona kaymışsa
+    m_trail = re.match(r"^(\d{1,2}):(\d{2})\s*(\d{2})\s*[,;.]?$", s)
+    if m_trail:
+        return f"{int(m_trail.group(1)):02d}:{m_trail.group(2)}.{m_trail.group(3)}"
+    s = s.replace(";", ".").replace(",", ".")
+    # '00:29. 99' veya '00:29 .99' -> '00:29.99'
+    s = re.sub(r"\s*\.\s*(\d{1,2})$", r".\1", s)
+    # '00:29 99' -> '00:29.99'
+    s = re.sub(r"(\d{2})\s+(\d{1,2})$", r"\1.\2", s)
+    return s.strip()
+
+
+def _parse_time_to_seconds(time_str: Optional[str]) -> Optional[float]:
+    s = _normalize_time_str(time_str)
     if not s or not re.search(r"\d", s):
         return None
-    # Formatlar: MM:SS.cc, SS.cc, HH:MM:SS.cc
+    # Formatlar: MM:SS.cc, SS.cc
     m_min = re.match(r"^(\d{1,2}):(\d{2}\.\d{1,2})$", s)
     if m_min:
         try:
@@ -68,6 +89,13 @@ def _parse_time_to_seconds(time_str: Optional[str]) -> Optional[float]:
     return None
 
 
+def _format_seconds_tr(seconds: float) -> str:
+    total_cs = int(round(seconds * 100))
+    mins, rem_cs = divmod(total_cs, 6000)
+    secs, cs = divmod(rem_cs, 100)
+    return f"{mins:02d}:{secs:02d},{cs:02d}"
+
+
 def _normalize_stil(raw_stil: str) -> Optional[str]:
     folded = _fold_tr(raw_stil)
     for key, val in STIL_MAP.items():
@@ -77,11 +105,11 @@ def _normalize_stil(raw_stil: str) -> Optional[str]:
 
 
 def _parse_event_cell(cell_text: Optional[str]) -> Optional[Tuple[int, str]]:
-    """Örn: '50 m\\nSerbest' -> (50, 'Serbest')"""
+    """Örn: '50 m\\nSerbest' veya '50MSERBEST' -> (50, 'Serbest')"""
     if not cell_text:
         return None
     cleaned = " ".join(str(cell_text).split())
-    m = re.match(r"^(\d{2,4})\s*m?\s+(.+)$", cleaned, re.IGNORECASE)
+    m = re.match(r"^(\d{2,4})\s*m?\s*(.+)$", cleaned, re.IGNORECASE)
     if not m:
         return None
     mesafe = int(m.group(1))
@@ -118,18 +146,19 @@ def _parse_age_header(cell_text: Optional[str]) -> Optional[Dict[str, Any]]:
         if years:
             dogum_yillari = sorted(set(years))
 
-    # Yaş bilgilerini çıkar (4 haneli yılları çıkardıktan sonra kalan sayılar)
+    # Yaş bilgilerini çıkar (4 haneli yılları çıkardıktan sonra kalan sayılar; '12YAŞ', '19+YAŞ' dahil)
     raw_no_years = re.sub(r"\b(?:19|20)\d{2}\+?", "", raw)
+    raw_no_years = re.sub(r"(?i)(yaş|yas)", r" \1", raw_no_years)
     min_yas: Optional[int] = None
     max_yas: Optional[int] = None
     yas_etiketi = ""
 
-    m_age_plus = re.search(r"\b(\d{1,2})\s*\+", raw_no_years)
+    m_age_plus = re.search(r"(?<!\d)(\d{1,2})\s*\+", raw_no_years)
     if m_age_plus:
         min_yas = int(m_age_plus.group(1))
         yas_etiketi = f"{min_yas}+ YAŞ"
     else:
-        age_nums = [int(a) for a in re.findall(r"\b(\d{1,2})\b", raw_no_years)]
+        age_nums = [int(a) for a in re.findall(r"(?<!\d)(\d{1,2})(?!\d)", raw_no_years)]
         if age_nums:
             min_yas = min(age_nums)
             max_yas = max(age_nums)
@@ -216,7 +245,7 @@ Kurallar:
 - min_yas, max_yas: tam sayı veya null.
 - mesafe: tam sayı (50, 100, 200, 400, 800, 1500)
 - stil: Yalnızca şu 5 değerden biri: "Serbest", "Sırtüstü", "Kurbağalama", "Kelebek", "Karışık"
-- sure: Görseldeki derece metni (ör. "00:32,99", "01:11,99")
+- sure: Görseldeki derece metni, salise (küsürat) hanesini KESİNLİKLE birebir oku (ör. "00:32,99", "01:11,99"). Saniye ile salise arasında virgül kullan; ,99 gibi sonları asla ,00 veya başka bir sayıya yuvarlama.
 
 Çıktı formatı:
 {
@@ -379,6 +408,7 @@ def parse_baraj_pdf_bytes(
     pdf_bytes: bytes,
     kaynak_url: str = "",
     use_gemini_fallback: bool = True,
+    include_harcirah: bool = False,
 ) -> Dict[str, Any]:
     """
     PDF baytlarından baraj tablolarını ayrıştırır ve standart JSON sözlüğü döndürür.
@@ -404,7 +434,7 @@ def parse_baraj_pdf_bytes(
             if is_image_page or has_baraj_text:
                 # Görsel fallback gerekirse kullanılmak üzere aday sayfayı hazırla
                 if is_image_page:
-                    candidate_image_pages.append(page.get_pixmap(dpi=200).tobytes("png"))
+                    candidate_image_pages.append(page.get_pixmap(dpi=280).tobytes("png"))
 
             if not has_baraj_text:
                 continue
@@ -426,14 +456,20 @@ def parse_baraj_pdf_bytes(
                 for idx, row in enumerate(rows[:6]):
                     row_joined = " ".join(str(c) for c in row if c)
                     row_folded = _fold_tr(row_joined)
-                    if gender_row_idx is None and ("erkek" in row_folded or "kadin" in row_folded or "bayan" in row_folded):
-                        # Bu satır cinsiyet satırı mı yoksa hem başlık hem cinsiyet mi?
+                    has_gender = "erkek" in row_folded or "kadin" in row_folded or "bayan" in row_folded
+                    has_age = "yas" in row_folded or bool(re.search(r"\b(?:19|20)\d{2}\b", row_folded))
+
+                    if gender_row_idx is None and has_gender:
                         non_empty = [c for c in row if c and str(c).strip()]
                         if len(non_empty) >= 2:
                             gender_row_idx = idx
+                            # Tek satırda hem cinsiyet hem yaş varsa (ör. 'ERKEK\n12YAŞ\n2014')
+                            if has_age:
+                                age_row_idx = idx
+                                break
                             continue
                     if gender_row_idx is not None and age_row_idx is None:
-                        if "yas" in row_folded or re.search(r"\b(?:19|20)\d{2}\b", row_folded):
+                        if has_age:
                             age_row_idx = idx
                             break
                     if gender_row_idx is None:
@@ -444,7 +480,7 @@ def parse_baraj_pdf_bytes(
 
                 title_text = "\n".join(title_lines)
                 baraj_adi, havuz, baraj_turu = _detect_table_meta(title_text, page_text)
-                if baraj_turu == "Harcırah Barajı":
+                if baraj_turu == "Harcırah Barajı" and not include_harcirah:
                     continue
                 if baraj_adi and baraj_adi not in baraj_adi_candidates:
                     baraj_adi_candidates.append(baraj_adi)
@@ -461,8 +497,10 @@ def parse_baraj_pdf_bytes(
                 for c_idx in range(num_cols):
                     g_cell = gender_row[c_idx] if c_idx < len(gender_row) else None
                     g_fold = _fold_tr(str(g_cell or ""))
-                    if "erkek" in g_fold and "kadin" in g_fold:
-                        # Orta branş sütunu ('ERKEK-KADIN 50M')
+                    if ("erkek" in g_fold and "kadin" in g_fold) or (
+                        age_row_idx == gender_row_idx and g_cell and ("erkek" not in g_fold and "kadin" not in g_fold and "bayan" not in g_fold)
+                    ):
+                        # Orta branş sütunu ('ERKEK-KADIN 50M' veya tek satırda '25M')
                         event_col_idx = c_idx
                         current_gender = None
                         continue
@@ -474,12 +512,13 @@ def parse_baraj_pdf_bytes(
                     if current_gender:
                         col_gender[c_idx] = current_gender
 
-                # Eğer cinsiyet satırından orta sütun bulunamadıysa yaş satırında None olan sütunu bul
+                # Eğer cinsiyet satırından orta sütun bulunamadıysa yaş satırında None veya yaşsız sütunu bul
                 if event_col_idx is None:
                     for c_idx in range(num_cols):
-                        if age_row[c_idx] is None:
-                            event_col_idx = c_idx
-                            break
+                        if age_row[c_idx] is None or _parse_age_header(age_row[c_idx]) is None:
+                            if c_idx not in col_gender:
+                                event_col_idx = c_idx
+                                break
 
                 # Her veri sütunu için yaş bilgisini çözümle
                 col_age: Dict[int, Dict[str, Any]] = {}
@@ -519,7 +558,7 @@ def parse_baraj_pdf_bytes(
                         if sure_sn is None:
                             continue
 
-                        sure_str = " ".join(str(sure_raw).split())
+                        sure_str = _format_seconds_tr(sure_sn)
                         entries.append({
                             "havuz": havuz,
                             "baraj_turu": baraj_turu,

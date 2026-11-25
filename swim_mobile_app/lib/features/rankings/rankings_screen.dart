@@ -492,7 +492,9 @@ class _RankingsScreenState extends State<RankingsScreen> {
         : palette.textPrimary.withValues(alpha: palette.isDark ? 0.08 : 0.05);
     final chipBorder = isPodium
         ? palette.accent
-        : Colors.white.withValues(alpha: palette.isDark ? 0.12 : 0.25);
+        : (palette.isCrispCardTheme
+            ? palette.border
+            : Colors.white.withValues(alpha: palette.isDark ? 0.12 : 0.25));
 
     return Column(
       mainAxisSize: MainAxisSize.min,

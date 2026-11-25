@@ -5,10 +5,11 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from sonuclar.models import Sporcu, Kulup, SporcuKulupTarihce, Event, MobilUygulamaSurumu
-from .utils import api_response, api_error
+from .utils import api_response, api_error, cache_api_response
 
 
 @require_GET
+@cache_api_response(60)
 def get_config(request):
     """Mobil uygulama yapılandırma ve sürüm kontrol uç noktası."""
     latest_release = MobilUygulamaSurumu.objects.filter(aktif=True).order_by('-surum_kodu', '-olusturulma_tarihi').first()
@@ -130,6 +131,7 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 @require_GET
+@cache_api_response(60)
 def get_clubs_list(request):
     """Sayfalı ve alfabetik/il/tür/konum filtreli kulüp listesi."""
     q = (request.GET.get('q') or '').strip()
@@ -215,6 +217,7 @@ def get_clubs_list(request):
 
 
 @require_GET
+@cache_api_response(120)
 def get_clubs_map(request):
     """Haritada gösterilecek koordinatlı kulüplerin listesini döner."""
     q = (request.GET.get('q') or '').strip()
@@ -251,6 +254,7 @@ def get_clubs_map(request):
 
 
 @require_GET
+@cache_api_response(300)
 def get_club_detail(request, club_id):
     """Tekil kulüp profili, iletişim/sosyal medya bilgileri ve performans özeti."""
     club = get_object_or_404(Kulup, pk=club_id)

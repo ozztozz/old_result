@@ -33,5 +33,8 @@ urlpatterns = [
     path('clubs/relay-simulator/', views_tools.get_relay_simulator, name='relay_simulator'),
     path('rankings/', views_tools.get_rankings, name='rankings'),
     path('highlights/', views_tools.get_highlights_feed, name='highlights_feed'),
+    path('news-feed/', views_meets.get_news_feed, name='news_feed'),
+    path('calendar/', views_meets.get_event_calendar, name='event_calendar'),
+    path('barajlar/', views_meets.get_barajlar_list, name='barajlar_list'),
 ]
 

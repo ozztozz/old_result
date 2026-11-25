@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 
-/// TYF Yüzme Sonuçları — Yüzen Koyu Yarı Saydam Cam Navigasyon Kabuğu
+/// TYF Yüzme Sonuçları — Yüzen Yarı Saydam Cam Navigasyon Kabuğu
 /// Doğrudan [SoftGlassPanel] (`GlassTier.dock`) kullanır.
 class AppScaffold extends StatelessWidget {
   final int currentIndex;
@@ -21,48 +22,54 @@ class AppScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: palette.background,
+      extendBody: true,
       body: _AnimatedTabStack(
         currentIndex: currentIndex,
         children: screens,
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: palette.surface,
-          border: Border(
-            top: BorderSide(
-              color: palette.border,
-              width: 1.0,
-            ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.sm,
           ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 62,
-            child: Row(
-              children: [
-                _buildNavItem(
-                  context,
-                  0,
-                  'Ana Sayfa',
-                  Icons.home_outlined,
-                  Icons.home_rounded,
-                ),
-                _buildNavItem(
-                  context,
-                  1,
-                  'Canlı Takip',
-                  Icons.sensors_outlined,
-                  Icons.sensors_rounded,
-                ),
-                _buildNavItem(
-                  context,
-                  2,
-                  'Favorilerim',
-                  Icons.star_outline_rounded,
-                  Icons.star_rounded,
-                ),
-              ],
+          child: SoftGlassPanel(
+            tier: GlassTier.dock,
+            borderRadius: AppRadius.radius28,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            child: SizedBox(
+              height: 56,
+              child: Row(
+                children: [
+                  _buildNavItem(
+                    context,
+                    0,
+                    'Ana Sayfa',
+                    Icons.home_outlined,
+                    Icons.home_rounded,
+                  ),
+                  _buildNavItem(
+                    context,
+                    1,
+                    'Canlı Takip',
+                    Icons.sensors_outlined,
+                    Icons.sensors_rounded,
+                  ),
+                  _buildNavItem(
+                    context,
+                    2,
+                    'Favorilerim',
+                    Icons.star_outline_rounded,
+                    Icons.star_rounded,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -79,39 +86,40 @@ class AppScaffold extends StatelessWidget {
   ) {
     final palette = context.palette;
     final isSelected = currentIndex == index;
-    final activeColor = palette.accent;
-    final inactiveColor = palette.textSecondary;
+    final activeColor = palette.navLabelActive;
+    final inactiveColor = palette.navLabelInactive;
+    final pillColor = activeColor.withValues(
+      alpha: palette.isCrispCardTheme ? 0.10 : 0.14,
+    );
 
     return Expanded(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onNavigationChanged(index),
-          splashColor: palette.accent.withValues(alpha: 0.08),
+          borderRadius: AppRadius.large,
+          splashColor: activeColor.withValues(alpha: 0.08),
           highlightColor: Colors.transparent,
-          child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: BoxDecoration(
+              color: isSelected ? pillColor : Colors.transparent,
+              borderRadius: AppRadius.large,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  width: isSelected ? 20 : 0,
-                  height: 2.5,
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected ? activeColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
                 AnimatedScale(
-                  scale: isSelected ? 1.08 : 1.0,
+                  scale: isSelected ? 1.06 : 1.0,
                   duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutBack,
+                  curve: Curves.easeOutCubic,
                   child: Icon(
                     isSelected ? activeIcon : icon,
-                    size: 22,
+                    size: 21,
                     color: isSelected ? activeColor : inactiveColor,
                   ),
                 ),

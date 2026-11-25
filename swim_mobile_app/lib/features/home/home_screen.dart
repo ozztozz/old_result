@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/section_header.dart';
@@ -12,6 +13,7 @@ import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
+import '../../data/models/tyf_news.dart';
 import '../../shared/widgets/component_gallery_screen.dart';
 import '../../shared/widgets/theme_picker_sheet.dart';
 import '../clubs/club_search_screen.dart';
@@ -20,6 +22,8 @@ import '../live/live_meet_detail_screen.dart';
 import '../meets/meet_search_screen.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../rankings/rankings_screen.dart';
+import '../calendar/event_calendar_screen.dart';
+import '../barajlar/barajlar_screen.dart';
 
 /// 1. Ekran: Ana Sayfa & Keşfet (Home Dashboard)
 class HomeScreen extends StatefulWidget {
@@ -44,6 +48,15 @@ class _HomeScreenState extends State<HomeScreen> {
   List<MeetSummary> _recentMeets = [];
   List<LiveMeetSummary> _liveMeets = [];
   List<Map<String, dynamic>> _highlights = [];
+  List<TyfNewsItem> _newsFeed = [];
+  final PageController _newsPageController = PageController(viewportFraction: 0.88);
+  int _newsPageIndex = 0;
+
+  @override
+  void dispose() {
+    _newsPageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -74,12 +87,16 @@ class _HomeScreenState extends State<HomeScreen> {
         widget.repository.getMeets(page: 1),
         widget.repository.getLiveMeets(),
         hlFuture,
+        widget.repository
+            .getNewsFeed(limit: 15)
+            .catchError((_) => <TyfNewsItem>[]),
       ]);
       if (mounted) {
         setState(() {
           _recentMeets = results[0] as List<MeetSummary>;
           _liveMeets = results[1] as List<LiveMeetSummary>;
           _highlights = results[2] as List<Map<String, dynamic>>;
+          _newsFeed = results[3] as List<TyfNewsItem>;
           _isLoading = false;
         });
       }
@@ -322,26 +339,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 AppSpacing.vLg,
 
-                                // 1. Öne Çıkan Canlı Havuz Spotlight Kartı
+                                // 1. TYF Duyurular & Takvim Haber Bandı
+                                if (_newsFeed.isNotEmpty) ...[
+                                  _buildNewsFeedBand(palette),
+                                  AppSpacing.v20,
+                                ],
+
+                                // 2. Öne Çıkan Canlı Havuz Spotlight Kartı
                                 if (_liveMeets.isNotEmpty) ...[
                                   _buildUnifiedSpotlightCard(
                                     _liveMeets.first,
                                     palette,
                                   ),
-                                  const SizedBox(height: 16),
+                                  AppSpacing.vMd,
                                 ],
 
-                                // 2. 2 Sütunlu Mikro-Rozetli Hızlı Araçlar
+                                // 3. 2 Sütunlu Mikro-Rozetli Hızlı Araçlar
                                 _buildUnifiedToolGrid(palette),
-                                const SizedBox(height: 18),
+                                AppSpacing.v20,
 
-                                // 3. Favori Sporcu & Kulüp Canlı Akışı
+                                // 4. Favori Sporcu & Kulüp Canlı Akışı
                                 if (_highlights.isNotEmpty) ...[
                                   _buildHighlightsSection(palette),
-                                  const SizedBox(height: 18),
+                                  AppSpacing.v20,
                                 ],
 
-                                // 4. Güncel Müsabakalar (25m / 50m Kulvar Şeritleri)
+                                // 5. Güncel Müsabakalar (25m / 50m Kulvar Şeritleri)
                                 _buildUnifiedMeetList(palette),
                               ],
                             ),
@@ -388,28 +411,24 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: CustomPaint(
-          painter: _HomePoolLanesPainter(
-            laneColor: Colors.white.withValues(alpha: 0.06),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  palette.surfaceContrast,
-                  Color.lerp(palette.surfaceContrast, palette.accent, 0.25)!,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1,
-              ),
+        borderRadius: AppRadius.cardRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                palette.surfaceContrast,
+                Color.lerp(palette.surfaceContrast, palette.accent, 0.25)!,
+              ],
             ),
-            padding: const EdgeInsets.all(18),
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(
+              color: palette.textOnContrast.withValues(alpha: 0.12),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(AppSpacing.s20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -520,7 +539,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
@@ -846,6 +864,543 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _launchPdfUrl(String url) async {
+    if (url.trim().isEmpty) return;
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Widget _buildNewsFeedBand(AppColorPalette palette) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'TYF Duyurular & Takvim',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BarajlarScreen(repository: widget.repository),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: palette.primary.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.full,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timer_outlined, size: 13, color: palette.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Barajlar',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: palette.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => EventCalendarScreen(repository: widget.repository),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: palette.accentSoft,
+                    borderRadius: AppRadius.full,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_month_outlined, size: 13, color: palette.accent),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Takvim',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: palette.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        AppSpacing.v12,
+        SizedBox(
+          height: 196,
+          child: PageView.builder(
+            controller: _newsPageController,
+            padEnds: false,
+            itemCount: _newsFeed.length,
+            onPageChanged: (idx) => setState(() => _newsPageIndex = idx),
+            itemBuilder: (context, index) {
+              final item = _newsFeed[index];
+              final isActive = index == _newsPageIndex;
+              final isMilli = item.belgeTuru == 'MILLI_TAKIM';
+              final isTakvim = item.belgeTuru == 'TAKVIM';
+              final badgeColor = isMilli
+                  ? palette.statusWarning
+                  : (isTakvim ? palette.statusSuccess : palette.accent);
+
+              return AnimatedScale(
+                scale: isActive ? 1.0 : 0.96,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 10, bottom: 4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          palette.surface,
+                          Color.lerp(palette.surface, badgeColor, 0.06)!,
+                        ],
+                      ),
+                      border: Border.all(
+                        color: isActive
+                            ? badgeColor.withValues(alpha: 0.35)
+                            : palette.border,
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isActive ? 0.07 : 0.03,
+                          ),
+                          blurRadius: isActive ? 14 : 6,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(22),
+                        onTap: () => _openNewsDetailSheet(item, palette),
+                        child: Padding(
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 3.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor.withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      item.turEtiketi,
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.fontFamily,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.3,
+                                        color: badgeColor,
+                                      ),
+                                    ),
+                                  ),
+                                  if (item.revizyonEtiketi.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: palette.primary
+                                              .withValues(alpha: 0.10),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          item.revizyonEtiketi,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontFamily:
+                                                AppTextStyles.fontFamily,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: palette.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  const Spacer(),
+                                  if (item.barajSayisi > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: palette.accentSoft,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.timer_outlined,
+                                            size: 11,
+                                            color: palette.accent,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            '${item.barajSayisi} Baraj',
+                                            style: TextStyle(
+                                              fontFamily:
+                                                  AppTextStyles.fontFamily,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: palette.accent,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                item.baslik,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.25,
+                                  color: palette.textPrimary,
+                                ),
+                              ),
+                              if (item.ozet.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  item.ozet,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: AppTextStyles.fontFamily,
+                                    fontSize: 11.5,
+                                    height: 1.35,
+                                    color: palette.textSecondary,
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              if (item.yasGrubu.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text(
+                                    item.yasGrubu,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: palette.accent,
+                                    ),
+                                  ),
+                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 12,
+                                    color: palette.textSecondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      [
+                                        if (item.tarihMetni.isNotEmpty)
+                                          item.tarihMetni,
+                                        if (item.sehirYer.isNotEmpty)
+                                          item.sehirYer,
+                                      ].isNotEmpty
+                                          ? [
+                                              if (item.tarihMetni.isNotEmpty)
+                                                item.tarihMetni,
+                                              if (item.sehirYer.isNotEmpty)
+                                                item.sehirYer,
+                                            ].join(' • ')
+                                          : 'TYF Resmi Belge',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.fontFamily,
+                                        fontSize: 11.5,
+                                        color: palette.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                  if (item.pdfUrl.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () => _launchPdfUrl(item.pdfUrl),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: palette.primary
+                                              .withValues(alpha: 0.10),
+                                          borderRadius:
+                                              BorderRadius.circular(7),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.picture_as_pdf_outlined,
+                                              size: 12,
+                                              color: palette.primary,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'PDF',
+                                              style: TextStyle(
+                                                fontFamily:
+                                                    AppTextStyles.fontFamily,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: palette.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (_newsFeed.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_newsFeed.length, (i) {
+              final active = i == _newsPageIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active
+                      ? palette.accent
+                      : palette.textTertiary.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _openNewsDetailSheet(TyfNewsItem item, AppColorPalette palette) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: palette.textTertiary.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      Chip(
+                        label: Text(item.turEtiketi),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      if (item.revizyonEtiketi.isNotEmpty)
+                        Chip(
+                          label: Text(item.revizyonEtiketi),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (item.havuz.isNotEmpty)
+                        Chip(
+                          label: Text(item.havuz),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (item.barajSayisi > 0)
+                        Chip(
+                          label: Text('${item.barajSayisi} Baraj Kuralı'),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    item.baslik,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (item.tarihMetni.isNotEmpty || item.sehirYer.isNotEmpty)
+                    Text(
+                      [
+                        if (item.tarihMetni.isNotEmpty) item.tarihMetni,
+                        if (item.sehirYer.isNotEmpty) item.sehirYer,
+                      ].join(' • '),
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  if (item.yasGrubu.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Yaş Grubu: ${item.yasGrubu}',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: palette.accent,
+                      ),
+                    ),
+                  ],
+                  if (item.ozet.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      item.ozet,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13.5,
+                        height: 1.45,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ],
+                  if (item.onemliNotlar.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'Önemli Notlar',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ...item.onemliNotlar.map(
+                      (note) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '• ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: palette.accent,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                note,
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 12.5,
+                                  height: 1.35,
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  if (item.pdfUrl.isNotEmpty)
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _launchPdfUrl(item.pdfUrl),
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        label: const Text('Resmi PDF Belgesini Aç'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildHighlightsSection(AppColorPalette palette) {
     final items = _highlights.take(5).toList();
     return Column(
@@ -1056,7 +1611,11 @@ class _SwimSearchDelegate extends SearchDelegate {
               ...athletes.map((a) => ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: const Icon(Icons.person, color: Colors.white, size: 20),
+                      child: Icon(
+                        Icons.person,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        size: 20,
+                      ),
                     ),
                     title: Text(StringUtils.formatAthleteName(a.name)),
                     subtitle: Text(
@@ -1084,7 +1643,11 @@ class _SwimSearchDelegate extends SearchDelegate {
               ...clubs.map((c) => ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Theme.of(context).colorScheme.secondary,
-                      child: const Icon(Icons.shield_outlined, color: Colors.white, size: 20),
+                      child: Icon(
+                        Icons.shield_outlined,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        size: 20,
+                      ),
                     ),
                     title: Text(c.name),
                     subtitle: Text('${c.athleteCount} Kayıtlı Sporcu'),
@@ -1104,28 +1667,6 @@ class _SwimSearchDelegate extends SearchDelegate {
       },
     );
   }
-}
-
-class _HomePoolLanesPainter extends CustomPainter {
-  final Color laneColor;
-
-  const _HomePoolLanesPainter({required this.laneColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = laneColor
-      ..strokeWidth = 1.2;
-    const laneCount = 5;
-    for (int i = 1; i < laneCount; i++) {
-      final y = size.height * (i / laneCount);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_HomePoolLanesPainter oldDelegate) =>
-      laneColor != oldDelegate.laneColor;
 }
 
 class _KheloOnTapScale extends StatefulWidget {

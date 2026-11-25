@@ -166,12 +166,15 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                       height: 24,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB),
+                          color: palette.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
+                          border: Border.all(
+                            color: palette.surface,
+                            width: 3,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF2563EB).withValues(alpha: 0.4),
+                              color: palette.primary.withValues(alpha: 0.4),
                               blurRadius: 8,
                             ),
                           ],
@@ -187,7 +190,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                         ? palette.accent
                         : (club.isSchool
                             ? palette.infoCyan
-                            : const Color(0xFF2563EB));
+                            : palette.primary);
                     final size = isSelected ? 40.0 : 32.0;
                     final shortName = StringUtils.toTitleCase(club.name)
                         .replaceAll(
@@ -234,12 +237,12 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                                     bottomLeft: Radius.circular(4),
                                   ),
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: palette.surface,
                                     width: 2.5,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(
+                                      color: palette.shadowTint.withValues(
                                         alpha: isSelected ? 0.32 : 0.22,
                                       ),
                                       blurRadius: isSelected ? 10 : 6,
@@ -254,7 +257,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                                         ? Icons.school_rounded
                                         : Icons.shield_rounded,
                                     size: isSelected ? 18 : 14,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 ),
                               ),
@@ -264,18 +267,18 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                               Flexible(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 3,
+                                    horizontal: AppSpacing.sm,
+                                    vertical: AppSpacing.xs,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.94),
-                                    borderRadius: BorderRadius.circular(10),
+                                    color: palette.surface.withValues(alpha: 0.92),
+                                    borderRadius: AppRadius.small,
                                     border: Border.all(
-                                      color: Colors.black.withValues(alpha: 0.12),
+                                      color: palette.border,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.12),
+                                        color: palette.shadowTint.withValues(alpha: 0.12),
                                         blurRadius: 4,
                                         offset: const Offset(0, 2),
                                       ),
@@ -285,10 +288,11 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                                     labelText,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFF0F172A),
+                                      color: palette.textPrimary,
                                     ),
                                   ),
                                 ),
@@ -460,7 +464,7 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                     ),
                     const SizedBox(width: 8),
                     if (_selectedClub!.id != null)
-                      ElevatedButton(
+                      FilledButton(
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -473,15 +477,16 @@ class _ClubMapSearchScreenState extends State<ClubMapSearchScreen> {
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
+                        style: FilledButton.styleFrom(
                           backgroundColor: palette.accent,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: AppRadius.buttonRadius,
                           ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.s12,
                           ),
                         ),
                         child: const Text(

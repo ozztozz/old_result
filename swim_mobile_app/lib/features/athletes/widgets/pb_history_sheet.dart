@@ -347,10 +347,15 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                           ),
                           AppSpacing.v12,
 
-                          // Hedef Reglaman Barajı Kartı
+                          // Hedef Reglaman Barajı Kartları
                           if (_targets.isNotEmpty) ...[
-                            _buildTargetBarajCard(palette, _targets.first),
-                            AppSpacing.v12,
+                            ..._targets.take(3).map(
+                                  (t) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: _buildTargetBarajCard(palette, t),
+                                  ),
+                                ),
+                            const SizedBox(height: 4),
                           ],
 
                           // Gelişim Grafiği Kartı

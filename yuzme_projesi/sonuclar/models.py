@@ -304,6 +304,10 @@ class Event(models.Model):
     yaris_tarihi_baslangic = models.CharField(max_length=20, blank=True, null=True, db_index=True, verbose_name="Yarış Tarihi (Başlangıç)")
     yaris_tarihi_bitis = models.CharField(max_length=20, blank=True, null=True, verbose_name="Yarış Tarihi (Bitiş)")
     kaynak_turu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Varsayılan Kaynak Türü")
+    yas_grubu = models.CharField(max_length=255, blank=True, null=True, verbose_name="Yaş Grubu / Kategori")
+    min_yas = models.IntegerField(blank=True, null=True, verbose_name="Min Yaş")
+    max_yas = models.IntegerField(blank=True, null=True, verbose_name="Max Yaş")
+    havuz = models.CharField(max_length=30, blank=True, null=True, verbose_name="Havuz (25m/50m)")
     toplam_yaris_sayisi = models.IntegerField(default=0, verbose_name="Toplam Yarış Sayısı")
     toplam_sporcu_sayisi = models.IntegerField(default=0, verbose_name="Toplam Sporcu Sayısı")
     olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
@@ -582,3 +586,104 @@ class MobilUygulamaSurumu(models.Model):
             except Exception:
                 pass
         super().save(*args, **kwargs)
+
+
+class TyfBelge(models.Model):
+    TUR_CHOICES = [
+        ('TAKVIM', 'Faaliyet Takvimi'),
+        ('REGLAMAN', 'Müsabaka Reglamanı'),
+        ('MILLI_TAKIM', 'Milli Takım Kriterleri'),
+        ('DUYURU', 'Duyuru / Genelge'),
+    ]
+
+    belge_turu = models.CharField(max_length=20, choices=TUR_CHOICES, default='DUYURU', db_index=True, verbose_name="Belge Türü")
+    baslik = models.CharField(max_length=500, verbose_name="Belge Başlığı")
+    revizyon_etiketi = models.CharField(max_length=100, blank=True, null=True, verbose_name="Revizyon Etiketi")
+    kaynak_sayfa = models.URLField(max_length=500, blank=True, null=True, verbose_name="Kaynak Sayfa")
+    kaynak_url = models.URLField(max_length=700, unique=True, verbose_name="TYF Dosya URL")
+    yerel_dosya = models.FileField(upload_to="tyf_belgeler/%Y-%m/", blank=True, null=True, verbose_name="Yerel PDF Dosyası")
+
+    tarih_metni = models.CharField(max_length=150, blank=True, null=True, verbose_name="Tarih Metni")
+    baslangic_tarihi = models.CharField(max_length=20, blank=True, null=True, db_index=True, verbose_name="Başlangıç Tarihi")
+    bitis_tarihi = models.CharField(max_length=20, blank=True, null=True, verbose_name="Bitiş Tarihi")
+    sehir_yer = models.CharField(max_length=200, blank=True, null=True, verbose_name="Şehir / Yer")
+    havuz = models.CharField(max_length=30, blank=True, null=True, verbose_name="Havuz")
+    yas_grubu = models.CharField(max_length=255, blank=True, null=True, verbose_name="Yaş Grubu")
+    min_yas = models.IntegerField(blank=True, null=True, verbose_name="Min Yaş")
+    max_yas = models.IntegerField(blank=True, null=True, verbose_name="Max Yaş")
+
+    ozet = models.TextField(blank=True, null=True, verbose_name="Haber Bandı Özeti")
+    onemli_notlar = models.JSONField(default=list, blank=True, verbose_name="Önemli Notlar")
+    baraj_gecerlilik_metni = models.CharField(max_length=150, blank=True, null=True, verbose_name="Baraj Geçerlilik Tarihi (Metin)")
+    baraj_gecerlilik_baslangic = models.CharField(max_length=20, blank=True, null=True, verbose_name="Baraj Geçerlilik Başlangıç")
+    baraj_gecerlilik_bitis = models.CharField(max_length=20, blank=True, null=True, verbose_name="Baraj Geçerlilik Bitiş")
+    gemini_json = models.JSONField(default=dict, blank=True, verbose_name="Gemini Analiz Çıktısı")
+
+    event = models.ForeignKey(
+        Event,
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='tyf_belgeler',
+        verbose_name="İlişkili Müsabaka (Event)",
+    )
+
+    etag = models.CharField(max_length=150, blank=True, null=True, verbose_name="ETag")
+    last_modified = models.CharField(max_length=100, blank=True, null=True, verbose_name="Last-Modified")
+    content_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True, verbose_name="SHA-256 Hash")
+    aktif = models.BooleanField(default=True, db_index=True, verbose_name="Haber Bandında Göster")
+    son_kontrol_tarihi = models.DateTimeField(blank=True, null=True, verbose_name="Son Kontrol Tarihi")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    guncellenme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        db_table = 'tyf_belgeler'
+        verbose_name = "TYF Belgesi"
+        verbose_name_plural = "TYF Belgeleri"
+        ordering = ['-guncellenme_tarihi', '-olusturulma_tarihi']
+
+    def __str__(self):
+        return f"[{self.belge_turu}] {self.baslik}"
+
+
+class BarajKurali(models.Model):
+    belge = models.ForeignKey(
+        TyfBelge,
+        models.CASCADE,
+        blank=True,
+        null=True,
+        related_name='baraj_kurallari',
+        verbose_name="Kaynak Belge",
+    )
+    event = models.ForeignKey(
+        Event,
+        models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='baraj_kurallari',
+        verbose_name="İlişkili Müsabaka (Event)",
+    )
+    baraj_adi = models.CharField(max_length=300, verbose_name="Baraj Adı")
+    baraj_turu = models.CharField(max_length=60, default='Katılım Barajı', db_index=True, verbose_name="Baraj Türü")
+    havuz = models.CharField(max_length=20, blank=True, null=True, db_index=True, verbose_name="Havuz")
+    cinsiyet = models.CharField(max_length=20, db_index=True, verbose_name="Cinsiyet")
+    yas_etiketi = models.CharField(max_length=100, blank=True, null=True, verbose_name="Yaş Etiketi")
+    dogum_yillari = models.JSONField(default=list, blank=True, verbose_name="Doğum Yılları")
+    max_dogum_yili = models.IntegerField(blank=True, null=True, verbose_name="Max Doğum Yılı (Açık Uçlu)")
+    min_yas = models.IntegerField(blank=True, null=True, verbose_name="Min Yaş")
+    max_yas = models.IntegerField(blank=True, null=True, verbose_name="Max Yaş")
+    mesafe = models.IntegerField(db_index=True, verbose_name="Mesafe")
+    stil = models.CharField(max_length=50, db_index=True, verbose_name="Stil")
+    sure = models.CharField(max_length=30, verbose_name="Baraj Süresi")
+    sure_saniye = models.FloatField(verbose_name="Süre (Saniye)")
+    sure_cs = models.IntegerField(verbose_name="Süre (Salise/CS)")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+
+    class Meta:
+        db_table = 'baraj_kurallari'
+        verbose_name = "Baraj Kuralı"
+        verbose_name_plural = "Baraj Kuralları"
+        ordering = ['baraj_adi', 'havuz', 'cinsiyet', 'mesafe', 'stil']
+
+    def __str__(self):
+        return f"{self.baraj_adi} | {self.cinsiyet} {self.yas_etiketi} {self.mesafe}m {self.stil}: {self.sure}"

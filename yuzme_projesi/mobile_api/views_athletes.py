@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Counter
+from django.db.models import Count, F, Q, Window
+from django.db.models.functions import RowNumber
 from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
 from django.utils import timezone
@@ -8,6 +10,7 @@ from sonuclar.local_baraj_parser import _fold_tr, _normalize_stil
 from .utils import (
     api_response,
     api_error,
+    cache_api_response,
     seconds_to_cs,
     map_result_status,
     map_stroke,
@@ -17,28 +20,54 @@ from .utils import (
 
 
 @require_GET
+@cache_api_response(60)
 def get_athlete_detail(request, athlete_id: int):
     """
     Sporcu profil kartı, 25m/50m Kişisel En İyi (PB) dereceleri ve kariyer özeti.
     """
     try:
-        athlete = Sporcu.objects.select_related('birincil_kulup').get(pk=athlete_id)
+        athlete = (
+            Sporcu.objects.select_related('birincil_kulup')
+            .only(
+                'id', 'sporcu_adi', 'dogum_yili', 'cinsiyet', 'birincil_kulup_id',
+                'birincil_kulup__id', 'birincil_kulup__kulup_adi',
+            )
+            .get(pk=athlete_id)
+        )
     except Sporcu.DoesNotExist:
         return api_error('not_found', 'Sporcu bulunamadı', status=404)
 
-    # Aktif kulüp ve okul
-    active_club = athlete.aktif_kulup()
+    # Aktif kulüp ve okul (tek sorguda kulüp tarihçesinden çözülür)
+    tarihce_list = list(
+        athlete.kulup_tarihcesi.select_related('kulup')
+        .only(
+            'id', 'kulup_id', 'aktif_kulup_mu', 'son_yaris_tarihi',
+            'kulup__id', 'kulup__kulup_adi', 'kulup__okul_mu',
+        )
+        .order_by('-son_yaris_tarihi', '-id')
+    )
+    active_club = (
+        next((t.kulup for t in tarihce_list if t.kulup and t.kulup.okul_mu == 0 and t.aktif_kulup_mu == 1), None)
+        or next((t.kulup for t in tarihce_list if t.kulup and t.kulup.okul_mu == 0), None)
+        or (tarihce_list[0].kulup if tarihce_list else None)
+        or athlete.birincil_kulup
+    )
     active_club_data = {
         'id': active_club.id,
         'name': active_club.kulup_adi
     } if active_club else None
 
-    school_name = athlete.okul()
+    school_entry = next((t for t in tarihce_list if t.kulup and t.kulup.okul_mu == 1), None)
+    school_name = school_entry.kulup.kulup_adi if school_entry else None
 
-    # Tüm geçerli dereceler
+    # Tüm geçerli dereceler (yalnızca gerekli sütunlar)
     all_results = list(
-        athlete.yaris_sonuclari.select_related('event', 'kulup')
+        athlete.yaris_sonuclari.select_related('event')
         .filter(derece_saniye__isnull=False, derece_saniye__gt=0)
+        .only(
+            'id', 'mesafe', 'stil', 'derece', 'derece_saniye', 'puan', 'sira',
+            'kaynak_turu', 'event__musabaka_adi', 'event__yaris_tarihi_baslangic',
+        )
         .order_by('derece_saniye')
     )
 
@@ -76,15 +105,19 @@ def get_athlete_detail(request, athlete_id: int):
     pbs_sc.sort(key=sort_fn)
     pbs_lc.sort(key=sort_fn)
 
-    # Kariyer İstatistikleri
-    total_races = athlete.yaris_sonuclari.count()
+    # Kariyer İstatistikleri (tek aggregate sorgusu)
+    stats_agg = athlete.yaris_sonuclari.aggregate(
+        total_races=Count('id'),
+        standards_count=Count(
+            'id',
+            filter=Q(baraj__isnull=False) & ~Q(baraj='') & ~Q(baraj='-') & ~Q(baraj__iexact='HAYIR'),
+        ),
+    )
+    total_races = stats_agg['total_races'] or 0
     podium_results = [r for r in all_results if str(r.sira or '').strip() in ('1', '2', '3')]
     podium_count = len(podium_results)
     podium_rate = round((podium_count / total_races) * 100, 1) if total_races > 0 else 0
-
-    standards_count = athlete.yaris_sonuclari.exclude(
-        baraj__isnull=True
-    ).exclude(baraj='').exclude(baraj='-').exclude(baraj__iexact='HAYIR').count()
+    standards_count = stats_agg['standards_count'] or 0
 
     # Scout değerlendirme notu
     stiller = [r.stil for r in all_results if r.stil]
@@ -135,6 +168,7 @@ def get_athlete_detail(request, athlete_id: int):
 
 
 @require_GET
+@cache_api_response(30)
 def get_athlete_races(request, athlete_id: int):
     """Sporcunun kronolojik tüm yarış geçmişi (Filtreli ve sayfalı)."""
     try:
@@ -142,8 +176,14 @@ def get_athlete_races(request, athlete_id: int):
     except Sporcu.DoesNotExist:
         return api_error('not_found', 'Sporcu bulunamadı', status=404)
 
-    qs = athlete.yaris_sonuclari.select_related('event', 'kulup').order_by(
-        '-event__yaris_tarihi_baslangic', '-id'
+    qs = (
+        athlete.yaris_sonuclari.select_related('event', 'kulup')
+        .only(
+            'id', 'event_id', 'yaris_no', 'mesafe', 'stil', 'seri', 'kulvar',
+            'sira', 'derece', 'derece_saniye', 'puan', 'baraj',
+            'event__musabaka_adi', 'event__yaris_tarihi_baslangic', 'kulup__kulup_adi',
+        )
+        .order_by('-event__yaris_tarihi_baslangic', '-id')
     )
 
     stroke = (request.GET.get('stroke') or '').strip().lower()
@@ -213,6 +253,7 @@ def get_athlete_races(request, athlete_id: int):
 
 
 @require_GET
+@cache_api_response(300)
 def get_athlete_clubs(request, athlete_id: int):
     """Sporcunun kulüp lisans tarihçesi."""
     try:
@@ -242,6 +283,7 @@ def get_athlete_clubs(request, athlete_id: int):
 
 
 @require_GET
+@cache_api_response(30)
 def get_athletes_summary(request):
     """
     Favoriler ekranı için toplu sporcu özeti (N+1 isteklerini önler).
@@ -255,17 +297,48 @@ def get_athletes_summary(request):
     if not id_list:
         return api_response({'data': []}, request=request)
 
-    athletes = Sporcu.objects.filter(id__in=id_list).select_related('birincil_kulup')
+    athletes = (
+        Sporcu.objects.filter(id__in=id_list)
+        .select_related('birincil_kulup')
+        .only('id', 'sporcu_adi', 'dogum_yili', 'toplam_yaris_sayisi', 'birincil_kulup__kulup_adi')
+    )
+
+    latest_rows = (
+        YarisSonucu.objects.filter(sporcu_id__in=id_list)
+        .select_related('event')
+        .only(
+            'id', 'sporcu_id', 'mesafe', 'stil', 'derece', 'derece_saniye',
+            'event__musabaka_adi', 'event__yaris_tarihi_baslangic',
+        )
+        .annotate(
+            rn=Window(
+                expression=RowNumber(),
+                partition_by=[F('sporcu_id')],
+                order_by=[F('event__yaris_tarihi_baslangic').desc(), F('id').desc()],
+            )
+        )
+        .filter(rn=1)
+    )
+    latest_map = {r.sporcu_id: r for r in latest_rows}
+
+    best_rows = (
+        YarisSonucu.objects.filter(sporcu_id__in=id_list, puan__gt=0)
+        .only('id', 'sporcu_id', 'mesafe', 'stil', 'derece', 'puan')
+        .annotate(
+            rn=Window(
+                expression=RowNumber(),
+                partition_by=[F('sporcu_id')],
+                order_by=[F('puan').desc(), F('id').desc()],
+            )
+        )
+        .filter(rn=1)
+    )
+    best_map = {r.sporcu_id: r for r in best_rows}
+
     summary_data = []
-
     for a in athletes:
-        latest_race = a.yaris_sonuclari.select_related('event').order_by(
-            '-event__yaris_tarihi_baslangic', '-id'
-        ).first()
-
-        best_race = a.yaris_sonuclari.filter(
-            puan__gt=0
-        ).order_by('-puan').first()
+        latest_race = latest_map.get(a.id)
+        best_race = best_map.get(a.id)
 
         summary_data.append({
             'id': a.id,
@@ -293,6 +366,7 @@ def get_athletes_summary(request):
 
 
 @require_GET
+@cache_api_response(120)
 def get_athlete_baraj_targets(request, athlete_id: int):
     """
     Sporcunun cinsiyeti ve doğum yılına göre tanımlı reglaman barajlarını
@@ -328,7 +402,128 @@ def get_athlete_baraj_targets(request, athlete_id: int):
 
     targets = []
     seen_rules = set()
-    for cy in CanliYaris.objects.exclude(barajlar__isnull=True).order_by('-id'):
+
+    # Sporcunun branş/havuz bazlı yarış sonuçları: (havuz, mesafe, stil) -> [(event_date, cs), ...]
+    race_records = {}
+    from .utils import detect_course, seconds_to_cs
+    for r in (
+        athlete.yaris_sonuclari.select_related('event')
+        .filter(derece_saniye__gt=0, mesafe__isnull=False, stil__isnull=False)
+        .only(
+            'mesafe', 'stil', 'derece_saniye',
+            'event__musabaka_adi', 'event__kaynak_turu', 'event__havuz',
+            'event__yaris_tarihi_baslangic',
+        )
+    ):
+        r_stil = _normalize_stil(r.stil or '')
+        if not r_stil:
+            continue
+        r_course = (r.event.havuz if (r.event and r.event.havuz in ('25m', '50m')) else None)
+        if not r_course and r.event:
+            c_code = detect_course(r.event.musabaka_adi or r.event.kaynak_turu)
+            r_course = '25m' if c_code == 'SC' else '50m'
+        cs = seconds_to_cs(r.derece_saniye)
+        ev_date = (r.event.yaris_tarihi_baslangic or '') if r.event else ''
+        if cs and cs > 0 and r_course:
+            race_records.setdefault((r_course, int(r.mesafe), r_stil), []).append((ev_date, cs))
+
+    def _best_pb_in_window(havuz_val, mesafe_val, stil_val, start_date, end_date):
+        recs = race_records.get((havuz_val or '', mesafe_val, stil_val), [])
+        if not recs:
+            return pb_cs, pb_cs
+        overall_best = min(cs for _, cs in recs)
+        if start_date or end_date:
+            filtered_cs = [
+                cs for ev_d, cs in recs
+                if ev_d and (not start_date or ev_d >= start_date) and (not end_date or ev_d <= end_date)
+            ]
+            return (min(filtered_cs) if filtered_cs else None), overall_best
+        if pb_cs is not None:
+            return pb_cs, overall_best
+        return overall_best, overall_best
+
+    # 1. İlişkisel BarajKurali tablosundan (TYF Takvim & Reglamanları) oku
+    from sonuclar.models import BarajKurali
+    bk_qs = BarajKurali.objects.select_related('event', 'belge').order_by('-id')
+    if target_havuz:
+        bk_qs = bk_qs.filter(havuz=target_havuz)
+    if target_gender == 'erkek':
+        bk_qs = bk_qs.filter(cinsiyet='Erkek')
+    elif target_gender == 'kadin':
+        bk_qs = bk_qs.filter(cinsiyet='Kadın')
+    if target_dist:
+        bk_qs = bk_qs.filter(mesafe=target_dist)
+    if target_stil:
+        bk_qs = bk_qs.filter(stil=target_stil)
+    if birth_year is not None:
+        bk_qs = bk_qs.filter(Q(max_dogum_yili__isnull=True) | Q(max_dogum_yili__gte=birth_year))
+
+    for bk in bk_qs:
+        if birth_year is not None:
+            dys = bk.dogum_yillari or []
+            max_dy = bk.max_dogum_yili
+            if not ((dys and birth_year in dys) or (max_dy is not None and birth_year <= max_dy)):
+                continue
+        dedup_key = (bk.belge_id, bk.baraj_adi, bk.baraj_turu, bk.havuz, bk.yas_etiketi, bk.mesafe, bk.stil, bk.sure_cs)
+        if dedup_key in seen_rules:
+            continue
+        seen_rules.add(dedup_key)
+        g_start = (bk.belge.baraj_gecerlilik_baslangic or '') if bk.belge else ''
+        g_end = (bk.belge.baraj_gecerlilik_bitis or '') if bk.belge else ''
+        g_text = (bk.belge.baraj_gecerlilik_metni or '') if bk.belge else ''
+        meet_date = (
+            (bk.belge.tarih_metni if bk.belge and bk.belge.tarih_metni else None)
+            or (bk.event.yaris_tarihi_ham if bk.event and bk.event.yaris_tarihi_ham else '')
+        )
+        ev_city = (
+            (bk.event.sehir if bk.event and bk.event.sehir else None)
+            or (bk.belge.sehir_yer if bk.belge and bk.belge.sehir_yer else '')
+        )
+        ev_start = (
+            (bk.event.yaris_tarihi_baslangic if bk.event and bk.event.yaris_tarihi_baslangic else None)
+            or (bk.belge.baslangic_tarihi if bk.belge and bk.belge.baslangic_tarihi else '')
+        )
+        eff_pb_cs, overall_pb_cs = _best_pb_in_window(bk.havuz, bk.mesafe, bk.stil, g_start, g_end)
+        diff_cs = (eff_pb_cs - bk.sure_cs) if eff_pb_cs is not None else None
+        is_in_window = eff_pb_cs is not None
+        meet_name = (bk.event.musabaka_adi if bk.event else None) or (bk.belge.baslik if bk.belge else None) or bk.baraj_adi
+        pdf_url = ''
+        if bk.belge:
+            if bk.belge.yerel_dosya:
+                try:
+                    pdf_url = request.build_absolute_uri(bk.belge.yerel_dosya.url)
+                except Exception:
+                    pdf_url = bk.belge.yerel_dosya.url
+            if not pdf_url:
+                pdf_url = bk.belge.kaynak_url or ''
+        targets.append({
+            'belge_id': bk.belge_id,
+            'event_id': bk.event_id,
+            'meet_name': meet_name,
+            'meet_date': meet_date,
+            'city': ev_city,
+            'start_date': ev_start,
+            'baraj_adi': bk.baraj_adi,
+            'baraj_turu': bk.baraj_turu,
+            'age_label': bk.yas_etiketi or '',
+            'havuz': bk.havuz or '',
+            'mesafe': bk.mesafe,
+            'stil': bk.stil,
+            'target_time': bk.sure,
+            'target_cs': bk.sure_cs,
+            'pb_cs': eff_pb_cs,
+            'overall_pb_cs': overall_pb_cs,
+            'is_in_validity_window': is_in_window,
+            'diff_cs': diff_cs,
+            'passed': (diff_cs <= 0) if diff_cs is not None else None,
+            'baraj_gecerlilik_metni': g_text,
+            'baraj_gecerlilik_baslangic': g_start,
+            'baraj_gecerlilik_bitis': g_end,
+            'pdf_url': pdf_url,
+        })
+
+    # 2. CanliYaris JSON barajlarını birleştir
+    for cy in CanliYaris.objects.exclude(barajlar__isnull=True).only('id', 'musabaka_adi', 'barajlar').order_by('-id'):
         bdata = cy.barajlar
         if not isinstance(bdata, dict) or not bdata.get('barajlar'):
             continue
@@ -351,7 +546,7 @@ def get_athlete_baraj_targets(request, athlete_id: int):
             if not sure_sn:
                 continue
             target_cs = int(round(float(sure_sn) * 100))
-            dedup_key = (baraj_adi, rule.get('havuz'), rule.get('yas_etiketi'), target_cs)
+            dedup_key = (baraj_adi, rule.get('baraj_turu') or 'Katılım Barajı', rule.get('havuz'), rule.get('yas_etiketi'), target_cs)
             if dedup_key in seen_rules:
                 continue
             seen_rules.add(dedup_key)

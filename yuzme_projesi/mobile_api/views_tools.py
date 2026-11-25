@@ -7,6 +7,7 @@ from sonuclar.models import Kulup, YarisSonucu
 from .utils import (
     api_response,
     api_error,
+    cache_api_response,
     seconds_to_cs,
     map_stroke,
     detect_course,
@@ -42,6 +43,7 @@ def _gender_filter_values(g: str):
 
 
 @require_GET
+@cache_api_response(60)
 def get_relay_simulator(request):
     """
     Kulüp sporcularının güncel PB derecelerinden en hızlı bayrak takımını simüle eder.
@@ -57,9 +59,12 @@ def get_relay_simulator(request):
 
     club = None
     if club_id and str(club_id).isdigit():
-        club = Kulup.objects.filter(pk=int(club_id)).first()
+        club = Kulup.objects.only('id', 'kulup_adi').filter(pk=int(club_id)).first()
     elif club_name:
-        club = Kulup.objects.filter(kulup_adi__iexact=club_name).first() or Kulup.objects.filter(kulup_adi__icontains=club_name).first()
+        club = (
+            Kulup.objects.only('id', 'kulup_adi').filter(kulup_adi__iexact=club_name).first()
+            or Kulup.objects.only('id', 'kulup_adi').filter(kulup_adi__icontains=club_name).first()
+        )
 
     if not club:
         return api_error('not_found', 'Kulüp bulunamadı', status=404)
@@ -88,7 +93,23 @@ def get_relay_simulator(request):
         .exclude(sporcu__sporcu_adi__startswith='Maskeli sporcu')
         .exclude(uyari_notu__iregex=r'DSQ|DNS|DNF|EXH')
         .select_related('sporcu', 'event')
+        .only(
+            'id', 'sporcu_id', 'stil', 'derece_saniye',
+            'sporcu__sporcu_adi', 'sporcu__dogum_yili',
+            'event__musabaka_adi', 'event__havuz', 'event__yaris_tarihi_baslangic',
+        )
     )
+    if course == 'SC':
+        qs = qs.filter(
+            Q(event__havuz='25m') |
+            ((Q(event__havuz__isnull=True) | Q(event__havuz='')) & (
+                Q(event__musabaka_adi__icontains='25M') |
+                Q(event__musabaka_adi__icontains='25 M') |
+                Q(event__musabaka_adi__icontains='KISA KULVAR')
+            ))
+        )
+    elif course == 'LC':
+        qs = qs.exclude(event__havuz='25m')
 
     g_vals = _gender_filter_values(gender)
     if g_vals:
@@ -174,6 +195,7 @@ def get_relay_simulator(request):
 
 
 @require_GET
+@cache_api_response(120)
 def get_rankings(request):
     """
     Branş, mesafe, cinsiyet, kulvar, il ve doğum yılına göre Top 25 sporcu sıralaması.
@@ -199,7 +221,25 @@ def get_rankings(request):
         .exclude(sporcu__sporcu_adi__startswith='Maskeli sporcu')
         .exclude(uyari_notu__iregex=r'DSQ|DNS|DNF|EXH')
         .select_related('sporcu', 'kulup', 'event')
+        .only(
+            'id', 'sporcu_id', 'kulup_id', 'event_id', 'derece_saniye', 'puan',
+            'sporcu__sporcu_adi', 'sporcu__dogum_yili',
+            'kulup__kulup_adi',
+            'event__musabaka_adi', 'event__havuz', 'event__yaris_tarihi_baslangic', 'event__sehir',
+        )
     )
+
+    if course == 'SC':
+        qs = qs.filter(
+            Q(event__havuz='25m') |
+            ((Q(event__havuz__isnull=True) | Q(event__havuz='')) & (
+                Q(event__musabaka_adi__icontains='25M') |
+                Q(event__musabaka_adi__icontains='25 M') |
+                Q(event__musabaka_adi__icontains='KISA KULVAR')
+            ))
+        )
+    elif course == 'LC':
+        qs = qs.exclude(event__havuz='25m')
 
     g_vals = _gender_filter_values(gender)
     if g_vals:
@@ -240,6 +280,7 @@ def get_rankings(request):
 
 
 @require_GET
+@cache_api_response(15)
 def get_highlights_feed(request):
     """
     Favori sporcular ve/veya seçili kulüp için en güncel canlı sonuç, kürsü ve baraj akışı.
@@ -264,6 +305,12 @@ def get_highlights_feed(request):
         YarisSonucu.objects.filter(q_filter, kaynak_turu='CANLI_SONUC', derece_saniye__gt=0)
         .exclude(uyari_notu__iregex=r'DSQ|DNS|DNF|EXH')
         .select_related('sporcu', 'kulup', 'event')
+        .only(
+            'id', 'sporcu_id', 'kulup_id', 'event_id', 'mesafe', 'stil',
+            'sira', 'derece', 'derece_saniye', 'puan', 'baraj',
+            'sporcu__sporcu_adi', 'kulup__kulup_adi',
+            'event__musabaka_adi', 'event__yaris_tarihi_baslangic',
+        )
         .order_by('-event__yaris_tarihi_baslangic', '-id')[:25]
     )
 

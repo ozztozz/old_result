@@ -1391,7 +1391,9 @@ class _LiveScreenState extends State<LiveScreen> {
                                                       ? FontWeight.w700
                                                       : FontWeight.w600,
                                               color: _feedTabIndex == tab.$1
-                                                  ? Colors.white
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .onPrimary
                                                   : palette.textSecondary,
                                             ),
                                           ),
@@ -1585,7 +1587,7 @@ class _LiveScreenState extends State<LiveScreen> {
                     Icons.tune_rounded,
                     size: 18,
                     color: _onlySelectedFocus
-                        ? Colors.white
+                        ? Theme.of(context).colorScheme.onPrimary
                         : palette.accent,
                   ),
                 ),

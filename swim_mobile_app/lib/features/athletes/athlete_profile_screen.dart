@@ -9,7 +9,9 @@ import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/athlete.dart';
+import '../../data/models/baraj_rule.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/baraj_event_selector.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
 import '../../shared/widgets/status_badge.dart';
@@ -40,6 +42,12 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   AthleteDetail? _athlete;
+  List<Map<String, dynamic>> _barajTargets = [];
+  List<BarajEventOption> _barajEventCatalog = [];
+  String _selectedBarajMeet = '';
+  String _selectedBarajCity = '';
+  String _selectedBarajMonth = '';
+  String _selectedBarajType = 'Katılım Barajı';
   bool _isFavorite = false;
   late TabController _tabController;
   int _selectedCourseIndex = 0; // 0: 50m Uzun Kulvar, 1: 25m Kısa Kulvar
@@ -47,7 +55,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _isFavorite = FavoriteAthletesService.instance.isFavorite(widget.athleteId);
     FavoriteAthletesService.instance.addListener(_onFavoritesChanged);
     _loadAthleteData();
@@ -70,10 +78,21 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   Future<void> _loadAthleteData() async {
     setState(() => _isLoading = true);
     try {
-      final athlete = await widget.repository.getAthleteDetail(widget.athleteId);
+      final results = await Future.wait([
+        widget.repository.getAthleteDetail(widget.athleteId),
+        widget.repository
+            .getAthleteBarajTargets(widget.athleteId)
+            .catchError((_) => <Map<String, dynamic>>[]),
+        widget.repository
+            .getBarajlar()
+            .then((r) => r.events)
+            .catchError((_) => <BarajEventOption>[]),
+      ]);
       if (mounted) {
         setState(() {
-          _athlete = athlete;
+          _athlete = results[0] as AthleteDetail;
+          _barajTargets = results[1] as List<Map<String, dynamic>>;
+          _barajEventCatalog = results[2] as List<BarajEventOption>;
           _isLoading = false;
         });
       }
@@ -161,6 +180,10 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                     icon: Icons.timer_outlined,
                                   ),
                                   TabItemData(
+                                    title: 'Barajlar',
+                                    icon: Icons.flag_outlined,
+                                  ),
+                                  TabItemData(
                                     title: 'Scout Analizi',
                                     icon: Icons.insights_outlined,
                                   ),
@@ -174,6 +197,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                         controller: _tabController,
                         children: [
                           _buildBestTimesTab(context, palette, _athlete!),
+                          _buildBarajlarTab(context, palette),
                           _buildScoutAnalysisTab(context, palette, _athlete!),
                         ],
                       ),
@@ -613,6 +637,525 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     );
   }
 
+  /// 2. SEKME: Barajlar (Sezon Baraj Tablosu - 50m / 25m Kulvar)
+  Widget _buildBarajlarTab(
+    BuildContext context,
+    AppColorPalette palette,
+  ) {
+    final havuzFilter = _selectedCourseIndex == 0 ? '50m' : '25m';
+    final hasMatching = _barajTargets
+        .any((t) => (t['havuz'] ?? '').toString() == havuzFilter);
+
+    const chip50 = '50m Uzun Kulvar';
+    const chip25 = '25m Kısa Kulvar';
+    final selectedChip = _selectedCourseIndex == 0 ? chip50 : chip25;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s20,
+            AppSpacing.s12,
+            AppSpacing.s20,
+            AppSpacing.s12,
+          ),
+          child: ModernFilterChipBar(
+            chips: const [
+              FilterChipItem(label: chip50),
+              FilterChipItem(label: chip25),
+            ],
+            selectedChip: selectedChip,
+            onSelected: (label) {
+              setState(() {
+                _selectedCourseIndex = label == chip50 ? 0 : 1;
+              });
+            },
+          ),
+        ),
+        Expanded(
+          child: !hasMatching
+              ? Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.s20,
+                      AppSpacing.sm,
+                      AppSpacing.s20,
+                      64 +
+                          AppSpacing.md +
+                          MediaQuery.of(context).padding.bottom +
+                          AppSpacing.lg,
+                    ),
+                    child: EmptyStateWidget(
+                      title: 'Baraj Bilgisi Bulunamadı',
+                      message:
+                          '$havuzFilter kulvar için tanımlı baraj hedefi bulunmuyor.',
+                      icon: Icons.flag_outlined,
+                      compact: true,
+                    ),
+                  ),
+                )
+              : ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.s20,
+                    AppSpacing.xs,
+                    AppSpacing.s20,
+                    64 +
+                        AppSpacing.md +
+                        MediaQuery.of(context).padding.bottom +
+                        AppSpacing.lg,
+                  ),
+                  children: [
+                    _buildSeasonBarajCard(palette, havuzFilter),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSeasonBarajCard(AppColorPalette palette, String havuzFilter) {
+    final matching = _barajTargets
+        .where((t) => (t['havuz'] ?? '').toString() == havuzFilter)
+        .toList();
+    if (matching.isEmpty) return const SizedBox.shrink();
+
+    String eventKeyForRow(Map<String, dynamic> t) {
+      final evId = t['event_id'];
+      if (evId != null) return 'ev_$evId';
+      final title = (t['meet_name'] ?? t['baraj_adi'] ?? 'Baraj').toString();
+      final dt = (t['meet_date'] ?? '').toString().trim();
+      return '${title}_$dt';
+    }
+
+    BarajEventOption? findCatalogMatch(
+      int? eventId,
+      String barajAdi,
+      String title,
+    ) {
+      for (final c in _barajEventCatalog) {
+        if (eventId != null && c.eventId == eventId) return c;
+      }
+      for (final c in _barajEventCatalog) {
+        if (barajAdi.isNotEmpty && c.barajAdi == barajAdi) return c;
+        if (title.isNotEmpty && c.title == title) return c;
+      }
+      return null;
+    }
+
+    final eventsMap = <String, BarajEventOption>{};
+    for (final t in matching) {
+      final key = eventKeyForRow(t);
+      if (!eventsMap.containsKey(key)) {
+        final evId = (t['event_id'] as num?)?.toInt();
+        final title = (t['meet_name'] ?? t['baraj_adi'] ?? 'Baraj').toString();
+        final barajAdi = (t['baraj_adi'] ?? title).toString();
+        final catalog = findCatalogMatch(evId, barajAdi, title);
+
+        final rawCity = (t['city'] ?? '').toString().trim();
+        final rawDateText = (t['meet_date'] ?? '').toString().trim();
+        final rawStartDate = (t['start_date'] ?? '').toString().trim();
+        final rawValidity =
+            (t['baraj_gecerlilik_metni'] ?? '').toString().trim();
+
+        eventsMap[key] = BarajEventOption(
+          eventId: evId ?? catalog?.eventId,
+          barajAdi: barajAdi,
+          title: title,
+          city: rawCity.isNotEmpty ? rawCity : (catalog?.city ?? ''),
+          dateText:
+              rawDateText.isNotEmpty ? rawDateText : (catalog?.dateText ?? ''),
+          startDate: rawStartDate.isNotEmpty
+              ? rawStartDate
+              : (catalog?.startDate ?? ''),
+          validityText: rawValidity.isNotEmpty
+              ? rawValidity
+              : (catalog?.validityText ?? ''),
+        );
+      }
+    }
+
+    final allEvents = eventsMap.values.toList();
+    final cities = BarajEventSelector.extractCities(allEvents);
+    final months = BarajEventSelector.extractMonths(allEvents);
+    final filteredEvents = BarajEventSelector.filterEvents(
+      allEvents,
+      city: _selectedBarajCity,
+      month: _selectedBarajMonth,
+    );
+    final eventsToShow = filteredEvents.isNotEmpty ? filteredEvents : allEvents;
+
+    String eventSelectionId(BarajEventOption ev) =>
+        ev.eventId != null ? 'ev_${ev.eventId}' : '${ev.title}_${ev.dateText}';
+
+    final activeEv = eventsToShow.firstWhere(
+      (ev) => eventSelectionId(ev) == _selectedBarajMeet,
+      orElse: () => eventsToShow.first,
+    );
+    final activeKey = eventSelectionId(activeEv);
+
+    final meetRowsRaw = matching
+        .where((t) =>
+            eventKeyForRow(t) == activeKey &&
+            (t['baraj_turu'] ?? 'Katılım Barajı').toString() ==
+                _selectedBarajType)
+        .toList();
+
+    final seenEvents = <String>{};
+    final meetRows = <Map<String, dynamic>>[];
+    for (final t in meetRowsRaw) {
+      final k = '${t['mesafe']}_${t['stil']}';
+      if (seenEvents.add(k)) {
+        meetRows.add(t);
+      }
+    }
+
+    final withPb = meetRows.where((t) => t['passed'] != null).toList();
+    final passedCount = withPb.where((t) => t['passed'] == true).length;
+
+    const strokeOrder = [
+      'Serbest',
+      'Sırtüstü',
+      'Kurbağalama',
+      'Kelebek',
+      'Karışık',
+    ];
+    final byStroke = <String, List<Map<String, dynamic>>>{};
+    for (final t in meetRows) {
+      final s = (t['stil'] ?? '').toString();
+      if (s.isNotEmpty) byStroke.putIfAbsent(s, () => []).add(t);
+    }
+    for (final list in byStroke.values) {
+      list.sort((a, b) => ((a['mesafe'] as num?)?.toInt() ?? 0)
+          .compareTo((b['mesafe'] as num?)?.toInt() ?? 0));
+    }
+    final strokes = byStroke.keys.toList()
+      ..sort((a, b) {
+        final ia = strokeOrder.indexOf(a);
+        final ib = strokeOrder.indexOf(b);
+        return (ia == -1 ? 99 : ia).compareTo(ib == -1 ? 99 : ib);
+      });
+
+    return SoftGlassPanel(
+      level: 2,
+      borderRadius: AppRadius.cardRadius,
+      padding: AppSpacing.cardPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 3,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: palette.statusSuccess,
+                  borderRadius: AppRadius.full,
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Sezon Baraj Tablosu ($havuzFilter)',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: passedCount > 0
+                      ? palette.statusSuccessBg
+                      : palette.accentSoft,
+                  borderRadius: AppRadius.full,
+                ),
+                child: Text(
+                  '$passedCount/${meetRows.length} Geçti',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: passedCount > 0
+                        ? palette.statusSuccess
+                        : palette.accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.vSm,
+          // Barajlar sayfasıyla ortak Yer / Tarih filtreli Etkinlik Seçici
+          BarajEventSelector(
+            events: eventsToShow,
+            activeEvent: activeEv,
+            cities: cities,
+            months: months,
+            selectedCity: _selectedBarajCity,
+            selectedMonth: _selectedBarajMonth,
+            onCityChanged: (val) {
+              setState(() {
+                _selectedBarajCity = val;
+                final next = BarajEventSelector.filterEvents(
+                  allEvents,
+                  city: val,
+                  month: _selectedBarajMonth,
+                );
+                if (next.isNotEmpty) {
+                  _selectedBarajMeet = eventSelectionId(next.first);
+                }
+              });
+            },
+            onMonthChanged: (val) {
+              setState(() {
+                _selectedBarajMonth = val;
+                final next = BarajEventSelector.filterEvents(
+                  allEvents,
+                  city: _selectedBarajCity,
+                  month: val,
+                );
+                if (next.isNotEmpty) {
+                  _selectedBarajMeet = eventSelectionId(next.first);
+                }
+              });
+            },
+            onEventSelected: (ev) {
+              setState(() => _selectedBarajMeet = eventSelectionId(ev));
+            },
+          ),
+          AppSpacing.vSm,
+          Row(
+            children: [
+              ChoiceChip(
+                label: const Text('Katılım'),
+                selected: _selectedBarajType == 'Katılım Barajı',
+                onSelected: (_) =>
+                    setState(() => _selectedBarajType = 'Katılım Barajı'),
+                visualDensity: VisualDensity.compact,
+                selectedColor: palette.accentSoft,
+              ),
+              const SizedBox(width: 6),
+              ChoiceChip(
+                label: const Text('Harcırah'),
+                selected: _selectedBarajType == 'Harcırah Barajı',
+                onSelected: (_) =>
+                    setState(() => _selectedBarajType = 'Harcırah Barajı'),
+                visualDensity: VisualDensity.compact,
+                selectedColor: palette.accentSoft,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Kompakt tablo başlığı
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 52,
+                  child: Text('MESAFE',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                ),
+                Expanded(
+                  child: Text(
+                    'BARAJ',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'SPORCU',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 72,
+                  child: Text(
+                    'DURUM',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 6, color: palette.divider),
+          if (strokes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Bu etkinlikte seçili tür için baraj bulunamadı.',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 12,
+                  color: palette.textSecondary,
+                ),
+              ),
+            )
+          else
+            ...strokes.map((stroke) {
+              final list = byStroke[stroke]!;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 3),
+                    child: Text(
+                      stroke,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: palette.primary,
+                      ),
+                    ),
+                  ),
+                  ...list.map((t) {
+                    final mesafe = t['mesafe'];
+                    final targetTime = (t['target_time'] ?? '-').toString();
+                    final pbCs = (t['pb_cs'] as num?)?.toInt();
+                    final overallPbCs = (t['overall_pb_cs'] as num?)?.toInt();
+                    final diffCs = (t['diff_cs'] as num?)?.toInt();
+                    final passed = t['passed'] == true;
+                    final isFallbackPb = pbCs == null && overallPbCs != null;
+                    final shownPbCs = pbCs ?? overallPbCs;
+                    final pbText = shownPbCs == null
+                        ? '-'
+                        : SwimTimeFormatter.formatCs(shownPbCs);
+                    final statusText = diffCs != null
+                        ? (passed
+                            ? 'GEÇTİ'
+                            : '+${(diffCs / 100).toStringAsFixed(2)}s')
+                        : (isFallbackPb ? 'Dönem Dışı' : '-');
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 5, horizontal: 4),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: palette.divider.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 52,
+                            child: Text(
+                              '${mesafe ?? "-"}m',
+                              style: TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: palette.accent,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              targetTime,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'JetBrainsMono',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: palette.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  pbText,
+                                  style: TextStyle(
+                                    fontFamily: 'JetBrainsMono',
+                                    fontSize: 12,
+                                    fontWeight: isFallbackPb
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                    color: isFallbackPb
+                                        ? palette.statusWarning
+                                        : (shownPbCs != null
+                                            ? palette.textPrimary
+                                            : palette.textTertiary),
+                                  ),
+                                ),
+                                if (isFallbackPb) ...[
+                                  const SizedBox(width: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: palette.statusWarningBg,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'PB',
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.fontFamily,
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: palette.statusWarning,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 72,
+                            child: Text(
+                              statusText,
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontFamily: 'JetBrainsMono',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: diffCs != null
+                                    ? (passed
+                                        ? palette.statusSuccess
+                                        : palette.accent)
+                                    : (isFallbackPb
+                                        ? palette.statusWarning
+                                        : palette.textTertiary),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
   /// PBs listesini yüzme stiline (Serbest, Sırtüstü, Kurbağalama vb.) göre gruplar ve mesafeye göre sıralar
   Map<String, List<PersonalBest>> _groupPbsByStroke(List<PersonalBest> pbs) {
     final Map<String, List<PersonalBest>> grouped = {};
@@ -663,13 +1206,20 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     List<PersonalBest> strokePbs,
   ) {
     final isDark = palette.isDark;
-    final tileFill = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : palette.textPrimary.withValues(alpha: 0.05);
-    final tileBorderColor =
-        Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
-    final chipFill = Colors.white.withValues(alpha: isDark ? 0.09 : 0.14);
-    final chipBorder = Colors.white.withValues(alpha: isDark ? 0.16 : 0.25);
+    final tileFill = palette.isCrispCardTheme
+        ? palette.surfaceSecondary
+        : (isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : palette.textPrimary.withValues(alpha: 0.05));
+    final tileBorderColor = palette.isCrispCardTheme
+        ? palette.border
+        : Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
+    final chipFill = palette.isCrispCardTheme
+        ? palette.surfaceSecondary
+        : Colors.white.withValues(alpha: isDark ? 0.09 : 0.14);
+    final chipBorder = palette.isCrispCardTheme
+        ? palette.border
+        : Colors.white.withValues(alpha: isDark ? 0.16 : 0.25);
 
     return SoftGlassPanel(
       level: 2,
