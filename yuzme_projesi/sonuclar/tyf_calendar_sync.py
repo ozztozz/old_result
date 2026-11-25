@@ -145,7 +145,163 @@ def parse_turkish_date_range(date_text: str) -> Tuple[Optional[str], Optional[st
             iso = f"{yr:04d}-{mon:02d}-{d1:02d}"
             return iso, iso
 
+    # '2026 aralik 22 26' (dosya adı formatı: 2026-ARALIK--22-26)
+    m_ymd_range = re.search(
+        r"\b(20\d{2})\s+([a-z]+)\s+(\d{1,2})\s*-\s*(\d{1,2})\b",
+        folded,
+    )
+    if m_ymd_range:
+        yr, mon_s, d1, d2 = int(m_ymd_range.group(1)), m_ymd_range.group(2), int(m_ymd_range.group(3)), int(m_ymd_range.group(4))
+        mon = TURKISH_MONTHS.get(mon_s)
+        if mon:
+            try:
+                return f"{yr:04d}-{mon:02d}-{d1:02d}", f"{yr:04d}-{mon:02d}-{d2:02d}"
+            except ValueError:
+                pass
+
+    # '01.10.2025 - 20.12.2026'
+    m_dot = re.search(
+        r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\s*-\s*(\d{1,2})\.(\d{1,2})\.(20\d{2})\b",
+        folded,
+    )
+    if m_dot:
+        d1, m1, y1, d2, m2, y2 = (int(x) for x in m_dot.groups())
+        try:
+            return f"{y1:04d}-{m1:02d}-{d1:02d}", f"{y2:04d}-{m2:02d}-{d2:02d}"
+        except ValueError:
+            pass
+
     return None, None
+
+
+_MONTH_NAMES_TR = {
+    1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan",
+    5: "Mayıs", 6: "Haziran", 7: "Temmuz", 8: "Ağustos",
+    9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık",
+}
+
+_TR_CITIES = [
+    "İstanbul", "Ankara", "İzmir", "Antalya", "Bursa", "Adana", "Edirne",
+    "Gaziantep", "Mersin", "Trabzon", "Konya", "Kayseri", "Samsun",
+    "Eskişehir", "Denizli", "Muğla", "Kocaeli", "Sakarya", "Tekirdağ",
+    "Çanakkale", "Erzurum", "Malatya", "Şanlıurfa", "Diyarbakır", "Van",
+    "Aydın", "Balıkesir", "Manisa", "Hatay", "Kahramanmaraş", "Sivas",
+    "Ordu", "Rize", "Giresun", "Zonguldak", "Bolu", "Düzce", "Afyonkarahisar",
+    "Kütahya", "Uşak", "Isparta", "Burdur", "Elazığ", "Aksaray", "Nevşehir",
+    "Niğde", "Karaman", "Kırıkkale", "Çorum", "Tokat", "Amasya", "Kastamonu",
+    "Sinop", "Bartın", "Karabük", "Yalova", "Bilecik", "Kırklareli", "Kars",
+    "Ağrı", "Mardin", "Batman", "Erzincan", "Adıyaman", "Osmaniye", "Kilis",
+]
+
+
+def _format_tr_date_range(start_iso: Optional[str], end_iso: Optional[str]) -> Optional[str]:
+    if not start_iso:
+        return None
+    try:
+        y1, m1, d1 = (int(x) for x in start_iso.split("-"))
+        if not end_iso or end_iso == start_iso:
+            return f"{d1} {_MONTH_NAMES_TR[m1]} {y1}"
+        y2, m2, d2 = (int(x) for x in end_iso.split("-"))
+        if y1 == y2 and m1 == m2:
+            return f"{d1}-{d2} {_MONTH_NAMES_TR[m1]} {y1}"
+        if y1 == y2:
+            return f"{d1} {_MONTH_NAMES_TR[m1]} - {d2} {_MONTH_NAMES_TR[m2]} {y1}"
+        return f"{d1} {_MONTH_NAMES_TR[m1]} {y1} - {d2} {_MONTH_NAMES_TR[m2]} {y2}"
+    except Exception:
+        return None
+
+
+def _extract_city_from_text(text: str) -> Optional[str]:
+    if not text:
+        return None
+    folded = _fold_tr(text)
+    for city in _TR_CITIES:
+        c_fold = _fold_tr(city)
+        if re.search(rf"\b{re.escape(c_fold)}\b", folded):
+            return city
+    return None
+
+
+def _extract_pdf_fallback_metadata(
+    pdf_bytes: bytes,
+    url: str = "",
+    link_baslik: str = "",
+) -> Dict[str, Any]:
+    """Gemini boş veya eksik döndüğünde PDF metni, link başlığı ve dosya adından tarih/yer/geçerlilik çıkarır."""
+    out: Dict[str, Any] = {}
+    pages_text: List[str] = []
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        try:
+            for i in range(min(4, len(doc))):
+                t = doc[i].get_text("text") or ""
+                if t.strip():
+                    pages_text.append(t)
+        finally:
+            doc.close()
+    except Exception:
+        pass
+
+    full_text = "\n".join(pages_text)
+    lines = [" ".join(ln.split()) for ln in full_text.splitlines() if ln.strip()]
+
+    # 1. Geçerlilik tarihleri (reglaman metnindeki "Baraj Geçerlilik ..." satırları)
+    for idx, ln in enumerate(lines):
+        if "gecerlilik" in _fold_tr(ln):
+            window = ln + (" " + lines[idx + 1] if idx + 1 < len(lines) else "")
+            g_start, g_end = parse_turkish_date_range(window)
+            if g_start:
+                out["baraj_gecerlilik_baslangic"] = g_start
+                out["baraj_gecerlilik_bitis"] = g_end
+                out["baraj_gecerlilik_metni"] = _format_tr_date_range(g_start, g_end)
+                break
+
+    # 2. Müsabaka tarihleri (PDF metni -> link başlığı -> dosya adı)
+    fname = os.path.basename(urlparse(url).path) if url else ""
+    fname_clean = re.sub(r"[-_]+", " ", os.path.splitext(fname)[0])
+    # '2026 ARALIK 22 26' gibi dosya adlarını '2026 ARALIK 22-26' şekline yaklaştır
+    fname_norm = re.sub(r"\b(20\d{2})\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(\d{1,2})\s+(\d{1,2})\b", r"\1 \2 \3-\4", fname_clean)
+
+    # PDF metninde geçerlilik satırı dışındaki ilk tarih aralığını ara
+    for ln in lines[:40]:
+        ln_f = _fold_tr(ln)
+        if "gecerlilik" in ln_f or "revize" in ln_f or "son bildirim" in ln_f:
+            continue
+        b_start, b_end = parse_turkish_date_range(ln)
+        if b_start:
+            out["baslangic_tarihi"] = b_start
+            out["bitis_tarihi"] = b_end
+            out["tarih_metni"] = _format_tr_date_range(b_start, b_end)
+            break
+
+    if not out.get("baslangic_tarihi"):
+        for cand in (link_baslik, fname_norm):
+            b_start, b_end = parse_turkish_date_range(cand)
+            if b_start:
+                out["baslangic_tarihi"] = b_start
+                out["bitis_tarihi"] = b_end
+                out["tarih_metni"] = _format_tr_date_range(b_start, b_end)
+                break
+
+    # 3. Yer / İl bilgisi ("YERİ:", "YER:", "İL:" satırları veya ilk sayfa şehir adı)
+    for idx, ln in enumerate(lines[:60]):
+        ln_f = _fold_tr(ln)
+        if re.search(r"\b(yeri|yer|il|ili|sehir|havuz)\b\s*[:\-]", ln_f):
+            after = re.split(r"[:\-]", ln, maxsplit=1)[-1].strip()
+            city = _extract_city_from_text(after) or (
+                _extract_city_from_text(lines[idx + 1]) if idx + 1 < len(lines) else None
+            )
+            if city:
+                out["il"] = city
+                out["sehir_yer"] = f"{city} - {after}" if after and _fold_tr(after) != _fold_tr(city) and len(after) <= 120 else city
+                break
+    if not out.get("il"):
+        city = _extract_city_from_text("\n".join(lines[:35]))
+        if city:
+            out["il"] = city
+            out["sehir_yer"] = city
+
+    return out
 
 
 def _get_gemini_client():
@@ -460,9 +616,15 @@ def sync_tyf_calendar(
             last_mod = resp.headers.get("Last-Modified", "")[:100]
 
             belge = TyfBelge.objects.filter(kaynak_url=url).first()
+            missing_meta = (
+                belge is not None
+                and belge.belge_turu in ("REGLAMAN", "MILLI_TAKIM")
+                and (not belge.baslangic_tarihi or not belge.sehir_yer or not belge.tarih_metni)
+            )
             if (
                 belge is not None
                 and not force
+                and not missing_meta
                 and belge.content_hash == content_hash
                 and belge.yerel_dosya
             ):
@@ -472,6 +634,8 @@ def sync_tyf_calendar(
                 continue
 
             gdata = {} if skip_gemini else analyze_pdf_with_gemini(pdf_bytes, fallback_title=item["link_baslik"])
+            fb = _extract_pdf_fallback_metadata(pdf_bytes, url=url, link_baslik=item["link_baslik"])
+
             belge_turu = gdata.get("belge_turu") or item["on_tur"]
             if belge_turu not in ("TAKVIM", "REGLAMAN", "MILLI_TAKIM", "DUYURU"):
                 belge_turu = item["on_tur"]
@@ -484,17 +648,32 @@ def sync_tyf_calendar(
                 min_yas, max_yas = _extract_min_max_age(yas_grubu)
 
             havuz = _normalize_havuz(gdata.get("havuz"))
-            baslangic = gdata.get("baslangic_tarihi")
-            bitis = gdata.get("bitis_tarihi")
-            tarih_metni = gdata.get("tarih_metni")
-            il_adi = (gdata.get("il") or "").strip()
+            baslangic = gdata.get("baslangic_tarihi") or fb.get("baslangic_tarihi")
+            bitis = gdata.get("bitis_tarihi") or fb.get("bitis_tarihi")
+            tarih_metni = gdata.get("tarih_metni") or fb.get("tarih_metni") or _format_tr_date_range(baslangic, bitis)
+            il_adi = (gdata.get("il") or fb.get("il") or "").strip()
             yer_havuz = (gdata.get("yer_havuz") or "").strip()
             sehir_yer = (gdata.get("sehir_yer") or "").strip()
             if not sehir_yer and (il_adi or yer_havuz):
                 sehir_yer = " - ".join(x for x in (il_adi, yer_havuz) if x)
+            if not sehir_yer:
+                sehir_yer = (fb.get("sehir_yer") or "").strip()
 
-            if not baslangic:
-                baslangic, bitis = parse_turkish_date_range(item["link_baslik"])
+            # Takvimdeki eşleşen Event üzerinden şehir/tarih tamamlama
+            if (not il_adi or not baslangic) and baslangic:
+                takvim_ev = Event.objects.filter(
+                    kaynak_turu="TYF_TAKVIM",
+                    yaris_tarihi_baslangic=baslangic,
+                ).exclude(sehir__isnull=True).exclude(sehir="").first()
+                if takvim_ev:
+                    if not il_adi and takvim_ev.sehir:
+                        il_adi = takvim_ev.sehir
+                    if not sehir_yer and takvim_ev.sehir:
+                        sehir_yer = takvim_ev.sehir
+
+            gecerlilik_metni = gdata.get("baraj_gecerlilik_metni") or fb.get("baraj_gecerlilik_metni")
+            gecerlilik_baslangic = gdata.get("baraj_gecerlilik_baslangic") or fb.get("baraj_gecerlilik_baslangic")
+            gecerlilik_bitis = gdata.get("baraj_gecerlilik_bitis") or fb.get("baraj_gecerlilik_bitis")
 
             event_obj: Optional[Event] = None
             if belge_turu == "REGLAMAN":
@@ -528,9 +707,9 @@ def sync_tyf_calendar(
                 belge.max_yas = max_yas
                 belge.ozet = gdata.get("haber_ozeti") or item["link_baslik"]
                 belge.onemli_notlar = gdata.get("onemli_notlar") or []
-                belge.baraj_gecerlilik_metni = (gdata.get("baraj_gecerlilik_metni") or "")[:150] or None
-                belge.baraj_gecerlilik_baslangic = (gdata.get("baraj_gecerlilik_baslangic") or "")[:20] or None
-                belge.baraj_gecerlilik_bitis = (gdata.get("baraj_gecerlilik_bitis") or "")[:20] or None
+                belge.baraj_gecerlilik_metni = (gecerlilik_metni or "")[:150] or None
+                belge.baraj_gecerlilik_baslangic = (gecerlilik_baslangic or "")[:20] or None
+                belge.baraj_gecerlilik_bitis = (gecerlilik_bitis or "")[:20] or None
                 belge.gemini_json = gdata
                 belge.event = event_obj
                 belge.etag = etag or None
