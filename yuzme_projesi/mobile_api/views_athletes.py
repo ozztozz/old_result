@@ -563,5 +563,6 @@ def get_athlete_baraj_targets(request, athlete_id: int):
                 'passed': (diff_cs <= 0) if diff_cs is not None else None,
             })
 
+    targets.sort(key=lambda t: (t.get('start_date') or '9999-99-99', t.get('meet_name') or ''))
     return api_response({'data': targets}, request=request, cache_seconds=60)
 
