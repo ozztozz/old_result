@@ -27,21 +27,16 @@ class AppScaffold extends StatelessWidget {
         currentIndex: currentIndex,
         children: screens,
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            0,
-            AppSpacing.md,
-            AppSpacing.sm,
-          ),
-          child: SoftGlassPanel(
-            tier: GlassTier.dock,
-            borderRadius: AppRadius.radius28,
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F273B),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
             ),
             child: SizedBox(
               height: 56,
@@ -52,21 +47,21 @@ class AppScaffold extends StatelessWidget {
                     0,
                     'Ana Sayfa',
                     Icons.home_outlined,
-                    Icons.home_rounded,
+                    Icons.home_outlined,
                   ),
                   _buildNavItem(
                     context,
                     1,
                     'Canlı Takip',
-                    Icons.sensors_outlined,
-                    Icons.sensors_rounded,
+                    Icons.sensors,
+                    Icons.sensors,
                   ),
                   _buildNavItem(
                     context,
                     2,
                     'Favorilerim',
-                    Icons.star_outline_rounded,
-                    Icons.star_rounded,
+                    Icons.star_border,
+                    Icons.star_border,
                   ),
                 ],
               ),
@@ -84,44 +79,34 @@ class AppScaffold extends StatelessWidget {
     IconData icon,
     IconData activeIcon,
   ) {
-    final palette = context.palette;
     final isSelected = currentIndex == index;
-    final activeColor = palette.navLabelActive;
-    final inactiveColor = palette.navLabelInactive;
-    final pillColor = activeColor.withValues(
-      alpha: palette.isCrispCardTheme ? 0.10 : 0.14,
-    );
+    const cyan = Color(0xFF14B8CC);
+    const navy = Color(0xFF0F273B);
+    final contentColor = isSelected ? navy : Colors.white.withAlpha(204);
 
     return Expanded(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => onNavigationChanged(index),
-          borderRadius: AppRadius.large,
-          splashColor: activeColor.withValues(alpha: 0.08),
-          highlightColor: Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            padding: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? pillColor : Colors.transparent,
-              borderRadius: AppRadius.large,
+              color: isSelected ? cyan : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedScale(
-                  scale: isSelected ? 1.06 : 1.0,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  child: Icon(
-                    isSelected ? activeIcon : icon,
-                    size: 21,
-                    color: isSelected ? activeColor : inactiveColor,
-                  ),
+                Icon(
+                  isSelected ? activeIcon : icon,
+                  size: 21,
+                  color: contentColor,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -131,9 +116,9 @@ class AppScaffold extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     letterSpacing: 0.1,
-                    color: isSelected ? activeColor : inactiveColor,
+                    color: contentColor,
                   ),
                 ),
               ],

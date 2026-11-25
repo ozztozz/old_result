@@ -1,31 +1,121 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/components/ambient_canvas.dart';
+
 import '../../core/components/empty_state_widget.dart';
-import '../../core/components/section_header.dart';
-import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
-import '../../data/repositories/swim_repository.dart';
-import '../../data/models/meet.dart';
 import '../../data/models/live_meet.dart';
+import '../../data/models/meet.dart';
 import '../../data/models/tyf_news.dart';
-import '../../shared/widgets/component_gallery_screen.dart';
-import '../../shared/widgets/theme_picker_sheet.dart';
+import '../../data/repositories/swim_repository.dart';
+import '../athletes/athlete_profile_screen.dart';
+import '../barajlar/barajlar_screen.dart';
+import '../calendar/event_calendar_screen.dart';
 import '../clubs/club_search_screen.dart';
 import '../clubs/relay_simulator_screen.dart';
 import '../live/live_meet_detail_screen.dart';
 import '../meets/meet_search_screen.dart';
-import '../athletes/athlete_profile_screen.dart';
 import '../rankings/rankings_screen.dart';
-import '../calendar/event_calendar_screen.dart';
-import '../barajlar/barajlar_screen.dart';
 
-/// 1. Ekran: Ana Sayfa & Keşfet (Home Dashboard)
+// ═══════════════════════════════════════════════════════════════
+// RENK & TİPOGRAFİ SABİTLERİ (Sportif Havuz Editoryal Tasarım)
+// ═══════════════════════════════════════════════════════════════
+
+class _PoolColors {
+  const _PoolColors({
+    required this.bg,
+    required this.card,
+    required this.navy,
+    required this.cyan,
+    required this.coral,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.border,
+    required this.divider,
+    required this.isDark,
+  });
+
+  final Color bg;
+  final Color card;
+  final Color navy;
+  final Color cyan;
+  final Color coral;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color border;
+  final Color divider;
+  final bool isDark;
+
+  factory _PoolColors.of(AppColorPalette palette) {
+    final dark = palette.isDark;
+    if (dark) {
+      return _PoolColors(
+        bg: palette.background,
+        card: palette.surface,
+        navy: const Color(0xFF0A1926),
+        cyan: const Color(0xFF14B8CC),
+        coral: const Color(0xFFFF6238),
+        textPrimary: palette.textPrimary,
+        textSecondary: palette.textSecondary,
+        border: palette.border,
+        divider: palette.divider,
+        isDark: true,
+      );
+    }
+    return const _PoolColors(
+      bg: Color(0xFFF6F8F9),
+      card: Color(0xFFFFFFFF),
+      navy: Color(0xFF0F273B),
+      cyan: Color(0xFF14B8CC),
+      coral: Color(0xFFFF6238),
+      textPrimary: Color(0xFF0F273B),
+      textSecondary: Color(0xFF526675),
+      border: Color(0xFFD9E2EC),
+      divider: Color(0xFFE4EBF1),
+      isDark: false,
+    );
+  }
+}
+
+TextStyle _display(
+  double size, {
+  FontWeight weight = FontWeight.w700,
+  required Color color,
+  double? height,
+  double letterSpacing = 0,
+}) =>
+    TextStyle(
+      fontFamily: AppTextStyles.displayFontFamily,
+      fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+
+TextStyle _num(
+  double size, {
+  FontWeight weight = FontWeight.w800,
+  required Color color,
+  double? height,
+  double letterSpacing = 0,
+}) =>
+    TextStyle(
+      fontFamily: AppTextStyles.fontFamily,
+      fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+/// 1. Ekran: Ana Sayfa & Keşfet
 class HomeScreen extends StatefulWidget {
   final SwimRepository repository;
   final ValueChanged<int>? onOpenLiveMeet;
@@ -49,19 +139,21 @@ class _HomeScreenState extends State<HomeScreen> {
   List<LiveMeetSummary> _liveMeets = [];
   List<Map<String, dynamic>> _highlights = [];
   List<TyfNewsItem> _newsFeed = [];
-  final PageController _newsPageController = PageController(viewportFraction: 0.88);
-  int _newsPageIndex = 0;
 
-  @override
-  void dispose() {
-    _newsPageController.dispose();
-    super.dispose();
-  }
+  final PageController _newsPageController = PageController(viewportFraction: 1);
+  int _newsPageIndex = 0;
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _newsPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -97,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _liveMeets = results[1] as List<LiveMeetSummary>;
           _highlights = results[2] as List<Map<String, dynamic>>;
           _newsFeed = results[3] as List<TyfNewsItem>;
+          _newsPageIndex = 0;
           _isLoading = false;
         });
       }
@@ -142,420 +235,445 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openGallery() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ComponentGalleryScreen()),
-    );
+  Future<void> _launchPdfUrl(String url) async {
+    if (url.trim().isEmpty) return;
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final c = _PoolColors.of(palette);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return AmbientBackground(
-      artStyle: AmbientArtStyle.none,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              // 1. Editoryal Üst Başlık
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.s20,
-                  AppSpacing.s12,
-                  AppSpacing.s20,
-                  AppSpacing.s12,
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: SafeArea(
+        bottom: false,
+        child: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: c.cyan,
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+              )
+            : _errorMessage != null &&
+                    _recentMeets.isEmpty &&
+                    _liveMeets.isEmpty
+                ? Center(
+                    child: EmptyStateWidget(
+                      title: 'Veriler Yüklenemedi',
+                      message: _errorMessage!,
+                      icon: Icons.cloud_off_outlined,
+                      actionText: 'Tekrar Dene',
+                      onAction: _loadData,
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: c.cyan,
+                    onRefresh: _loadData,
+                    child: ListView(
+                      padding: EdgeInsets.only(bottom: 100 + bottomInset),
+                      children: [
+                        const SizedBox(height: 12),
+                        _buildSearchField(c),
+                        const SizedBox(height: 14),
+                        _buildUnderlinedTabs(c),
+                        if (_newsFeed.isNotEmpty)
+                          _buildHeroAnnouncements(c, palette),
+                        const SizedBox(height: 20),
+                        _buildToolCards(c),
+                        if (_highlights.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          _buildLiveFeed(c),
+                        ],
+                        if (_recentMeets.isNotEmpty) ...[
+                          const SizedBox(height: 24),
+                          _buildRecentMeets(c),
+                        ],
+                      ],
+                    ),
+                  ),
+      ),
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // 1. ARAMA ÇUBUĞU
+  // ═════════════════════════════════════════════════════════════
+
+  Widget _buildSearchField(_PoolColors c) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Material(
+        color: c.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: c.border, width: 1),
+        ),
+        child: InkWell(
+          onTap: _openSearchModal,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(Icons.search, size: 22, color: c.textSecondary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Sporcu, kulüp, müsabaka',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _display(
+                      15,
+                      weight: FontWeight.w400,
+                      color: c.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // 3. ALTI ÇİZGİLİ SEKMELER
+  // ═════════════════════════════════════════════════════════════
+
+  Widget _buildUnderlinedTabs(_PoolColors c) {
+    final items = <(String, VoidCallback)>[
+      ('Yarış Ara', _openMeetSearch),
+      (
+        'Barajlar',
+        () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BarajlarScreen(repository: widget.repository),
+              ),
+            ),
+      ),
+      (
+        'Takvim',
+        () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    EventCalendarScreen(repository: widget.repository),
+              ),
+            ),
+      ),
+      ('Kulüpler', _openClubSearch),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(width: 24),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() => _selectedTabIndex = i);
+                  items[i].$2();
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        items[i].$1,
+                        style: _display(
+                          14,
+                          weight: i == _selectedTabIndex
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: i == _selectedTabIndex
+                              ? c.textPrimary
+                              : c.textSecondary,
+                        ),
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: 3,
+                      width: i == _selectedTabIndex ? 60 : 0,
+                      decoration: BoxDecoration(
+                        color: c.cyan,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // 4. KAYDIRILIR KOYU DUYURULAR HERO BANDI
+  // ═════════════════════════════════════════════════════════════
+
+  Widget _buildHeroAnnouncements(_PoolColors c, AppColorPalette palette) {
+    final total = _newsFeed.length;
+    return Container(
+      width: double.infinity,
+      color: c.navy,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 242,
+            child: PageView.builder(
+              controller: _newsPageController,
+              itemCount: total,
+              onPageChanged: (idx) => setState(() => _newsPageIndex = idx),
+              itemBuilder: (context, index) {
+                final item = _newsFeed[index];
+                final isMilli = item.belgeTuru == 'MILLI_TAKIM';
+                final dotColor = isMilli ? c.coral : c.cyan;
+                final cityUpper = item.sehirYer.trim().toUpperCase();
+                final topLabel = cityUpper.isNotEmpty
+                    ? '${item.turEtiketi.toUpperCase()} · $cityUpper'
+                    : item.turEtiketi.toUpperCase();
+                final metaParts = <String>[
+                  if (item.yasGrubu.isNotEmpty) item.yasGrubu,
+                  if (item.tarihMetni.isNotEmpty) item.tarihMetni,
+                  if (item.barajSayisi > 0) '${item.barajSayisi} Baraj',
+                ];
+                final metaLine = metaParts.isNotEmpty
+                    ? metaParts.join(' · ')
+                    : 'TYF Resmi Duyuru';
+
+                return Stack(
+                  children: [
+                    // Sağ tarafta büyük tipografik filigran numara
+                    Positioned(
+                      right: -6,
+                      top: 4,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '${index + 1}',
+                            style: _num(
+                              200,
+                              weight: FontWeight.w800,
+                              color: Colors.white.withAlpha(14),
+                              height: 0.9,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Türkiye Yüzme Federasyonu',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.2,
-                              color: palette.textSecondary,
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: dotColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  topLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: _display(
+                                    11.5,
+                                    weight: FontWeight.w700,
+                                    color: c.cyan,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${index + 1} / $total',
+                                style: _num(
+                                  12,
+                                  weight: FontWeight.w600,
+                                  color: Colors.white.withAlpha(160),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 320),
+                            child: Text(
+                              item.baslik.toUpperCase(),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: _display(
+                                21,
+                                weight: FontWeight.w800,
+                                color: Colors.white,
+                                height: 1.14,
+                                letterSpacing: -0.4,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 10),
                           Text(
-                            'Keşfet & Sonuçlar',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.6,
-                              height: 1.15,
-                              color: palette.textPrimary,
+                            metaLine,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _display(
+                              13,
+                              weight: FontWeight.w500,
+                              color: Colors.white.withAlpha(185),
                             ),
+                          ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              Material(
+                                color: c.coral,
+                                borderRadius: BorderRadius.circular(999),
+                                child: InkWell(
+                                  onTap: () =>
+                                      _openNewsDetailSheet(item, palette),
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 11,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Detayları gör',
+                                          style: _display(
+                                            13.5,
+                                            weight: FontWeight.w700,
+                                            color: const Color(0xFF0F273B),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Icon(
+                                          Icons.arrow_forward,
+                                          size: 16,
+                                          color: Color(0xFF0F273B),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (item.pdfUrl.isNotEmpty) ...[
+                                const SizedBox(width: 10),
+                                Material(
+                                  color: Colors.white.withAlpha(20),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(999),
+                                    side: BorderSide(
+                                      color: Colors.white.withAlpha(60),
+                                    ),
+                                  ),
+                                  child: InkWell(
+                                    onTap: () => _launchPdfUrl(item.pdfUrl),
+                                    borderRadius: BorderRadius.circular(999),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.picture_as_pdf_outlined,
+                                            size: 15,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            'PDF',
+                                            style: _display(
+                                              12.5,
+                                              weight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    if (kDebugMode) ...[
-                      GlassCircleButton(
-                        icon: Icons.design_services_outlined,
-                        iconSize: 20,
-                        iconColor: palette.textTertiary,
-                        tooltip: 'SwimDesign Galerisi',
-                        onTap: _openGallery,
-                      ),
-                      AppSpacing.hSm,
-                    ],
-                    GlassCircleButton(
-                      icon: Icons.palette_outlined,
-                      iconSize: 20,
-                      iconColor: palette.textTertiary,
-                      tooltip: 'Tema Seç',
-                      onTap: () => ThemePickerSheet.show(context),
-                    ),
-                    AppSpacing.hSm,
-                    GlassCircleButton(
-                      icon: Icons.search_outlined,
-                      iconSize: 20,
-                      iconColor: palette.textTertiary,
-                      tooltip: 'Sporcu / Kulüp Ara',
-                      onTap: _openSearchModal,
-                    ),
                   ],
-                ),
-              ),
-
-              // 2. İçerik
-              Expanded(
-                child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: palette.primary,
-                        ),
-                      )
-                    : _errorMessage != null &&
-                            _recentMeets.isEmpty &&
-                            _liveMeets.isEmpty
-                        ? Center(
-                            child: EmptyStateWidget(
-                              title: 'Veriler Yüklenemedi',
-                              message: _errorMessage!,
-                              icon: Icons.cloud_off_outlined,
-                              actionText: 'Tekrar Dene',
-                              onAction: _loadData,
-                            ),
-                          )
-                        : RefreshIndicator(
-                            color: palette.primary,
-                            onRefresh: _loadData,
-                            child: ListView(
-                              padding: EdgeInsets.fromLTRB(
-                                AppSpacing.s20,
-                                AppSpacing.sm,
-                                AppSpacing.s20,
-                                64 +
-                                    AppSpacing.md +
-                                    MediaQuery.of(context).padding.bottom +
-                                    AppSpacing.lg,
-                              ),
-                              children: [
-                                // Hızlı Arama Çubuğu (Level 3, height 48, radius 24, 180ms animasyon)
-                                SoftGlassPanel(
-                                  level: 3,
-                                  height: 48,
-                                  borderRadius: BorderRadius.circular(24),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                  ),
-                                  animationDuration:
-                                      const Duration(milliseconds: 180),
-                                  onTap: _openSearchModal,
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.search_outlined,
-                                        size: 20,
-                                        color: palette.textSecondary,
-                                      ),
-                                      AppSpacing.h12,
-                                      Expanded(
-                                        child: Text(
-                                          'Sporcu, kulüp veya müsabaka ara...',
-                                          style: TextStyle(
-                                            fontFamily:
-                                                AppTextStyles.fontFamily,
-                                            fontSize: 14.5,
-                                            fontWeight: FontWeight.w400,
-                                            color: palette.textSecondary
-                                                .withValues(alpha: 0.85),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: _openMeetSearch,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 5,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: palette.accentSoft,
-                                            borderRadius: AppRadius.full,
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.tune_rounded,
-                                                size: 14,
-                                                color: palette.accent,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Yarış Ara',
-                                                style: TextStyle(
-                                                  fontFamily:
-                                                      AppTextStyles.fontFamily,
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: palette.accent,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                AppSpacing.vLg,
-
-                                // 1. TYF Duyurular & Takvim Haber Bandı
-                                if (_newsFeed.isNotEmpty) ...[
-                                  _buildNewsFeedBand(palette),
-                                  AppSpacing.v20,
-                                ],
-
-                                // 2. Öne Çıkan Canlı Havuz Spotlight Kartı
-                                if (_liveMeets.isNotEmpty) ...[
-                                  _buildUnifiedSpotlightCard(
-                                    _liveMeets.first,
-                                    palette,
-                                  ),
-                                  AppSpacing.vMd,
-                                ],
-
-                                // 3. 2 Sütunlu Mikro-Rozetli Hızlı Araçlar
-                                _buildUnifiedToolGrid(palette),
-                                AppSpacing.v20,
-
-                                // 4. Favori Sporcu & Kulüp Canlı Akışı
-                                if (_highlights.isNotEmpty) ...[
-                                  _buildHighlightsSection(palette),
-                                  AppSpacing.v20,
-                                ],
-
-                                // 5. Güncel Müsabakalar (25m / 50m Kulvar Şeritleri)
-                                _buildUnifiedMeetList(palette),
-                              ],
-                            ),
-                          ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUnifiedSpotlightCard(
-    LiveMeetSummary live,
-    AppColorPalette palette,
-  ) {
-    final isCompleted = live.resultListProgress.total > 0 &&
-        live.resultListProgress.processed >= live.resultListProgress.total;
-    final statusLower = live.status.toLowerCase();
-    final isTrulyLive = !isCompleted &&
-        (statusLower.contains('canl') ||
-            statusLower.contains('live') ||
-            statusLower.contains('devam') ||
-            live.resultListProgress.processed > 0);
-    final total = live.resultListProgress.total;
-    final done = live.resultListProgress.processed;
-    final ratio = total > 0 ? (done / total).clamp(0.0, 1.0) : 0.0;
-    final pct = (ratio * 100).round();
-
-    return _KheloOnTapScale(
-      onTap: () {
-        if (widget.onOpenLiveMeet != null) {
-          widget.onOpenLiveMeet!(live.id);
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => LiveMeetDetailScreen(
-              live: live,
-              repository: widget.repository,
+                );
+              },
             ),
           ),
-        );
-      },
-      child: ClipRRect(
-        borderRadius: AppRadius.cardRadius,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                palette.surfaceContrast,
-                Color.lerp(palette.surfaceContrast, palette.accent, 0.25)!,
-              ],
-            ),
-            borderRadius: AppRadius.cardRadius,
-            border: Border.all(
-              color: palette.textOnContrast.withValues(alpha: 0.12),
-              width: 1,
-            ),
-          ),
-          padding: const EdgeInsets.all(AppSpacing.s20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
+          if (total > 1)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  total > 10 ? 10 : total,
+                  (i) {
+                    final active = i == (_newsPageIndex % 10);
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: active ? 18 : 6,
+                      height: 5,
                       decoration: BoxDecoration(
-                        color: isTrulyLive
-                            ? palette.statusLive
-                            : Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(6),
+                        color: active ? c.cyan : Colors.white.withAlpha(60),
+                        borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(
-                        isTrulyLive
-                            ? 'CANLI YAYIN'
-                            : (isCompleted ? 'SONUÇLANDI' : 'YAKLAŞAN'),
-                        style: const TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (live.city.isNotEmpty)
-                      Text(
-                        live.city,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: palette.textOnContrast.withValues(alpha: 0.78),
-                        ),
-                      ),
-                  ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  StringUtils.toTitleCase(live.name),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                    height: 1.25,
-                    color: palette.textOnContrast,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (total > 0) ...[
-                  ClipRRect(
-                    borderRadius: AppRadius.full,
-                    child: LinearProgressIndicator(
-                      value: ratio,
-                      minHeight: 4.5,
-                      backgroundColor: Colors.white.withValues(alpha: 0.16),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isCompleted
-                            ? palette.statusSuccess
-                            : Color.lerp(palette.accent, Colors.white, 0.22)!,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        total > 0
-                            ? 'Seri $done/$total  ·  %$pct'
-                            : 'Start ${live.startListProgress.processed}/${live.startListProgress.total}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: palette.textOnContrast.withValues(alpha: 0.75),
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'İzle',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: palette.textOnContrast,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 17,
-                      color: palette.textOnContrast,
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildUnifiedToolGrid(AppColorPalette palette) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildMicroBadgeToolCard(
-                palette,
-                title: 'Bayrak Simülatörü',
-                subtitle: 'En hızlı 4x50 / 4x100',
-                icon: Icons.groups_outlined,
-                badgeColor: palette.accent,
+  // ═════════════════════════════════════════════════════════════
+  // 6. ARAÇ KARTLARI (Turkuaz Dolgulu & Çerçeveli Filigranlı)
+  // ═════════════════════════════════════════════════════════════
+
+  Widget _buildToolCards(_PoolColors c) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: Material(
+              color: c.cyan,
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
                 onTap: () {
                   Navigator.push(
                     context,
@@ -565,16 +683,49 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
+                borderRadius: BorderRadius.circular(18),
+                child: SizedBox(
+                  height: 112,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'BAYRAK\nSİMÜLATÖRÜ',
+                          style: _display(
+                            17,
+                            weight: FontWeight.w800,
+                            color: const Color(0xFF0F273B),
+                            height: 1.12,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '4x50 / 4x100',
+                          style: _display(
+                            12.5,
+                            weight: FontWeight.w500,
+                            color: const Color(0xFF0F273B).withAlpha(210),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMicroBadgeToolCard(
-                palette,
-                title: 'Top 25 Sıralama',
-                subtitle: 'Branş & il en iyileri',
-                icon: Icons.leaderboard_outlined,
-                badgeColor: palette.infoCyan,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Material(
+              color: c.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+                side: BorderSide(color: c.textPrimary, width: 1.1),
+              ),
+              child: InkWell(
                 onTap: () {
                   Navigator.push(
                     context,
@@ -584,138 +735,197 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ListenableBuilder(
-          listenable: SelectedClubService.instance,
-          builder: (context, _) {
-            final clubService = SelectedClubService.instance;
-            final subtitle = clubService.hasSelectedClub
-                ? 'Seçili: ${StringUtils.toTitleCase(clubService.clubName!)}'
-                : 'Kulüp ara, takımını seç veya yarışlarını gör';
-            return _KheloOnTapScale(
-              onTap: _openClubSearch,
-              child: SoftGlassPanel(
-                level: 2,
                 borderRadius: BorderRadius.circular(18),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: palette.primary.withValues(alpha: 0.14),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.shield_outlined,
-                        size: 18,
-                        color: palette.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Kulüp Ara',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
+                child: SizedBox(
+                  height: 112,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: 10,
+                        top: 8,
+                        child: IgnorePointer(
+                          child: Text(
+                            '25',
+                            style: _num(
+                              56,
+                              weight: FontWeight.w800,
+                              color: c.textPrimary.withAlpha(26),
+                              height: 1.0,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 12,
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: palette.textTertiary,
-                    ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'TOP 25\nSIRALAMA',
+                              style: _display(
+                                17,
+                                weight: FontWeight.w800,
+                                color: c.textPrimary,
+                                height: 1.12,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Branş ve il',
+                              style: _display(
+                                12.5,
+                                weight: FontWeight.w500,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  // 7. CANLI AKIŞ (Düz Liste Satırları)
+  // ═════════════════════════════════════════════════════════════
+
+  Widget _buildLiveFeed(_PoolColors c) {
+    final items = _highlights.take(5).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: c.coral,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'CANLI AKIŞ',
+                    style: _display(
+                      17,
+                      weight: FontWeight.w800,
+                      color: c.textPrimary,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '${items.length} kayıt',
+                style: _display(
+                  12.5,
+                  weight: FontWeight.w500,
+                  color: c.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < items.length; i++) ...[
+          _buildLiveRow(c, i + 1, items[i]),
+          if (i != items.length - 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(height: 1, thickness: 1, color: c.divider),
+            ),
+        ],
       ],
     );
   }
 
-  Widget _buildMicroBadgeToolCard(
-    AppColorPalette palette, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color badgeColor,
-    required VoidCallback onTap,
-  }) {
-    return _KheloOnTapScale(
-      onTap: onTap,
-      child: SoftGlassPanel(
-        level: 2,
-        borderRadius: BorderRadius.circular(18),
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildLiveRow(
+    _PoolColors c,
+    int lane,
+    Map<String, dynamic> h,
+  ) {
+    final athId = h['athlete_id'] as int;
+    final athleteName = StringUtils.formatAthleteName(
+      h['athlete_name'] as String? ?? '',
+    );
+    final eventLabel =
+        '${h['distance'] ?? ''}m ${h['stroke_label'] ?? ''}'.trim();
+    final city = StringUtils.toTitleCase((h['city'] as String?)?.trim() ?? '');
+    final subtitleText =
+        city.isNotEmpty ? '$eventLabel · $city' : eventLabel;
+    final time = h['time'] as String? ?? '';
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AthleteProfileScreen(
+              athleteId: athId,
+              athleteName: h['athlete_name'] as String? ?? '',
+              repository: widget.repository,
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
           children: [
-            Row(
-              children: [
-                const Spacer(),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.14),
-                    shape: BoxShape.circle,
+            SizedBox(
+              width: 28,
+              child: Text(
+                '$lane',
+                style: _num(22, weight: FontWeight.w800, color: c.cyan),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    athleteName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _display(
+                      15,
+                      weight: FontWeight.w700,
+                      color: c.textPrimary,
+                    ),
                   ),
-                  child: Icon(icon, size: 17, color: badgeColor),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTextStyles.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: palette.textPrimary,
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitleText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _display(
+                      12.5,
+                      weight: FontWeight.w400,
+                      color: c.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(width: 10),
             Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTextStyles.fontFamily,
-                fontSize: 12,
-                color: palette.textSecondary,
-              ),
+              time,
+              style: _num(20, weight: FontWeight.w800, color: c.textPrimary),
             ),
           ],
         ),
@@ -723,520 +933,147 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildUnifiedMeetList(AppColorPalette palette) {
+  // ═════════════════════════════════════════════════════════════
+  // 8. GÜNCEL MÜSABAKALAR (Düz Liste)
+  // ═════════════════════════════════════════════════════════════
+
+  Widget _buildRecentMeets(_PoolColors c) {
     final items = _recentMeets.take(8).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
-          title: 'Güncel Müsabakalar',
-          trailing: SoftGlassPanel(
-            level: 3,
-            height: 28,
-            borderRadius: BorderRadius.circular(999),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            onTap: _openMeetSearch,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search_rounded, size: 14, color: palette.accent),
-                const SizedBox(width: 4),
-                Text(
-                  'Tümünü Ara',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: palette.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        for (final meet in items) _buildUnifiedMeetRow(meet, palette),
-      ],
-    );
-  }
-
-  Widget _buildUnifiedMeetRow(MeetSummary meet, AppColorPalette palette) {
-    final is25m = meet.course == 'SC';
-    final courseColor = is25m ? palette.infoCyan : palette.accent;
-    final cityText = meet.city.isNotEmpty ? meet.city : 'Türkiye';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: _KheloOnTapScale(
-        onTap: () {
-          final matchingLive = _liveMeets
-              .where((m) => m.meetId != null && m.meetId == meet.id)
-              .firstOrNull;
-          if (matchingLive != null && widget.onOpenLiveMeet != null) {
-            widget.onOpenLiveMeet!(matchingLive.id);
-            return;
-          }
-          if (widget.onOpenMeetInLive != null) {
-            widget.onOpenMeetInLive!(meet);
-            return;
-          }
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => LiveMeetDetailScreen(
-                live: LiveMeetSummary.fromMeetSummary(meet),
-                repository: widget.repository,
-              ),
-            ),
-          );
-        },
-        child: SoftGlassPanel(
-          level: 2,
-          borderRadius: BorderRadius.circular(16),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: courseColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    is25m ? '25m' : '50m',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: courseColor,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
+              Text(
+                'GÜNCEL MÜSABAKALAR',
+                style: _display(
+                  17,
+                  weight: FontWeight.w800,
+                  color: c.textPrimary,
+                  letterSpacing: 0.2,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      StringUtils.toTitleCase(meet.name),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      [
-                        cityText,
-                        if (meet.startDate.isNotEmpty) meet.startDate,
-                        '${meet.totalRaces} yarış',
-                      ].join('  ·  '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 11.5,
-                        color: palette.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: palette.textSecondary,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _launchPdfUrl(String url) async {
-    if (url.trim().isEmpty) return;
-    final uri = Uri.tryParse(url.trim());
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  Widget _buildNewsFeedBand(AppColorPalette palette) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'TYF Duyurular & Takvim',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
               GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => BarajlarScreen(repository: widget.repository),
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: palette.primary.withValues(alpha: 0.10),
-                    borderRadius: AppRadius.full,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.timer_outlined, size: 13, color: palette.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Barajlar',
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: palette.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => EventCalendarScreen(repository: widget.repository),
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: palette.accentSoft,
-                    borderRadius: AppRadius.full,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.calendar_month_outlined, size: 13, color: palette.accent),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Takvim',
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: palette.accent,
-                        ),
-                      ),
-                    ],
+                onTap: _openMeetSearch,
+                child: Text(
+                  'Tümünü Ara',
+                  style: _display(
+                    13,
+                    weight: FontWeight.w700,
+                    color: c.cyan,
                   ),
                 ),
               ),
             ],
           ),
         ),
-        AppSpacing.v12,
-        SizedBox(
-          height: 196,
-          child: PageView.builder(
-            controller: _newsPageController,
-            padEnds: false,
-            itemCount: _newsFeed.length,
-            onPageChanged: (idx) => setState(() => _newsPageIndex = idx),
-            itemBuilder: (context, index) {
-              final item = _newsFeed[index];
-              final isActive = index == _newsPageIndex;
-              final isMilli = item.belgeTuru == 'MILLI_TAKIM';
-              final isTakvim = item.belgeTuru == 'TAKVIM';
-              final badgeColor = isMilli
-                  ? palette.statusWarning
-                  : (isTakvim ? palette.statusSuccess : palette.accent);
-
-              return AnimatedScale(
-                scale: isActive ? 1.0 : 0.96,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 10, bottom: 4),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          palette.surface,
-                          Color.lerp(palette.surface, badgeColor, 0.06)!,
-                        ],
-                      ),
-                      border: Border.all(
-                        color: isActive
-                            ? badgeColor.withValues(alpha: 0.35)
-                            : palette.border,
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isActive ? 0.07 : 0.03,
-                          ),
-                          blurRadius: isActive ? 14 : 6,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: () => _openNewsDetailSheet(item, palette),
-                        child: Padding(
-                          padding: const EdgeInsets.all(15),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 9,
-                                      vertical: 3.5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: badgeColor.withValues(alpha: 0.14),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      item.turEtiketi,
-                                      style: TextStyle(
-                                        fontFamily: AppTextStyles.fontFamily,
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.3,
-                                        color: badgeColor,
-                                      ),
-                                    ),
-                                  ),
-                                  if (item.revizyonEtiketi.isNotEmpty) ...[
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 7,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: palette.primary
-                                              .withValues(alpha: 0.10),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          item.revizyonEtiketi,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontFamily:
-                                                AppTextStyles.fontFamily,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: palette.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                  const Spacer(),
-                                  if (item.barajSayisi > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: palette.accentSoft,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.timer_outlined,
-                                            size: 11,
-                                            color: palette.accent,
-                                          ),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            '${item.barajSayisi} Baraj',
-                                            style: TextStyle(
-                                              fontFamily:
-                                                  AppTextStyles.fontFamily,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: palette.accent,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                item.baslik,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: AppTextStyles.fontFamily,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
-                                  color: palette.textPrimary,
-                                ),
-                              ),
-                              if (item.ozet.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  item.ozet,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontFamily: AppTextStyles.fontFamily,
-                                    fontSize: 11.5,
-                                    height: 1.35,
-                                    color: palette.textSecondary,
-                                  ),
-                                ),
-                              ],
-                              const Spacer(),
-                              if (item.yasGrubu.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Text(
-                                    item.yasGrubu,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontFamily: AppTextStyles.fontFamily,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: palette.accent,
-                                    ),
-                                  ),
-                                ),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today_outlined,
-                                    size: 12,
-                                    color: palette.textSecondary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      [
-                                        if (item.tarihMetni.isNotEmpty)
-                                          item.tarihMetni,
-                                        if (item.sehirYer.isNotEmpty)
-                                          item.sehirYer,
-                                      ].isNotEmpty
-                                          ? [
-                                              if (item.tarihMetni.isNotEmpty)
-                                                item.tarihMetni,
-                                              if (item.sehirYer.isNotEmpty)
-                                                item.sehirYer,
-                                            ].join(' • ')
-                                          : 'TYF Resmi Belge',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontFamily: AppTextStyles.fontFamily,
-                                        fontSize: 11.5,
-                                        color: palette.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                  if (item.pdfUrl.isNotEmpty)
-                                    GestureDetector(
-                                      onTap: () => _launchPdfUrl(item.pdfUrl),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 7,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: palette.primary
-                                              .withValues(alpha: 0.10),
-                                          borderRadius:
-                                              BorderRadius.circular(7),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.picture_as_pdf_outlined,
-                                              size: 12,
-                                              color: palette.primary,
-                                            ),
-                                            const SizedBox(width: 3),
-                                            Text(
-                                              'PDF',
-                                              style: TextStyle(
-                                                fontFamily:
-                                                    AppTextStyles.fontFamily,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: palette.primary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        if (_newsFeed.length > 1) ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_newsFeed.length, (i) {
-              final active = i == _newsPageIndex;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: active ? 18 : 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: active
-                      ? palette.accent
-                      : palette.textTertiary.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              );
-            }),
-          ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < items.length; i++) ...[
+          _buildMeetRow(c, items[i]),
+          if (i != items.length - 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(height: 1, thickness: 1, color: c.divider),
+            ),
         ],
       ],
+    );
+  }
+
+  Widget _buildMeetRow(_PoolColors c, MeetSummary meet) {
+    final is25m = meet.course == 'SC';
+    final cityText = meet.city.isNotEmpty ? meet.city : 'Türkiye';
+    final subtitle = [
+      cityText,
+      if (meet.startDate.isNotEmpty) meet.startDate,
+      '${meet.totalRaces} yarış',
+    ].join(' · ');
+
+    return InkWell(
+      onTap: () {
+        final matchingLive = _liveMeets
+            .where((m) => m.meetId != null && m.meetId == meet.id)
+            .firstOrNull;
+        if (matchingLive != null && widget.onOpenLiveMeet != null) {
+          widget.onOpenLiveMeet!(matchingLive.id);
+          return;
+        }
+        if (widget.onOpenMeetInLive != null) {
+          widget.onOpenMeetInLive!(meet);
+          return;
+        }
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LiveMeetDetailScreen(
+              live: LiveMeetSummary.fromMeetSummary(meet),
+              repository: widget.repository,
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: is25m ? c.cyan.withAlpha(32) : c.navy.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                is25m ? '25m' : '50m',
+                style: _num(
+                  12,
+                  weight: FontWeight.w800,
+                  color: is25m ? c.cyan : c.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    StringUtils.toTitleCase(meet.name),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: _display(
+                      14.5,
+                      weight: FontWeight.w700,
+                      color: c.textPrimary,
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _display(
+                      12.5,
+                      weight: FontWeight.w400,
+                      color: c.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: c.textSecondary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1296,10 +1133,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   Text(
                     item.baslik,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
+                    style: _display(
+                      17,
+                      weight: FontWeight.w700,
                       color: palette.textPrimary,
                     ),
                   ),
@@ -1310,10 +1146,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (item.tarihMetni.isNotEmpty) item.tarihMetni,
                         if (item.sehirYer.isNotEmpty) item.sehirYer,
                       ].join(' • '),
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                      style: _display(
+                        13,
+                        weight: FontWeight.w500,
                         color: palette.textSecondary,
                       ),
                     ),
@@ -1321,10 +1156,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Yaş Grubu: ${item.yasGrubu}',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: _display(
+                        13,
+                        weight: FontWeight.w600,
                         color: palette.accent,
                       ),
                     ),
@@ -1333,11 +1167,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 14),
                     Text(
                       item.ozet,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13.5,
-                        height: 1.45,
+                      style: _display(
+                        13.5,
+                        weight: FontWeight.w400,
                         color: palette.textPrimary,
+                        height: 1.45,
                       ),
                     ),
                   ],
@@ -1345,10 +1179,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 14),
                     Text(
                       'Önemli Notlar',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                      style: _display(
+                        13,
+                        weight: FontWeight.w700,
                         color: palette.textPrimary,
                       ),
                     ),
@@ -1369,11 +1202,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: Text(
                                 note,
-                                style: TextStyle(
-                                  fontFamily: AppTextStyles.fontFamily,
-                                  fontSize: 12.5,
-                                  height: 1.35,
+                                style: _display(
+                                  12.5,
+                                  weight: FontWeight.w400,
                                   color: palette.textSecondary,
+                                  height: 1.35,
                                 ),
                               ),
                             ),
@@ -1400,148 +1233,11 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-
-  Widget _buildHighlightsSection(AppColorPalette palette) {
-    final items = _highlights.take(5).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'Favori & Kulüp Canlı Akışı',
-          trailingText: '${items.length} Kayıt',
-        ),
-        AppSpacing.v12,
-        SoftGlassPanel(
-          level: 2,
-          borderRadius: AppRadius.cardRadius,
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: items.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final h = entry.value;
-              final std = h['qualifying_standard'] as Map<String, dynamic>?;
-              final bool hasStd = std != null && std['passed'] == true;
-              final athId = h['athlete_id'] as int;
-              final athleteName = StringUtils.formatAthleteName(
-                h['athlete_name'] as String? ?? '',
-              );
-              final eventLabel =
-                  '${h['distance'] ?? ''}m ${h['stroke_label'] ?? ''}'.trim();
-              final city = StringUtils.toTitleCase(
-                (h['city'] as String?)?.trim() ?? '',
-              );
-              final subtitleText =
-                  city.isNotEmpty ? '$eventLabel • $city' : eventLabel;
-
-              return Column(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AthleteProfileScreen(
-                            athleteId: athId,
-                            athleteName: h['athlete_name'] as String? ?? '',
-                            repository: widget.repository,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.s12,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        athleteName,
-                                        style: TextStyle(
-                                          fontFamily: AppTextStyles.fontFamily,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: palette.textPrimary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                AppSpacing.vXs,
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        subtitleText,
-                                        style: TextStyle(
-                                          fontFamily: AppTextStyles.fontFamily,
-                                          fontSize: 12.5,
-                                          color: palette.textSecondary,
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (hasStd) ...[
-                                  AppSpacing.vXs,
-                                  Text(
-                                    (std['badge'] as String?) ?? 'Baraj',
-                                    style: TextStyle(
-                                      fontFamily: AppTextStyles.fontFamily,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: palette.successText,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          AppSpacing.h12,
-                          Text(
-                            h['time'] as String? ?? '',
-                            maxLines: 1,
-                            softWrap: false,
-                            style: AppTextStyles.officialTime.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (idx < items.length - 1)
-                    Divider(height: 1, thickness: 1, color: palette.divider),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
 }
+
+// ═══════════════════════════════════════════════════════════════
+// YARDIMCI WIDGET & PAINTER'LAR
+// ═══════════════════════════════════════════════════════════════
 
 /// Arama Delegesi
 class _SwimSearchDelegate extends SearchDelegate {
@@ -1606,102 +1302,73 @@ class _SwimSearchDelegate extends SearchDelegate {
             if (athletes.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.all(12),
-                child: Text('Sporcular', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                child: Text(
+                  'Sporcular',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
-              ...athletes.map((a) => ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: Icon(
-                        Icons.person,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        size: 20,
-                      ),
+              ...athletes.map(
+                (a) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      Icons.person,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 20,
                     ),
-                    title: Text(StringUtils.formatAthleteName(a.name)),
-                    subtitle: Text(
-                      '${a.birthYear ?? '-'} · ${a.clubName}',
-                    ),
-                    onTap: () {
-                      close(context, null);
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => AthleteProfileScreen(
-                            athleteId: a.id,
-                            athleteName: a.name,
-                            repository: repository,
-                          ),
+                  ),
+                  title: Text(StringUtils.formatAthleteName(a.name)),
+                  subtitle: Text('${a.birthYear ?? '-'} · ${a.clubName}'),
+                  onTap: () {
+                    close(context, null);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AthleteProfileScreen(
+                          athleteId: a.id,
+                          athleteName: a.name,
+                          repository: repository,
                         ),
-                      );
-                    },
-                  )),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
             if (clubs.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.all(12),
-                child: Text('Kulüpler', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                child: Text(
+                  'Kulüpler',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
-              ...clubs.map((c) => ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                      child: Icon(
-                        Icons.shield_outlined,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        size: 20,
-                      ),
+              ...clubs.map(
+                (c) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    child: Icon(
+                      Icons.shield_outlined,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 20,
                     ),
-                    title: Text(c.name),
-                    subtitle: Text('${c.athleteCount} Kayıtlı Sporcu'),
-                    onTap: () {
-                      close(context, null);
-                      ClubSearchScreen.showClubActionsSheet(
-                        context,
-                        club: c,
-                        repository: repository,
-                        onMeetSelected: onMeetSelected,
-                      );
-                    },
-                  )),
+                  ),
+                  title: Text(c.name),
+                  subtitle: Text('${c.athleteCount} Kayıtlı Sporcu'),
+                  onTap: () {
+                    close(context, null);
+                    ClubSearchScreen.showClubActionsSheet(
+                      context,
+                      club: c,
+                      repository: repository,
+                      onMeetSelected: onMeetSelected,
+                    );
+                  },
+                ),
+              ),
             ],
           ],
         );
       },
-    );
-  }
-}
-
-class _KheloOnTapScale extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-
-  const _KheloOnTapScale({
-    required this.child,
-    this.onTap,
-  });
-
-  @override
-  State<_KheloOnTapScale> createState() => _KheloOnTapScaleState();
-}
-
-class _KheloOnTapScaleState extends State<_KheloOnTapScale> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final disableMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration:
-            disableMotion ? Duration.zero : const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
-      ),
     );
   }
 }
