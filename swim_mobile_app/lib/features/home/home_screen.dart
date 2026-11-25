@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,7 +17,6 @@ import '../athletes/athlete_profile_screen.dart';
 import '../barajlar/barajlar_screen.dart';
 import '../calendar/event_calendar_screen.dart';
 import '../clubs/club_search_screen.dart';
-import '../clubs/relay_simulator_screen.dart';
 import '../live/live_meet_detail_screen.dart';
 import '../meets/meet_search_screen.dart';
 import '../rankings/rankings_screen.dart';
@@ -132,7 +133,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   String? _errorMessage;
   List<MeetSummary> _recentMeets = [];
@@ -142,16 +144,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final PageController _newsPageController = PageController(viewportFraction: 1);
   int _newsPageIndex = 0;
-  int _selectedTabIndex = 0;
+
+  late final AnimationController _brandController;
+  late final Animation<double> _brandFade;
+  late final Animation<Offset> _brandSlide;
+  late final Animation<double> _brandScale;
 
   @override
   void initState() {
     super.initState();
+    _brandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    final curved = CurvedAnimation(
+      parent: _brandController,
+      curve: Curves.easeOutCubic,
+    );
+    _brandFade = curved;
+    _brandSlide = Tween<Offset>(
+      begin: const Offset(0.18, 0.45),
+      end: Offset.zero,
+    ).animate(curved);
+    _brandScale = Tween<double>(begin: 0.85, end: 1.0).animate(curved);
+    _brandController.forward();
     _loadData();
   }
 
   @override
   void dispose() {
+    _brandController.dispose();
     _newsPageController.dispose();
     super.dispose();
   }
@@ -253,23 +275,37 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         bottom: false,
         child: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: c.cyan,
-                ),
+            ? Column(
+                children: [
+                  _buildBrandBar(c),
+                  Expanded(
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: c.cyan,
+                      ),
+                    ),
+                  ),
+                ],
               )
             : _errorMessage != null &&
                     _recentMeets.isEmpty &&
                     _liveMeets.isEmpty
-                ? Center(
-                    child: EmptyStateWidget(
-                      title: 'Veriler Yüklenemedi',
-                      message: _errorMessage!,
-                      icon: Icons.cloud_off_outlined,
-                      actionText: 'Tekrar Dene',
-                      onAction: _loadData,
-                    ),
+                ? Column(
+                    children: [
+                      _buildBrandBar(c),
+                      Expanded(
+                        child: Center(
+                          child: EmptyStateWidget(
+                            title: 'Veriler Yüklenemedi',
+                            message: _errorMessage!,
+                            icon: Icons.cloud_off_outlined,
+                            actionText: 'Tekrar Dene',
+                            onAction: _loadData,
+                          ),
+                        ),
+                      ),
+                    ],
                   )
                 : RefreshIndicator(
                     color: c.cyan,
@@ -277,10 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ListView(
                       padding: EdgeInsets.only(bottom: 100 + bottomInset),
                       children: [
+                        _buildBrandBar(c),
                         const SizedBox(height: 12),
-                        _buildSearchField(c),
-                        const SizedBox(height: 14),
-                        _buildUnderlinedTabs(c),
                         if (_newsFeed.isNotEmpty)
                           _buildHeroAnnouncements(c, palette),
                         const SizedBox(height: 20),
@@ -301,38 +335,84 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 1. ARAMA ÇUBUĞU
+  // 1. ANİMASYONLU LOGO & UYGULAMA ADI
   // ═════════════════════════════════════════════════════════════
 
-  Widget _buildSearchField(_PoolColors c) {
+  Widget _buildBrandBar(_PoolColors c) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Material(
-        color: c.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: c.border, width: 1),
-        ),
-        child: InkWell(
-          onTap: _openSearchModal,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      child: FadeTransition(
+        opacity: _brandFade,
+        child: SlideTransition(
+          position: _brandSlide,
+          child: ScaleTransition(
+            scale: _brandScale,
+            alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                Icon(Icons.search, size: 22, color: c.textSecondary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Sporcu, kulüp, müsabaka',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _display(
-                      15,
-                      weight: FontWeight.w400,
-                      color: c.textSecondary,
+                Container(
+                  width: 38,
+                  height: 38,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: c.border, width: 1),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: Image.asset(
+                      'assets/images/app_logo.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
+                ),
+                const SizedBox(width: 11),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          'KULVA',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.displayFontFamily,
+                            fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            color: c.textPrimary,
+                            letterSpacing: -0.4,
+                            height: 1.0,
+                          ),
+                        ),
+                        Text(
+                          'R',
+                          style: TextStyle(
+                            fontFamily: 'Syne',
+                            fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: c.coral,
+                            letterSpacing: -0.4,
+                            height: 0.92,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Türkiye Yüzme Platformu',
+                      style: _display(
+                        11.5,
+                        weight: FontWeight.w600,
+                        color: c.cyan,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -343,86 +423,45 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 3. ALTI ÇİZGİLİ SEKMELER
+  // 2. KAYDIRILIR KOYU DUYURULAR HERO BANDI
   // ═════════════════════════════════════════════════════════════
 
-  Widget _buildUnderlinedTabs(_PoolColors c) {
-    final items = <(String, VoidCallback)>[
-      ('Yarış Ara', _openMeetSearch),
-      (
-        'Barajlar',
-        () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => BarajlarScreen(repository: widget.repository),
-              ),
-            ),
-      ),
-      (
-        'Takvim',
-        () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    EventCalendarScreen(repository: widget.repository),
-              ),
-            ),
-      ),
-      ('Kulüpler', _openClubSearch),
-    ];
+  static const _trMonths = [
+    'OCA',
+    'ŞUB',
+    'MAR',
+    'NİS',
+    'MAY',
+    'HAZ',
+    'TEM',
+    'AĞU',
+    'EYL',
+    'EKİ',
+    'KAS',
+    'ARA',
+  ];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(width: 24),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  setState(() => _selectedTabIndex = i);
-                  items[i].$2();
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        items[i].$1,
-                        style: _display(
-                          14,
-                          weight: i == _selectedTabIndex
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: i == _selectedTabIndex
-                              ? c.textPrimary
-                              : c.textSecondary,
-                        ),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: 3,
-                      width: i == _selectedTabIndex ? 60 : 0,
-                      decoration: BoxDecoration(
-                        color: c.cyan,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+  ({String day, String month})? _extractDayMonth(TyfNewsItem item) {
+    final raw = item.baslangicTarihi.trim().isNotEmpty
+        ? item.baslangicTarihi.trim()
+        : item.guncellenmeTarihi.trim();
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return null;
+    final yy = (dt.year % 100).toString().padLeft(2, '0');
+    return (day: '${dt.day}', month: '${_trMonths[dt.month - 1]} $yy');
   }
 
-  // ═════════════════════════════════════════════════════════════
-  // 4. KAYDIRILIR KOYU DUYURULAR HERO BANDI
-  // ═════════════════════════════════════════════════════════════
+  String? _formatAgeRange(TyfNewsItem item) {
+    final min = item.minYas;
+    final max = item.maxYas;
+    if (min != null && max != null) {
+      return min == max ? '$min Yaş' : '$min–$max Yaş';
+    }
+    if (min != null) return '$min+ Yaş';
+    if (max != null) return '$max Yaş ve Altı';
+    final raw = item.yasGrubu.trim();
+    return raw.isNotEmpty ? raw : null;
+  }
 
   Widget _buildHeroAnnouncements(_PoolColors c, AppColorPalette palette) {
     final total = _newsFeed.length;
@@ -433,201 +472,24 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 242,
+            height: 272,
             child: PageView.builder(
               controller: _newsPageController,
               itemCount: total,
               onPageChanged: (idx) => setState(() => _newsPageIndex = idx),
               itemBuilder: (context, index) {
                 final item = _newsFeed[index];
-                final isMilli = item.belgeTuru == 'MILLI_TAKIM';
-                final dotColor = isMilli ? c.coral : c.cyan;
-                final cityUpper = item.sehirYer.trim().toUpperCase();
-                final topLabel = cityUpper.isNotEmpty
-                    ? '${item.turEtiketi.toUpperCase()} · $cityUpper'
-                    : item.turEtiketi.toUpperCase();
-                final metaParts = <String>[
-                  if (item.yasGrubu.isNotEmpty) item.yasGrubu,
-                  if (item.tarihMetni.isNotEmpty) item.tarihMetni,
-                  if (item.barajSayisi > 0) '${item.barajSayisi} Baraj',
-                ];
-                final metaLine = metaParts.isNotEmpty
-                    ? metaParts.join(' · ')
-                    : 'TYF Resmi Duyuru';
-
-                return Stack(
-                  children: [
-                    // Sağ tarafta büyük tipografik filigran numara
-                    Positioned(
-                      right: -6,
-                      top: 4,
-                      bottom: 0,
-                      child: IgnorePointer(
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            '${index + 1}',
-                            style: _num(
-                              200,
-                              weight: FontWeight.w800,
-                              color: Colors.white.withAlpha(14),
-                              height: 0.9,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: dotColor,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  topLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: _display(
-                                    11.5,
-                                    weight: FontWeight.w700,
-                                    color: c.cyan,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${index + 1} / $total',
-                                style: _num(
-                                  12,
-                                  weight: FontWeight.w600,
-                                  color: Colors.white.withAlpha(160),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 320),
-                            child: Text(
-                              item.baslik.toUpperCase(),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: _display(
-                                21,
-                                weight: FontWeight.w800,
-                                color: Colors.white,
-                                height: 1.14,
-                                letterSpacing: -0.4,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            metaLine,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _display(
-                              13,
-                              weight: FontWeight.w500,
-                              color: Colors.white.withAlpha(185),
-                            ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              Material(
-                                color: c.coral,
-                                borderRadius: BorderRadius.circular(999),
-                                child: InkWell(
-                                  onTap: () =>
-                                      _openNewsDetailSheet(item, palette),
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 11,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Detayları gör',
-                                          style: _display(
-                                            13.5,
-                                            weight: FontWeight.w700,
-                                            color: const Color(0xFF0F273B),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const Icon(
-                                          Icons.arrow_forward,
-                                          size: 16,
-                                          color: Color(0xFF0F273B),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (item.pdfUrl.isNotEmpty) ...[
-                                const SizedBox(width: 10),
-                                Material(
-                                  color: Colors.white.withAlpha(20),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(999),
-                                    side: BorderSide(
-                                      color: Colors.white.withAlpha(60),
-                                    ),
-                                  ),
-                                  child: InkWell(
-                                    onTap: () => _launchPdfUrl(item.pdfUrl),
-                                    borderRadius: BorderRadius.circular(999),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.picture_as_pdf_outlined,
-                                            size: 15,
-                                            color: Colors.white,
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            'PDF',
-                                            style: _display(
-                                              12.5,
-                                              weight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                return _FlippableAnnouncementCard(
+                  key: ValueKey('news_${item.id}_$index'),
+                  item: item,
+                  index: index,
+                  total: total,
+                  colors: c,
+                  dayMonth: _extractDayMonth(item),
+                  ageRange: _formatAgeRange(item),
+                  onOpenPdf: item.pdfUrl.isNotEmpty
+                      ? () => _launchPdfUrl(item.pdfUrl)
+                      : null,
                 );
               },
             ),
@@ -661,132 +523,124 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 6. ARAÇ KARTLARI (Turkuaz Dolgulu & Çerçeveli Filigranlı)
+  // 3. ARAÇ KARTLARI (2x2 Grid: Barajlar, Top 25, Takvim, Kulüpler)
   // ═════════════════════════════════════════════════════════════
 
   Widget _buildToolCards(_PoolColors c) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: Material(
-              color: c.cyan,
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          RelaySimulatorScreen(repository: widget.repository),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(18),
-                child: SizedBox(
-                  height: 112,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          'BAYRAK\nSİMÜLATÖRÜ',
-                          style: _display(
-                            17,
-                            weight: FontWeight.w800,
-                            color: const Color(0xFF0F273B),
-                            height: 1.12,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '4x50 / 4x100',
-                          style: _display(
-                            12.5,
-                            weight: FontWeight.w500,
-                            color: const Color(0xFF0F273B).withAlpha(210),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: _ActionTileCard(
+                  colors: c,
+                  title: 'BARAJLAR',
+                  subtitle: 'A / B baraj süreleri',
+                  backgroundColor: c.cyan,
+                  titleColor: const Color(0xFF0F273B),
+                  subtitleColor: const Color(0xFF0F273B).withAlpha(210),
+                  watermarkColor: const Color(0xFF0F273B).withAlpha(36),
+                  watermarkIcon: Icons.timer_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            BarajlarScreen(repository: widget.repository),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionTileCard(
+                  colors: c,
+                  title: 'TOP 25\nSIRALAMA',
+                  subtitle: 'Branş ve il',
+                  backgroundColor: c.coral,
+                  titleColor: const Color(0xFF0F273B),
+                  subtitleColor: const Color(0xFF0F273B).withAlpha(210),
+                  watermarkColor: const Color(0xFF0F273B).withAlpha(36),
+                  watermarkText: '25',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            RankingsScreen(repository: widget.repository),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Material(
-              color: c.card,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: BorderSide(color: c.textPrimary, width: 1.1),
-              ),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          RankingsScreen(repository: widget.repository),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(18),
-                child: SizedBox(
-                  height: 112,
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        right: 10,
-                        top: 8,
-                        child: IgnorePointer(
-                          child: Text(
-                            '25',
-                            style: _num(
-                              56,
-                              weight: FontWeight.w800,
-                              color: c.textPrimary.withAlpha(26),
-                              height: 1.0,
-                            ),
-                          ),
-                        ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _ActionTileCard(
+                  colors: c,
+                  title: 'TAKVİM',
+                  subtitle: 'TYF yarış takvimi',
+                  backgroundColor: c.isDark
+                      ? const Color(0xFF132D42)
+                      : const Color(0xFFE3F5F8),
+                  borderColor: c.cyan.withAlpha(140),
+                  watermarkColor: c.cyan.withAlpha(64),
+                  watermarkIcon: Icons.calendar_month_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EventCalendarScreen(repository: widget.repository),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              'TOP 25\nSIRALAMA',
-                              style: _display(
-                                17,
-                                weight: FontWeight.w800,
-                                color: c.textPrimary,
-                                height: 1.12,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Branş ve il',
-                              style: _display(
-                                12.5,
-                                weight: FontWeight.w500,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ListenableBuilder(
+                  listenable: SelectedClubService.instance,
+                  builder: (context, _) {
+                    final club = SelectedClubService.instance;
+                    final subtitle = club.hasSelectedClub
+                        ? StringUtils.toTitleCase(club.clubName!)
+                        : 'Kulüp ara ve incele';
+                    return _ActionTileCard(
+                      colors: c,
+                      title: 'KULÜPLER',
+                      subtitle: subtitle,
+                      backgroundColor: c.navy,
+                      titleColor: Colors.white,
+                      subtitleColor: c.cyan,
+                      watermarkColor: Colors.white.withAlpha(32),
+                      watermarkIcon: Icons.shield_outlined,
+                      onTap: _openClubSearch,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _ActionTileCard(
+            colors: c,
+            title: 'SPORCU ARA',
+            subtitle: 'Sporcu, kulüp veya müsabaka ara',
+            backgroundColor: c.isDark
+                ? const Color(0xFF1A2B3C)
+                : const Color(0xFFEAF0F5),
+            borderColor: c.textPrimary.withAlpha(70),
+            watermarkColor: c.coral.withAlpha(80),
+            watermarkIcon: Icons.person_search_outlined,
+            height: 88,
+            onTap: _openSearchModal,
           ),
         ],
       ),
@@ -1076,116 +930,550 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  void _openNewsDetailSheet(TyfNewsItem item, AppColorPalette palette) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: palette.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+class _ActionTileCard extends StatelessWidget {
+  const _ActionTileCard({
+    required this.colors,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.backgroundColor,
+    this.titleColor,
+    this.subtitleColor,
+    this.borderColor,
+    this.watermarkColor,
+    this.watermarkText,
+    this.watermarkIcon,
+    this.height = 108,
+  });
+
+  final _PoolColors colors;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color? backgroundColor;
+  final Color? titleColor;
+  final Color? subtitleColor;
+  final Color? borderColor;
+  final Color? watermarkColor;
+  final String? watermarkText;
+  final IconData? watermarkIcon;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colors;
+    final bg = backgroundColor ?? c.card;
+    final fgTitle = titleColor ?? c.textPrimary;
+    final fgSubtitle = subtitleColor ?? c.textSecondary;
+    final wmColor = watermarkColor ?? c.textPrimary.withAlpha(26);
+
+    return Material(
+      color: bg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: borderColor != null
+            ? BorderSide(color: borderColor!, width: 1.1)
+            : BorderSide.none,
       ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 38,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: palette.textTertiary.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
+          height: height,
+          child: Stack(
+            children: [
+              if (watermarkText != null)
+                Positioned(
+                  right: 10,
+                  top: 8,
+                  child: IgnorePointer(
+                    child: Text(
+                      watermarkText!,
+                      style: _num(
+                        54,
+                        weight: FontWeight.w800,
+                        color: wmColor,
+                        height: 1.0,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      Chip(
-                        label: Text(item.turEtiketi),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      if (item.revizyonEtiketi.isNotEmpty)
-                        Chip(
-                          label: Text(item.revizyonEtiketi),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      if (item.havuz.isNotEmpty)
-                        Chip(
-                          label: Text(item.havuz),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      if (item.barajSayisi > 0)
-                        Chip(
-                          label: Text('${item.barajSayisi} Baraj Kuralı'),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    item.baslik,
-                    style: _display(
-                      17,
-                      weight: FontWeight.w700,
-                      color: palette.textPrimary,
+                )
+              else if (watermarkIcon != null)
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: IgnorePointer(
+                    child: Icon(
+                      watermarkIcon,
+                      size: 40,
+                      color: wmColor,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (item.tarihMetni.isNotEmpty || item.sehirYer.isNotEmpty)
+                ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
                     Text(
-                      [
-                        if (item.tarihMetni.isNotEmpty) item.tarihMetni,
-                        if (item.sehirYer.isNotEmpty) item.sehirYer,
-                      ].join(' • '),
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: _display(
-                        13,
+                        17,
+                        weight: FontWeight.w800,
+                        color: fgTitle,
+                        height: 1.12,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _display(
+                        12.5,
                         weight: FontWeight.w500,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                  if (item.yasGrubu.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Yaş Grubu: ${item.yasGrubu}',
-                      style: _display(
-                        13,
-                        weight: FontWeight.w600,
-                        color: palette.accent,
+                        color: fgSubtitle,
                       ),
                     ),
                   ],
-                  if (item.ozet.isNotEmpty) ...[
-                    const SizedBox(height: 14),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DÖNEN DUYURU KARTI (3D Flip Animasyonu + Arka Yüz Detayları)
+// ═══════════════════════════════════════════════════════════════
+
+class _FlippableAnnouncementCard extends StatefulWidget {
+  const _FlippableAnnouncementCard({
+    super.key,
+    required this.item,
+    required this.index,
+    required this.total,
+    required this.colors,
+    required this.dayMonth,
+    required this.ageRange,
+    this.onOpenPdf,
+  });
+
+  final TyfNewsItem item;
+  final int index;
+  final int total;
+  final _PoolColors colors;
+  final ({String day, String month})? dayMonth;
+  final String? ageRange;
+  final VoidCallback? onOpenPdf;
+
+  @override
+  State<_FlippableAnnouncementCard> createState() =>
+      _FlippableAnnouncementCardState();
+}
+
+class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+  late final Animation<double> _animation = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOutCubic,
+  );
+  bool _isFlipped = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggleFlip() {
+    if (_isFlipped) {
+      _controller.reverse();
+    } else {
+      _controller.forward();
+    }
+    _isFlipped = !_isFlipped;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleFlip,
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, _) {
+          final angle = _animation.value * math.pi;
+          final showBack = angle > math.pi / 2;
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0012)
+              ..rotateY(angle),
+            child: showBack
+                ? Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.rotationY(math.pi),
+                    child: _buildBack(),
+                  )
+                : _buildFront(),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFront() {
+    final item = widget.item;
+    final c = widget.colors;
+    final isMilli = item.belgeTuru == 'MILLI_TAKIM';
+    final dotColor = isMilli ? c.coral : c.cyan;
+    final cityUpper = StringUtils.toTurkishUpper(item.sehirYer.trim());
+    final turUpper = StringUtils.toTurkishUpper(item.turEtiketi);
+    final topLabel = cityUpper.isNotEmpty ? '$turUpper · $cityUpper' : turUpper;
+    final metaParts = <String>[
+      if (item.tarihMetni.isNotEmpty) item.tarihMetni,
+      if (widget.ageRange != null) widget.ageRange!,
+      if (item.barajSayisi > 0) '${item.barajSayisi} Baraj',
+    ];
+    final metaLine =
+        metaParts.isNotEmpty ? metaParts.join(' · ') : 'TYF Resmi Duyuru';
+
+    return Stack(
+      children: [
+        if (widget.dayMonth != null)
+          Positioned(
+            right: 12,
+            top: 26,
+            bottom: 16,
+            child: IgnorePointer(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    widget.dayMonth!.day,
+                    style: _num(
+                      108,
+                      weight: FontWeight.w800,
+                      color: Colors.white.withAlpha(18),
+                      height: 0.88,
+                    ),
+                  ),
+                  Text(
+                    widget.dayMonth!.month,
+                    style: _display(
+                      28,
+                      weight: FontWeight.w800,
+                      color: Colors.white.withAlpha(24),
+                      letterSpacing: 3,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      topLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _display(
+                        11.5,
+                        weight: FontWeight.w700,
+                        color: c.cyan,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${widget.index + 1} / ${widget.total}',
+                    style: _num(
+                      12,
+                      weight: FontWeight.w600,
+                      color: Colors.white.withAlpha(160),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Text(
+                  StringUtils.toTurkishUpper(item.baslik),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: _display(
+                    21,
+                    weight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.14,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (item.sehirYer.isNotEmpty) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: c.cyan.withAlpha(36),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: c.cyan.withAlpha(90)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on_rounded, size: 15, color: c.cyan),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          item.sehirYer,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _display(
+                            13,
+                            weight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Text(
+                metaLine,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _display(
+                  12.5,
+                  weight: FontWeight.w500,
+                  color: Colors.white.withAlpha(185),
+                ),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  Material(
+                    color: c.coral,
+                    borderRadius: BorderRadius.circular(999),
+                    child: InkWell(
+                      onTap: _toggleFlip,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 11,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Detayları gör',
+                              style: _display(
+                                13.5,
+                                weight: FontWeight.w700,
+                                color: const Color(0xFF0F273B),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.arrow_forward,
+                              size: 16,
+                              color: Color(0xFF0F273B),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.onOpenPdf != null) ...[
+                    const SizedBox(width: 10),
+                    Material(
+                      color: Colors.white.withAlpha(20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        side: BorderSide(color: Colors.white.withAlpha(60)),
+                      ),
+                      child: InkWell(
+                        onTap: widget.onOpenPdf,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.picture_as_pdf_outlined,
+                                size: 15,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'PDF',
+                                style: _display(
+                                  12.5,
+                                  weight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBack() {
+    final item = widget.item;
+    final c = widget.colors;
+    final tags = <String>[
+      item.turEtiketi,
+      if (item.revizyonEtiketi.isNotEmpty) item.revizyonEtiketi,
+      if (item.havuz.isNotEmpty) item.havuz,
+      if (widget.ageRange != null) widget.ageRange!,
+      if (item.barajSayisi > 0) '${item.barajSayisi} Baraj',
+    ];
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(14),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.cyan.withAlpha(80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < tags.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: i == 0
+                                ? c.coral.withAlpha(45)
+                                : Colors.white.withAlpha(20),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            tags[i],
+                            style: _display(
+                              11,
+                              weight: FontWeight.w700,
+                              color: i == 0 ? c.coral : Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: _toggleFlip,
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(20),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.flip_to_front_rounded, size: 14, color: c.cyan),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Ön yüz',
+                        style: _display(
+                          11.5,
+                          weight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.ozet.isNotEmpty)
                     Text(
                       item.ozet,
                       style: _display(
-                        13.5,
+                        12.5,
                         weight: FontWeight.w400,
-                        color: palette.textPrimary,
-                        height: 1.45,
+                        color: Colors.white.withAlpha(225),
+                        height: 1.4,
                       ),
                     ),
-                  ],
                   if (item.onemliNotlar.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      'Önemli Notlar',
-                      style: _display(
-                        13,
-                        weight: FontWeight.w700,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
+                    if (item.ozet.isNotEmpty) const SizedBox(height: 8),
                     ...item.onemliNotlar.map(
                       (note) => Padding(
                         padding: const EdgeInsets.only(bottom: 4),
@@ -1194,18 +1482,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               '• ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: palette.accent,
+                              style: _display(
+                                12,
+                                weight: FontWeight.w700,
+                                color: c.cyan,
                               ),
                             ),
                             Expanded(
                               child: Text(
                                 note,
                                 style: _display(
-                                  12.5,
+                                  12,
                                   weight: FontWeight.w400,
-                                  color: palette.textSecondary,
+                                  color: Colors.white.withAlpha(200),
                                   height: 1.35,
                                 ),
                               ),
@@ -1215,29 +1504,61 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 18),
-                  if (item.pdfUrl.isNotEmpty)
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => _launchPdfUrl(item.pdfUrl),
-                        icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: const Text('Resmi PDF Belgesini Aç'),
+                  if (item.ozet.isEmpty && item.onemliNotlar.isEmpty)
+                    Text(
+                      item.baslik,
+                      style: _display(
+                        13.5,
+                        weight: FontWeight.w600,
+                        color: Colors.white.withAlpha(220),
+                        height: 1.4,
                       ),
                     ),
                 ],
               ),
             ),
           ),
-        );
-      },
+          if (widget.onOpenPdf != null) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: c.coral,
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  onTap: widget.onOpenPdf,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 16,
+                          color: Color(0xFF0F273B),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Resmi PDF Belgesini Aç',
+                          style: _display(
+                            12.5,
+                            weight: FontWeight.w700,
+                            color: const Color(0xFF0F273B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// YARDIMCI WIDGET & PAINTER'LAR
-// ═══════════════════════════════════════════════════════════════
 
 /// Arama Delegesi
 class _SwimSearchDelegate extends SearchDelegate {

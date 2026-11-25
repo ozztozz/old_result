@@ -364,13 +364,13 @@ class _RankingsScreenState extends State<RankingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Türkiye Yüzme Federasyonu',
+                  'TÜRKİYE YÜZME FEDERASYONU',
                   style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.2,
-                    color: palette.textSecondary,
+                    fontFamily: AppTextStyles.displayFontFamily,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: palette.primary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -381,9 +381,9 @@ class _RankingsScreenState extends State<RankingsScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
+                    fontFamily: AppTextStyles.displayFontFamily,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: -0.6,
                     height: 1.15,
                     color: palette.textPrimary,

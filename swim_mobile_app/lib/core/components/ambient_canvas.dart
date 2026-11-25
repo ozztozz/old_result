@@ -59,6 +59,12 @@ class AmbientBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    if (palette.isCrispCardTheme) {
+      return ColoredBox(
+        color: palette.background,
+        child: child,
+      );
+    }
     final fieldAColor = palette.ambientFieldA.withValues(
       alpha: (palette.ambientFieldA.a + fieldAlphaBoost).clamp(0.0, 1.0),
     );

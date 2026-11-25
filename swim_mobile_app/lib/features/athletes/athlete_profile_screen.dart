@@ -14,12 +14,10 @@ import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/baraj_event_selector.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
-import '../../shared/widgets/status_badge.dart';
 import 'athlete_compare_screen.dart';
 import 'widgets/pb_history_sheet.dart';
 
 const double _profileTabBarHeight = 46;
-const double _profileActionButtonOffset = (28 * 1.15 - 40) / 2;
 
 /// Sporcu Profili, Kişisel En İyi Dereceler (PB) ve Scout Analizi Ekranı
 class AthleteProfileScreen extends StatefulWidget {
@@ -231,105 +229,63 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     );
   }
 
-  /// Editoryal Üst Başlık (Kulüp etiketi, 28 w700 sporcu adı, Level 3 aksiyon butonları)
+  /// Editoryal Üst Başlık (Geri, SPORCU PROFİLİ etiketi, aksiyon butonları)
   Widget _buildHeader(AppColorPalette palette, AthleteDetail a) {
-    final rawClub = a.clubName?.trim() ?? '';
-    final clubName = rawClub.isNotEmpty
-        ? (rawClub == rawClub.toUpperCase()
-            ? StringUtils.toTitleCase(rawClub)
-            : rawClub)
-        : 'Ferdi Sporcu';
-    final athleteName = StringUtils.formatAthleteName(a.name);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            const SizedBox(width: 40 + AppSpacing.sm),
-            Expanded(
-              child: Text(
-                clubName,
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.2,
-                  color: palette.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 88 + AppSpacing.sm),
-          ],
+        GlassCircleButton(
+          icon: Icons.arrow_back_outlined,
+          iconSize: 20,
+          iconColor: palette.textPrimary,
+          tooltip: 'Geri',
+          onTap: () => Navigator.maybePop(context),
         ),
-        AppSpacing.vXs,
+        AppSpacing.hMd,
+        Expanded(
+          child: Text(
+            'SPORCU PROFİLİ',
+            style: TextStyle(
+              fontFamily: AppTextStyles.displayFontFamily,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: palette.primary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        AppSpacing.hSm,
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Transform.translate(
-              offset: const Offset(0, _profileActionButtonOffset),
-              child: GlassCircleButton(
-                icon: Icons.arrow_back_outlined,
-                iconSize: 20,
-                iconColor: palette.textTertiary,
-                tooltip: 'Geri',
-                onTap: () => Navigator.maybePop(context),
-              ),
+            GlassCircleButton(
+              icon: Icons.compare_arrows_outlined,
+              iconSize: 20,
+              iconColor: palette.textPrimary,
+              tooltip: 'Karşılaştır',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AthleteCompareScreen(
+                      athleteA: a,
+                      repository: widget.repository,
+                    ),
+                  ),
+                );
+              },
             ),
             AppSpacing.hSm,
-            Expanded(
-              child: Text(
-                athleteName,
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.6,
-                  height: 1.15,
-                  color: palette.textPrimary,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            AppSpacing.hSm,
-            Transform.translate(
-              offset: const Offset(0, _profileActionButtonOffset),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GlassCircleButton(
-                    icon: Icons.compare_arrows_outlined,
-                    iconSize: 20,
-                    iconColor: palette.textTertiary,
-                    tooltip: 'Karşılaştır',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AthleteCompareScreen(
-                            athleteA: a,
-                            repository: widget.repository,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  AppSpacing.hSm,
-                  GlassCircleButton(
-                    icon: _isFavorite
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    iconColor:
-                        _isFavorite ? palette.accent : palette.textTertiary,
-                    iconSize: 20,
-                    tooltip: _isFavorite ? 'Favorilerden çıkar' : 'Favoriye ekle',
-                    onTap: _toggleFavorite,
-                  ),
-                ],
-              ),
+            GlassCircleButton(
+              icon: _isFavorite
+                  ? Icons.star_rounded
+                  : Icons.star_outline_rounded,
+              iconColor: _isFavorite ? palette.statusWarning : palette.textPrimary,
+              iconSize: 20,
+              tooltip: _isFavorite ? 'Favorilerden çıkar' : 'Favoriye ekle',
+              onTap: _toggleFavorite,
             ),
           ],
         ),
@@ -366,21 +322,14 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     }
     final metaText = metaItems.join(' · ');
 
-    final allPbs = [...a.pbs50m, ...a.pbs25m];
-    int bestFina = 0;
-    for (final pb in allPbs) {
-      if ((pb.points ?? 0) > bestFina) {
-        bestFina = pb.points!;
-      }
-    }
-
-    return SoftGlassPanel(
-      level: 1,
-      tier: GlassTier.hero,
-      ambientGlowBehind: true,
-      borderRadius: AppRadius.rounded,
+    final hasPodium = a.stats.podiumCount > 0;
+    final onContrast = palette.textOnContrast;
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surfaceContrast,
+        borderRadius: BorderRadius.circular(20),
+      ),
       padding: AppSpacing.cardPadding,
-      artStyle: AmbientArtStyle.none,
       child: Column(
         children: [
           Row(
@@ -389,21 +338,21 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: palette.primaryContainer,
+                  color: palette.primary.withAlpha(42),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: palette.primary.withValues(alpha: 0.25),
-                    width: 1.5,
+                    color: palette.primary,
+                    width: 1.6,
                   ),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   initials.isEmpty ? 'SP' : initials,
                   style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
+                    fontFamily: AppTextStyles.displayFontFamily,
                     fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: palette.primary,
+                    fontWeight: FontWeight.w800,
+                    color: onContrast,
                   ),
                 ),
               ),
@@ -413,39 +362,63 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      metaText.isNotEmpty ? metaText : clubName,
+                      athleteName,
                       style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textPrimary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontFamily: 'Syne',
+                        fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                        height: 1.15,
+                        color: onContrast,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    AppSpacing.vXs,
+                    if (metaText.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        metaText,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: onContrast.withAlpha(200),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 3),
                     Text(
-                      'Kürsü Oranı %${a.stats.podiumRate.toStringAsFixed(0)}',
+                      clubName,
                       style: TextStyle(
                         fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13,
-                        color: palette.textSecondary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.primary,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (hasPodium) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'Kürsü Oranı %${a.stats.podiumRate.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12,
+                          color: onContrast.withAlpha(170),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
                 ),
               ),
-              if (bestFina > 0) ...[
-                AppSpacing.hSm,
-                StatusBadge(
-                  label: '$bestFina FINA',
-                  variant: StatusBadgeVariant.info,
-                ),
-              ],
             ],
           ),
           AppSpacing.v20,
@@ -459,14 +432,16 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                   value: '${a.stats.totalRaces}',
                 ),
               ),
-              _buildHeroDivider(palette),
-              Expanded(
-                child: _buildHeroMetric(
-                  palette: palette,
-                  label: 'Kürsü',
-                  value: '${a.stats.podiumCount}',
+              if (hasPodium) ...[
+                _buildHeroDivider(palette),
+                Expanded(
+                  child: _buildHeroMetric(
+                    palette: palette,
+                    label: 'Kürsü',
+                    value: '${a.stats.podiumCount}',
+                  ),
                 ),
-              ),
+              ],
               _buildHeroDivider(palette),
               Expanded(
                 child: _buildHeroMetric(
@@ -487,6 +462,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     required String label,
     required String value,
   }) {
+    final onContrast = palette.textOnContrast;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Column(
@@ -507,10 +483,10 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     fontSize: 38,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
                     height: 1.0,
-                    color: palette.textPrimary,
+                    color: onContrast,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -526,8 +502,8 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
             style: TextStyle(
               fontFamily: AppTextStyles.fontFamily,
               fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: palette.textSecondary,
+              fontWeight: FontWeight.w500,
+              color: onContrast.withAlpha(180),
             ),
           ),
         ],
@@ -539,17 +515,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     return Container(
       width: 1,
       height: 36,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            palette.divider.withValues(alpha: 0.0),
-            palette.textSecondary.withValues(alpha: 0.35),
-            palette.divider.withValues(alpha: 0.0),
-          ],
-        ),
-      ),
+      color: palette.textOnContrast.withAlpha(36),
     );
   }
 
@@ -635,6 +601,23 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
         ),
       ],
     );
+  }
+
+  int? _parseBarajTimeToCs(String raw) {
+    final cleaned = raw.trim().replaceAll(',', '.');
+    if (cleaned.isEmpty || cleaned == '-') return null;
+    final parts = cleaned.split(':');
+    if (parts.length == 2) {
+      final min = int.tryParse(parts[0]);
+      final sec = double.tryParse(parts[1]);
+      if (min != null && sec != null) {
+        return (min * 6000) + (sec * 100).round();
+      }
+    } else if (parts.length == 1) {
+      final sec = double.tryParse(parts[0]);
+      if (sec != null) return (sec * 100).round();
+    }
+    return null;
   }
 
   /// 2. SEKME: Barajlar (Sezon Baraj Tablosu - 50m / 25m Kulvar)
@@ -928,25 +911,57 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
           AppSpacing.vSm,
           Row(
             children: [
-              ChoiceChip(
-                label: const Text('Katılım'),
-                selected: _selectedBarajType == 'Katılım Barajı',
-                onSelected: (_) =>
+              ModernFilterChip(
+                label: 'Katılım',
+                isSelected: _selectedBarajType == 'Katılım Barajı',
+                onTap: () =>
                     setState(() => _selectedBarajType = 'Katılım Barajı'),
-                visualDensity: VisualDensity.compact,
-                selectedColor: palette.accentSoft,
               ),
-              const SizedBox(width: 6),
-              ChoiceChip(
-                label: const Text('Harcırah'),
-                selected: _selectedBarajType == 'Harcırah Barajı',
-                onSelected: (_) =>
+              ModernFilterChip(
+                label: 'Harcırah',
+                isSelected: _selectedBarajType == 'Harcırah Barajı',
+                onTap: () =>
                     setState(() => _selectedBarajType = 'Harcırah Barajı'),
-                visualDensity: VisualDensity.compact,
-                selectedColor: palette.accentSoft,
               ),
             ],
           ),
+          if (meetRows.any((t) =>
+              (t['pb_cs'] as num?) == null &&
+              (t['overall_pb_cs'] as num?) != null)) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: palette.statusWarningBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: palette.statusWarning.withAlpha(65),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: palette.statusWarning,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      'Geçerlilik dönemi dışında — PB dereceleri ile karşılaştırılıyor',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           // Kompakt tablo başlığı
           Padding(
@@ -1018,37 +1033,57 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(top: 6, bottom: 3),
-                    child: Text(
-                      stroke,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: palette.primary,
-                      ),
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          stroke,
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.displayFontFamily,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            height: 1.2,
+                            color: palette.primary.withAlpha(75),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   ...list.map((t) {
                     final mesafe = t['mesafe'];
-                    final targetTime = (t['target_time'] ?? '-').toString();
+                    final rawTargetTime = (t['target_time'] ?? '-').toString();
+                    final targetCs = _parseBarajTimeToCs(rawTargetTime);
+                    final targetText = targetCs != null
+                        ? SwimTimeFormatter.formatCs(targetCs)
+                        : rawTargetTime;
                     final pbCs = (t['pb_cs'] as num?)?.toInt();
                     final overallPbCs = (t['overall_pb_cs'] as num?)?.toInt();
-                    final diffCs = (t['diff_cs'] as num?)?.toInt();
-                    final passed = t['passed'] == true;
-                    final isFallbackPb = pbCs == null && overallPbCs != null;
                     final shownPbCs = pbCs ?? overallPbCs;
                     final pbText = shownPbCs == null
                         ? '-'
                         : SwimTimeFormatter.formatCs(shownPbCs);
-                    final statusText = diffCs != null
+
+                    final rawDiffCs = (t['diff_cs'] as num?)?.toInt() ??
+                        (shownPbCs != null && targetCs != null
+                            ? shownPbCs - targetCs
+                            : null);
+                    final passed = t['passed'] == true ||
+                        (rawDiffCs != null && rawDiffCs <= 0);
+                    final statusText = rawDiffCs != null
                         ? (passed
                             ? 'GEÇTİ'
-                            : '+${(diffCs / 100).toStringAsFixed(2)}s')
-                        : (isFallbackPb ? 'Dönem Dışı' : '-');
+                            : '+${(rawDiffCs / 100).toStringAsFixed(2)}')
+                        : '-';
+
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 4),
+                          vertical: 6, horizontal: 4),
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
@@ -1060,89 +1095,118 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                         children: [
                           SizedBox(
                             width: 52,
-                            child: Text(
-                              '${mesafe ?? "-"}m',
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: palette.accent,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              targetTime,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'JetBrainsMono',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: palette.textPrimary,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  pbText,
-                                  style: TextStyle(
-                                    fontFamily: 'JetBrainsMono',
-                                    fontSize: 12,
-                                    fontWeight: isFallbackPb
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
-                                    color: isFallbackPb
-                                        ? palette.statusWarning
-                                        : (shownPbCs != null
-                                            ? palette.textPrimary
-                                            : palette.textTertiary),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                width: 42,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: passed
+                                      ? (palette.isDark
+                                          ? const Color(0x2610B981)
+                                          : const Color(0xFFECFDF5))
+                                      : palette.statusSuccessBg,
+                                  borderRadius: BorderRadius.circular(7),
+                                  border: Border.all(
+                                    color: (passed
+                                            ? const Color(0xFF10B981)
+                                            : palette.statusSuccess)
+                                        .withAlpha(85),
+                                    width: 1.0,
                                   ),
                                 ),
-                                if (isFallbackPb) ...[
-                                  const SizedBox(width: 3),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: palette.statusWarningBg,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      'PB',
-                                      style: TextStyle(
-                                        fontFamily: AppTextStyles.fontFamily,
-                                        fontSize: 8.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: palette.statusWarning,
-                                      ),
-                                    ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${mesafe ?? "-"}',
+                                  style: TextStyle(
+                                    fontFamily: AppTextStyles.displayFontFamily,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                    color: passed
+                                        ? (palette.isDark
+                                            ? const Color(0xFF34D399)
+                                            : const Color(0xFF059669))
+                                        : palette.statusSuccess,
                                   ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              targetText,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: palette.statusSuccess,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
                                 ],
-                              ],
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              pbText,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: AppTextStyles.fontFamily,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: shownPbCs != null
+                                    ? palette.textPrimary
+                                    : palette.textTertiary,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
                             ),
                           ),
                           SizedBox(
                             width: 72,
-                            child: Text(
-                              statusText,
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                fontFamily: 'JetBrainsMono',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: diffCs != null
-                                    ? (passed
-                                        ? palette.statusSuccess
-                                        : palette.accent)
-                                    : (isFallbackPb
-                                        ? palette.statusWarning
-                                        : palette.textTertiary),
-                              ),
-                            ),
+                            child: rawDiffCs != null && passed
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.emoji_events_rounded,
+                                        size: 13.5,
+                                        color: palette.gold,
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        statusText,
+                                        style: TextStyle(
+                                          fontFamily: AppTextStyles.fontFamily,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: palette.isDark
+                                              ? const Color(0xFF34D399)
+                                              : const Color(0xFF059669),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    statusText,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: rawDiffCs != null
+                                          ? palette.statusWarning
+                                          : palette.textTertiary,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
@@ -1214,12 +1278,6 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     final tileBorderColor = palette.isCrispCardTheme
         ? palette.border
         : Colors.white.withValues(alpha: isDark ? 0.10 : 0.25);
-    final chipFill = palette.isCrispCardTheme
-        ? palette.surfaceSecondary
-        : Colors.white.withValues(alpha: isDark ? 0.09 : 0.14);
-    final chipBorder = palette.isCrispCardTheme
-        ? palette.border
-        : Colors.white.withValues(alpha: isDark ? 0.16 : 0.25);
 
     return SoftGlassPanel(
       level: 2,
@@ -1253,27 +1311,6 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              AppSpacing.hSm,
-              Container(
-                height: 26,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: chipFill,
-                  borderRadius: AppRadius.full,
-                  border: Border.all(color: chipBorder, width: 1.0),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${strokePbs.length} Derece',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: palette.textTertiary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
             ],
           ),
           AppSpacing.v12,
@@ -1304,7 +1341,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                           repository: widget.repository,
                         ),
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 48),
+                          constraints: const BoxConstraints(minHeight: 44),
                           child: Container(
                             decoration: BoxDecoration(
                               color: tileFill,
@@ -1317,11 +1354,11 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                             child: Stack(
                               children: [
                                 Positioned(
-                                  top: 8,
-                                  right: 8,
+                                  top: 6,
+                                  right: 6,
                                   child: Container(
-                                    width: 6,
-                                    height: 6,
+                                    width: 5,
+                                    height: 5,
                                     decoration: BoxDecoration(
                                       color: palette.accent,
                                       shape: BoxShape.circle,
@@ -1330,8 +1367,8 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.sm,
-                                    vertical: AppSpacing.s12,
+                                    horizontal: AppSpacing.xs,
+                                    vertical: AppSpacing.sm,
                                   ),
                                   child: Center(
                                     child: Column(
@@ -1340,21 +1377,21 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                           CrossAxisAlignment.center,
                                       children: [
                                         Text(
-                                          '${pb.distance}m',
+                                          '${pb.distance}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
-                                            fontFamily:
-                                                AppTextStyles.fontFamily,
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w500,
-                                            color: palette.textSecondary,
-                                            fontFeatures: const [
-                                              FontFeature.tabularFigures(),
-                                            ],
+                                            fontFamily: AppTextStyles
+                                                .displayFontFamily,
+                                            fontFamilyFallback:
+                                                AppTextStyles.fontFamilyFallback,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.4,
+                                            color: palette.statusSuccess,
                                           ),
                                         ),
-                                        AppSpacing.vXs,
+                                        const SizedBox(height: 2),
                                         FittedBox(
                                           fit: BoxFit.scaleDown,
                                           child: Text(
@@ -1366,7 +1403,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                             style: TextStyle(
                                               fontFamily:
                                                   AppTextStyles.fontFamily,
-                                              fontSize: 17,
+                                              fontSize: 16,
                                               fontWeight: FontWeight.w700,
                                               color: palette.textPrimary,
                                               fontFeatures: const [
@@ -1375,24 +1412,6 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                             ),
                                           ),
                                         ),
-                                        if (pb.points != null) ...[
-                                          AppSpacing.vXs,
-                                          Text(
-                                            '${pb.points} FINA',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontFamily:
-                                                  AppTextStyles.fontFamily,
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: palette.accent,
-                                              fontFeatures: const [
-                                                FontFeature.tabularFigures(),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
                                       ],
                                     ),
                                   ),

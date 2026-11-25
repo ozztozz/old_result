@@ -48,6 +48,19 @@ abstract final class StringUtils {
     }).join(' ');
   }
 
+  /// Türkçe büyük harf dönüşümü ('i' -> 'İ', 'ı' -> 'I' eşlemesi sonrası toUpperCase)
+  static String toTurkishUpper(String text) {
+    return text
+        .replaceAll('i', 'İ')
+        .replaceAll('ı', 'I')
+        .replaceAll('ş', 'Ş')
+        .replaceAll('ç', 'Ç')
+        .replaceAll('ğ', 'Ğ')
+        .replaceAll('ü', 'Ü')
+        .replaceAll('ö', 'Ö')
+        .toUpperCase();
+  }
+
   /// Türkçe büyük/küçük harf dönüşümü ('İ' -> 'i', 'I' -> 'ı' eşlemesi sonrası toLowerCase)
   static String toTurkishLower(String text) {
     return text

@@ -237,8 +237,10 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
           title: Text(
             'Etkinlik Takvimi',
             style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontWeight: FontWeight.w700,
+              fontFamily: AppTextStyles.displayFontFamily,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
               color: palette.textPrimary,
             ),
           ),

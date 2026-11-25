@@ -60,6 +60,10 @@ flutter:
           weight: 500
         - asset: assets/fonts/JetBrainsMono-700.ttf
           weight: 700
+    - family: Syne
+      fonts:
+        - asset: assets/fonts/Syne-ExtraBold.ttf
+          weight: 800
     - family: NotoSansSymbols2
       fonts:
         - asset: assets/fonts/NotoSansSymbols2-Regular.ttf

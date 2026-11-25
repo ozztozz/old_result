@@ -442,7 +442,8 @@ class _SoftGlassPanelState extends State<SoftGlassPanel> {
             child: inner,
           );
 
-    final shouldBlur = widget.enableBlur && !reducedTransparency;
+    final shouldBlur =
+        widget.enableBlur && !reducedTransparency && !palette.isCrispCardTheme;
     if (shouldBlur) {
       final filtered = BackdropFilter(
         filter: ImageFilter.blur(
@@ -506,21 +507,45 @@ class GlassCircleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    final button = SoftGlassPanel(
-      level: 3,
-      shape: BoxShape.circle,
-      width: 40,
-      height: 40,
-      padding: EdgeInsets.zero,
-      onTap: onTap,
-      child: Center(
-        child: Icon(
-          icon,
-          size: iconSize,
-          color: iconColor ?? palette.textPrimary,
+    final Widget button;
+    if (palette.isCrispCardTheme) {
+      button = Material(
+        color: palette.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: palette.border, width: 1.1),
         ),
-      ),
-    );
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: Icon(
+              icon,
+              size: iconSize,
+              color: iconColor ?? palette.textPrimary,
+            ),
+          ),
+        ),
+      );
+    } else {
+      button = SoftGlassPanel(
+        level: 3,
+        shape: BoxShape.circle,
+        width: 40,
+        height: 40,
+        padding: EdgeInsets.zero,
+        onTap: onTap,
+        child: Center(
+          child: Icon(
+            icon,
+            size: iconSize,
+            color: iconColor ?? palette.textPrimary,
+          ),
+        ),
+      );
+    }
 
     if (tooltip != null) {
       return Tooltip(message: tooltip!, child: button);

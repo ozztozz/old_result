@@ -595,9 +595,9 @@ class _LiveScreenState extends State<LiveScreen> {
 
   Color _statusColor(AppColorPalette palette, _MeetStatus st) {
     if (st.live) return palette.statusLive;
-    if (st.completed) return palette.statusSuccess;
-    if (st.future) return palette.infoCyan;
-    return palette.statusWarning;
+    if (st.completed) return palette.primary;
+    if (st.future) return const Color(0xFF5B7C99);
+    return palette.gold;
   }
 
   @override
@@ -783,20 +783,11 @@ class _LiveScreenState extends State<LiveScreen> {
                                       : statusColor.withValues(alpha: 0.72),
                                   width: isSelected ? 2.4 : 1.6,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: statusColor.withValues(
-                                      alpha: isSelected ? 0.26 : 0.10,
-                                    ),
-                                    blurRadius: isSelected ? 14 : 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
                               ),
                               child: CircleAvatar(
                                 backgroundColor: isSelected
                                     ? palette.surfaceContrast
-                                    : statusColor.withValues(alpha: 0.12),
+                                    : statusColor.withValues(alpha: 0.16),
                                 child: Text(
                                   initials,
                                   style: TextStyle(
@@ -964,232 +955,235 @@ class _LiveScreenState extends State<LiveScreen> {
         ? '${meet.resultListProgress.processed}/${meet.resultListProgress.total}'
         : '${events.length}';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.surfaceSecondary.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: palette.textPrimary.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+    final onContrast = palette.textOnContrast;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: palette.surfaceContrast,
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: GestureDetector(
-                  key: const ValueKey('selected_story_meet_header'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _openLiveDetail(meet),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      key: const ValueKey('selected_story_meet_header'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _openLiveDetail(meet),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 13.5,
-                            color: palette.accent,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              city,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: palette.accent,
-                              ),
-                            ),
-                          ),
-                          if (meet.date.trim().isNotEmpty) ...[
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 6),
-                              child: Text(
-                                '·',
-                                style: TextStyle(
-                                  fontFamily: AppTextStyles.fontFamily,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: palette.textMuted,
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.location_on_rounded,
+                                      size: 13.5,
+                                      color: palette.primary,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.calendar_today_rounded,
-                              size: 11.5,
-                              color: palette.textSecondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                meet.date.trim(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: AppTextStyles.fontFamily,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: palette.textSecondary,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
+                                TextSpan(
+                                  text: city,
+                                  style: TextStyle(
+                                    fontFamily: AppTextStyles.fontFamily,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: palette.primary,
+                                  ),
                                 ),
-                              ),
+                                if (meet.date.trim().isNotEmpty) ...[
+                                  TextSpan(
+                                    text: '  ·  ',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: onContrast.withAlpha(140),
+                                    ),
+                                  ),
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: Icon(
+                                        Icons.calendar_today_rounded,
+                                        size: 11.5,
+                                        color: onContrast.withAlpha(180),
+                                      ),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: meet.date.trim(),
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: onContrast.withAlpha(185),
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _toTurkishTitleCase(meet.name),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.displayFontFamily,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              height: 1.25,
+                              color: onContrast,
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _toTurkishTitleCase(meet.name),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.displayFontFamily,
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                          color: palette.textPrimary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Builder(
-                builder: (context) {
-                  final isFav =
-                      FavoriteLiveMeetsService.instance.isFavorite(meet.id);
-                  return IconButton(
-                    key: ValueKey('favorite_live_meet_${meet.id}'),
-                    onPressed: () => FavoriteLiveMeetsService.instance
-                        .toggleFavorite(meet.id),
-                    tooltip:
-                        isFav ? 'Favorilerden çıkar' : 'Favori canlı yarışa ekle',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 34,
-                      minHeight: 34,
-                    ),
-                    icon: Icon(
-                      isFav ? Icons.star_rounded : Icons.star_outline_rounded,
-                      size: 21,
-                      color: isFav
-                          ? palette.statusWarning
-                          : palette.textSecondary,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: palette.divider.withValues(alpha: 0.7),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: _statusColor(palette, st),
-                          shape: BoxShape.circle,
+                  const SizedBox(width: 6),
+                  Builder(
+                    builder: (context) {
+                      final isFav =
+                          FavoriteLiveMeetsService.instance.isFavorite(meet.id);
+                      return IconButton(
+                        key: ValueKey('favorite_live_meet_${meet.id}'),
+                        onPressed: () => FavoriteLiveMeetsService.instance
+                            .toggleFavorite(meet.id),
+                        tooltip: isFav
+                            ? 'Favorilerden çıkar'
+                            : 'Favori canlı yarışa ekle',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 34,
+                          minHeight: 34,
                         ),
+                        icon: Icon(
+                          isFav
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 21,
+                          color: isFav
+                              ? palette.statusWarning
+                              : onContrast.withAlpha(185),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: onContrast.withAlpha(32),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: _statusColor(palette, st),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            st.live
+                                ? 'Canlı'
+                                : (st.completed
+                                    ? 'Tamamlandı'
+                                    : (st.future ? 'İleri Tarihli' : 'Bekliyor')),
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: onContrast,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 5),
-                      Text(
-                        st.live
-                            ? 'Canlı'
-                            : (st.completed
-                                ? 'Tamamlandı'
-                                : (st.future ? 'İleri Tarihli' : 'Bekliyor')),
+                    ),
+                  ),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Yarış: $totalRaces',
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: palette.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          color: onContrast.withAlpha(190),
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        meet.totalAthletes > 0
+                            ? 'Sporcu: ${meet.totalAthletes}'
+                            : 'Şehir: $city',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: onContrast.withAlpha(190),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    'Yarış: $totalRaces',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: palette.textSecondary,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+              if (meet.resultListProgress.total > 0) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (meet.resultListProgress.processed /
+                            meet.resultListProgress.total)
+                        .clamp(0.0, 1.0),
+                    minHeight: 5,
+                    backgroundColor: onContrast.withAlpha(36),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _statusColor(palette, st),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    meet.totalAthletes > 0
-                        ? 'Sporcu: ${meet.totalAthletes}'
-                        : 'Şehir: $city',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: palette.textSecondary,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          if (meet.resultListProgress.total > 0) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (meet.resultListProgress.processed /
-                        meet.resultListProgress.total)
-                    .clamp(0.0, 1.0),
-                minHeight: 5,
-                backgroundColor: palette.progressTrack,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _statusColor(palette, st),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
+        ),
+        const SizedBox(height: 12),
           if (_isFeedLoading && feed == null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1496,8 +1490,7 @@ class _LiveScreenState extends State<LiveScreen> {
             ),
           ],
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildFeedFocusSelectorRow(

@@ -38,11 +38,19 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 450),
+          transitionDuration: const Duration(milliseconds: 550),
           pageBuilder: (_, __, ___) =>
               MainNavigationContainer(repository: widget.repository),
-          transitionsBuilder: (_, animation, __, child) =>
-              FadeTransition(opacity: animation, child: child),
+          transitionsBuilder: (_, animation, __, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            return FadeTransition(
+              opacity: curved,
+              child: child,
+            );
+          },
         ),
       );
     });
@@ -84,19 +92,40 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   AppSpacing.vLg,
-                  Text(
-                    'Kulvar 360',
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.6,
-                      color: palette.textPrimary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        'KULVA',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.displayFontFamily,
+                          fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.6,
+                          height: 1.0,
+                          color: palette.textPrimary,
+                        ),
+                      ),
+                      const Text(
+                        'R',
+                        style: TextStyle(
+                          fontFamily: 'Syne',
+                          fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.6,
+                          height: 0.92,
+                          color: Color(0xFFFF6238),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Türkiye Yüzme Sonuçları & Canlı Takip',
+                    'Türkiye Yüzme Platformu',
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
                       fontSize: 13.5,

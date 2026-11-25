@@ -8,7 +8,6 @@ import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/status_badge.dart';
-import '../../shared/widgets/theme_picker_sheet.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../home/home_screen.dart';
 
@@ -170,13 +169,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hızlı takip',
+                            'HIZLI TAKİP',
                             style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.2,
-                              color: palette.textSecondary,
+                              fontFamily: AppTextStyles.displayFontFamily,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: palette.primary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -185,9 +184,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontFamily: AppTextStyles.fontFamily,
+                              fontFamily: AppTextStyles.displayFontFamily,
                               fontSize: 28,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                               letterSpacing: -0.6,
                               height: 1.15,
                               color: palette.textPrimary,
@@ -198,17 +197,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     ),
                     AppSpacing.hSm,
                     GlassCircleButton(
-                      icon: Icons.palette_outlined,
-                      iconSize: 20,
-                      iconColor: palette.textTertiary,
-                      tooltip: 'Tema Seç',
-                      onTap: () => ThemePickerSheet.show(context),
-                    ),
-                    AppSpacing.hSm,
-                    GlassCircleButton(
                       icon: Icons.refresh_outlined,
                       iconSize: 20,
-                      iconColor: palette.textTertiary,
+                      iconColor: palette.textPrimary,
                       tooltip: 'Yenile',
                       onTap: _loadFavorites,
                     ),
@@ -346,15 +337,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  /// Level 1 Hero İstatistik Paneli
+  /// Koyu Lacivert Hero İstatistik Paneli
   Widget _buildOverviewHero(AppColorPalette palette) {
-    return SoftGlassPanel(
-      level: 1,
-      tier: GlassTier.hero,
-      ambientGlowBehind: true,
-      borderRadius: AppRadius.rounded,
+    final onContrast = palette.textOnContrast;
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surfaceContrast,
+        borderRadius: BorderRadius.circular(20),
+      ),
       padding: AppSpacing.cardPadding,
-      artStyle: AmbientArtStyle.none,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -362,12 +353,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'Takip Özeti',
+                  'TAKİP ÖZETİ',
                   style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: palette.textPrimary,
+                    fontFamily: AppTextStyles.displayFontFamily,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: palette.primary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -379,7 +371,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
                   fontSize: 12,
-                  color: palette.textSecondary,
+                  color: onContrast.withAlpha(170),
                 ),
               ),
             ],
@@ -423,6 +415,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     required String label,
     required AppColorPalette palette,
   }) {
+    final onContrast = palette.textOnContrast;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Column(
@@ -443,10 +436,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     fontSize: 38,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
                     height: 1.0,
-                    color: palette.textPrimary,
+                    color: onContrast,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -462,8 +455,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             style: TextStyle(
               fontFamily: AppTextStyles.fontFamily,
               fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: palette.textSecondary,
+              fontWeight: FontWeight.w500,
+              color: onContrast.withAlpha(180),
             ),
           ),
         ],
@@ -475,17 +468,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Container(
       width: 1,
       height: 36,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            palette.divider.withValues(alpha: 0.0),
-            palette.textSecondary.withValues(alpha: 0.35),
-            palette.divider.withValues(alpha: 0.0),
-          ],
-        ),
-      ),
+      color: palette.textOnContrast.withAlpha(36),
     );
   }
 

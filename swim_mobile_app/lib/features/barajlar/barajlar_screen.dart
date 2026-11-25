@@ -182,8 +182,10 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
           title: Text(
             'Resmi Barajlar',
             style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontWeight: FontWeight.w700,
+              fontFamily: AppTextStyles.displayFontFamily,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
               color: palette.textPrimary,
             ),
           ),
