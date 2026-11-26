@@ -1002,6 +1002,7 @@ class LocalLiveEngine:
                     stats["hatalar"].append(err)
 
             # 2. Sonuç Listeleri
+            notified_result_files: List[str] = []
             for item in pending_results:
                 try:
                     added = self._process_single_pdf(
@@ -1013,6 +1014,7 @@ class LocalLiveEngine:
                     )
                     stats["yeni_sonuc"] += 1
                     stats["eklenen_kayit"] += added
+                    notified_result_files.append(item["filename"])
                 except Exception as exc:
                     err = f"ResultList Hata ({item['filename']}): {exc}"
                     logger.error(f"  [!] {err}")
@@ -1051,16 +1053,26 @@ class LocalLiveEngine:
 
                     meet_title = (
                         (yaris.musabaka_adi or "").strip()
-                        or (event.baslik if event else "").strip()
+                        or (event.musabaka_adi if event else "").strip()
                         or "Canlı Yarış Güncellemesi"
                     )
                     new_res_count = stats["yeni_sonuc"]
                     added_count = stats["eklenen_kayit"]
-                    body_text = (
-                        f"{new_res_count} yeni yarış sonucu yayınlandı ({added_count} derece)."
-                        if added_count > 0
-                        else f"{new_res_count} yeni yarış sonucu yayınlandı."
-                    )
+                    files_preview = ", ".join(notified_result_files[:3])
+                    if len(notified_result_files) > 3:
+                        files_preview += f" (+{len(notified_result_files) - 3})"
+                    if len(notified_result_files) == 1:
+                        body_text = (
+                            f"{files_preview} yayınlandı ({added_count} derece)."
+                            if added_count > 0
+                            else f"{files_preview} yayınlandı."
+                        )
+                    else:
+                        body_text = (
+                            f"{new_res_count} yeni sonuç ({files_preview}) - {added_count} derece."
+                            if added_count > 0
+                            else f"{new_res_count} yeni sonuç ({files_preview})."
+                        )
                     send_live_meet_notification(
                         live_meet_id=yaris.id,
                         title=meet_title,
