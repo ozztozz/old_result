@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668700614961",
+    "project_id": "swimming-results-f98f6",
+    "storage_bucket": "swimming-results-f98f6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668700614961:android:1005c4227ebc9d62ca5010",
+        "android_client_info": {
+          "package_name": "com.ozztozz.kulvar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDnDb_HGfdCgIaeZJjb6FO-3fQdaopCX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

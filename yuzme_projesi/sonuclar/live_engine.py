@@ -1465,6 +1465,8 @@ def process_single_meet_db(
             return stats
 
         current_batch = pending_queue[:limit] if limit else pending_queue
+        batch_new_result_files = 0
+        batch_new_results = 0
         for doc_type, pdf_url in current_batch:
             filename = clean_pdf_filename(pdf_url)
             try:
@@ -1510,6 +1512,8 @@ def process_single_meet_db(
                     stats["islenen_start_listesi"] += 1
                 else:
                     stats["islenen_sonuc_listesi"] += 1
+                    batch_new_result_files += 1
+                    batch_new_results += int(db_stats.get("eklenen_sonuc", 0) or 0)
 
                 update_meet_status_db(yaris, {
                     "durum": "ISLENIYOR",
@@ -1547,6 +1551,31 @@ def process_single_meet_db(
             stats["durum"] = "ISLENIYOR"
 
     update_meet_status_db(yaris, stats)
+
+    if locals().get("batch_new_result_files", 0) > 0:
+        try:
+            from sonuclar.fcm_service import send_live_meet_notification
+
+            meet_title = (
+                (stats.get("musabaka_adi") or "").strip()
+                or (yaris.yaris_adi or "").strip()
+                or "Canlı Yarış Güncellemesi"
+            )
+            if batch_new_results > 0:
+                body_text = (
+                    f"{batch_new_result_files} yeni yarış sonucu yayınlandı "
+                    f"({batch_new_results} derece)."
+                )
+            else:
+                body_text = f"{batch_new_result_files} yeni yarış sonucu yayınlandı."
+            send_live_meet_notification(
+                live_meet_id=yaris.id,
+                title=meet_title,
+                body=body_text,
+            )
+        except Exception as fcm_exc:
+            logger.warning(f"[!] FCM bildirim tetiklenemedi: {fcm_exc}")
+
     return stats
 
 

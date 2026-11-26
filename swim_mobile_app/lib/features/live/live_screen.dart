@@ -8,6 +8,7 @@ import '../../core/components/app_bottom_sheet.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_live_meets_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
@@ -1057,6 +1058,55 @@ class _LiveScreenState extends State<LiveScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
+                  ListenableBuilder(
+                    listenable: NotificationService.instance,
+                    builder: (context, _) {
+                      final notifService = NotificationService.instance;
+                      final isEnabled = notifService.liveNotificationsEnabled &&
+                          notifService.hasPermission;
+                      return IconButton(
+                        key: const ValueKey('live_notifications_toggle'),
+                        onPressed: () async {
+                          final next = !isEnabled;
+                          final ok =
+                              await notifService.setLiveNotificationsEnabled(
+                            next,
+                            favoriteMeetIds:
+                                FavoriteLiveMeetsService.instance.favoriteIds,
+                          );
+                          if (!context.mounted) return;
+                          final msg = !ok
+                              ? 'Bildirim izni verilmedi. Ayarlardan izin verebilirsiniz.'
+                              : next
+                                  ? 'Favori canlı yarış bildirimleri açıldı.'
+                                  : 'Canlı yarış bildirimleri kapatıldı.';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(msg),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        tooltip: isEnabled
+                            ? 'Canlı yarış bildirimlerini kapat'
+                            : 'Canlı yarış bildirimlerini aç',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 34,
+                          minHeight: 34,
+                        ),
+                        icon: Icon(
+                          isEnabled
+                              ? Icons.notifications_active_rounded
+                              : Icons.notifications_off_outlined,
+                          size: 20,
+                          color: isEnabled
+                              ? palette.primary
+                              : onContrast.withAlpha(165),
+                        ),
+                      );
+                    },
+                  ),
                   Builder(
                     builder: (context) {
                       final isFav =
@@ -1261,15 +1311,29 @@ class _LiveScreenState extends State<LiveScreen> {
 
                   bool isEventDone(LiveEventProgramItem e) =>
                       !e.isPending || e.status.toLowerCase().contains('sonu');
+                  int parseEventOrder(LiveEventProgramItem e) =>
+                      int.tryParse(
+                        e.eventNo.replaceAll(RegExp(r'[^0-9]'), ''),
+                      ) ??
+                      0;
+
                   final completedEvents =
-                      visibleEvents.where(isEventDone).toList();
+                      visibleEvents.where(isEventDone).toList()
+                        ..sort(
+                          (a, b) =>
+                              parseEventOrder(b).compareTo(parseEventOrder(a)),
+                        );
                   final pendingEvents =
-                      visibleEvents.where((e) => !isEventDone(e)).toList();
+                      visibleEvents.where((e) => !isEventDone(e)).toList()
+                        ..sort(
+                          (a, b) =>
+                              parseEventOrder(a).compareTo(parseEventOrder(b)),
+                        );
 
                   List<LiveEventProgramItem> eventsForTab(int tabIndex) {
                     if (tabIndex == 0) {
                       return [
-                        if (completedEvents.isNotEmpty) completedEvents.last,
+                        if (completedEvents.isNotEmpty) completedEvents.first,
                         if (pendingEvents.isNotEmpty) pendingEvents.first,
                       ];
                     } else if (tabIndex == 1) {
@@ -1898,6 +1962,8 @@ class _LiveScreenState extends State<LiveScreen> {
                   ),
                   child: Text(
                     sectionTag,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: AppTextStyles.fontFamily,
                       fontSize: 10.5,
@@ -2057,6 +2123,33 @@ class _LiveScreenState extends State<LiveScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ],
+                if (event.eventNo.trim().isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.surfaceContrast,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Yarış ${event.eventNo.trim()}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textOnContrast,
+                        fontFeatures: const [
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
                     ),
                   ),
                 ],

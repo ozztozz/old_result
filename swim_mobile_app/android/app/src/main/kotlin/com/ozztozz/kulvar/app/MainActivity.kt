@@ -1,4 +1,4 @@
-package tr.gov.tyf.swim_mobile_app
+package com.ozztozz.kulvar.app
 
 import io.flutter.embedding.android.FlutterActivity
 

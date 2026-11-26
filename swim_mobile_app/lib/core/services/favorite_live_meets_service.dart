@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/live_meet.dart';
+import 'notification_service.dart';
 
 /// Yerel Favori Canlı Yarışlar Servisi
 /// Kullanıcının favorilediği canlı müsabaka ID'lerini SharedPreferences ile
@@ -51,6 +54,9 @@ class FavoriteLiveMeetsService extends ChangeNotifier {
     }
     await _save();
     notifyListeners();
+    unawaited(
+      NotificationService.instance.syncFavoriteLiveMeetTopic(liveMeetId, added),
+    );
     return added;
   }
 

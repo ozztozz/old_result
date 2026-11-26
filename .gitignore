@@ -17,6 +17,8 @@ __pycache__/
 id_rsa*
 ssh-key*
 *.pub
+firebase-service-account.json
+*firebase-adminsdk*.json
 
 # Large Database, CSV & Archive Files
 output/

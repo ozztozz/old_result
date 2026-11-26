@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/network/api_client.dart';
 import 'core/services/favorite_athletes_service.dart';
 import 'core/services/favorite_live_meets_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/selected_club_service.dart';
 import 'core/services/theme_service.dart';
 import 'data/models/live_meet.dart';
@@ -25,6 +28,10 @@ Future<void> main() async {
     FavoriteAthletesService.instance.init(),
     FavoriteLiveMeetsService.instance.init(),
   ]);
+
+  await NotificationService.instance.init(
+    initialFavoriteMeetIds: FavoriteLiveMeetsService.instance.favoriteIds,
+  );
 
   // Merkezi HTTP ve Veri Deposu
   final apiClient = ApiClient();
@@ -87,6 +94,7 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
   final ValueNotifier<int?> _requestedLiveMeetId = ValueNotifier<int?>(null);
   final ValueNotifier<LiveMeetSummary?> _requestedLiveMeet =
       ValueNotifier<LiveMeetSummary?>(null);
+  StreamSubscription<int>? _notificationTapSub;
 
   @override
   void initState() {
@@ -96,10 +104,19 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
       GlobalKey<NavigatorState>(),
       GlobalKey<NavigatorState>(),
     ];
+    _notificationTapSub =
+        NotificationService.instance.onLiveMeetTap.listen(_openLiveMeetInLiveTab);
+    final pendingMeetId = NotificationService.instance.consumePendingLiveMeetId();
+    if (pendingMeetId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openLiveMeetInLiveTab(pendingMeetId);
+      });
+    }
   }
 
   @override
   void dispose() {
+    _notificationTapSub?.cancel();
     _requestedLiveMeetId.dispose();
     _requestedLiveMeet.dispose();
     super.dispose();

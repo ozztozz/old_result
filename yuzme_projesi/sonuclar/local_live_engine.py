@@ -1053,6 +1053,30 @@ class LocalLiveEngine:
                 f"(Start: {islenen_start}/{all_start_count}, Sonuç: {islenen_sonuc}/{all_result_count})"
             )
 
+            if stats["yeni_sonuc"] > 0:
+                try:
+                    from sonuclar.fcm_service import send_live_meet_notification
+
+                    meet_title = (
+                        (yaris.musabaka_adi or "").strip()
+                        or (event.baslik if event else "").strip()
+                        or "Canlı Yarış Güncellemesi"
+                    )
+                    new_res_count = stats["yeni_sonuc"]
+                    added_count = stats["eklenen_kayit"]
+                    body_text = (
+                        f"{new_res_count} yeni yarış sonucu yayınlandı ({added_count} derece)."
+                        if added_count > 0
+                        else f"{new_res_count} yeni yarış sonucu yayınlandı."
+                    )
+                    send_live_meet_notification(
+                        live_meet_id=yaris.id,
+                        title=meet_title,
+                        body=body_text,
+                    )
+                except Exception as fcm_exc:
+                    logger.warning(f"  [!] FCM bildirim tetiklenemedi: {fcm_exc}")
+
         except Exception as exc:
             err = f"Canlı Yarış İşleme Hatası: {exc}"
             logger.error(f"[!] {err}")
