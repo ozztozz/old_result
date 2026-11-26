@@ -1280,8 +1280,9 @@ class LocalLiveEngine:
                         return None
             return cands[0] if len(cands) == 1 else None
 
-        def _save_pdf_atomically() -> int:
+        def _save_pdf_atomically() -> Tuple[int, int]:
             records_added = 0
+            meaningful_updated = 0
             unmatched_skipped = 0
             seen_result_ids: List[int] = []
             seen_athlete_ids_in_pdf: set = set()
@@ -1717,7 +1718,7 @@ class LocalLiveEngine:
                             "kulup": club,
                             "derece": final_derece,
                             "derece_saniye": derece_sn,
-                            "sira": sira_val,
+                            "sira": str(sira_val) if sira_val is not None else None,
                             "puan": fina,
                             "seri": str(seri_val) if seri_val else None,
                             "kulvar": kulvar_val,
@@ -1830,6 +1831,8 @@ class LocalLiveEngine:
                                     setattr(existing, k_f, v_f)
                                     dirty_fields.append(k_f)
                             if dirty_fields:
+                                if any(f in ("derece", "derece_saniye", "kaynak_turu") for f in dirty_fields):
+                                    meaningful_updated += 1
                                 to_update_map[existing.id] = existing
                                 bulk_update_fields.update(dirty_fields)
                         if existing.id:
@@ -1897,7 +1900,7 @@ class LocalLiveEngine:
                         f"(logs/unmatched_result_records.jsonl dosyasına kaydedildi)."
                     )
 
-            return records_added, len(to_update_map)
+            return records_added, meaningful_updated
 
         return db_retry(_save_pdf_atomically)
 
