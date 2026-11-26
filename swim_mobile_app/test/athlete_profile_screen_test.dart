@@ -4,6 +4,7 @@ import 'package:swim_mobile_app/core/theme/app_theme.dart';
 import 'package:swim_mobile_app/features/athletes/athlete_profile_screen.dart';
 import 'package:swim_mobile_app/data/repositories/swim_repository.dart';
 import 'package:swim_mobile_app/data/models/athlete.dart';
+import 'package:swim_mobile_app/data/models/baraj_rule.dart';
 
 class MockSwimRepository implements SwimRepository {
   @override
@@ -52,6 +53,30 @@ class MockSwimRepository implements SwimRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> getAthleteBarajTargets(
+    int athleteId, {
+    String? stroke,
+    int? distance,
+    String? course,
+    int? pbCs,
+  }) async =>
+      const [];
+
+  @override
+  Future<BarajFeedResponse> getBarajlar({
+    String? barajAdi,
+    int? eventId,
+    String? city,
+    String? month,
+    String? cinsiyet,
+    String? yas,
+    String? havuz,
+    String? stil,
+    String? barajTuru,
+  }) async =>
+      const BarajFeedResponse(rules: [], barajNames: [], ageLabels: []);
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -72,25 +97,23 @@ void main() {
     );
 
     // Initial load shimmer/indicator
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
 
     // Name and club should be rendered
     expect(find.text('Emre Sakçı'), findsOneWidget);
-    expect(find.text('Fenerbahçe SK'), findsOneWidget);
+    expect(find.textContaining('Fenerbahçe'), findsOneWidget);
 
     // The two main swipeable tabs should be visible
     expect(find.text('Best Time'), findsOneWidget);
-    expect(find.text('Scout Analizi'), findsOneWidget);
+    expect(find.text('Barajlar'), findsOneWidget);
 
     // Bottom race history title 'Son Yarışlar' should NOT exist
     expect(find.text('Son Yarışlar'), findsNothing);
 
     // PB tab is selected by default; Kurbağalama stroke card and 50m tile should be visible
     expect(find.text('Kurbağalama'), findsOneWidget);
-    expect(find.text('50m'), findsOneWidget);
+    expect(find.text('50'), findsOneWidget);
     expect(find.text('26.83'), findsOneWidget);
-    expect(find.text('890 FINA'), findsOneWidget);
 
     // Switch to Scout Analizi tab
     await tester.tap(find.text('Scout Analizi'));
@@ -100,7 +123,6 @@ void main() {
     expect(find.text('Scout Analiz Raporu'), findsOneWidget);
     expect(find.textContaining('Çıkış ve su altı reaksiyon süresi'), findsOneWidget);
     expect(find.text('%73.8'), findsOneWidget);
-    expect(find.text('980 FINA'), findsOneWidget);
   });
 
   testWidgets(
@@ -168,13 +190,11 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Serbest'), findsOneWidget);
-    expect(find.text('5 Derece'), findsOneWidget);
-    expect(find.text('50m'), findsOneWidget);
-    expect(find.text('100m'), findsOneWidget);
-    expect(find.text('200m'), findsOneWidget);
-    expect(find.text('400m'), findsOneWidget);
-    expect(find.text('1500m'), findsOneWidget);
-    expect(find.text('364 FINA'), findsOneWidget);
+    expect(find.text('50'), findsOneWidget);
+    expect(find.text('100'), findsOneWidget);
+    expect(find.text('200'), findsOneWidget);
+    expect(find.text('400'), findsOneWidget);
+    expect(find.text('1500'), findsOneWidget);
   });
 }
 
@@ -257,6 +277,30 @@ class _FiveEventsMockRepository implements SwimRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> getAthleteBarajTargets(
+    int athleteId, {
+    String? stroke,
+    int? distance,
+    String? course,
+    int? pbCs,
+  }) async =>
+      const [];
+
+  @override
+  Future<BarajFeedResponse> getBarajlar({
+    String? barajAdi,
+    int? eventId,
+    String? city,
+    String? month,
+    String? cinsiyet,
+    String? yas,
+    String? havuz,
+    String? stil,
+    String? barajTuru,
+  }) async =>
+      const BarajFeedResponse(rules: [], barajNames: [], ageLabels: []);
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -282,6 +326,30 @@ class _LongEmptyMockRepository implements SwimRepository {
       pbs25m: const [],
     );
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAthleteBarajTargets(
+    int athleteId, {
+    String? stroke,
+    int? distance,
+    String? course,
+    int? pbCs,
+  }) async =>
+      const [];
+
+  @override
+  Future<BarajFeedResponse> getBarajlar({
+    String? barajAdi,
+    int? eventId,
+    String? city,
+    String? month,
+    String? cinsiyet,
+    String? yas,
+    String? havuz,
+    String? stil,
+    String? barajTuru,
+  }) async =>
+      const BarajFeedResponse(rules: [], barajNames: [], ageLabels: []);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

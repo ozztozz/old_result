@@ -127,13 +127,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Takip Özeti'), findsOneWidget);
+      expect(find.text('TAKİP ÖZETİ'), findsOneWidget);
       expect(find.text('Abdurrahman Şahin İbrahimoğlu'), findsOneWidget);
       expect(find.text('Zeynep Gülşah Çetinkaya'), findsOneWidget);
-      expect(find.text('865 FINA'), findsOneWidget);
-      expect(find.text('408 FINA'), findsOneWidget);
-      expect(find.text('Başlamadı'), findsOneWidget);
-      expect(find.text('DNS'), findsNothing);
+      expect(find.text('865 pt'), findsOneWidget);
+      expect(find.text('408 pt'), findsOneWidget);
+      expect(find.text('DNS'), findsOneWidget);
     },
   );
 }

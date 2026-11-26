@@ -5,6 +5,7 @@ import '../../core/components/app_skeleton.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/brand_header_bar.dart';
@@ -130,7 +131,9 @@ class _RankingsScreenState extends State<RankingsScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -336,6 +339,7 @@ class _RankingsScreenState extends State<RankingsScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

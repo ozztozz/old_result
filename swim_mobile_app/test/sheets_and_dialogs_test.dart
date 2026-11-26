@@ -315,9 +315,9 @@ class _FakePbHistoryRepository implements SwimRepository {
   @override
   Future<List<Map<String, dynamic>>> getAthleteBarajTargets(
     int athleteId, {
-    required String stroke,
-    required int distance,
-    required String course,
+    String? stroke,
+    int? distance,
+    String? course,
     int? pbCs,
   }) async {
     return [

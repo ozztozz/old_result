@@ -77,6 +77,7 @@ class _FakeMeetDetailRepository implements SwimRepository {
     int? athleteId,
     String? status,
     int page = 1,
+    bool summary = false,
   }) async {
     if (status == 'pending') return [];
 

@@ -6,6 +6,7 @@ import 'package:swim_mobile_app/core/theme/app_theme.dart';
 import 'package:swim_mobile_app/data/models/athlete.dart';
 import 'package:swim_mobile_app/data/models/live_meet.dart';
 import 'package:swim_mobile_app/data/models/meet.dart';
+import 'package:swim_mobile_app/data/models/tyf_news.dart';
 import 'package:swim_mobile_app/data/repositories/swim_repository.dart';
 import 'package:swim_mobile_app/features/clubs/club_search_screen.dart';
 import 'package:swim_mobile_app/features/home/home_screen.dart';
@@ -26,6 +27,8 @@ class _FakeClubSearchRepository implements SwimRepository {
     String? city,
     String? letter,
     String kind = 'club',
+    double? lat,
+    double? lon,
   }) async {
     lastPage = page;
     lastQuery = q;
@@ -92,6 +95,10 @@ class _FakeClubSearchRepository implements SwimRepository {
     String? city,
     String? q,
   }) async =>
+      const [];
+
+  @override
+  Future<List<TyfNewsItem>> getNewsFeed({String? type, int limit = 15}) async =>
       const [];
 
   @override
@@ -197,9 +204,9 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      expect(find.text('Kulüp Ara'), findsOneWidget);
+      expect(find.text('KULÜPLER'), findsOneWidget);
 
-      await tester.tap(find.text('Kulüp Ara'));
+      await tester.tap(find.text('KULÜPLER'));
       await tester.pumpAndSettle();
 
       expect(find.byType(ClubSearchScreen), findsOneWidget);

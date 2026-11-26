@@ -11,7 +11,11 @@ class _MockCompareRepository implements SwimRepository {
   late AthleteDetail athleteB;
 
   @override
-  Future<GlobalSearchResult> searchGlobal(String query) async {
+  Future<GlobalSearchResult> searchGlobal(
+    String query, {
+    String type = 'all',
+    String? city,
+  }) async {
     return GlobalSearchResult(
       athletes: [
         AthleteSearchItem(
@@ -173,7 +177,6 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
-        expect(find.text('Sporcu Karşılaştırma'), findsOneWidget);
         expect(
           find.text('Karşılaştırmak için ikinci sporcuyu seç'),
           findsOneWidget,

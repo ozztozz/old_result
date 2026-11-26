@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import math
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from sonuclar.models import Sporcu, Kulup, SporcuKulupTarihce, Event, MobilUygulamaSurumu
 from .utils import api_response, api_error, cache_api_response
+from .views_athletes import _resolve_active_club
 
 
 @require_GET
@@ -60,14 +61,27 @@ def search_global(request):
         athletes_qs = (
             Sporcu.objects.filter(sporcu_adi__icontains=q)
             .select_related('birincil_kulup')
+            .prefetch_related(
+                Prefetch(
+                    'kulup_tarihcesi',
+                    queryset=SporcuKulupTarihce.objects.select_related('kulup')
+                    .only(
+                        'id', 'sporcu_id', 'kulup_id', 'aktif_kulup_mu', 'son_yaris_tarihi',
+                        'kulup__id', 'kulup__kulup_adi', 'kulup__okul_mu',
+                    )
+                    .order_by('-son_yaris_tarihi', '-id'),
+                    to_attr='prefetched_clubs',
+                )
+            )
             .only('id', 'sporcu_adi', 'dogum_yili', 'birincil_kulup__kulup_adi')[:15]
         )
         for a in athletes_qs:
+            active_club = _resolve_active_club(a.prefetched_clubs, a.birincil_kulup)
             res_athletes.append({
                 'id': a.id,
                 'name': a.sporcu_adi,
                 'birth_year': a.dogum_yili,
-                'club_name': a.birincil_kulup.kulup_adi if a.birincil_kulup else None,
+                'club_name': active_club.kulup_adi if active_club else None,
             })
 
     if search_type in ('all', 'club'):

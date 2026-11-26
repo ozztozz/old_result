@@ -75,7 +75,19 @@ class _FakeLiveScreenRepository implements SwimRepository {
     return LiveFeedResponse(
       liveId: liveMeetId,
       status: 'CANLI',
-      events: const [],
+      events: [
+        LiveEventProgramItem(
+          eventNo: '1',
+          name: '100m Serbest',
+          distance: 100,
+          stroke: 'free',
+          strokeLabel: 'Serbest',
+          gender: 'Erkekler',
+          isPending: false,
+          status: 'Sonuçlandı',
+          totalAthletes: 16,
+        ),
+      ],
       data: const [],
     );
   }
@@ -118,6 +130,11 @@ class _FakeLiveScreenRepository implements SwimRepository {
       events: const [],
       data: const [],
     );
+  }
+
+  @override
+  Future<MeetParticipants> getMeetParticipants(int meetId) async {
+    return MeetParticipants(meetId: meetId, clubs: const [], athletes: const []);
   }
 
   @override
@@ -223,7 +240,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text('Canlı Müsabakalar'), findsNothing);
-        expect(find.text('Canlı Takip'), findsNothing);
+        expect(find.text('Canlı Takip'), findsOneWidget);
         expect(find.byType(ModernFilterChipBar), findsNothing);
 
         // In disableAnimations mode, all cards stay at opacity 1.0 (no fading)
@@ -248,7 +265,7 @@ void main() {
         expect(find.byType(LiveMeetDetailScreen), findsOneWidget);
         expect(repo.getLiveSummaryCalls, greaterThanOrEqualTo(1));
         expect(repo.getLiveFeedFullCalls, 0);
-        expect(repo.getLiveEventsCalls, 1);
+        expect(repo.getLiveEventsCalls, 0);
         expect(find.textContaining('Serbest'), findsWidgets);
         tester.takeException();
       },
@@ -281,7 +298,7 @@ void main() {
 
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Canlı Takip'), findsNothing);
+      expect(find.text('Canlı Takip'), findsOneWidget);
       expect(find.textContaining('Kahramanmaraş'), findsWidgets);
     },
   );

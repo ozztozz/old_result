@@ -7,6 +7,7 @@ import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
@@ -419,7 +420,9 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -553,6 +556,7 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

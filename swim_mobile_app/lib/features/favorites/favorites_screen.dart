@@ -4,6 +4,7 @@ import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
@@ -189,10 +190,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           )
                         : _favoritesData.isEmpty
                             ? _buildEmptyState(context, palette)
-                            : RefreshIndicator(
-                                color: palette.primary,
-                                onRefresh: _loadFavorites,
-                                child: ListView(
+                            : ResponsiveCenter(
+                                maxWidth: 960,
+                                child: RefreshIndicator(
+                                  color: palette.primary,
+                                  onRefresh: _loadFavorites,
+                                  child: ListView(
                                   padding: EdgeInsets.fromLTRB(
                                     AppSpacing.s20,
                                     AppSpacing.sm,
@@ -280,16 +283,47 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                         compact: true,
                                       )
                                     else
-                                      ...filtered.map(
-                                        (fav) => _buildFavoriteCard(
-                                          context,
-                                          palette,
-                                          fav,
-                                        ),
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          if (constraints.maxWidth < 680) {
+                                            return Column(
+                                              children: filtered
+                                                  .map(
+                                                    (fav) => _buildFavoriteCard(
+                                                      context,
+                                                      palette,
+                                                      fav,
+                                                    ),
+                                                  )
+                                                  .toList(),
+                                            );
+                                          }
+                                          const spacing = AppSpacing.s12;
+                                          final cardWidth =
+                                              (constraints.maxWidth - spacing) /
+                                                  2;
+                                          return Wrap(
+                                            spacing: spacing,
+                                            runSpacing: 0,
+                                            children: filtered
+                                                .map(
+                                                  (fav) => SizedBox(
+                                                    width: cardWidth,
+                                                    child: _buildFavoriteCard(
+                                                      context,
+                                                      palette,
+                                                      fav,
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
+                                          );
+                                        },
                                       ),
                                   ],
                                 ),
                               ),
+                            ),
               ),
             ],
           ),
@@ -647,14 +681,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'JetBrainsMono',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: accentColor,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 6),

@@ -176,8 +176,8 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
         final currentNavigator = _navigatorKeys[_currentIndex].currentState;
         if (currentNavigator != null && currentNavigator.canPop()) {
           currentNavigator.pop();
-        } else if (_currentIndex != 1) {
-          setState(() => _currentIndex = 1);
+        } else if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
         } else {
           SystemNavigator.pop();
         }
@@ -200,6 +200,7 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
               repository: widget.repository,
               selectedMeetIdListenable: _requestedLiveMeetId,
               selectedMeetListenable: _requestedLiveMeet,
+              isActive: _currentIndex == 1,
             ),
           ),
           _buildTabNavigator(2, FavoritesScreen(repository: widget.repository)),

@@ -5,6 +5,7 @@ import 'package:swim_mobile_app/core/services/favorite_athletes_service.dart';
 import 'package:swim_mobile_app/core/theme/app_theme.dart';
 import 'package:swim_mobile_app/data/models/live_meet.dart';
 import 'package:swim_mobile_app/data/models/meet.dart';
+import 'package:swim_mobile_app/data/models/tyf_news.dart';
 import 'package:swim_mobile_app/data/repositories/swim_repository.dart';
 import 'package:swim_mobile_app/features/home/home_screen.dart';
 
@@ -19,7 +20,33 @@ class _FakeHomeRepository implements SwimRepository {
       [];
 
   @override
-  Future<List<LiveMeetSummary>> getLiveMeets() async => [];
+  Future<List<TyfNewsItem>> getNewsFeed({String? type, int limit = 15}) async =>
+      const [];
+
+  @override
+  Future<List<LiveMeetSummary>> getLiveMeets() async => [
+        LiveMeetSummary(
+          id: 1,
+          name:
+              'TÜRKİYE YÜZME FEDERASYONU UZUN KULVAR MİLLİ TAKIM SEÇME MÜSABAKALARI',
+          city: 'ANKARA',
+          date: '2026-04-12',
+          status: 'CANLI',
+          totalAthletes: 640,
+          startListProgress: LiveProgress(processed: 10, total: 10),
+          resultListProgress: LiveProgress(processed: 5, total: 10),
+        ),
+        LiveMeetSummary(
+          id: 2,
+          name: 'UZUN KULVAR TÜRKİYE ŞAMPİYONASI VE SEÇME YARIŞLARI',
+          city: 'İSTANBUL',
+          date: '2026-04-14',
+          status: 'CANLI',
+          totalAthletes: 420,
+          startListProgress: LiveProgress(processed: 8, total: 8),
+          resultListProgress: LiveProgress(processed: 4, total: 8),
+        ),
+      ];
 
   @override
   Future<List<Map<String, dynamic>>> getHighlightsFeed({
@@ -91,14 +118,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Favori & Kulüp Canlı Akışı'), findsOneWidget);
-      expect(find.text('200m Karışık • Ankara'), findsOneWidget);
-      expect(find.text('100m Serbest • İstanbul'), findsOneWidget);
-      expect(
-        find.text('A. Y***, B. K***, C. D***, E. T*** Baraj Geçti'),
-        findsOneWidget,
-      );
-      expect(find.text('02:04.88'), findsOneWidget);
+      expect(find.text('CANLI AKIŞ'), findsOneWidget);
+      expect(find.text('2 yarış'), findsOneWidget);
+      expect(find.text('2026-04-12 · Ankara'), findsOneWidget);
+      expect(find.text('2026-04-14 · İstanbul'), findsOneWidget);
     },
   );
 }

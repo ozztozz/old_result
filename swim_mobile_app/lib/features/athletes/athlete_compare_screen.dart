@@ -5,6 +5,7 @@ import '../../core/components/app_skeleton.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/athlete.dart';
@@ -139,7 +140,9 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -386,6 +389,7 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -9,6 +9,7 @@ import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/race_result_sorter.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/live_meet.dart';
@@ -483,7 +484,9 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -491,6 +494,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
               bodyContent,
             ],
           ),
+        ),
         ),
       ),
     );

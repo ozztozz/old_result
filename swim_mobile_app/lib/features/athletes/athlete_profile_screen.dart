@@ -7,6 +7,7 @@ import '../../core/components/section_header.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/athlete.dart';
@@ -129,83 +130,86 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
         backgroundColor: Colors.transparent,
         body: SafeArea(
           bottom: false,
-          child: _isLoading
-              ? _buildLoadingSkeleton(context)
-              : _athlete == null
-                  ? Center(
-                      child: EmptyStateWidget(
-                        title: 'Sporcu bilgileri yüklenemedi',
-                        message:
-                            'Lütfen bağlantınızı kontrol edip tekrar deneyin.',
-                        icon: Icons.error_outline,
-                        actionText: 'Tekrar Dene',
-                        onAction: _loadAthleteData,
-                      ),
-                    )
-                  : NestedScrollView(
-                      headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.s20,
-                              AppSpacing.s12,
-                              AppSpacing.s20,
-                              AppSpacing.md,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const BrandHeaderBar(
-                                  subtitle: 'Sporcu Profili',
-                                  padding: EdgeInsets.zero,
-                                ),
-                                const SizedBox(height: 12),
-                                _buildProfileHero(palette, _athlete!),
-                              ],
-                            ),
-                          ),
+          child: ResponsiveCenter(
+            maxWidth: 1040,
+            child: _isLoading
+                ? _buildLoadingSkeleton(context)
+                : _athlete == null
+                    ? Center(
+                        child: EmptyStateWidget(
+                          title: 'Sporcu bilgileri yüklenemedi',
+                          message:
+                              'Lütfen bağlantınızı kontrol edip tekrar deneyin.',
+                          icon: Icons.error_outline,
+                          actionText: 'Tekrar Dene',
+                          onAction: _loadAthleteData,
                         ),
-                        SliverPersistentHeader(
-                          pinned: true,
-                          delegate: _PinnedTabBarDelegate(
-                            extent: _profileTabBarHeight + AppSpacing.xs * 2,
-                            child: Container(
-                              color: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.s20,
-                                vertical: AppSpacing.xs,
+                      )
+                    : NestedScrollView(
+                        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.s20,
+                                AppSpacing.s12,
+                                AppSpacing.s20,
+                                AppSpacing.md,
                               ),
-                              child: ModernSegmentedTabBar(
-                                controller: _tabController,
-                                height: _profileTabBarHeight,
-                                tabs: const [
-                                  TabItemData(
-                                    title: 'Best Time',
-                                    icon: Icons.timer_outlined,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const BrandHeaderBar(
+                                    subtitle: 'Sporcu Profili',
+                                    padding: EdgeInsets.zero,
                                   ),
-                                  TabItemData(
-                                    title: 'Barajlar',
-                                    icon: Icons.flag_outlined,
-                                  ),
-                                  TabItemData(
-                                    title: 'Scout Analizi',
-                                    icon: Icons.insights_outlined,
-                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildProfileHero(palette, _athlete!),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                      body: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildBestTimesTab(context, palette, _athlete!),
-                          _buildBarajlarTab(context, palette),
-                          _buildScoutAnalysisTab(context, palette, _athlete!),
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _PinnedTabBarDelegate(
+                              extent: _profileTabBarHeight + AppSpacing.xs * 2,
+                              child: Container(
+                                color: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.s20,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                child: ModernSegmentedTabBar(
+                                  controller: _tabController,
+                                  height: _profileTabBarHeight,
+                                  tabs: const [
+                                    TabItemData(
+                                      title: 'Best Time',
+                                      icon: Icons.timer_outlined,
+                                    ),
+                                    TabItemData(
+                                      title: 'Barajlar',
+                                      icon: Icons.flag_outlined,
+                                    ),
+                                    TabItemData(
+                                      title: 'Scout Analizi',
+                                      icon: Icons.insights_outlined,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
+                        body: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildBestTimesTab(context, palette, _athlete!),
+                            _buildBarajlarTab(context, palette),
+                            _buildScoutAnalysisTab(context, palette, _athlete!),
+                          ],
+                        ),
                       ),
-                    ),
+          ),
         ),
       ),
     );

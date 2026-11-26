@@ -9,6 +9,7 @@ import '../../core/services/favorite_athletes_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/race_result_sorter.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/utils/swim_time_formatter.dart';
 import '../../data/models/meet.dart';
@@ -122,7 +123,9 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: _isLoading
               ? _buildInitialLoadingSkeleton(context)
@@ -191,6 +194,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                         ),
                       ],
                     ),
+        ),
         ),
       ),
     );

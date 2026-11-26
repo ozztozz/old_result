@@ -7,6 +7,7 @@ import '../../core/theme/tokens/tokens.dart';
 import '../../core/services/favorite_live_meets_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/utils/race_result_sorter.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/race_model.dart';
@@ -320,7 +321,9 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -453,6 +456,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
               ),
             ],
           ),
+        ),
         ),
       ),
     );

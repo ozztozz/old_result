@@ -69,7 +69,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Top 25 Sıralamalar'), findsOneWidget);
+      expect(find.text('Top 25 Sıralama'), findsOneWidget);
       expect(find.text('Getir'), findsOneWidget);
       expect(find.text('1.'), findsOneWidget);
       expect(find.text('850 FINA'), findsOneWidget);

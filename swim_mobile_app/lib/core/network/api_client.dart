@@ -18,23 +18,6 @@ class ApiClient {
         },
       ),
     );
-
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          // İstek başlıkları ve parametre loglama
-          return handler.next(options);
-        },
-        onResponse: (response, handler) {
-          // Başarılı yanıt
-          return handler.next(response);
-        },
-        onError: (DioException e, handler) {
-          // Merkezi hata işleme
-          return handler.next(e);
-        },
-      ),
-    );
   }
 
   Dio get dio => _dio;

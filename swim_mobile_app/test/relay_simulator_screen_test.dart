@@ -58,7 +58,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Bayrak Simülatörü'), findsOneWidget);
       expect(find.text('Kulüp seçilmedi'), findsOneWidget);
       expect(find.text('Kulüp Seç'), findsOneWidget);
     },

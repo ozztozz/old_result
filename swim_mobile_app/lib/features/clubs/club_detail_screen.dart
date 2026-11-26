@@ -12,6 +12,7 @@ import '../../core/components/section_header.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
@@ -99,11 +100,14 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
       body: AmbientBackground(
         child: SafeArea(
           bottom: false,
-          child: Column(
-            children: [
-              _buildTopBar(palette),
-              Expanded(child: _buildBody(palette)),
-            ],
+          child: ResponsiveCenter(
+            maxWidth: 1040,
+            child: Column(
+              children: [
+                _buildTopBar(palette),
+                Expanded(child: _buildBody(palette)),
+              ],
+            ),
           ),
         ),
       ),
@@ -205,10 +209,23 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
           AppSpacing.xxl,
         ),
         children: [
-          _buildHeaderCard(palette, club),
-          if (club.hasContactInfo) ...[
-            AppSpacing.vMd,
-            _buildContactCard(palette, club),
+          if (club.hasContactInfo && context.isMasterDetail)
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: _buildHeaderCard(palette, club)),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: _buildContactCard(palette, club)),
+                ],
+              ),
+            )
+          else ...[
+            _buildHeaderCard(palette, club),
+            if (club.hasContactInfo) ...[
+              AppSpacing.vMd,
+              _buildContactCard(palette, club),
+            ],
           ],
           AppSpacing.vLg,
           SectionHeader(title: 'Kulüp Özeti ve Aktif Yaş Dağılımı'),

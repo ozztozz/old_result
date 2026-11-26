@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/live_meet.dart';
@@ -258,25 +259,28 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ],
                   )
-                : RefreshIndicator(
-                    color: c.cyan,
-                    onRefresh: _loadData,
-                    child: ListView(
-                      padding: EdgeInsets.only(bottom: 100 + bottomInset),
-                      children: [
-                        _buildBrandBar(c),
-                        const SizedBox(height: 14),
-                        if (_newsFeed.isNotEmpty)
-                          _buildHeroAnnouncements(c, palette),
-                        const SizedBox(height: 16),
-                        _buildToolCards(c),
-                        const SizedBox(height: 14),
-                        _buildSearchPill(c),
-                        if (_liveMeets.isNotEmpty) ...[
-                          const SizedBox(height: 22),
-                          _buildLiveFeed(c),
+                : ResponsiveCenter(
+                    maxWidth: 1040,
+                    child: RefreshIndicator(
+                      color: c.cyan,
+                      onRefresh: _loadData,
+                      child: ListView(
+                        padding: EdgeInsets.only(bottom: 100 + bottomInset),
+                        children: [
+                          _buildBrandBar(c),
+                          const SizedBox(height: 14),
+                          if (_newsFeed.isNotEmpty)
+                            _buildHeroAnnouncements(c, palette),
+                          const SizedBox(height: 16),
+                          _buildToolCards(c),
+                          const SizedBox(height: 14),
+                          _buildSearchPill(c),
+                          if (_liveMeets.isNotEmpty) ...[
+                            const SizedBox(height: 22),
+                            _buildLiveFeed(c),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
       ),
@@ -515,100 +519,108 @@ class _HomeScreenState extends State<HomeScreen>
   // ═════════════════════════════════════════════════════════════
 
   Widget _buildToolCards(_PoolColors c) {
+    final barajlarCard = _ActionTileCard(
+      colors: c,
+      number: '01',
+      icon: Icons.timer_outlined,
+      accentColor: c.cyan,
+      title: 'BARAJLAR',
+      subtitle: 'A / B baraj süreleri',
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BarajlarScreen(repository: widget.repository),
+          ),
+        );
+      },
+    );
+    final top25Card = _ActionTileCard(
+      colors: c,
+      number: '02',
+      icon: Icons.emoji_events_outlined,
+      accentColor: c.coral,
+      title: 'TOP 25',
+      subtitle: 'Branş ve yaş sıralaması',
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RankingsScreen(repository: widget.repository),
+          ),
+        );
+      },
+    );
+    final takvimCard = _ActionTileCard(
+      colors: c,
+      number: '03',
+      icon: Icons.calendar_month_outlined,
+      accentColor: c.cyan,
+      title: 'TAKVİM',
+      subtitle: 'Yarış takvimi',
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EventCalendarScreen(repository: widget.repository),
+          ),
+        );
+      },
+    );
+    final kuluplerCard = ListenableBuilder(
+      listenable: SelectedClubService.instance,
+      builder: (context, _) {
+        final club = SelectedClubService.instance;
+        final subtitle = club.hasSelectedClub
+            ? StringUtils.toTitleCase(club.clubName!)
+            : 'Kulüp ara ve incele';
+        return _ActionTileCard(
+          colors: c,
+          number: '04',
+          icon: Icons.groups_outlined,
+          accentColor: const Color(0xFF7DD3FC),
+          title: 'KULÜPLER',
+          subtitle: subtitle,
+          onTap: _openClubSearch,
+        );
+      },
+    );
+
+    final isFourCol = context.screenWidth >= 720;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _ActionTileCard(
-                  colors: c,
-                  number: '01',
-                  icon: Icons.timer_outlined,
-                  accentColor: c.cyan,
-                  title: 'BARAJLAR',
-                  subtitle: 'A / B baraj süreleri',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            BarajlarScreen(repository: widget.repository),
-                      ),
-                    );
-                  },
+      child: isFourCol
+          ? Row(
+              children: [
+                Expanded(child: barajlarCard),
+                const SizedBox(width: 12),
+                Expanded(child: top25Card),
+                const SizedBox(width: 12),
+                Expanded(child: takvimCard),
+                const SizedBox(width: 12),
+                Expanded(child: kuluplerCard),
+              ],
+            )
+          : Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: barajlarCard),
+                    const SizedBox(width: 12),
+                    Expanded(child: top25Card),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ActionTileCard(
-                  colors: c,
-                  number: '02',
-                  icon: Icons.emoji_events_outlined,
-                  accentColor: c.coral,
-                  title: 'TOP 25',
-                  subtitle: 'Branş ve yaş sıralaması',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            RankingsScreen(repository: widget.repository),
-                      ),
-                    );
-                  },
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: takvimCard),
+                    const SizedBox(width: 12),
+                    Expanded(child: kuluplerCard),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _ActionTileCard(
-                  colors: c,
-                  number: '03',
-                  icon: Icons.calendar_month_outlined,
-                  accentColor: c.cyan,
-                  title: 'TAKVİM',
-                  subtitle: 'Yarış takvimi',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            EventCalendarScreen(repository: widget.repository),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: SelectedClubService.instance,
-                  builder: (context, _) {
-                    final club = SelectedClubService.instance;
-                    final subtitle = club.hasSelectedClub
-                        ? StringUtils.toTitleCase(club.clubName!)
-                        : 'Kulüp ara ve incele';
-                    return _ActionTileCard(
-                      colors: c,
-                      number: '04',
-                      icon: Icons.groups_outlined,
-                      accentColor: const Color(0xFF7DD3FC),
-                      title: 'KULÜPLER',
-                      subtitle: subtitle,
-                      onTap: _openClubSearch,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
     );
   }
 
@@ -669,28 +681,35 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: c.coral,
-                      shape: BoxShape.circle,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: c.coral,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'CANLI AKIŞ',
-                    style: _display(
-                      17,
-                      weight: FontWeight.w800,
-                      color: c.textPrimary,
-                      letterSpacing: 0.2,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'CANLI AKIŞ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _display(
+                          17,
+                          weight: FontWeight.w800,
+                          color: c.textPrimary,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${items.length} yarış',
                 style: _display(

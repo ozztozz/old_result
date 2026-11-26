@@ -4,6 +4,7 @@ import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../data/models/calendar_event.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/brand_header_bar.dart';
@@ -245,7 +246,9 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: ResponsiveCenter(
+          maxWidth: 1040,
+          child: SafeArea(
           bottom: false,
           child: Column(
             children: [
@@ -414,6 +417,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                             ),
             ),
           ],
+        ),
         ),
         ),
       ),

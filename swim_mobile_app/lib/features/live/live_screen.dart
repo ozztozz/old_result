@@ -11,6 +11,7 @@ import '../../core/services/favorite_live_meets_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
@@ -27,12 +28,14 @@ class LiveScreen extends StatefulWidget {
   final SwimRepository repository;
   final ValueListenable<int?>? selectedMeetIdListenable;
   final ValueListenable<LiveMeetSummary?>? selectedMeetListenable;
+  final bool isActive;
 
   const LiveScreen({
     super.key,
     required this.repository,
     this.selectedMeetIdListenable,
     this.selectedMeetListenable,
+    this.isActive = true,
   });
 
   @override
@@ -67,8 +70,9 @@ class _MeetStatus {
 // Ekran durumu
 // ---------------------------------------------------------------------------
 
-class _LiveScreenState extends State<LiveScreen> {
+class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
+  bool _isAppResumed = true;
   String? _errorMessage;
   List<LiveMeetSummary> _liveMeets = [];
   int? _selectedStoryMeetId;
@@ -87,6 +91,7 @@ class _LiveScreenState extends State<LiveScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SelectedClubService.instance.addListener(_onSelectedClubChanged);
     FavoriteLiveMeetsService.instance.addListener(_onFavoriteLiveMeetsChanged);
     widget.selectedMeetIdListenable?.addListener(_onRequestedMeetIdChanged);
@@ -99,7 +104,13 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isAppResumed = state == AppLifecycleState.resumed;
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _autoRefreshTimer?.cancel();
     widget.selectedMeetListenable?.removeListener(_onRequestedMeetChanged);
     widget.selectedMeetIdListenable?.removeListener(_onRequestedMeetIdChanged);
@@ -247,7 +258,14 @@ class _LiveScreenState extends State<LiveScreen> {
 
   Future<void> _autoRefreshSelectedFeed() async {
     final meetId = _selectedStoryMeetId;
-    if (!mounted || meetId == null || meetId <= 0 || _isFeedLoading) return;
+    if (!mounted ||
+        !widget.isActive ||
+        !_isAppResumed ||
+        meetId == null ||
+        meetId <= 0 ||
+        _isFeedLoading) {
+      return;
+    }
     final meet = _liveMeets.where((m) => m.id == meetId).firstOrNull;
     if (meet == null) return;
     final total = meet.resultListProgress.total;
@@ -267,6 +285,7 @@ class _LiveScreenState extends State<LiveScreen> {
     if (missing.isEmpty) return;
 
     final currentYear = DateTime.now().year;
+    final computedUpdates = <int, String>{};
     await Future.wait(
       missing.map((m) async {
         try {
@@ -282,7 +301,7 @@ class _LiveScreenState extends State<LiveScreen> {
               .map((by) => meetYear - by)
               .where((age) => age > 0 && age < 100)
               .toList();
-          if (ages.isNotEmpty && mounted) {
+          if (ages.isNotEmpty) {
             final counts = <int, int>{};
             for (final age in ages) {
               counts[age] = (counts[age] ?? 0) + 1;
@@ -299,15 +318,18 @@ class _LiveScreenState extends State<LiveScreen> {
             final label = valid.first == valid.last
                 ? '${valid.first} Yaş'
                 : '${valid.first}–${valid.last} Yaş';
-            setState(() {
-              _computedMeetAgeRanges[m.id] = label;
-            });
+            computedUpdates[m.id] = label;
           }
         } catch (_) {
           // Katılımcı listesi alınamazsa sessizce atla
         }
       }),
     );
+    if (computedUpdates.isNotEmpty && mounted) {
+      setState(() {
+        _computedMeetAgeRanges.addAll(computedUpdates);
+      });
+    }
   }
 
   Future<void> _loadSelectedFeed(
@@ -730,6 +752,8 @@ class _LiveScreenState extends State<LiveScreen> {
       orElse: () => meets.first,
     );
 
+    final isMasterDetail = context.isMasterDetail;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -738,12 +762,136 @@ class _LiveScreenState extends State<LiveScreen> {
           showBack: false,
           padding: EdgeInsets.fromLTRB(6, 2, 6, 10),
         ),
-        _buildMeetStoriesStrip(palette, meets, selectedStoryMeet),
-        const SizedBox(height: 14),
-        Expanded(
-          child: _buildSelectedStoryFeedSection(palette, selectedStoryMeet),
-        ),
+        if (isMasterDetail)
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: context.isExpanded ? 360 : 310,
+                  child: _buildMasterMeetList(
+                    palette,
+                    meets,
+                    selectedStoryMeet,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: palette.border,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSelectedStoryFeedSection(
+                    palette,
+                    selectedStoryMeet,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          _buildMeetStoriesStrip(palette, meets, selectedStoryMeet),
+          const SizedBox(height: 14),
+          Expanded(
+            child: _buildSelectedStoryFeedSection(palette, selectedStoryMeet),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildMasterMeetList(
+    AppColorPalette palette,
+    List<LiveMeetSummary> meets,
+    LiveMeetSummary selected,
+  ) {
+    return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 24),
+      itemCount: meets.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final meet = meets[index];
+        final st = _statusOf(meet);
+        final isSelected = selected.id == meet.id;
+        final statusColor = _statusColor(palette, st);
+        final city = meet.city.trim().isNotEmpty
+            ? StringUtils.toTitleCase(meet.city.trim())
+            : 'Türkiye';
+        final isFav = FavoriteLiveMeetsService.instance.isFavorite(meet.id);
+
+        return Material(
+          color: isSelected
+              ? palette.primary.withValues(alpha: palette.isDark ? 0.16 : 0.10)
+              : palette.surface,
+          borderRadius: AppRadius.cardRadius,
+          child: InkWell(
+            borderRadius: AppRadius.cardRadius,
+            onTap: () => _selectStoryMeet(meet),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: AppRadius.cardRadius,
+                border: Border.all(
+                  color: isSelected ? statusColor : palette.border,
+                  width: isSelected ? 1.5 : 1.0,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '$city · ${_formatBadgeStartDate(meet.date, meet.name)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ),
+                      if (isFav)
+                        Icon(
+                          Icons.star_rounded,
+                          size: 16,
+                          color: palette.statusWarning,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    StringUtils.toTitleCase(meet.name),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.displayFontFamily,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textPrimary,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

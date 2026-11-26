@@ -4,6 +4,7 @@ import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 import '../../data/models/baraj_rule.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/baraj_event_selector.dart';
@@ -184,8 +185,10 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           bottom: false,
-          child: Column(
-            children: [
+          child: ResponsiveCenter(
+            maxWidth: 1040,
+            child: Column(
+              children: [
               BrandHeaderBar(
                 subtitle: 'Resmi Barajlar',
                 actions: [
@@ -374,24 +377,60 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                               : RefreshIndicator(
                                   color: palette.primary,
                                   onRefresh: _loadBarajlar,
-                                  child: ListView.builder(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      4,
-                                      16,
-                                      28,
-                                    ),
-                                    itemCount: strokes.length,
-                                    itemBuilder: (context, idx) {
-                                      final stroke = strokes[idx];
-                                      final items = grouped[stroke]!;
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 12),
-                                        child: _buildCompactStrokeCard(
-                                          palette,
-                                          stroke,
-                                          items,
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      if (constraints.maxWidth < 720) {
+                                        return ListView.builder(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            16,
+                                            4,
+                                            16,
+                                            28,
+                                          ),
+                                          itemCount: strokes.length,
+                                          itemBuilder: (context, idx) {
+                                            final stroke = strokes[idx];
+                                            final items = grouped[stroke]!;
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 12,
+                                              ),
+                                              child: _buildCompactStrokeCard(
+                                                palette,
+                                                stroke,
+                                                items,
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      }
+                                      const spacing = 12.0;
+                                      final cardWidth =
+                                          (constraints.maxWidth - 32 - spacing) /
+                                              2;
+                                      return SingleChildScrollView(
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          4,
+                                          16,
+                                          28,
+                                        ),
+                                        child: Wrap(
+                                          spacing: spacing,
+                                          runSpacing: 12,
+                                          children: strokes.map((stroke) {
+                                            final items = grouped[stroke]!;
+                                            return SizedBox(
+                                              width: cardWidth,
+                                              child: _buildCompactStrokeCard(
+                                                palette,
+                                                stroke,
+                                                items,
+                                              ),
+                                            );
+                                          }).toList(),
                                         ),
                                       );
                                     },
@@ -400,6 +439,7 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
             ),
           ],
         ),
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
+import '../../core/utils/responsive.dart';
 
 /// TYF Yüzme Sonuçları — Yüzen Yarı Saydam Cam Navigasyon Kabuğu
 /// Doğrudan [SoftGlassPanel] (`GlassTier.dock`) kullanır.
@@ -19,59 +20,165 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final isWide = context.isWide;
+    final tabStack = _AnimatedTabStack(
+      currentIndex: currentIndex,
+      children: screens,
+    );
 
     return Scaffold(
       backgroundColor: palette.background,
-      extendBody: true,
-      body: _AnimatedTabStack(
-        currentIndex: currentIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: palette.navFill,
-          border: palette.isDark
-              ? Border(top: BorderSide(color: palette.border, width: 1))
-              : null,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            child: SizedBox(
-              height: 56,
-              child: Row(
-                children: [
-                  _buildNavItem(
-                    context,
-                    0,
-                    'Ana Sayfa',
-                    Icons.home_outlined,
-                    Icons.home_outlined,
+      extendBody: !isWide,
+      body: isWide
+          ? Row(
+              children: [
+                _buildSideRail(context, palette, extended: context.isExpanded),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: palette.border,
+                ),
+                Expanded(child: tabStack),
+              ],
+            )
+          : tabStack,
+      bottomNavigationBar: isWide
+          ? null
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: palette.navFill,
+                border: palette.isDark
+                    ? Border(top: BorderSide(color: palette.border, width: 1))
+                    : null,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
                   ),
-                  _buildNavItem(
-                    context,
-                    1,
-                    'Canlı Takip',
-                    Icons.sensors,
-                    Icons.sensors,
+                  child: SizedBox(
+                    height: 56,
+                    child: Row(
+                      children: [
+                        _buildNavItem(
+                          context,
+                          0,
+                          'Ana Sayfa',
+                          Icons.home_outlined,
+                          Icons.home_outlined,
+                        ),
+                        _buildNavItem(
+                          context,
+                          1,
+                          'Canlı Takip',
+                          Icons.sensors,
+                          Icons.sensors,
+                        ),
+                        _buildNavItem(
+                          context,
+                          2,
+                          'Favorilerim',
+                          Icons.star_border,
+                          Icons.star_border,
+                        ),
+                      ],
+                    ),
                   ),
-                  _buildNavItem(
-                    context,
-                    2,
-                    'Favorilerim',
-                    Icons.star_border,
-                    Icons.star_border,
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+    );
+  }
+
+  Widget _buildSideRail(
+    BuildContext context,
+    AppColorPalette palette, {
+    required bool extended,
+  }) {
+    final activeBg = palette.navLabelActive;
+    final onActive = activeBg.computeLuminance() > 0.42
+        ? palette.navFill
+        : Colors.white;
+
+    return NavigationRail(
+      extended: extended,
+      selectedIndex: currentIndex,
+      onDestinationSelected: onNavigationChanged,
+      backgroundColor: palette.navFill,
+      indicatorColor: activeBg,
+      indicatorShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      labelType: extended
+          ? NavigationRailLabelType.none
+          : NavigationRailLabelType.all,
+      selectedIconTheme: IconThemeData(color: onActive, size: 22),
+      unselectedIconTheme:
+          IconThemeData(color: palette.navLabelInactive, size: 22),
+      selectedLabelTextStyle: TextStyle(
+        fontFamily: AppTextStyles.fontFamily,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: palette.textPrimary,
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        fontFamily: AppTextStyles.fontFamily,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: palette.navLabelInactive,
+      ),
+      leading: Padding(
+        padding: EdgeInsets.symmetric(
+          vertical: AppSpacing.md,
+          horizontal: extended ? AppSpacing.md : AppSpacing.sm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 34,
+              height: 34,
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/app_logo.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            if (extended) ...[
+              const SizedBox(width: 10),
+              Text(
+                'KulvaR',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.displayFontFamily,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: palette.textPrimary,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
+      destinations: const [
+        NavigationRailDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_outlined),
+          label: Text('Ana Sayfa'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.sensors),
+          selectedIcon: Icon(Icons.sensors),
+          label: Text('Canlı Takip'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.star_border),
+          selectedIcon: Icon(Icons.star_border),
+          label: Text('Favorilerim'),
+        ),
+      ],
     );
   }
 
