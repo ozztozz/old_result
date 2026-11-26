@@ -63,7 +63,10 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
   }
 
   void _onClubChanged() {
-    if (mounted && _lastFeedResponse != null) {
+    if (!mounted) return;
+    if (widget.live.id > 0) {
+      _loadFeedData();
+    } else if (_lastFeedResponse != null) {
       _rebuildRacesFromFeed(_lastFeedResponse!);
     }
   }
@@ -76,7 +79,12 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
     try {
       final LiveFeedResponse feed;
       if (widget.live.id > 0) {
-        feed = await widget.repository.getLiveEvents(widget.live.id);
+        final clubService = SelectedClubService.instance;
+        feed = await widget.repository.getLiveSummary(
+          widget.live.id,
+          clubId: clubService.clubId,
+          clubName: clubService.clubName,
+        );
       } else if (widget.live.meetId != null) {
         final detail =
             await widget.repository.getMeetDetail(widget.live.meetId!);
@@ -111,15 +119,6 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
         );
       }
       _lastFeedResponse = feed;
-
-      if (feed.results.isNotEmpty) {
-        _availableClubs = feed.results
-            .map((r) => r.clubName.trim())
-            .where((c) => c.isNotEmpty && !c.toLowerCase().startsWith('ferdi'))
-            .toSet()
-            .toList()
-          ..sort((a, b) => a.compareTo(b));
-      }
 
       _rebuildRacesFromFeed(feed);
     } catch (_) {

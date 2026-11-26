@@ -51,32 +51,17 @@ class _PoolColors {
   final bool isDark;
 
   factory _PoolColors.of(AppColorPalette palette) {
-    final dark = palette.isDark;
-    if (dark) {
-      return _PoolColors(
-        bg: palette.background,
-        card: palette.surface,
-        navy: const Color(0xFF0A1926),
-        cyan: const Color(0xFF14B8CC),
-        coral: const Color(0xFFFF6238),
-        textPrimary: palette.textPrimary,
-        textSecondary: palette.textSecondary,
-        border: palette.border,
-        divider: palette.divider,
-        isDark: true,
-      );
-    }
-    return const _PoolColors(
-      bg: Color(0xFFF6F8F9),
-      card: Color(0xFFFFFFFF),
-      navy: Color(0xFF0F273B),
-      cyan: Color(0xFF14B8CC),
-      coral: Color(0xFFFF6238),
-      textPrimary: Color(0xFF0F273B),
-      textSecondary: Color(0xFF526675),
-      border: Color(0xFFD9E2EC),
-      divider: Color(0xFFE4EBF1),
-      isDark: false,
+    return _PoolColors(
+      bg: palette.background,
+      card: palette.surface,
+      navy: palette.isDark ? palette.surfaceSecondary : palette.secondary,
+      cyan: palette.primary,
+      coral: palette.statusLive,
+      textPrimary: palette.textPrimary,
+      textSecondary: palette.textSecondary,
+      border: palette.border,
+      divider: palette.divider,
+      isDark: palette.isDark,
     );
   }
 }
@@ -352,20 +337,13 @@ class _HomeScreenState extends State<HomeScreen>
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: c.border, width: 1),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(7),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: ClipOval(
                     child: Image.asset(
                       'assets/images/app_logo.png',
-                      fit: BoxFit.contain,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
@@ -374,42 +352,32 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            'KULVA',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.displayFontFamily,
-                              fontFamilyFallback:
-                                  AppTextStyles.fontFamilyFallback,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              color: c.textPrimary,
-                              letterSpacing: -0.4,
-                              height: 1.0,
-                            ),
+                      Text.rich(
+                        TextSpan(
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.displayFontFamily,
+                            fontFamilyFallback:
+                                AppTextStyles.fontFamilyFallback,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            height: 1.0,
                           ),
-                          Text(
-                            'R',
-                            style: TextStyle(
-                              fontFamily: 'Syne',
-                              fontFamilyFallback:
-                                  AppTextStyles.fontFamilyFallback,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: c.coral,
-                              letterSpacing: -0.4,
-                              height: 0.92,
+                          children: [
+                            TextSpan(
+                              text: 'Kulva',
+                              style: TextStyle(color: c.textPrimary),
                             ),
-                          ),
-                        ],
+                            TextSpan(
+                              text: 'R',
+                              style: TextStyle(color: c.coral),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Türkiye Yüzme Platformu',
+                        'Yüzme Platformu',
                         style: _display(
                           11.5,
                           weight: FontWeight.w600,
@@ -1154,8 +1122,8 @@ class _ActionTileCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: _display(
                                 11.5,
-                                weight: FontWeight.w400,
-                                color: Colors.white.withAlpha(185),
+                                weight: FontWeight.w500,
+                                color: Colors.white.withAlpha(232),
                               ),
                             ),
                           ],
@@ -1296,7 +1264,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                     style: _num(
                       108,
                       weight: FontWeight.w800,
-                      color: Colors.white.withAlpha(18),
+                      color: Colors.white.withAlpha(38),
                       height: 0.88,
                     ),
                   ),
@@ -1305,7 +1273,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                     style: _display(
                       28,
                       weight: FontWeight.w800,
-                      color: Colors.white.withAlpha(24),
+                      color: c.cyan.withAlpha(78),
                       letterSpacing: 3,
                       height: 1.0,
                     ),
@@ -1349,7 +1317,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                     style: _num(
                       12,
                       weight: FontWeight.w600,
-                      color: Colors.white.withAlpha(160),
+                      color: Colors.white.withAlpha(210),
                     ),
                   ),
                 ],
@@ -1409,7 +1377,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                 style: _display(
                   12.5,
                   weight: FontWeight.w500,
-                  color: Colors.white.withAlpha(185),
+                  color: Colors.white.withAlpha(235),
                 ),
               ),
               const Spacer(),
@@ -1451,25 +1419,28 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                   if (widget.onOpenPdf != null) ...[
                     const SizedBox(width: 10),
                     Material(
-                      color: Colors.white.withAlpha(20),
+                      color: Colors.white.withAlpha(38),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),
-                        side: BorderSide(color: Colors.white.withAlpha(60)),
+                        side: BorderSide(
+                          color: Colors.white.withAlpha(170),
+                          width: 1.2,
+                        ),
                       ),
                       child: InkWell(
                         onTap: widget.onOpenPdf,
                         borderRadius: BorderRadius.circular(999),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
+                            horizontal: 15,
                             vertical: 10,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                Icons.picture_as_pdf_outlined,
-                                size: 15,
+                                Icons.picture_as_pdf_rounded,
+                                size: 16,
                                 color: Colors.white,
                               ),
                               const SizedBox(width: 5),

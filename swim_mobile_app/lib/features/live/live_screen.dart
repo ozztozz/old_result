@@ -74,6 +74,7 @@ class _LiveScreenState extends State<LiveScreen> {
   bool _isFeedLoading = false;
   LiveFeedResponse? _selectedFeed;
   final Map<int, LiveFeedResponse> _feedCache = {};
+  final Map<int, MeetParticipants> _participantsCache = {};
   final Map<int, String> _computedMeetAgeRanges = {};
   int _feedTabIndex = 0;
   String? _selectedAthleteName;
@@ -155,7 +156,11 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   void _onSelectedClubChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    if (_selectedStoryMeetId != null) {
+      _loadSelectedFeed(_selectedStoryMeetId!, forceRefresh: true);
+    }
   }
 
   Future<void> _loadLiveMeets() async {
@@ -266,6 +271,7 @@ class _LiveScreenState extends State<LiveScreen> {
         try {
           final participants =
               await widget.repository.getMeetParticipants(m.meetId!);
+          _participantsCache[m.meetId!] = participants;
           final isoMatch = RegExp(r'(\d{4})').firstMatch(m.date);
           final meetYear = int.tryParse(isoMatch?.group(1) ?? '') ?? currentYear;
           final ages = participants.athletes
@@ -324,6 +330,15 @@ class _LiveScreenState extends State<LiveScreen> {
       final clubService = SelectedClubService.instance;
       final LiveFeedResponse feed;
       final meet = _liveMeets.where((m) => m.id == liveMeetId).firstOrNull;
+      if (meet?.meetId != null && !_participantsCache.containsKey(meet!.meetId!)) {
+        widget.repository.getMeetParticipants(meet.meetId!).then((p) {
+          if (mounted) {
+            setState(() {
+              _participantsCache[meet.meetId!] = p;
+            });
+          }
+        }).catchError((_) {});
+      }
       if (meet != null && meet.id <= 0 && meet.meetId != null) {
         final responses = await Future.wait([
           widget.repository.getMeetDetail(meet.meetId!),
@@ -1371,20 +1386,42 @@ class _LiveScreenState extends State<LiveScreen> {
                     }
                   }
 
-                  final availableClubs =
-                      (feed?.results ?? const <RaceResult>[])
+                  final selectedMeet = _liveMeets
+                      .where((m) => m.id == _selectedStoryMeetId)
+                      .firstOrNull;
+                  final cachedParticipants = selectedMeet?.meetId != null
+                      ? _participantsCache[selectedMeet!.meetId!]
+                      : null;
+
+                  final availableClubs = (cachedParticipants != null &&
+                          cachedParticipants.clubs.isNotEmpty)
+                      ? (cachedParticipants.clubs
+                          .map((c) => c.name.trim())
+                          .where((c) => c.isNotEmpty)
+                          .toSet()
+                          .toList()
+                        ..sort())
+                      : ((feed?.results ?? const <RaceResult>[])
                           .map((r) => r.clubName.trim())
                           .where((c) => c.isNotEmpty)
                           .toSet()
                           .toList()
-                        ..sort();
-                  final availableAthletes =
-                      (feed?.results ?? const <RaceResult>[])
+                        ..sort());
+
+                  final availableAthletes = (cachedParticipants != null &&
+                          cachedParticipants.athletes.isNotEmpty)
+                      ? (cachedParticipants.athletes
+                          .map((a) => a.name.trim())
+                          .where((a) => a.isNotEmpty)
+                          .toSet()
+                          .toList()
+                        ..sort())
+                      : ((feed?.results ?? const <RaceResult>[])
                           .map((r) => r.athleteName.trim())
                           .where((a) => a.isNotEmpty)
                           .toSet()
                           .toList()
-                        ..sort();
+                        ..sort());
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1605,10 +1642,16 @@ class _LiveScreenState extends State<LiveScreen> {
               isSelected: hasAthlete,
               onTap: () => _showAthleteSelectionSheet(availableAthletes),
               onClear: hasAthlete
-                  ? () => setState(() {
+                  ? () {
+                      setState(() {
                         _selectedAthleteName = null;
                         if (!hasClub) _onlySelectedFocus = false;
-                      })
+                      });
+                      if (_selectedStoryMeetId != null) {
+                        _loadSelectedFeed(_selectedStoryMeetId!,
+                            forceRefresh: true);
+                      }
+                    }
                   : null,
             ),
           ),
@@ -1761,6 +1804,10 @@ class _LiveScreenState extends State<LiveScreen> {
                             onPressed: () {
                               setState(() => _selectedAthleteName = null);
                               Navigator.pop(sheetCtx);
+                              if (_selectedStoryMeetId != null) {
+                                _loadSelectedFeed(_selectedStoryMeetId!,
+                                    forceRefresh: true);
+                              }
                             },
                             child: Text(
                               'Temizle',
@@ -1861,6 +1908,10 @@ class _LiveScreenState extends State<LiveScreen> {
                                 onTap: () {
                                   setState(() => _selectedAthleteName = name);
                                   Navigator.pop(sheetCtx);
+                                  if (_selectedStoryMeetId != null) {
+                                    _loadSelectedFeed(_selectedStoryMeetId!,
+                                        forceRefresh: true);
+                                  }
                                 },
                                 );
                               },

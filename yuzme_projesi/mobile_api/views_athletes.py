@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import Counter
-from django.db.models import Count, F, Q, Window
+from django.db.models import Count, F, Prefetch, Q, Window
 from django.db.models.functions import RowNumber
 from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
@@ -17,6 +17,16 @@ from .utils import (
     parse_qualifying_standard,
     detect_course,
 )
+
+
+def _resolve_active_club(tarihce_list, fallback_club):
+    """Kulüp tarihçesinden aktif kulübü (okul hariç) öncelik sırasına göre çözer."""
+    return (
+        next((t.kulup for t in tarihce_list if t.kulup and t.kulup.okul_mu == 0 and t.aktif_kulup_mu == 1), None)
+        or next((t.kulup for t in tarihce_list if t.kulup and t.kulup.okul_mu == 0), None)
+        or (tarihce_list[0].kulup if tarihce_list else None)
+        or fallback_club
+    )
 
 
 @require_GET
@@ -46,12 +56,7 @@ def get_athlete_detail(request, athlete_id: int):
         )
         .order_by('-son_yaris_tarihi', '-id')
     )
-    active_club = (
-        next((t.kulup for t in tarihce_list if t.kulup and t.kulup.okul_mu == 0 and t.aktif_kulup_mu == 1), None)
-        or next((t.kulup for t in tarihce_list if t.kulup and t.kulup.okul_mu == 0), None)
-        or (tarihce_list[0].kulup if tarihce_list else None)
-        or athlete.birincil_kulup
-    )
+    active_club = _resolve_active_club(tarihce_list, athlete.birincil_kulup)
     active_club_data = {
         'id': active_club.id,
         'name': active_club.kulup_adi
@@ -297,9 +302,22 @@ def get_athletes_summary(request):
     if not id_list:
         return api_response({'data': []}, request=request)
 
+    kulup_gecmisi_model = Sporcu.kulup_tarihcesi.rel.related_model
     athletes = (
         Sporcu.objects.filter(id__in=id_list)
         .select_related('birincil_kulup')
+        .prefetch_related(
+            Prefetch(
+                'kulup_tarihcesi',
+                queryset=kulup_gecmisi_model.objects.select_related('kulup')
+                .only(
+                    'id', 'sporcu_id', 'kulup_id', 'aktif_kulup_mu', 'son_yaris_tarihi',
+                    'kulup__id', 'kulup__kulup_adi', 'kulup__okul_mu',
+                )
+                .order_by('-son_yaris_tarihi', '-id'),
+                to_attr='prefetched_clubs',
+            )
+        )
         .only('id', 'sporcu_adi', 'dogum_yili', 'toplam_yaris_sayisi', 'birincil_kulup__kulup_adi')
     )
 
@@ -339,12 +357,13 @@ def get_athletes_summary(request):
     for a in athletes:
         latest_race = latest_map.get(a.id)
         best_race = best_map.get(a.id)
+        active_club = _resolve_active_club(a.prefetched_clubs, a.birincil_kulup)
 
         summary_data.append({
             'id': a.id,
             'name': a.sporcu_adi,
             'birth_year': a.dogum_yili,
-            'club_name': a.birincil_kulup.kulup_adi if a.birincil_kulup else 'Ferdi',
+            'club_name': active_club.kulup_adi if active_club else 'Ferdi',
             'total_races': a.toplam_yaris_sayisi or 0,
             'latest_race': {
                 'meet_name': latest_race.event.musabaka_adi if latest_race and latest_race.event else '',

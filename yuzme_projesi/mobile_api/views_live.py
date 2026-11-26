@@ -6,6 +6,7 @@ from django.db.models import Count, Q
 from django.views.decorators.http import require_GET
 from sonuclar.models import CanliYaris, YarisSonucu
 from sonuclar.live_engine import parse_tr_date_range
+from sonuclar.local_baraj_parser import _fold_tr
 from .utils import (
     api_response,
     api_error,
@@ -349,12 +350,23 @@ def get_live_feed(request, live_id: int):
         for r in results_raw:
             grouped[str(r.yaris_no or '').strip()].append(r)
 
+        def _norm_club(name: str) -> str:
+            s = _fold_tr(name or '')
+            for suf in ('spor kulubu', 'yuzme kulubu', 'kulubu', 'dernegi', 's.k.', 's.k', 'sk'):
+                s = s.replace(suf, '')
+            return ' '.join(s.split())
+
+        norm_filter_club = _norm_club(filter_club_name)
+        norm_filter_athlete = _fold_tr(filter_athlete_name)
+
         def is_focus_row(r):
             if filter_club_id.isdigit() and r.kulup_id == int(filter_club_id):
                 return True
-            if filter_club_name and r.kulup and filter_club_name in (r.kulup.kulup_adi or '').lower():
-                return True
-            if filter_athlete_name and r.sporcu and (r.sporcu.sporcu_adi or '').strip().lower() == filter_athlete_name:
+            if norm_filter_club and r.kulup:
+                nc = _norm_club(r.kulup.kulup_adi or '')
+                if nc and (norm_filter_club in nc or nc in norm_filter_club):
+                    return True
+            if norm_filter_athlete and r.sporcu and _fold_tr(r.sporcu.sporcu_adi or '') == norm_filter_athlete:
                 return True
             return False
 

@@ -364,12 +364,12 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                     Text(
                       athleteName,
                       style: TextStyle(
-                        fontFamily: 'Syne',
+                        fontFamily: AppTextStyles.displayFontFamily,
                         fontFamilyFallback: AppTextStyles.fontFamilyFallback,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                        height: 1.15,
+                        letterSpacing: -0.3,
+                        height: 1.18,
                         color: onContrast,
                       ),
                       maxLines: 2,

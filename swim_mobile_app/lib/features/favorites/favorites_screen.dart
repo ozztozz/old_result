@@ -7,7 +7,6 @@ import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../../shared/widgets/status_badge.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../home/home_screen.dart';
 
@@ -478,7 +477,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     AthleteSummaryItem fav,
   ) {
     final latest = fav.latestRace;
-    final topPerf = fav.topPerformance;
     final athleteName = StringUtils.formatAthleteName(fav.name);
     final clubName = StringUtils.toTitleCase(fav.clubName);
     final branchInfo = latest != null
@@ -494,10 +492,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         .take(2)
         .join()
         .toUpperCase();
-
-    final bestTime = topPerf?.time.isNotEmpty == true
-        ? topPerf!.time
-        : (latest?.time.isNotEmpty == true ? latest!.time : '-');
 
     return SoftGlassPanel(
       level: 2,
@@ -578,19 +572,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (bestTime.trim().toUpperCase() != 'DNS')
-                    Text(
-                      bestTime,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textPrimary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
                   IconButton(
                     icon: Icon(
                       Icons.star_rounded,
@@ -610,49 +591,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ],
           ),
-          if (topPerf?.points != null || latest != null) ...[
-            AppSpacing.v12,
-            Divider(height: 1, thickness: 1, color: palette.divider),
-            AppSpacing.v12,
-            SizedBox(
-              width: double.infinity,
-              child: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xs,
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (topPerf?.points != null)
-                    StatusBadge(
-                      label: '${topPerf!.points} FINA',
-                      variant: StatusBadgeVariant.info,
-                    )
-                  else if (latest != null)
-                    StatusBadge(
-                      label:
-                          '${latest.distance}m ${StringUtils.toTitleCase(latest.stroke)}',
-                      variant: StatusBadgeVariant.neutral,
-                    ),
-                  if (latest != null)
-                    if (latest.time.trim().toUpperCase() == 'DNS')
-                      const StatusBadge.neutral(label: 'Başlamadı')
-                    else
-                      Text(
-                        latest.time,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: palette.textSecondary,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );

@@ -875,61 +875,61 @@ class CoolSophisticatedLightPalette implements AppColorPalette {
   const CoolSophisticatedLightPalette();
 
   @override
-  Color get background => const Color(0xFFF6F8F9);
+  Color get background => const Color(0xFFF7F7F5);
 
   @override
   Color get surface => const Color(0xFFFFFFFF);
 
   @override
-  Color get surfaceSecondary => const Color(0xFFEAF0F5);
+  Color get surfaceSecondary => const Color(0xFFE3F1F8);
 
   @override
   Color get surfaceElevated => const Color(0xFFFFFFFF);
 
   @override
-  Color get textPrimary => const Color(0xFF0F273B);
+  Color get textPrimary => const Color(0xFF1A535C);
 
   @override
-  Color get textSecondary => const Color(0xFF526675);
+  Color get textSecondary => const Color(0xFF4F7276);
 
   @override
-  Color get textTertiary => const Color(0xFF2E4659);
+  Color get textTertiary => const Color(0xFF16697A);
 
   @override
-  Color get textMuted => const Color(0xFF7B8E9D);
+  Color get textMuted => const Color(0xFF6B8A8E);
 
   @override
-  Color get primary => const Color(0xFF14B8CC);
+  Color get primary => const Color(0xFF489FB5);
 
   @override
-  Color get accent => const Color(0xFF14B8CC);
+  Color get accent => const Color(0xFF489FB5);
 
   @override
-  Color get primaryContainer => const Color(0xFFE3F5F8);
+  Color get primaryContainer => const Color(0xFFE1F3F7);
 
   @override
-  Color get secondary => const Color(0xFF0F273B);
+  Color get secondary => const Color(0xFF023047);
 
   @override
   Color get glowLight => const Color(0xFFFFFFFF);
 
   @override
-  Color get border => const Color(0xFFD9E2EC);
+  Color get border => const Color(0xFFCBE5F2);
 
   @override
-  Color get divider => const Color(0xFFE4EBF1);
+  Color get divider => const Color(0xFFDDF0F9);
 
   @override
-  Color get statusSuccess => const Color(0xFF0E9AA7);
+  Color get statusSuccess => const Color(0xFF1A535C);
 
   @override
-  Color get statusSuccessBg => const Color(0xFFE3F5F8);
+  Color get statusSuccessBg => const Color(0xFFE1F3F7);
 
   @override
-  Color get statusWarning => const Color(0xFFFF6238);
+  Color get statusWarning => const Color(0xFFFFA62B);
 
   @override
-  Color get statusWarningBg => const Color(0xFFFFEFEA);
+  Color get statusWarningBg => const Color(0xFFFFF4E5);
 
   @override
   Color get statusDanger => const Color(0xFFEF4444);
@@ -938,114 +938,114 @@ class CoolSophisticatedLightPalette implements AppColorPalette {
   Color get statusDangerBg => const Color(0xFFFEF2F2);
 
   @override
-  Color get statusLive => const Color(0xFFFF6238);
+  Color get statusLive => const Color(0xFFFF6B6B);
 
   @override
-  Color get statusLiveBg => const Color(0x1FFF6238);
+  Color get statusLiveBg => const Color(0x1FFF6B6B);
 
   @override
-  Color get gold => const Color(0xFFF59E0B);
+  Color get gold => const Color(0xFFFFB703);
 
   @override
   Color get goldBg => const Color(0xFFFFFBEB);
 
   @override
-  Color get ambientTop => const Color(0xFFF6F8F9);
+  Color get ambientTop => const Color(0xFFF7F7F5);
 
   @override
-  Color get ambientMid => const Color(0xFFF6F8F9);
+  Color get ambientMid => const Color(0xFFF7F7F5);
 
   @override
-  Color get ambientBottom => const Color(0xFFF6F8F9);
+  Color get ambientBottom => const Color(0xFFF7F7F5);
 
   @override
   Color get ambientFieldA => const Color(0xFFFFFFFF).withValues(alpha: 0.0);
 
   @override
-  Color get ambientFieldB => const Color(0xFF14B8CC).withValues(alpha: 0.0);
+  Color get ambientFieldB => const Color(0xFF489FB5).withValues(alpha: 0.0);
 
   @override
-  Color get ambientFieldC => const Color(0xFF0F273B).withValues(alpha: 0.0);
+  Color get ambientFieldC => const Color(0xFF023047).withValues(alpha: 0.0);
 
   @override
-  Color get navFill => const Color(0xFF0F273B);
+  Color get navFill => const Color(0xFF023047);
 
   @override
-  Color get navLabelActive => const Color(0xFF14B8CC);
+  Color get navLabelActive => const Color(0xFF489FB5);
 
   @override
-  Color get navLabelInactive => const Color(0xFF8FA3B8);
+  Color get navLabelInactive => const Color(0xFFA9D6E5);
 
   @override
-  Color get shadowTint => const Color(0xFF0F273B);
+  Color get shadowTint => const Color(0xFF023047);
 
   @override
   bool get isDark => false;
 
   @override
-  Color get successText => const Color(0xFF0B7E8A);
+  Color get successText => const Color(0xFF16697A);
 }
 
-/// KULVAR Koyu Tema — Derin Lacivert + Havuz Turkuazı + Mercan
+/// KULVAR Koyu Tema — R10 Karbon & Turuncu
 class CoolSophisticatedDarkPalette implements AppColorPalette {
   const CoolSophisticatedDarkPalette();
 
   @override
-  Color get background => const Color(0xFF0A1926);
+  Color get background => const Color(0xFF111113);
 
   @override
-  Color get surface => const Color(0xFF0F273B);
+  Color get surface => const Color(0xFF1C1C21);
 
   @override
-  Color get surfaceSecondary => const Color(0xFF16324A);
+  Color get surfaceSecondary => const Color(0xFF27272E);
 
   @override
-  Color get surfaceElevated => const Color(0xFF1B3A54);
+  Color get surfaceElevated => const Color(0xFF2E2E36);
 
   @override
-  Color get textPrimary => const Color(0xFFF4F7FA);
+  Color get textPrimary => const Color(0xFFFAFAFA);
 
   @override
-  Color get textSecondary => const Color(0xFF93A8BA);
+  Color get textSecondary => const Color(0xFFA1A1AA);
 
   @override
-  Color get textTertiary => const Color(0xFFD0DCE6);
+  Color get textTertiary => const Color(0xFFD4D4D8);
 
   @override
-  Color get textMuted => const Color(0xFF6B8194);
+  Color get textMuted => const Color(0xFF71717A);
 
   @override
-  Color get primary => const Color(0xFF14B8CC);
+  Color get primary => const Color(0xFF38BDF8);
 
   @override
-  Color get accent => const Color(0xFF14B8CC);
+  Color get accent => const Color(0xFF38BDF8);
 
   @override
-  Color get primaryContainer => const Color(0x2914B8CC);
+  Color get primaryContainer => const Color(0x2938BDF8);
 
   @override
-  Color get secondary => const Color(0xFFFF6238);
+  Color get secondary => const Color(0xFFFF5722);
 
   @override
   Color get glowLight => const Color(0xFFEEF3F6);
 
   @override
-  Color get border => const Color(0x1FFFFFFF);
+  Color get border => const Color(0xFF2E2E36);
 
   @override
-  Color get divider => const Color(0x14FFFFFF);
+  Color get divider => const Color(0xFF232329);
 
   @override
-  Color get statusSuccess => const Color(0xFF14B8CC);
+  Color get statusSuccess => const Color(0xFF38BDF8);
 
   @override
-  Color get statusSuccessBg => const Color(0x2414B8CC);
+  Color get statusSuccessBg => const Color(0x2438BDF8);
 
   @override
-  Color get statusWarning => const Color(0xFFFF6238);
+  Color get statusWarning => const Color(0xFFFF5722);
 
   @override
-  Color get statusWarningBg => const Color(0x24FF6238);
+  Color get statusWarningBg => const Color(0x24FF5722);
 
   @override
   Color get statusDanger => const Color(0xFFEF4444);
@@ -1054,10 +1054,10 @@ class CoolSophisticatedDarkPalette implements AppColorPalette {
   Color get statusDangerBg => const Color(0x24EF4444);
 
   @override
-  Color get statusLive => const Color(0xFFFF6238);
+  Color get statusLive => const Color(0xFFFF5722);
 
   @override
-  Color get statusLiveBg => const Color(0x24FF6238);
+  Color get statusLiveBg => const Color(0x24FF5722);
 
   @override
   Color get gold => const Color(0xFFF59E0B);
@@ -1066,40 +1066,40 @@ class CoolSophisticatedDarkPalette implements AppColorPalette {
   Color get goldBg => const Color(0x24F59E0B);
 
   @override
-  Color get ambientTop => const Color(0xFF0A1926);
+  Color get ambientTop => const Color(0xFF111113);
 
   @override
-  Color get ambientMid => const Color(0xFF0A1926);
+  Color get ambientMid => const Color(0xFF111113);
 
   @override
-  Color get ambientBottom => const Color(0xFF0A1926);
+  Color get ambientBottom => const Color(0xFF111113);
 
   @override
-  Color get ambientFieldA => const Color(0xFF14B8CC).withValues(alpha: 0.0);
+  Color get ambientFieldA => const Color(0xFF38BDF8).withValues(alpha: 0.0);
 
   @override
-  Color get ambientFieldB => const Color(0xFF1B3A54).withValues(alpha: 0.0);
+  Color get ambientFieldB => const Color(0xFF27272E).withValues(alpha: 0.0);
 
   @override
-  Color get ambientFieldC => const Color(0xFF070D14).withValues(alpha: 0.0);
+  Color get ambientFieldC => const Color(0xFF111113).withValues(alpha: 0.0);
 
   @override
-  Color get navFill => const Color(0xFF0F273B);
+  Color get navFill => const Color(0xFF1C1C21);
 
   @override
-  Color get navLabelActive => const Color(0xFF14B8CC);
+  Color get navLabelActive => const Color(0xFF38BDF8);
 
   @override
-  Color get navLabelInactive => const Color(0xFF93A8BA);
+  Color get navLabelInactive => const Color(0xFFA1A1AA);
 
   @override
-  Color get shadowTint => const Color(0xFF050D14);
+  Color get shadowTint => const Color(0xFF000000);
 
   @override
   bool get isDark => true;
 
   @override
-  Color get successText => const Color(0xFF14B8CC);
+  Color get successText => const Color(0xFF38BDF8);
 }
 
 /// shadcn/ui Zinc — Açık Tema (Yüksek kontrast, net 1px kenarlık, minimal gölge)

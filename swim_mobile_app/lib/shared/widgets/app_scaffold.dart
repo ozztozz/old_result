@@ -28,8 +28,11 @@ class AppScaffold extends StatelessWidget {
         children: screens,
       ),
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F273B),
+        decoration: BoxDecoration(
+          color: palette.navFill,
+          border: palette.isDark
+              ? Border(top: BorderSide(color: palette.border, width: 1))
+              : null,
         ),
         child: SafeArea(
           top: false,
@@ -79,10 +82,13 @@ class AppScaffold extends StatelessWidget {
     IconData icon,
     IconData activeIcon,
   ) {
+    final palette = context.palette;
     final isSelected = currentIndex == index;
-    const cyan = Color(0xFF14B8CC);
-    const navy = Color(0xFF0F273B);
-    final contentColor = isSelected ? navy : Colors.white.withAlpha(204);
+    final activeBg = palette.navLabelActive;
+    final onActive = activeBg.computeLuminance() > 0.42
+        ? palette.navFill
+        : Colors.white;
+    final contentColor = isSelected ? onActive : palette.navLabelInactive;
 
     return Expanded(
       child: Material(
@@ -96,7 +102,7 @@ class AppScaffold extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? cyan : Colors.transparent,
+              color: isSelected ? activeBg : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
