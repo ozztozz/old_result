@@ -6,6 +6,8 @@ import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/calendar_event.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/brand_header_bar.dart';
+import '../../shared/widgets/formatted_summary_view.dart';
 import '../meets/meet_detail_screen.dart';
 
 /// Ulusal (TYF) ve İl Etkinlik Takvimi Ekranı
@@ -122,22 +124,31 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
 
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => SafeArea(
-        child: Padding(
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: ev.ozet.isNotEmpty ? 0.72 : 0.45,
+        minChildSize: 0.35,
+        maxChildSize: 0.92,
+        expand: false,
+        builder: (_, scrollController) => Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Wrap(
                 spacing: 8,
                 children: [
                   Chip(
-                    label: Text(ev.scope == 'IL' ? 'İl Etkinliği' : 'Ulusal / TYF'),
+                    label: Text(ev.scope == 'IL' ? 'İl Etkinliği' : 'Ulusal'),
                     visualDensity: VisualDensity.compact,
                   ),
                   if (ev.pool.isNotEmpty)
@@ -188,14 +199,16 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
               ],
               if (ev.ozet.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text(
-                  ev.ozet,
-                  style: TextStyle(
+                FormattedSummaryView(
+                  text: ev.ozet,
+                  baseStyle: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     fontSize: 13.5,
-                    height: 1.45,
+                    height: 1.5,
                     color: palette.textPrimary,
                   ),
+                  boldColor: palette.textPrimary,
+                  bulletColor: palette.accent,
                 ),
               ],
               if (ev.pdfUrl.isNotEmpty) ...[
@@ -209,7 +222,8 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                   ),
                 ),
               ],
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -231,35 +245,31 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            'Etkinlik Takvimi',
-            style: TextStyle(
-              fontFamily: AppTextStyles.displayFontFamily,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
-              color: palette.textPrimary,
-            ),
-          ),
-          actions: [
-            IconButton(
-              tooltip: _includePast ? 'Yalnız Yaklaşanlar' : 'Geçmişi de Göster',
-              icon: Icon(
-                _includePast ? Icons.history_toggle_off : Icons.history_rounded,
-                color: _includePast ? palette.accent : palette.textSecondary,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              BrandHeaderBar(
+                subtitle: 'Etkinlik Takvimi',
+                actions: [
+                  IconButton(
+                    tooltip:
+                        _includePast ? 'Yalnız Yaklaşanlar' : 'Geçmişi de Göster',
+                    icon: Icon(
+                      _includePast
+                          ? Icons.history_toggle_off
+                          : Icons.history_rounded,
+                      color:
+                          _includePast ? palette.accent : palette.textSecondary,
+                    ),
+                    onPressed: () {
+                      setState(() => _includePast = !_includePast);
+                      _loadCalendar();
+                    },
+                  ),
+                ],
               ),
-              onPressed: () {
-                setState(() => _includePast = !_includePast);
-                _loadCalendar();
-              },
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
+              const SizedBox(height: 6),
             // Arama + Kapsam + Havuz + İl Filtreleri
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -304,7 +314,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                           _loadCalendar();
                         }),
                         const SizedBox(width: 6),
-                        _filterChip('Ulusal / TYF', _scope == 'national', palette, () {
+                        _filterChip('Ulusal', _scope == 'national', palette, () {
                           setState(() => _scope = 'national');
                           _loadCalendar();
                         }),
@@ -404,6 +414,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                             ),
             ),
           ],
+        ),
         ),
       ),
     );

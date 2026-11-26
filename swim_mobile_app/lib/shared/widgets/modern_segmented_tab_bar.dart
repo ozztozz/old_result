@@ -57,25 +57,20 @@ class ModernSegmentedTabBar extends StatelessWidget {
                     alignment: Alignment(isRtl ? -indicatorX : indicatorX, 0),
                     child: FractionallySizedBox(
                       widthFactor: 1 / tabCount,
+                      heightFactor: 1,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: palette.isDark
-                              ? Colors.white.withValues(alpha: 0.14)
-                              : palette.surface.withValues(alpha: 0.92),
+                          color: palette.activeChipFill,
                           borderRadius: AppRadius.chipRadius,
                           border: Border.all(
-                            color: palette.isDark
-                                ? Colors.white.withValues(alpha: 0.12)
-                                : palette.border.withValues(alpha: 0.7),
+                            color: palette.activeChipFill,
                             width: 1,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: palette.shadowTint.withValues(
-                                alpha: palette.isDark ? 0.24 : 0.08,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              color: palette.activeChipShadow,
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
@@ -111,10 +106,10 @@ class ModernSegmentedTabBar extends StatelessWidget {
                                       Icon(
                                         tabs[index].icon,
                                         size: 16,
-                                        color: tabs[index].iconColor ??
-                                            (controller.index == index
-                                                ? palette.accent
-                                                : palette.textSecondary),
+                                        color: controller.index == index
+                                            ? palette.activeChipText
+                                            : (tabs[index].iconColor ??
+                                                palette.textSecondary),
                                       ),
                                       AppSpacing.hXs,
                                     ],
@@ -127,7 +122,7 @@ class ModernSegmentedTabBar extends StatelessWidget {
                                             ? AppTextStyles.tabSelected
                                                 .copyWith(
                                                 fontWeight: FontWeight.w600,
-                                                color: palette.textPrimary,
+                                                color: palette.activeChipText,
                                               )
                                             : AppTextStyles.tabUnselected
                                                 .copyWith(

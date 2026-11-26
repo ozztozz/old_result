@@ -10,6 +10,7 @@ import '../../core/utils/string_utils.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/brand_header_bar.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../live/live_meet_detail_screen.dart';
 
@@ -312,61 +313,38 @@ class _MeetSearchScreenState extends State<MeetSearchScreen> {
   }
 
   Widget _buildHeader(BuildContext context, AppColorPalette palette) {
-    return Padding(
+    return BrandHeaderBar(
+      subtitle: 'Müsabaka Arama',
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s20,
         AppSpacing.s12,
         AppSpacing.s20,
         AppSpacing.sm,
       ),
-      child: Row(
-        children: [
-          GlassCircleButton(
-            icon: Icons.arrow_back_outlined,
-            iconSize: 20,
-            iconColor: palette.textTertiary,
-            tooltip: 'Geri',
-            onTap: () => Navigator.maybePop(context),
-          ),
-          AppSpacing.hSm,
-          Expanded(
+      actions: [
+        if (_hasActiveFilters)
+          TextButton(
+            onPressed: _clearFilters,
             child: Text(
-              'Müsabaka Ara',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              'Temizle',
               style: TextStyle(
                 fontFamily: AppTextStyles.fontFamily,
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-                color: palette.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: palette.accent,
               ),
             ),
           ),
-          if (_hasActiveFilters)
-            TextButton(
-              onPressed: _clearFilters,
-              child: Text(
-                'Temizle',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: palette.accent,
-                ),
-              ),
-            ),
-          GlassCircleButton(
-            icon: _filtersExpanded
-                ? Icons.filter_list_off_rounded
-                : Icons.filter_list_rounded,
-            iconSize: 20,
-            iconColor: _hasActiveFilters ? palette.accent : palette.textTertiary,
-            tooltip: _filtersExpanded ? 'Filtreleri Gizle' : 'Filtreleri Göster',
-            onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
-          ),
-        ],
-      ),
+        GlassCircleButton(
+          icon: _filtersExpanded
+              ? Icons.filter_list_off_rounded
+              : Icons.filter_list_rounded,
+          iconSize: 20,
+          iconColor: _hasActiveFilters ? palette.accent : palette.textTertiary,
+          tooltip: _filtersExpanded ? 'Filtreleri Gizle' : 'Filtreleri Göster',
+          onTap: () => setState(() => _filtersExpanded = !_filtersExpanded),
+        ),
+      ],
     );
   }
 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/components/empty_state_widget.dart';
-import '../../core/services/favorite_athletes_service.dart';
 import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
@@ -13,12 +12,12 @@ import '../../data/models/live_meet.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/tyf_news.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/formatted_summary_view.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../barajlar/barajlar_screen.dart';
 import '../calendar/event_calendar_screen.dart';
 import '../clubs/club_search_screen.dart';
 import '../live/live_meet_detail_screen.dart';
-import '../meets/meet_search_screen.dart';
 import '../rankings/rankings_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════
@@ -122,9 +121,7 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   String? _errorMessage;
-  List<MeetSummary> _recentMeets = [];
   List<LiveMeetSummary> _liveMeets = [];
-  List<Map<String, dynamic>> _highlights = [];
   List<TyfNewsItem> _newsFeed = [];
 
   final PageController _newsPageController = PageController(viewportFraction: 1);
@@ -169,33 +166,16 @@ class _HomeScreenState extends State<HomeScreen>
       _errorMessage = null;
     });
     try {
-      final favIds = FavoriteAthletesService.instance.favoriteIds;
-      final club = SelectedClubService.instance;
-      final Future<List<Map<String, dynamic>>> hlFuture =
-          (favIds.isNotEmpty || club.hasSelectedClub)
-              ? widget.repository
-                  .getHighlightsFeed(
-                    athleteIds: favIds,
-                    clubId: club.clubId,
-                    clubName: club.clubName,
-                  )
-                  .catchError((_) => <Map<String, dynamic>>[])
-              : Future.value(<Map<String, dynamic>>[]);
-
       final results = await Future.wait([
-        widget.repository.getMeets(page: 1),
         widget.repository.getLiveMeets(),
-        hlFuture,
         widget.repository
             .getNewsFeed(limit: 15)
             .catchError((_) => <TyfNewsItem>[]),
       ]);
       if (mounted) {
         setState(() {
-          _recentMeets = results[0] as List<MeetSummary>;
-          _liveMeets = results[1] as List<LiveMeetSummary>;
-          _highlights = results[2] as List<Map<String, dynamic>>;
-          _newsFeed = results[3] as List<TyfNewsItem>;
+          _liveMeets = results[0] as List<LiveMeetSummary>;
+          _newsFeed = results[1] as List<TyfNewsItem>;
           _newsPageIndex = 0;
           _isLoading = false;
         });
@@ -215,7 +195,6 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       delegate: _SwimSearchDelegate(
         repository: widget.repository,
-        onMeetSelected: widget.onOpenMeetInLive,
       ),
     );
   }
@@ -224,17 +203,6 @@ class _HomeScreenState extends State<HomeScreen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ClubSearchScreen(
-          repository: widget.repository,
-          onMeetSelected: widget.onOpenMeetInLive,
-        ),
-      ),
-    );
-  }
-
-  void _openMeetSearch() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MeetSearchScreen(
           repository: widget.repository,
           onMeetSelected: widget.onOpenMeetInLive,
         ),
@@ -273,9 +241,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               )
-            : _errorMessage != null &&
-                    _recentMeets.isEmpty &&
-                    _liveMeets.isEmpty
+            : _errorMessage != null && _liveMeets.isEmpty && _newsFeed.isEmpty
                 ? Column(
                     children: [
                       _buildBrandBar(c),
@@ -306,13 +272,9 @@ class _HomeScreenState extends State<HomeScreen>
                         _buildToolCards(c),
                         const SizedBox(height: 14),
                         _buildSearchPill(c),
-                        if (_highlights.isNotEmpty) ...[
+                        if (_liveMeets.isNotEmpty) ...[
                           const SizedBox(height: 22),
                           _buildLiveFeed(c),
-                        ],
-                        if (_recentMeets.isNotEmpty) ...[
-                          const SizedBox(height: 22),
-                          _buildRecentMeets(c),
                         ],
                       ],
                     ),
@@ -476,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 266,
+              height: 218,
               child: PageView.builder(
                 controller: _newsPageController,
                 itemCount: total,
@@ -491,6 +453,27 @@ class _HomeScreenState extends State<HomeScreen>
                     colors: c,
                     dayMonth: _extractDayMonth(item),
                     ageRange: _formatAgeRange(item),
+                    onOpenDetail: (item.ozet.isNotEmpty || item.onemliNotlar.isNotEmpty)
+                        ? () => showAnnouncementDetailSheet(
+                              context,
+                              title: item.baslik,
+                              subtitle: [
+                                if (item.tarihMetni.isNotEmpty) item.tarihMetni,
+                                if (item.sehirYer.isNotEmpty) item.sehirYer,
+                              ].join(' • '),
+                              tags: [
+                                item.turEtiketi,
+                                if (_formatAgeRange(item) != null)
+                                  _formatAgeRange(item)!,
+                                if (item.havuz.isNotEmpty) item.havuz,
+                              ],
+                              summary: item.ozet,
+                              notes: item.onemliNotlar,
+                              onOpenPdf: item.pdfUrl.isNotEmpty
+                                  ? () => _launchPdfUrl(item.pdfUrl)
+                                  : null,
+                            )
+                        : null,
                     onOpenPdf: item.pdfUrl.isNotEmpty
                         ? () => _launchPdfUrl(item.pdfUrl)
                         : null,
@@ -589,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen>
                   icon: Icons.calendar_month_outlined,
                   accentColor: c.cyan,
                   title: 'TAKVİM',
-                  subtitle: 'TYF yarış takvimi',
+                  subtitle: 'Yarış takvimi',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -649,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Sporcu, kulüp veya müsabaka ara',
+                    'Sporcu ara',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: _display(
@@ -677,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen>
   // ═════════════════════════════════════════════════════════════
 
   Widget _buildLiveFeed(_PoolColors c) {
-    final items = _highlights.take(5).toList();
+    final items = _liveMeets.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -709,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
               Text(
-                '${items.length} kayıt',
+                '${items.length} yarış',
                 style: _display(
                   12.5,
                   weight: FontWeight.w500,
@@ -735,27 +718,25 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildLiveRow(
     _PoolColors c,
     int lane,
-    Map<String, dynamic> h,
+    LiveMeetSummary live,
   ) {
-    final athId = h['athlete_id'] as int;
-    final athleteName = StringUtils.formatAthleteName(
-      h['athlete_name'] as String? ?? '',
-    );
-    final eventLabel =
-        '${h['distance'] ?? ''}m ${h['stroke_label'] ?? ''}'.trim();
-    final city = StringUtils.toTitleCase((h['city'] as String?)?.trim() ?? '');
-    final subtitleText =
-        city.isNotEmpty ? '$eventLabel · $city' : eventLabel;
-    final time = h['time'] as String? ?? '';
+    final city = StringUtils.toTitleCase(live.city.trim());
+    final subtitleText = [
+      if (live.date.trim().isNotEmpty) live.date.trim(),
+      if (city.isNotEmpty) city,
+    ].join(' · ');
 
     return InkWell(
       onTap: () {
+        if (widget.onOpenLiveMeet != null) {
+          widget.onOpenLiveMeet!(live.id);
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => AthleteProfileScreen(
-              athleteId: athId,
-              athleteName: h['athlete_name'] as String? ?? '',
+            builder: (_) => LiveMeetDetailScreen(
+              live: live,
               repository: widget.repository,
             ),
           ),
@@ -778,258 +759,42 @@ class _HomeScreenState extends State<HomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    athleteName,
-                    maxLines: 1,
+                    StringUtils.toTitleCase(live.name),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: _display(
-                      15,
+                      14.5,
                       weight: FontWeight.w700,
                       color: c.textPrimary,
+                      height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitleText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _display(
-                      12.5,
-                      weight: FontWeight.w400,
-                      color: c.textSecondary,
+                  if (subtitleText.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitleText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _display(
+                        12.5,
+                        weight: FontWeight.w400,
+                        color: c.textSecondary,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(width: 10),
-            Text(
-              time,
-              style: _num(20, weight: FontWeight.w800, color: c.textPrimary),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: c.textSecondary,
             ),
           ],
         ),
       ),
     );
-  }
-
-  // ═════════════════════════════════════════════════════════════
-  // 8. GÜNCEL MÜSABAKALAR (Kart Listesi)
-  // ═════════════════════════════════════════════════════════════
-
-  Widget _buildRecentMeets(_PoolColors c) {
-    final items = _recentMeets.take(8).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Güncel Müsabakalar',
-                style: _display(
-                  18,
-                  weight: FontWeight.w800,
-                  color: c.textPrimary,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              GestureDetector(
-                onTap: _openMeetSearch,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Tümünü Gör',
-                      style: _display(
-                        13,
-                        weight: FontWeight.w700,
-                        color: c.cyan,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward, size: 15, color: c.cyan),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        for (var i = 0; i < items.length; i++) ...[
-          _buildMeetRow(c, items[i]),
-          if (i != items.length - 1) const SizedBox(height: 10),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildMeetRow(_PoolColors c, MeetSummary meet) {
-    final is25m = meet.course == 'SC';
-    final cityText = meet.city.isNotEmpty
-        ? StringUtils.toTurkishUpper(meet.city)
-        : 'TÜRKİYE';
-    final metaLine = [
-      cityText,
-      if (meet.startDate.isNotEmpty) meet.startDate,
-    ].join(' · ');
-
-    final isUpcoming = _isMeetUpcoming(meet.startDate);
-    final badgeBg = isUpcoming
-        ? (c.isDark ? const Color(0x2610B981) : const Color(0xFFE7F7EF))
-        : (c.isDark ? const Color(0x2614B8CC) : const Color(0xFFEAF0F5));
-    final badgeDot = isUpcoming ? const Color(0xFF10B981) : c.cyan;
-    final badgeText = isUpcoming ? 'Yaklaşan' : 'Tamamlandı';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: c.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: c.border, width: 1),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            final matchingLive = _liveMeets
-                .where((m) => m.meetId != null && m.meetId == meet.id)
-                .firstOrNull;
-            if (matchingLive != null && widget.onOpenLiveMeet != null) {
-              widget.onOpenLiveMeet!(matchingLive.id);
-              return;
-            }
-            if (widget.onOpenMeetInLive != null) {
-              widget.onOpenMeetInLive!(meet);
-              return;
-            }
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => LiveMeetDetailScreen(
-                  live: LiveMeetSummary.fromMeetSummary(meet),
-                  repository: widget.repository,
-                ),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: c.isDark
-                        ? const Color(0xFF16324A)
-                        : const Color(0xFFEAF0F5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    is25m ? '25m' : '50m',
-                    style: _num(
-                      12.5,
-                      weight: FontWeight.w800,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        StringUtils.toTitleCase(meet.name),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: _display(
-                          14.5,
-                          weight: FontWeight.w700,
-                          color: c.textPrimary,
-                          height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 12,
-                            color: c.textSecondary,
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              metaLine,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: _display(
-                                12,
-                                weight: FontWeight.w500,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: badgeDot,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              badgeText,
-                              style: _display(
-                                11,
-                                weight: FontWeight.w600,
-                                color: c.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: c.textSecondary,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  bool _isMeetUpcoming(String rawDate) {
-    final dt = DateTime.tryParse(rawDate.trim());
-    if (dt == null) return false;
-    final now = DateTime.now();
-    return dt.isAfter(DateTime(now.year, now.month, now.day));
   }
 }
 
@@ -1160,6 +925,7 @@ class _FlippableAnnouncementCard extends StatefulWidget {
     required this.colors,
     required this.dayMonth,
     required this.ageRange,
+    this.onOpenDetail,
     this.onOpenPdf,
   });
 
@@ -1169,6 +935,7 @@ class _FlippableAnnouncementCard extends StatefulWidget {
   final _PoolColors colors;
   final ({String day, String month})? dayMonth;
   final String? ageRange;
+  final VoidCallback? onOpenDetail;
   final VoidCallback? onOpenPdf;
 
   @override
@@ -1245,15 +1012,15 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
       if (item.barajSayisi > 0) '${item.barajSayisi} Baraj',
     ];
     final metaLine =
-        metaParts.isNotEmpty ? metaParts.join(' · ') : 'TYF Resmi Duyuru';
+        metaParts.isNotEmpty ? metaParts.join(' · ') : 'Resmi Duyuru';
 
     return Stack(
       children: [
         if (widget.dayMonth != null)
           Positioned(
             right: 12,
-            top: 26,
-            bottom: 16,
+            top: 18,
+            bottom: 12,
             child: IgnorePointer(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1262,7 +1029,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                   Text(
                     widget.dayMonth!.day,
                     style: _num(
-                      108,
+                      84,
                       weight: FontWeight.w800,
                       color: Colors.white.withAlpha(38),
                       height: 0.88,
@@ -1271,7 +1038,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                   Text(
                     widget.dayMonth!.month,
                     style: _display(
-                      28,
+                      22,
                       weight: FontWeight.w800,
                       color: c.cyan.withAlpha(78),
                       letterSpacing: 3,
@@ -1283,7 +1050,7 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
             ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1322,15 +1089,15 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 320),
                 child: Text(
                   StringUtils.toTurkishUpper(item.baslik),
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: _display(
-                    21,
+                    19,
                     weight: FontWeight.w800,
                     color: Colors.white,
                     height: 1.14,
@@ -1338,11 +1105,11 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               if (item.sehirYer.isNotEmpty) ...[
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
                     color: c.cyan.withAlpha(36),
                     borderRadius: BorderRadius.circular(8),
@@ -1351,15 +1118,15 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_on_rounded, size: 15, color: c.cyan),
-                      const SizedBox(width: 5),
+                      Icon(Icons.location_on_rounded, size: 14, color: c.cyan),
+                      const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           item.sehirYer,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: _display(
-                            13,
+                            12.5,
                             weight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -1368,14 +1135,14 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 5),
               ],
               Text(
                 metaLine,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: _display(
-                  12.5,
+                  12,
                   weight: FontWeight.w500,
                   color: Colors.white.withAlpha(235),
                 ),
@@ -1391,8 +1158,8 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
                       borderRadius: BorderRadius.circular(999),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 11,
+                          horizontal: 18,
+                          vertical: 9,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1557,100 +1324,118 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
           ),
           const SizedBox(height: 10),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (item.ozet.isNotEmpty)
-                    Text(
-                      item.ozet,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: item.ozet.isNotEmpty
+                  ? Text(
+                      FormattedSummaryView.plainPreview(item.ozet),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: _display(
                         12.5,
                         weight: FontWeight.w400,
                         color: Colors.white.withAlpha(225),
                         height: 1.4,
                       ),
-                    ),
-                  if (item.onemliNotlar.isNotEmpty) ...[
-                    if (item.ozet.isNotEmpty) const SizedBox(height: 8),
-                    ...item.onemliNotlar.map(
-                      (note) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '• ',
-                              style: _display(
-                                12,
-                                weight: FontWeight.w700,
-                                color: c.cyan,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                note,
-                                style: _display(
-                                  12,
-                                  weight: FontWeight.w400,
-                                  color: Colors.white.withAlpha(200),
-                                  height: 1.35,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (item.ozet.isEmpty && item.onemliNotlar.isEmpty)
-                    Text(
-                      item.baslik,
-                      style: _display(
-                        13.5,
-                        weight: FontWeight.w600,
-                        color: Colors.white.withAlpha(220),
-                        height: 1.4,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          if (widget.onOpenPdf != null) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: Material(
-                color: c.coral,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  onTap: widget.onOpenPdf,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.picture_as_pdf_outlined,
-                          size: 16,
-                          color: Color(0xFF0F273B),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Resmi PDF Belgesini Aç',
+                    )
+                  : item.onemliNotlar.isNotEmpty
+                      ? Text(
+                          '• ${item.onemliNotlar.join('\n• ')}',
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                           style: _display(
-                            12.5,
-                            weight: FontWeight.w700,
-                            color: const Color(0xFF0F273B),
+                            12,
+                            weight: FontWeight.w400,
+                            color: Colors.white.withAlpha(205),
+                            height: 1.4,
+                          ),
+                        )
+                      : Text(
+                          item.baslik,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: _display(
+                            13.5,
+                            weight: FontWeight.w600,
+                            color: Colors.white.withAlpha(220),
+                            height: 1.4,
                           ),
                         ),
-                      ],
+            ),
+          ),
+          if (widget.onOpenDetail != null || widget.onOpenPdf != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (widget.onOpenDetail != null)
+                  Expanded(
+                    child: Material(
+                      color: Colors.white.withAlpha(24),
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        onTap: widget.onOpenDetail,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.article_outlined,
+                                size: 15,
+                                color: c.cyan,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Tamamını Oku',
+                                style: _display(
+                                  12,
+                                  weight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
+                if (widget.onOpenDetail != null && widget.onOpenPdf != null)
+                  const SizedBox(width: 8),
+                if (widget.onOpenPdf != null)
+                  Expanded(
+                    child: Material(
+                      color: c.coral,
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        onTap: widget.onOpenPdf,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.picture_as_pdf_outlined,
+                                size: 15,
+                                color: Color(0xFF0F273B),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'PDF Aç',
+                                style: _display(
+                                  12,
+                                  weight: FontWeight.w700,
+                                  color: const Color(0xFF0F273B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ],
@@ -1659,18 +1444,16 @@ class _FlippableAnnouncementCardState extends State<_FlippableAnnouncementCard>
   }
 }
 
-/// Arama Delegesi
+/// Sporcu Arama Delegesi
 class _SwimSearchDelegate extends SearchDelegate {
   final SwimRepository repository;
-  final ValueChanged<MeetSummary>? onMeetSelected;
 
   _SwimSearchDelegate({
     required this.repository,
-    this.onMeetSelected,
   });
 
   @override
-  String get searchFieldLabel => 'Sporcu veya kulüp ara...';
+  String get searchFieldLabel => 'Sporcu ara...';
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -1700,7 +1483,7 @@ class _SwimSearchDelegate extends SearchDelegate {
     }
 
     return FutureBuilder<GlobalSearchResult>(
-      future: repository.searchGlobal(query.trim()),
+      future: repository.searchGlobal(query.trim(), type: 'athlete'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -1709,83 +1492,47 @@ class _SwimSearchDelegate extends SearchDelegate {
           return const Center(child: Text('Sonuç bulunamadı.'));
         }
 
-        final data = snapshot.data!;
-        final athletes = data.athletes;
-        final clubs = data.clubs;
+        final athletes = snapshot.data!.athletes;
 
-        if (athletes.isEmpty && clubs.isEmpty) {
-          return const Center(child: Text('Eşleşen sonuç bulunamadı.'));
+        if (athletes.isEmpty) {
+          return const Center(child: Text('Eşleşen sporcu bulunamadı.'));
         }
 
         return ListView(
           children: [
-            if (athletes.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'Sporcular',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'Sporcular',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
-              ...athletes.map(
-                (a) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: Icon(
-                      Icons.person,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      size: 20,
-                    ),
+            ),
+            ...athletes.map(
+              (a) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Icon(
+                    Icons.person,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    size: 20,
                   ),
-                  title: Text(StringUtils.formatAthleteName(a.name)),
-                  subtitle: Text('${a.birthYear ?? '-'} · ${a.clubName}'),
-                  onTap: () {
-                    close(context, null);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => AthleteProfileScreen(
-                          athleteId: a.id,
-                          athleteName: a.name,
-                          repository: repository,
-                        ),
+                ),
+                title: Text(StringUtils.formatAthleteName(a.name)),
+                subtitle: Text('${a.birthYear ?? '-'} · ${a.clubName}'),
+                onTap: () {
+                  close(context, null);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AthleteProfileScreen(
+                        athleteId: a.id,
+                        athleteName: a.name,
+                        repository: repository,
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
-            if (clubs.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'Kulüpler',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ),
-              ...clubs.map(
-                (c) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
-                    child: Icon(
-                      Icons.shield_outlined,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      size: 20,
                     ),
-                  ),
-                  title: Text(c.name),
-                  subtitle: Text('${c.athleteCount} Kayıtlı Sporcu'),
-                  onTap: () {
-                    close(context, null);
-                    ClubSearchScreen.showClubActionsSheet(
-                      context,
-                      club: c,
-                      repository: repository,
-                      onMeetSelected: onMeetSelected,
-                    );
-                  },
-                ),
+                  );
+                },
               ),
-            ],
+            ),
           ],
         );
       },

@@ -461,7 +461,6 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
   Widget _buildHeader(BuildContext context, AppColorPalette palette) {
     final athleteCount =
         NumberFormat('#,###', 'tr_TR').format(widget.live.totalAthletes);
-    final title = StringUtils.toTitleCase(widget.live.name);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -507,21 +506,7 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
                 ),
               ),
               AppSpacing.hSm,
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    height: 1.2,
-                    color: palette.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              const Spacer(),
               AppSpacing.hSm,
               Transform.translate(
                 offset: const Offset(0, _liveMeetActionButtonOffset),

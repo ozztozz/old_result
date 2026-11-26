@@ -7,6 +7,7 @@ import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/brand_header_bar.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../home/home_screen.dart';
 
@@ -152,58 +153,19 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           bottom: false,
           child: Column(
             children: [
-              // 1. Editoryal Üst Başlık (LiveScreen ile aynı yapı)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.s20,
-                  AppSpacing.s12,
-                  AppSpacing.s20,
-                  AppSpacing.s12,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'HIZLI TAKİP',
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.displayFontFamily,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                              color: palette.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Favori Sporcular',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.displayFontFamily,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.6,
-                              height: 1.15,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    AppSpacing.hSm,
-                    GlassCircleButton(
-                      icon: Icons.refresh_outlined,
-                      iconSize: 20,
-                      iconColor: palette.textPrimary,
-                      tooltip: 'Yenile',
-                      onTap: _loadFavorites,
-                    ),
-                  ],
-                ),
+              // 1. Sabit Marka Başlığı
+              BrandHeaderBar(
+                subtitle: 'Favori Sporcular',
+                showBack: false,
+                actions: [
+                  GlassCircleButton(
+                    icon: Icons.refresh_outlined,
+                    iconSize: 20,
+                    iconColor: palette.textPrimary,
+                    tooltip: 'Yenile',
+                    onTap: _loadFavorites,
+                  ),
+                ],
               ),
 
               // 2. İçerik
@@ -477,13 +439,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     AthleteSummaryItem fav,
   ) {
     final latest = fav.latestRace;
+    final top = fav.topPerformance;
     final athleteName = StringUtils.formatAthleteName(fav.name);
     final clubName = StringUtils.toTitleCase(fav.clubName);
-    final branchInfo = latest != null
-        ? '${latest.distance}m ${StringUtils.toTitleCase(latest.stroke)}'
-        : (fav.birthYear != null ? '${fav.birthYear}' : '');
-    final subtitleText =
-        branchInfo.isNotEmpty ? '$clubName · $branchInfo' : clubName;
 
     final initials = athleteName
         .split(' ')
@@ -516,23 +474,24 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: palette.primaryContainer,
+                  color: palette.accentSoft,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: palette.primary.withValues(alpha: 0.25),
+                    color: palette.accent.withAlpha(90),
+                    width: 1.5,
                   ),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   initials.isEmpty ? 'SP' : initials,
                   style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: palette.primary,
+                    fontFamily: AppTextStyles.displayFontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: palette.accent,
                   ),
                 ),
               ),
@@ -541,26 +500,55 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      athleteName,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 17,
-                        letterSpacing: -0.2,
-                        color: palette.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            athleteName,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.displayFontFamily,
+                              fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16.5,
+                              letterSpacing: -0.2,
+                              color: palette.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (fav.birthYear != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.accentSoft,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${fav.birthYear}',
+                              style: TextStyle(
+                                fontFamily: 'JetBrainsMono',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: palette.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
-                      subtitleText,
+                      clubName,
                       style: TextStyle(
                         fontFamily: AppTextStyles.fontFamily,
                         color: palette.textSecondary,
-                        fontSize: 13.5,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -568,26 +556,120 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   ],
                 ),
               ),
-              AppSpacing.hSm,
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.star_rounded,
-                      color: palette.accent,
-                      size: 22,
+              const SizedBox(width: 4),
+              IconButton(
+                icon: Icon(
+                  Icons.star_rounded,
+                  color: palette.statusWarning,
+                  size: 22,
+                ),
+                tooltip: 'Favorilerden çıkar',
+                visualDensity: VisualDensity.compact,
+                onPressed: () =>
+                    FavoriteAthletesService.instance.removeFavorite(fav.id),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: palette.textMuted,
+              ),
+            ],
+          ),
+          if (latest != null || top != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (latest != null)
+                  Expanded(
+                    child: _buildFavStatBox(
+                      palette,
+                      label: 'SON YARIŞ',
+                      value: latest.time,
+                      sub:
+                          '${latest.distance}m ${StringUtils.toTitleCase(latest.stroke)}',
+                      accentColor: palette.accent,
                     ),
-                    tooltip: 'Favorilerden çıkar',
-                    onPressed: () =>
-                        FavoriteAthletesService.instance.removeFavorite(fav.id),
                   ),
-                  Icon(
-                    Icons.chevron_right_outlined,
-                    size: 20,
+                if (latest != null && top != null) const SizedBox(width: 8),
+                if (top != null)
+                  Expanded(
+                    child: _buildFavStatBox(
+                      palette,
+                      label: 'EN İYİ FINA',
+                      value: top.points != null ? '${top.points} pt' : top.time,
+                      sub:
+                          '${top.distance}m ${StringUtils.toTitleCase(top.stroke)}',
+                      accentColor: palette.statusSuccess,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFavStatBox(
+    AppColorPalette palette, {
+    required String label,
+    required String value,
+    required String sub,
+    required Color accentColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.isDark
+            ? Colors.white.withAlpha(14)
+            : palette.surfaceSecondary,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: palette.divider,
+          width: 0.8,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+              color: palette.textMuted,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'JetBrainsMono',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
                     color: palette.textSecondary,
                   ),
-                ],
+                ),
               ),
             ],
           ),

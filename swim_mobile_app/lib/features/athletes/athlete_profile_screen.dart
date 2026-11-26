@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/components/ambient_canvas.dart';
 import '../../core/components/app_skeleton.dart';
 import '../../core/components/empty_state_widget.dart';
@@ -12,6 +13,8 @@ import '../../data/models/athlete.dart';
 import '../../data/models/baraj_rule.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/baraj_event_selector.dart';
+import '../../shared/widgets/brand_header_bar.dart';
+import '../../shared/widgets/formatted_summary_view.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
 import 'athlete_compare_screen.dart';
@@ -152,8 +155,11 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildHeader(palette, _athlete!),
-                                AppSpacing.vLg,
+                                const BrandHeaderBar(
+                                  subtitle: 'Sporcu Profili',
+                                  padding: EdgeInsets.zero,
+                                ),
+                                const SizedBox(height: 12),
                                 _buildProfileHero(palette, _athlete!),
                               ],
                             ),
@@ -229,67 +235,38 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     );
   }
 
-  /// Editoryal Üst Başlık (Geri, SPORCU PROFİLİ etiketi, aksiyon butonları)
-  Widget _buildHeader(AppColorPalette palette, AthleteDetail a) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        GlassCircleButton(
-          icon: Icons.arrow_back_outlined,
-          iconSize: 20,
-          iconColor: palette.textPrimary,
-          tooltip: 'Geri',
-          onTap: () => Navigator.maybePop(context),
-        ),
-        AppSpacing.hMd,
-        Expanded(
-          child: Text(
-            'SPORCU PROFİLİ',
-            style: TextStyle(
-              fontFamily: AppTextStyles.displayFontFamily,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: palette.primary,
+  /// Koyu Kart İçi Yuvarlak Aksiyon Butonu
+  Widget _buildHeroCircleButton({
+    required IconData icon,
+    required Color iconColor,
+    required Color onContrast,
+    required String tooltip,
+    required VoidCallback onTap,
+    double size = 38,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: onContrast.withAlpha(24),
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: onContrast.withAlpha(55),
+                width: 1,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            alignment: Alignment.center,
+            child: Icon(icon, size: 19, color: iconColor),
           ),
         ),
-        AppSpacing.hSm,
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GlassCircleButton(
-              icon: Icons.compare_arrows_outlined,
-              iconSize: 20,
-              iconColor: palette.textPrimary,
-              tooltip: 'Karşılaştır',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AthleteCompareScreen(
-                      athleteA: a,
-                      repository: widget.repository,
-                    ),
-                  ),
-                );
-              },
-            ),
-            AppSpacing.hSm,
-            GlassCircleButton(
-              icon: _isFavorite
-                  ? Icons.star_rounded
-                  : Icons.star_outline_rounded,
-              iconColor: _isFavorite ? palette.statusWarning : palette.textPrimary,
-              iconSize: 20,
-              tooltip: _isFavorite ? 'Favorilerden çıkar' : 'Favoriye ekle',
-              onTap: _toggleFavorite,
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
@@ -333,16 +310,17 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: palette.primary.withAlpha(42),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: palette.primary,
-                    width: 1.6,
+                    width: 1.5,
                   ),
                 ),
                 alignment: Alignment.center,
@@ -350,7 +328,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                   initials.isEmpty ? 'SP' : initials,
                   style: TextStyle(
                     fontFamily: AppTextStyles.displayFontFamily,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: onContrast,
                   ),
@@ -418,6 +396,41 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                     ],
                   ],
                 ),
+              ),
+              AppSpacing.hSm,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeroCircleButton(
+                    icon: Icons.compare_arrows_outlined,
+                    iconColor: onContrast,
+                    onContrast: onContrast,
+                    tooltip: 'Karşılaştır',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AthleteCompareScreen(
+                            athleteA: a,
+                            repository: widget.repository,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 6),
+                  _buildHeroCircleButton(
+                    icon: _isFavorite
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    iconColor:
+                        _isFavorite ? palette.statusWarning : onContrast,
+                    onContrast: onContrast,
+                    tooltip:
+                        _isFavorite ? 'Favorilerden çıkar' : 'Favoriye ekle',
+                    onTap: _toggleFavorite,
+                  ),
+                ],
               ),
             ],
           ),
@@ -739,6 +752,10 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
         final rawStartDate = (t['start_date'] ?? '').toString().trim();
         final rawValidity =
             (t['baraj_gecerlilik_metni'] ?? '').toString().trim();
+        final rawOzet = (t['ozet'] ?? '').toString().trim();
+        final rawNotes = t['onemli_notlar'] is List
+            ? (t['onemli_notlar'] as List).map((e) => e.toString()).toList()
+            : <String>[];
 
         eventsMap[key] = BarajEventOption(
           eventId: evId ?? catalog?.eventId,
@@ -753,6 +770,10 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
           validityText: rawValidity.isNotEmpty
               ? rawValidity
               : (catalog?.validityText ?? ''),
+          ozet: rawOzet.isNotEmpty ? rawOzet : (catalog?.ozet ?? ''),
+          onemliNotlar: rawNotes.isNotEmpty
+              ? rawNotes
+              : (catalog?.onemliNotlar ?? const []),
         );
       }
     }
@@ -775,6 +796,10 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
       orElse: () => eventsToShow.first,
     );
     final activeKey = eventSelectionId(activeEv);
+    final activePdfUrl = matching
+        .where((t) => eventKeyForRow(t) == activeKey)
+        .map((t) => (t['pdf_url'] ?? '').toString().trim())
+        .firstWhere((u) => u.isNotEmpty, orElse: () => '');
 
     final meetRowsRaw = matching
         .where((t) =>
@@ -907,6 +932,42 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
             onEventSelected: (ev) {
               setState(() => _selectedBarajMeet = eventSelectionId(ev));
             },
+            onOpenPdf: activePdfUrl.isNotEmpty
+                ? () async {
+                    final uri = Uri.tryParse(activePdfUrl);
+                    if (uri != null) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  }
+                : null,
+            onOpenSummary: (activeEv.ozet.isNotEmpty ||
+                    activeEv.onemliNotlar.isNotEmpty)
+                ? () => showAnnouncementDetailSheet(
+                      context,
+                      title: activeEv.title,
+                      subtitle: [
+                        if (activeEv.dateText.isNotEmpty) activeEv.dateText,
+                        if (activeEv.city.isNotEmpty) activeEv.city,
+                      ].join(' • '),
+                      tags: [
+                        if (activeEv.validityText.isNotEmpty)
+                          'Geçerlilik: ${activeEv.validityText}',
+                      ],
+                      summary: activeEv.ozet,
+                      notes: activeEv.onemliNotlar,
+                      onOpenPdf: activePdfUrl.isNotEmpty
+                          ? () async {
+                              final uri = Uri.tryParse(activePdfUrl);
+                              if (uri != null) {
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            }
+                          : null,
+                    )
+                : null,
           ),
           AppSpacing.vSm,
           Row(
@@ -1388,7 +1449,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                             fontSize: 15,
                                             fontWeight: FontWeight.w800,
                                             letterSpacing: -0.4,
-                                            color: palette.statusSuccess,
+                                            color: palette.accent,
                                           ),
                                         ),
                                         const SizedBox(height: 2),

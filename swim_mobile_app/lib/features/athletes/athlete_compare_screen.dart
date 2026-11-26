@@ -409,40 +409,7 @@ class _AthleteCompareScreenState extends State<AthleteCompareScreen>
             tooltip: 'Geri',
             onTap: () => Navigator.maybePop(context),
           ),
-          AppSpacing.hSm,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Türkiye Yüzme Federasyonu',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.2,
-                    color: palette.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Sporcu Karşılaştırma',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.6,
-                    height: 1.15,
-                    color: palette.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const Spacer(),
         ],
       ),
     );

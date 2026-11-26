@@ -7,6 +7,7 @@ import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/brand_header_bar.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../athletes/athlete_profile_screen.dart';
 
@@ -341,58 +342,13 @@ class _RankingsScreenState extends State<RankingsScreen> {
   }
 
   Widget _buildHeader(BuildContext context, AppColorPalette palette) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return const BrandHeaderBar(
+      subtitle: 'Top 25 Sıralama',
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.s20,
         AppSpacing.s12,
         AppSpacing.s20,
         AppSpacing.md,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          GlassCircleButton(
-            icon: Icons.arrow_back_outlined,
-            iconSize: 20,
-            iconColor: palette.textTertiary,
-            tooltip: 'Geri',
-            onTap: () => Navigator.maybePop(context),
-          ),
-          AppSpacing.hSm,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'TÜRKİYE YÜZME FEDERASYONU',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.displayFontFamily,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: palette.primary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Top 25 Sıralamalar',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.displayFontFamily,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.6,
-                    height: 1.15,
-                    color: palette.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

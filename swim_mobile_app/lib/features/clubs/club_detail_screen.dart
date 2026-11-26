@@ -17,6 +17,7 @@ import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/animated_count_text.dart';
+import '../../shared/widgets/brand_header_bar.dart';
 import '../meets/meet_search_screen.dart';
 
 /// Kulüp Profili, İletişim/Sosyal Medya Kartı ve Sporcuları
@@ -92,9 +93,6 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final displayTitle = StringUtils.toTitleCase(
-      _detail?.name ?? widget.clubName,
-    );
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -103,7 +101,7 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
           bottom: false,
           child: Column(
             children: [
-              _buildTopBar(palette, displayTitle),
+              _buildTopBar(palette),
               Expanded(child: _buildBody(palette)),
             ],
           ),
@@ -112,83 +110,63 @@ class _ClubDetailScreenState extends State<ClubDetailScreen> {
     );
   }
 
-  Widget _buildTopBar(AppColorPalette palette, String title) {
-    return Padding(
+  Widget _buildTopBar(AppColorPalette palette) {
+    return BrandHeaderBar(
+      subtitle: 'Kulüp Detayı',
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm,
         AppSpacing.lg,
         AppSpacing.sm,
       ),
-      child: Row(
-        children: [
-          GlassCircleButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            tooltip: 'Geri',
-            onTap: () => Navigator.of(context).pop(),
-          ),
-          AppSpacing.h12,
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: AppTextStyles.fontFamily,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: palette.textPrimary,
-              ),
-            ),
-          ),
-          ListenableBuilder(
-            listenable: SelectedClubService.instance,
-            builder: (context, _) {
-              final isSelected = SelectedClubService.instance.matches(
-                _detail?.name ?? widget.clubName,
-                widget.clubId,
-              );
-              return InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () async {
-                  if (isSelected) {
-                    await SelectedClubService.instance.clearClub();
-                  } else {
-                    await SelectedClubService.instance.setClub(
-                      id: widget.clubId,
-                      name: _detail?.name ?? widget.clubName,
-                    );
-                  }
-                },
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
+      actions: [
+        ListenableBuilder(
+          listenable: SelectedClubService.instance,
+          builder: (context, _) {
+            final isSelected = SelectedClubService.instance.matches(
+              _detail?.name ?? widget.clubName,
+              widget.clubId,
+            );
+            return InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () async {
+                if (isSelected) {
+                  await SelectedClubService.instance.clearClub();
+                } else {
+                  await SelectedClubService.instance.setClub(
+                    id: widget.clubId,
+                    name: _detail?.name ?? widget.clubName,
+                  );
+                }
+              },
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? palette.statusWarning.withValues(alpha: 0.14)
+                      : palette.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
                     color: isSelected
-                        ? palette.statusWarning.withValues(alpha: 0.14)
-                        : palette.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected
-                          ? palette.statusWarning.withValues(alpha: 0.4)
-                          : palette.border,
-                    ),
-                  ),
-                  child: Icon(
-                    isSelected
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    size: 20,
-                    color: isSelected
-                        ? palette.statusWarning
-                        : palette.textSecondary,
+                        ? palette.statusWarning.withValues(alpha: 0.4)
+                        : palette.border,
                   ),
                 ),
-              );
-            },
-          ),
-        ],
-      ),
+                child: Icon(
+                  isSelected
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  size: 20,
+                  color: isSelected
+                      ? palette.statusWarning
+                      : palette.textSecondary,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 

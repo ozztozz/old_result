@@ -11,6 +11,7 @@ import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/models/meet.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/brand_header_bar.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../meets/meet_search_screen.dart';
 import 'club_detail_screen.dart';
@@ -558,51 +559,13 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
   }
 
   Widget _buildHeader(BuildContext context, AppColorPalette palette) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return const BrandHeaderBar(
+      subtitle: 'Kulüp Arama',
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.s20,
         AppSpacing.sm,
         AppSpacing.s20,
         AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          GlassCircleButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            tooltip: 'Geri',
-            onTap: () => Navigator.of(context).pop(),
-          ),
-          AppSpacing.h12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Kulüp Ara',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: palette.textPrimary,
-                  ),
-                ),
-                Text(
-                  'Kulüp seç, müsabakaları ve sporcuları takip et',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 12.5,
-                    color: palette.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -638,7 +601,11 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                   fontSize: 14,
                   color: palette.textSecondary.withValues(alpha: 0.75),
                 ),
+                filled: false,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 13),
               ),
@@ -734,7 +701,11 @@ class _ClubSearchScreenState extends State<ClubSearchScreen> {
                   fontSize: 13.5,
                   color: palette.textSecondary.withValues(alpha: 0.75),
                 ),
+                filled: false,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 11),
               ),

@@ -80,8 +80,8 @@ enum AppThemePreset {
   ),
   classic(
     id: 'classic',
-    title: 'Klasik TYF',
-    subtitle: 'Geleneksel TYF laciverti · Sistem',
+    title: 'Klasik Lacivert',
+    subtitle: 'Geleneksel lacivert palet · Sistem',
     badge: 'Klasik',
     isDarkOnly: false,
     isSystemAdaptive: true,

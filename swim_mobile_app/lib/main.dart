@@ -66,7 +66,7 @@ class SwimApp extends StatelessWidget {
                 isDark ? Brightness.light : Brightness.dark,
           ),
           child: MaterialApp(
-            title: 'Kulvar 360',
+            title: 'KulvaR',
             debugShowCheckedModeBanner: false,
             theme: themeService.lightTheme,
             darkTheme: themeService.darkTheme,

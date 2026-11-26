@@ -61,9 +61,19 @@ Verilen PDF metnini incele ve yalnızca aşağıdaki JSON şemasında yanıt ver
   "baraj_gecerlilik_baslangic": "Baraj geçerlilik başlangıç tarihi (YYYY-MM-DD) veya null",
   "baraj_gecerlilik_bitis": "Baraj geçerlilik bitiş tarihi (YYYY-MM-DD) veya null",
   "onemli_notlar": ["Son liste bildirim tarihi", "Max bireysel yarış sayısı", "Diğer kritik kural"],
-  "haber_ozeti": "Mobil uygulama haber bandında gösterilecek 2-3 cümlelik net, bilgilendirici Türkçe özet."
+  "haber_ozeti": "Aşağıdaki özet kurallarına göre hazırlanmış yapılandırılmış Türkçe özet (satır sonları için \\n kullan)"
 }
-Not: min_yas ve max_yas tam sayı (ör. 11, 12) veya açık uçlu ise biri null olabilir."""
+Notlar:
+- min_yas ve max_yas tam sayı (ör. 11, 12) veya açık uçlu ise biri null olabilir.
+- "haber_ozeti" alanını üretirken Türkiye Yüzme Federasyonu (TYF) mevzuatını ve yarış kurallarını analiz eden bir spor veri analisti gibi davran. Dışarıdan hiçbir bilgi veya yorum eklemeden sadece metindeki bilgilere dayanarak "Seçilme ve Katılma Kriterlerini" yapılandırılmış bir özet haline getir:
+  1. Çıktıyı şu 4 ana başlık altında grupla:
+     - Temel Seçme Müsabakası ve Derece Kriterleri
+     - Kadro Kotası ve Tamamlama / Eleme Kuralları
+     - Müsabakaya Katılım Kuralları
+     - Antrenör Seçim Kriterleri
+  2. Tarihleri, sporcu/antrenör kota sayılarını ve yarış sınırlarını mutlaka kalın (**...**) yaz.
+  3. Metinde yer almayan hiçbir varsayımda bulunma.
+  4. Yalnızca özet metnini döndür; giriş veya kapanış cümlesi ("İşte özet:" vb.) yazma."""
 
 
 def _fold_tr(text: str) -> str:

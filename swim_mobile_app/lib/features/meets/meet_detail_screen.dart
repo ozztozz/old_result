@@ -300,9 +300,6 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
     final topLabel = city.isNotEmpty
         ? (raceCount > 0 ? '$city • $raceCount yarış' : city)
         : (raceCount > 0 ? '$raceCount yarış' : 'Müsabaka Detayı');
-    final titleText = StringUtils.toTitleCase(
-      (detail != null && detail.name.isNotEmpty) ? detail.name : widget.meetTitle,
-    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -350,21 +347,7 @@ class _MeetDetailScreenState extends State<MeetDetailScreen> {
                 ),
               ),
               AppSpacing.hSm,
-              Expanded(
-                child: Text(
-                  titleText,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    height: 1.2,
-                    color: palette.textPrimary,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              const Spacer(),
               const SizedBox(width: 40 + AppSpacing.sm),
             ],
           ),

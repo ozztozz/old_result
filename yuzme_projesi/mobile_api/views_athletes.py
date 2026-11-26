@@ -539,6 +539,8 @@ def get_athlete_baraj_targets(request, athlete_id: int):
             'baraj_gecerlilik_baslangic': g_start,
             'baraj_gecerlilik_bitis': g_end,
             'pdf_url': pdf_url,
+            'ozet': (bk.belge.ozet or '') if bk.belge else '',
+            'onemli_notlar': (bk.belge.onemli_notlar or []) if bk.belge else [],
         })
 
     # 2. CanliYaris JSON barajlarını birleştir

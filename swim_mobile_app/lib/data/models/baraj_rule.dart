@@ -70,6 +70,9 @@ class BarajEventOption {
   final String dateText;
   final String startDate;
   final String validityText;
+  final String pdfUrl;
+  final String ozet;
+  final List<String> onemliNotlar;
 
   const BarajEventOption({
     this.eventId,
@@ -79,9 +82,13 @@ class BarajEventOption {
     this.dateText = '',
     this.startDate = '',
     this.validityText = '',
+    this.pdfUrl = '',
+    this.ozet = '',
+    this.onemliNotlar = const [],
   });
 
   factory BarajEventOption.fromJson(Map<String, dynamic> json) {
+    final rawNotes = json['onemli_notlar'] as List<dynamic>? ?? const [];
     return BarajEventOption(
       eventId: (json['event_id'] as num?)?.toInt(),
       barajAdi: (json['baraj_adi'] as String?) ?? '',
@@ -90,6 +97,9 @@ class BarajEventOption {
       dateText: (json['date_text'] as String?) ?? '',
       startDate: (json['start_date'] as String?) ?? '',
       validityText: (json['validity_text'] as String?) ?? '',
+      pdfUrl: (json['pdf_url'] as String?) ?? '',
+      ozet: (json['ozet'] as String?) ?? '',
+      onemliNotlar: rawNotes.map((e) => e.toString()).toList(),
     );
   }
 }

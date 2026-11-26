@@ -7,6 +7,8 @@ import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/baraj_rule.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/baraj_event_selector.dart';
+import '../../shared/widgets/brand_header_bar.dart';
+import '../../shared/widgets/formatted_summary_view.dart';
 
 /// Resmi TYF Katılım & Harcırah Barajları Ekranı
 class BarajlarScreen extends StatefulWidget {
@@ -98,11 +100,11 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
         if (_selectedAge.isNotEmpty && !_ageLabels.contains(_selectedAge)) {
           _selectedAge = '';
         }
-        _rules = (_selectedBaraj.isNotEmpty && _selectedAge.isNotEmpty)
+        _rules = _selectedBaraj.isNotEmpty
             ? res.rules
                 .where(
                   (r) =>
-                      r.yasEtiketi == _selectedAge &&
+                      (_selectedAge.isEmpty || r.yasEtiketi == _selectedAge) &&
                       (_selectedEventId != null
                           ? r.eventId == _selectedEventId
                           : r.barajAdi == _selectedBaraj),
@@ -135,9 +137,13 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
   }
 
   Future<void> _openSourcePdf() async {
-    final url = _rules
-        .map((r) => r.pdfUrl.isNotEmpty ? r.pdfUrl : r.sourceUrl)
-        .firstWhere((u) => u.isNotEmpty, orElse: () => '');
+    final activeEv = _activeEvent;
+    var url = activeEv?.pdfUrl ?? '';
+    if (url.isEmpty) {
+      url = _rules
+          .map((r) => r.pdfUrl.isNotEmpty ? r.pdfUrl : r.sourceUrl)
+          .firstWhere((u) => u.isNotEmpty, orElse: () => '');
+    }
     if (url.isEmpty) return;
     final uri = Uri.tryParse(url);
     if (uri != null) {
@@ -148,10 +154,10 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final hasSourcePdf =
-        _rules.any((r) => r.pdfUrl.isNotEmpty || r.sourceUrl.isNotEmpty);
     final eventsToShow = _filteredEvents;
     final activeEv = _activeEvent;
+    final hasSourcePdf = (activeEv?.pdfUrl.isNotEmpty ?? false) ||
+        _rules.any((r) => r.pdfUrl.isNotEmpty || r.sourceUrl.isNotEmpty);
 
     // Stile göre grupla (geleneksel yüzme sırası)
     const strokeOrder = [
@@ -176,42 +182,34 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
       artStyle: AmbientArtStyle.none,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            'Resmi Barajlar',
-            style: TextStyle(
-              fontFamily: AppTextStyles.displayFontFamily,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
-              color: palette.textPrimary,
-            ),
-          ),
-          actions: [
-            if (hasSourcePdf)
-              TextButton.icon(
-                onPressed: _openSourcePdf,
-                icon: Icon(
-                  Icons.picture_as_pdf_outlined,
-                  size: 17,
-                  color: palette.accent,
-                ),
-                label: Text(
-                  'Reglaman PDF',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: palette.accent,
-                  ),
-                ),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              BrandHeaderBar(
+                subtitle: 'Resmi Barajlar',
+                actions: [
+                  if (hasSourcePdf)
+                    TextButton.icon(
+                      onPressed: _openSourcePdf,
+                      icon: Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 17,
+                        color: palette.accent,
+                      ),
+                      label: Text(
+                        'Reglaman',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: palette.accent,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
-        body: Column(
-          children: [
+              const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -241,6 +239,27 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                       });
                       _loadBarajlar();
                     },
+                    onOpenPdf: hasSourcePdf ? _openSourcePdf : null,
+                    onOpenSummary: (activeEv != null &&
+                            (activeEv.ozet.isNotEmpty ||
+                                activeEv.onemliNotlar.isNotEmpty))
+                        ? () => showAnnouncementDetailSheet(
+                              context,
+                              title: activeEv.title,
+                              subtitle: [
+                                if (activeEv.dateText.isNotEmpty)
+                                  activeEv.dateText,
+                                if (activeEv.city.isNotEmpty) activeEv.city,
+                              ].join(' • '),
+                              tags: [
+                                if (activeEv.validityText.isNotEmpty)
+                                  'Geçerlilik: ${activeEv.validityText}',
+                              ],
+                              summary: activeEv.ozet,
+                              notes: activeEv.onemliNotlar,
+                              onOpenPdf: hasSourcePdf ? _openSourcePdf : null,
+                            )
+                        : null,
                     extraFilterChips: [
                       _chip('50m', _selectedPool == '50m', palette, () {
                         setState(() => _selectedPool = '50m');
@@ -276,7 +295,7 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                   if (_ageLabels.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(
-                      'Yaş Grubu Seçin',
+                      'Yaş Grubu',
                       style: TextStyle(
                         fontFamily: AppTextStyles.fontFamily,
                         fontSize: 12,
@@ -288,22 +307,39 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: _ageLabels
-                            .map(
-                              (age) => Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: _chip(
-                                  age,
-                                  _selectedAge == age,
-                                  palette,
-                                  () {
-                                    setState(() => _selectedAge = age);
-                                    _loadBarajlar();
-                                  },
-                                ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _chip(
+                              'Tümü',
+                              _selectedAge.isEmpty,
+                              palette,
+                              () {
+                                if (_selectedAge.isNotEmpty) {
+                                  setState(() => _selectedAge = '');
+                                  _loadBarajlar();
+                                }
+                              },
+                            ),
+                          ),
+                          ..._ageLabels.map(
+                            (age) => Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: _chip(
+                                age,
+                                _selectedAge == age,
+                                palette,
+                                () {
+                                  setState(() {
+                                    _selectedAge =
+                                        _selectedAge == age ? '' : age;
+                                  });
+                                  _loadBarajlar();
+                                },
                               ),
-                            )
-                            .toList(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -326,16 +362,7 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                             onAction: _loadBarajlar,
                           ),
                         )
-                      : _selectedAge.isEmpty
-                          ? const Center(
-                              child: EmptyStateWidget(
-                                title: 'Yaş Grubu Seçin',
-                                message:
-                                    'Baraj derecelerini görüntülemek için yukarıdan bir yaş grubu seçin.',
-                                icon: Icons.cake_outlined,
-                              ),
-                            )
-                          : _rules.isEmpty
+                      : _rules.isEmpty
                               ? const Center(
                                   child: EmptyStateWidget(
                                     title: 'Baraj Bulunamadı',
@@ -373,6 +400,7 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -382,17 +410,27 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
     String strokeName,
     List<BarajRule> items,
   ) {
-    final byDistance = <int, Map<String, BarajRule>>{};
+    final byRow = <String, ({int mesafe, String age, Map<String, BarajRule> pair})>{};
     for (final r in items) {
-      final map = byDistance.putIfAbsent(r.mesafe, () => {});
+      final key = '${r.mesafe}|${r.yasEtiketi}';
+      final entry = byRow.putIfAbsent(
+        key,
+        () => (mesafe: r.mesafe, age: r.yasEtiketi, pair: <String, BarajRule>{}),
+      );
       final g = r.cinsiyet.toLowerCase();
       if (g.contains('kad') || g.contains('bayan')) {
-        map['K'] = r;
+        entry.pair['K'] = r;
       } else {
-        map['E'] = r;
+        entry.pair['E'] = r;
       }
     }
-    final distances = byDistance.keys.toList()..sort();
+    final rows = byRow.values.toList()
+      ..sort((a, b) {
+        final d = a.mesafe.compareTo(b.mesafe);
+        return d != 0 ? d : a.age.compareTo(b.age);
+      });
+    final showAgeInRow = _selectedAge.isEmpty &&
+        rows.map((r) => r.age).where((a) => a.isNotEmpty).toSet().length > 1;
 
     return SoftGlassPanel(
       level: 2,
@@ -427,7 +465,7 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                 ),
               ),
               Text(
-                _selectedAge,
+                _selectedAge.isEmpty ? 'Tüm Yaşlar' : _selectedAge,
                 style: TextStyle(
                   fontFamily: AppTextStyles.fontFamily,
                   fontSize: 11.5,
@@ -473,15 +511,15 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
             ),
           ),
           Divider(height: 8, color: palette.divider),
-          ...List.generate(distances.length, (i) {
-            final dist = distances[i];
-            final pair = byDistance[dist]!;
-            final female = pair['K'];
-            final male = pair['E'];
+          ...List.generate(rows.length, (i) {
+            final row = rows[i];
+            final dist = row.mesafe;
+            final female = row.pair['K'];
+            final male = row.pair['E'];
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
               decoration: BoxDecoration(
-                border: i < distances.length - 1
+                border: i < rows.length - 1
                     ? Border(bottom: BorderSide(color: palette.divider))
                     : null,
               ),
@@ -503,22 +541,39 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                     ),
                   ),
                   Container(
-                    width: 56,
+                    width: showAgeInRow ? 74 : 56,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: palette.accentSoft,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      '${dist}m',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: palette.accent,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${dist}m',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
+                          ),
+                        ),
+                        if (showAgeInRow && row.age.isNotEmpty)
+                          Text(
+                            row.age,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   Expanded(

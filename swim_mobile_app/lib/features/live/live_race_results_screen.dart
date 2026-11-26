@@ -1030,21 +1030,7 @@ class _LiveRaceResultsScreenState extends State<LiveRaceResultsScreen> {
                 ),
               ),
               AppSpacing.hSm,
-              Expanded(
-                child: Text(
-                  StringUtils.toTitleCase(title),
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    height: 1.2,
-                    color: palette.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              const Spacer(),
               AppSpacing.hSm,
               Transform.translate(
                 offset: const Offset(0, _raceActionButtonOffset),

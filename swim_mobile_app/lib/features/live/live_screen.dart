@@ -16,6 +16,7 @@ import '../../data/repositories/swim_repository.dart';
 import '../../data/models/live_meet.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
+import '../../shared/widgets/brand_header_bar.dart';
 import '../../shared/widgets/club_selection_sheet.dart';
 import 'live_meet_detail_screen.dart';
 import 'live_race_results_screen.dart';
@@ -732,6 +733,11 @@ class _LiveScreenState extends State<LiveScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const BrandHeaderBar(
+          subtitle: 'Canlı Takip',
+          showBack: false,
+          padding: EdgeInsets.fromLTRB(6, 2, 6, 10),
+        ),
         _buildMeetStoriesStrip(palette, meets, selectedStoryMeet),
         const SizedBox(height: 14),
         Expanded(

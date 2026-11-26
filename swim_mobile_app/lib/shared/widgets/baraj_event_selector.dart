@@ -16,6 +16,8 @@ class BarajEventSelector extends StatelessWidget {
   final ValueChanged<String> onMonthChanged;
   final ValueChanged<BarajEventOption> onEventSelected;
   final List<Widget> extraFilterChips;
+  final VoidCallback? onOpenPdf;
+  final VoidCallback? onOpenSummary;
 
   const BarajEventSelector({
     super.key,
@@ -29,6 +31,8 @@ class BarajEventSelector extends StatelessWidget {
     required this.onMonthChanged,
     required this.onEventSelected,
     this.extraFilterChips = const [],
+    this.onOpenPdf,
+    this.onOpenSummary,
   });
 
   static String formatMonth(String ym) {
@@ -206,6 +210,32 @@ class BarajEventSelector extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (onOpenPdf != null || onOpenSummary != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (onOpenPdf != null)
+                              _buildActionBadge(
+                                icon: Icons.picture_as_pdf_outlined,
+                                label: 'Reglaman',
+                                foreground: palette.accent,
+                                background: palette.accentSoft,
+                                onTap: onOpenPdf!,
+                              ),
+                            if (onOpenPdf != null && onOpenSummary != null)
+                              const SizedBox(width: 8),
+                            if (onOpenSummary != null)
+                              _buildActionBadge(
+                                icon: Icons.info_outline_rounded,
+                                label: 'Özet',
+                                foreground: palette.statusSuccess,
+                                background: palette.statusSuccessBg,
+                                onTap: onOpenSummary!,
+                              ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -218,6 +248,46 @@ class BarajEventSelector extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildActionBadge({
+    required IconData icon,
+    required String label,
+    required Color foreground,
+    required Color background,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: foreground.withAlpha(90)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: foreground),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: AppTextStyles.fontFamily,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

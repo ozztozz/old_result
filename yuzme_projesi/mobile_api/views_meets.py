@@ -294,7 +294,8 @@ def get_barajlar_list(request):
         'baraj_adi', 'event_id',
         'event__musabaka_adi', 'event__sehir', 'event__yaris_tarihi_ham', 'event__yaris_tarihi_baslangic',
         'belge__baslik', 'belge__sehir_yer', 'belge__tarih_metni', 'belge__baslangic_tarihi',
-        'belge__baraj_gecerlilik_metni',
+        'belge__baraj_gecerlilik_metni', 'belge__ozet', 'belge__onemli_notlar',
+        'belge__yerel_dosya', 'belge__kaynak_url',
     ):
         ev_title = (
             (b.event.musabaka_adi if b.event else None)
@@ -321,6 +322,15 @@ def get_barajlar_list(request):
 
         key = b.event_id or b.baraj_adi
         if key not in events_map:
+            ev_pdf_url = ''
+            if b.belge:
+                if b.belge.yerel_dosya:
+                    try:
+                        ev_pdf_url = request.build_absolute_uri(b.belge.yerel_dosya.url)
+                    except Exception:
+                        ev_pdf_url = b.belge.yerel_dosya.url
+                if not ev_pdf_url:
+                    ev_pdf_url = b.belge.kaynak_url or ''
             events_map[key] = {
                 'event_id': b.event_id,
                 'baraj_adi': b.baraj_adi,
@@ -329,6 +339,9 @@ def get_barajlar_list(request):
                 'date_text': ev_date_text,
                 'start_date': ev_start,
                 'validity_text': ev_validity,
+                'pdf_url': ev_pdf_url,
+                'ozet': (b.belge.ozet if b.belge and b.belge.ozet else ''),
+                'onemli_notlar': (b.belge.onemli_notlar if b.belge and b.belge.onemli_notlar else []),
             }
 
     events_list = sorted(
