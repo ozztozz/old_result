@@ -1502,7 +1502,7 @@ class LocalLiveEngine:
 
                     #    b) Eşleşmezse (K/S) veya seri yoksa Kulvar + Kulüp/Yıl üzerinden dene
                     if not athlete:
-                        if seri_no and kulvar_val and (seri_no, kulvar_val) in cross_unmasked:
+                        if seri_no and kulvar_val is not None and (seri_no, kulvar_val) in cross_unmasked:
                             st_sp, st_mask, st_club_id, st_row = cross_unmasked[(seri_no, kulvar_val)]
                             matched_start_row = matched_start_row or st_row
                             if not matched_start_club:
@@ -1512,8 +1512,16 @@ class LocalLiveEngine:
                             elif st_sp and not matched_masked_sp:
                                 matched_masked_sp = st_sp
                                 matched_start_mask = st_mask or ""
-                        elif not seri_no and kulvar_val and kulvar_val in cross_by_lane:
-                            picked = _narrow_cross_cands(cross_by_lane.get(kulvar_val), club.id if club else None, birth_year, clean_name)
+                        elif not seri_no and kulvar_val is not None and kulvar_val in cross_by_lane:
+                            if is_bayrak and not club and club_lookup_str:
+                                club = _resolve_club_lazy()
+                            picked = _narrow_cross_cands(
+                                cross_by_lane.get(kulvar_val),
+                                club.id if club else None,
+                                birth_year,
+                                clean_name,
+                                require_name_match=is_bayrak,
+                            )
                             if picked:
                                 st_sp, st_mask, st_club_id, _, st_row = picked
                                 matched_start_row = matched_start_row or st_row

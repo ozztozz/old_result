@@ -359,7 +359,7 @@ class LocalResultListParser:
                                 seri = int(s_str)
                             else:
                                 kulvar = int(nxt1)
-                                seri = 1
+                                seri = None
                             derece = nxt2
                             idx += 3
 

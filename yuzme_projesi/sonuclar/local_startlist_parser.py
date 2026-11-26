@@ -46,6 +46,7 @@ class LocalStartListParser:
         re.IGNORECASE,
     )
     RE_TIME = re.compile(r"^(?:(\d{1,2}):)?(\d{2})[.,](\d{2})$|^NT$", re.IGNORECASE)
+    RE_CLOCK = re.compile(r"^\d{1,2}:\d{2}$")
     RE_YEAR = re.compile(r"^(19\d\d|20[01]\d|202[0-2]|\d{2})$")
     RE_NUMERIC_ONLY = re.compile(r"^\d{1,3}$")
     RE_LANE_ONLY = re.compile(r"^([0-9]|10)$")
@@ -250,6 +251,7 @@ class LocalStartListParser:
         stil_lower = (header_info.get("stil") or "").lower()
         is_relay = "bayrak" in stil_lower or "relay" in stil_lower
         has_seen_seri_or_lane = False
+        has_seen_table_header = False
 
         for page_idx, lines in enumerate(page_lines_list):
             pno = page_idx + 1
@@ -294,8 +296,12 @@ class LocalStartListParser:
                     idx += 1
                     continue
 
-                # Tablo Başlığı kontrolü (Kulvar, Sporcu, D.Yılı, Kulüp, Giriş)
+                # Tablo Başlığı veya saat ("09:00") kontrolü
                 if self.RE_TABLE_HEADER.match(line):
+                    has_seen_table_header = True
+                    idx += 1
+                    continue
+                if self.RE_CLOCK.match(line):
                     idx += 1
                     continue
 
@@ -418,14 +424,22 @@ class LocalStartListParser:
                     })
                     continue
 
-                # Tip 3: Serisiz / Kulvarsız Bayrak Giriş Listesi (doğrudan Kulüp + opsiyonel Derece)
-                if is_relay and not has_seen_seri_or_lane and not self.RE_TIME.match(line):
+                # Tip 3: Kulvarsız Bayrak Satırı (Seri içinde 0. kulvar boş bırakılmışsa kulvar=0; serisiz giriş listesinde kulvar=None)
+                if (
+                    is_relay
+                    and has_seen_table_header
+                    and (current_seri is not None or not has_seen_seri_or_lane)
+                    and not self.RE_TIME.match(line)
+                    and not self.RE_CLOCK.match(line)
+                    and not self.RE_NUMERIC_ONLY.match(line)
+                    and line not in (header_info.get("musabaka_adi") or "")
+                ):
                     club = line
                     idx += 1
                     entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
                     swimmers.append({
                         "seri": current_seri,
-                        "kulvar": None,
+                        "kulvar": 0 if current_seri is not None else None,
                         "sporcu": club,
                         "dogum_yili": None,
                         "kulup": club,
@@ -433,7 +447,7 @@ class LocalStartListParser:
                     })
                     continue
 
-                # Tip 4: Kulvarsız Bireysel Sporcu Satırı (ör. "Seri None/11" altında tek yüzen/kulvarsız sporcu)
+                # Tip 4: Kulvarsız Bireysel Sporcu Satırı (Seri içinde 0. kulvar boş bırakılmışsa kulvar=0; "Seri None" ise kulvar=None)
                 if (
                     not is_relay
                     and idx + 1 < n_lines
@@ -461,7 +475,7 @@ class LocalStartListParser:
                     entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
                     swimmers.append({
                         "seri": current_seri,
-                        "kulvar": None,
+                        "kulvar": 0 if current_seri is not None else None,
                         "sporcu": athlete_name,
                         "dogum_yili": birth_year,
                         "kulup": club,
