@@ -370,7 +370,7 @@ class LocalResultListParser:
                                 and not self.RE_STATUS_START.match(lines[idx])
                                 and not self.RE_PAGE_FOOTER.match(lines[idx])
                             ):
-                                club = lines[idx]
+                                club = re.sub(r"\s+", " ", lines[idx]).strip()
                                 idx += 1
 
                             fina_puan = None

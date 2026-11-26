@@ -140,57 +140,49 @@ def _extract_relay_suffix(name: str) -> str:
 
 def _resolve_or_create_relay_team(team_name: str, club: Optional[Kulup] = None) -> Sporcu:
     """
-    Bayrak/Takım sporcu kaydını cinsiyet='Takım' üzerinden yüksek esneklikle eşleştirir;
-    bulunamazsa cinsiyet='Takım' olarak yeni kayıt oluşturur.
+    Bayrak/Takım sporcu kaydını cinsiyet='Takım' üzerinden çözer;
+    kulüp biliniyorsa yalnızca o kulübe ait Takım kayıtlarını kullanır,
+    farklı kulüplerle bulanık (fuzzy) eşleştirme yapmaz.
     """
-    from rapidfuzz import fuzz
-
-    clean = (team_name or "").strip() or (club.kulup_adi if club else "Takım")
+    clean = re.sub(r"\s+", " ", (team_name or "").strip()) or (club.kulup_adi if club else "Takım")
     norm_target = normalize_tr(clean)
     target_suffix = _extract_relay_suffix(clean)
 
-    # 1. Birebir isim eşleşmesi (Takım öncelikli)
+    # 1. Kulüp biliniyorsa önce bu kulübün Takım kayıtlarından eşleştir
+    if club:
+        club_teams = list(Sporcu.objects.filter(cinsiyet="Takım", birincil_kulup=club))
+        for ct in club_teams:
+            if _extract_relay_suffix(ct.sporcu_adi) == target_suffix and (
+                normalize_tr(ct.sporcu_adi) == norm_target or not target_suffix
+            ):
+                return ct
+        if len(club_teams) == 1 and not target_suffix:
+            return club_teams[0]
+        team_label = club.kulup_adi if not target_suffix else clean
+        return Sporcu.objects.create(
+            sporcu_adi=team_label,
+            cinsiyet="Takım",
+            birincil_kulup=club,
+        )
+
+    # 2. Kulüp bilinmiyorsa yalnızca birebir/normalize isim eşleşmesi ara
     exact = (
         Sporcu.objects.filter(sporcu_adi=clean, cinsiyet="Takım").first()
         or Sporcu.objects.filter(sporcu_adi__iexact=clean, cinsiyet="Takım").first()
-        or Sporcu.objects.filter(sporcu_adi=clean, dogum_yili__isnull=True).first()
     )
     if exact:
         return exact
 
-    # 2. Çözümlenmiş kulüp üzerinden Takım eşleşmesi
-    if club:
-        club_teams = list(Sporcu.objects.filter(cinsiyet="Takım", birincil_kulup=club))
-        for ct in club_teams:
-            if _extract_relay_suffix(ct.sporcu_adi) == target_suffix:
-                return ct
-        if len(club_teams) == 1 and not target_suffix:
-            return club_teams[0]
-
-    # 3. Tüm 'Takım' kayıtları arasında yüksek esnekliğe sahip bulanık eşleşme
-    best_cand = None
-    best_score = 0.0
     for cand in Sporcu.objects.filter(cinsiyet="Takım"):
         if _extract_relay_suffix(cand.sporcu_adi) != target_suffix:
             continue
-        norm_cand = normalize_tr(cand.sporcu_adi)
-        if not norm_cand:
-            continue
-        if norm_cand == norm_target:
+        if normalize_tr(cand.sporcu_adi) == norm_target and norm_target:
             return cand
-        score = max(fuzz.ratio(norm_target, norm_cand), fuzz.token_set_ratio(norm_target, norm_cand) * 0.96)
-        if score > best_score:
-            best_score = score
-            best_cand = cand
 
-    if best_cand and best_score >= 82.0:
-        return best_cand
-
-    # 4. Bulunamazsa yeni Takım kaydı oluştur
     return Sporcu.objects.create(
         sporcu_adi=clean,
         cinsiyet="Takım",
-        birincil_kulup=club,
+        birincil_kulup=None,
     )
 
 
@@ -1272,7 +1264,9 @@ class LocalLiveEngine:
                         key=lambda x: x[0],
                         reverse=True,
                     )
-                    if scored[0][0] >= 0.55 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.12):
+                    if scored[0][0] >= 0.92 or (
+                        scored[0][0] >= 0.55 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.12)
+                    ):
                         return scored[0][1]
                     if require_name_match:
                         return None
