@@ -1556,32 +1556,27 @@ def process_single_meet_db(
 
     if locals().get("batch_new_result_files", 0) > 0:
         try:
-            from sonuclar.fcm_service import send_live_meet_notification
+            from sonuclar.fcm_service import (
+                build_live_result_notification_body,
+                send_live_meet_notification,
+            )
 
             meet_title = (
                 (stats.get("musabaka_adi") or "").strip()
                 or (yaris.musabaka_adi or "").strip()
                 or "Canlı Yarış Güncellemesi"
             )
-            files_preview = ", ".join(batch_result_filenames[:3])
-            if len(batch_result_filenames) > 3:
-                files_preview += f" (+{len(batch_result_filenames) - 3})"
-            if len(batch_result_filenames) == 1:
-                body_text = (
-                    f"{files_preview} yayınlandı ({batch_new_results} derece)."
-                    if batch_new_results > 0
-                    else f"{files_preview} yayınlandı."
-                )
-            else:
-                body_text = (
-                    f"{batch_new_result_files} yeni sonuç ({files_preview}) - {batch_new_results} derece."
-                    if batch_new_results > 0
-                    else f"{batch_new_result_files} yeni sonuç ({files_preview})."
-                )
+            body_text, single_yaris_no = build_live_result_notification_body(
+                yaris,
+                batch_result_filenames,
+                added_count=batch_new_results,
+            )
+            extra = {"yaris_no": single_yaris_no} if single_yaris_no else None
             send_live_meet_notification(
                 live_meet_id=yaris.id,
                 title=meet_title,
                 body=body_text,
+                extra_data=extra,
             )
         except Exception as fcm_exc:
             logger.warning(f"[!] FCM bildirim tetiklenemedi: {fcm_exc}")

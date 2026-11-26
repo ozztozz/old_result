@@ -987,7 +987,7 @@ class LocalLiveEngine:
             # 1. Start Listeleri
             for item in pending_starts:
                 try:
-                    added = self._process_single_pdf(
+                    added, _updated = self._process_single_pdf(
                         yaris,
                         event,
                         item,
@@ -1003,9 +1003,10 @@ class LocalLiveEngine:
 
             # 2. Sonuç Listeleri
             notified_result_files: List[str] = []
+            notified_changed_rows = 0
             for item in pending_results:
                 try:
-                    added = self._process_single_pdf(
+                    added, updated = self._process_single_pdf(
                         yaris,
                         event,
                         item,
@@ -1014,7 +1015,9 @@ class LocalLiveEngine:
                     )
                     stats["yeni_sonuc"] += 1
                     stats["eklenen_kayit"] += added
-                    notified_result_files.append(item["filename"])
+                    if added + updated > 0:
+                        notified_result_files.append(item["filename"])
+                        notified_changed_rows += added + updated
                 except Exception as exc:
                     err = f"ResultList Hata ({item['filename']}): {exc}"
                     logger.error(f"  [!] {err}")
@@ -1047,36 +1050,29 @@ class LocalLiveEngine:
                 f"(Start: {islenen_start}/{all_start_count}, Sonuç: {islenen_sonuc}/{all_result_count})"
             )
 
-            if stats["yeni_sonuc"] > 0:
+            if notified_result_files:
                 try:
-                    from sonuclar.fcm_service import send_live_meet_notification
+                    from sonuclar.fcm_service import (
+                        build_live_result_notification_body,
+                        send_live_meet_notification,
+                    )
 
                     meet_title = (
                         (yaris.musabaka_adi or "").strip()
                         or (event.musabaka_adi if event else "").strip()
                         or "Canlı Yarış Güncellemesi"
                     )
-                    new_res_count = stats["yeni_sonuc"]
-                    added_count = stats["eklenen_kayit"]
-                    files_preview = ", ".join(notified_result_files[:3])
-                    if len(notified_result_files) > 3:
-                        files_preview += f" (+{len(notified_result_files) - 3})"
-                    if len(notified_result_files) == 1:
-                        body_text = (
-                            f"{files_preview} yayınlandı ({added_count} derece)."
-                            if added_count > 0
-                            else f"{files_preview} yayınlandı."
-                        )
-                    else:
-                        body_text = (
-                            f"{new_res_count} yeni sonuç ({files_preview}) - {added_count} derece."
-                            if added_count > 0
-                            else f"{new_res_count} yeni sonuç ({files_preview})."
-                        )
+                    body_text, single_yaris_no = build_live_result_notification_body(
+                        yaris,
+                        notified_result_files,
+                        added_count=notified_changed_rows,
+                    )
+                    extra = {"yaris_no": single_yaris_no} if single_yaris_no else None
                     send_live_meet_notification(
                         live_meet_id=yaris.id,
                         title=meet_title,
                         body=body_text,
+                        extra_data=extra,
                     )
                 except Exception as fcm_exc:
                     logger.warning(f"  [!] FCM bildirim tetiklenemedi: {fcm_exc}")
@@ -1183,7 +1179,7 @@ class LocalLiveEngine:
         item: Dict[str, str],
         doc_type: str,
         prefetched: Optional[Dict[str, Any]] = None,
-    ) -> int:
+    ) -> Tuple[int, int]:
         filename = item["filename"]
         url = item["url"]
         logger.info(f"  [>] {filename} işleniyor ({doc_type})...")
@@ -1901,7 +1897,7 @@ class LocalLiveEngine:
                         f"(logs/unmatched_result_records.jsonl dosyasına kaydedildi)."
                     )
 
-            return records_added
+            return records_added, len(to_update_map)
 
         return db_retry(_save_pdf_atomically)
 

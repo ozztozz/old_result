@@ -12,7 +12,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger("fcm_service")
 
@@ -69,6 +69,76 @@ def _ensure_firebase_initialized() -> bool:
         except Exception as exc:
             logger.error(f"Firebase Admin başlatılamadı: {exc}")
             return False
+
+
+def build_live_result_notification_body(
+    canli_yaris,
+    filenames: List[str],
+    added_count: int = 0,
+) -> Tuple[str, Optional[str]]:
+    """
+    İşlenen sonuç PDF'lerinden kullanıcı dostu yarış etiketleri üretir.
+    Dönüş: (body_text, single_yaris_no)
+    """
+    labels: List[str] = []
+    yaris_nos: List[str] = []
+
+    if filenames:
+        try:
+            from sonuclar.models import CanliYarisDosya
+
+            dosya_map = {
+                d.dosya_adi: d
+                for d in CanliYarisDosya.objects.filter(
+                    canli_yaris=canli_yaris,
+                    dosya_adi__in=filenames,
+                )
+            }
+            for fname in filenames:
+                d = dosya_map.get(fname)
+                if d and (d.mesafe or d.stil):
+                    parts: List[str] = []
+                    if d.yaris_no:
+                        parts.append(f"#{d.yaris_no}")
+                        yaris_nos.append(str(d.yaris_no))
+                    if d.cinsiyet:
+                        parts.append(str(d.cinsiyet))
+                    if d.mesafe:
+                        parts.append(f"{d.mesafe}m")
+                    if d.stil:
+                        parts.append(str(d.stil))
+                    labels.append(" ".join(parts))
+                else:
+                    labels.append(fname)
+        except Exception:
+            labels = list(filenames)
+
+    if not labels:
+        body = (
+            f"Yeni yarış sonuçları yayınlandı ({added_count} derece)."
+            if added_count > 0
+            else "Yeni yarış sonuçları yayınlandı."
+        )
+        return body, None
+
+    single_yaris_no = yaris_nos[0] if len(labels) == 1 and len(yaris_nos) == 1 else None
+    if len(labels) == 1:
+        body = (
+            f"{labels[0]} sonuçları yayınlandı ({added_count} derece)."
+            if added_count > 0
+            else f"{labels[0]} sonuçları yayınlandı."
+        )
+        return body, single_yaris_no
+
+    preview = ", ".join(labels[:3])
+    if len(labels) > 3:
+        preview += f" (+{len(labels) - 3})"
+    body = (
+        f"{len(labels)} yeni yarış sonucu: {preview} ({added_count} derece)."
+        if added_count > 0
+        else f"{len(labels)} yeni yarış sonucu: {preview}."
+    )
+    return body, None
 
 
 def send_live_meet_notification(
