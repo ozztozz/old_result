@@ -1,30 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
-import '../../core/utils/responsive.dart';
 import '../../data/models/calendar_event.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../../shared/widgets/brand_header_bar.dart';
+import '../../shared/widgets/app_page_shell.dart';
 import '../../shared/widgets/formatted_summary_view.dart';
 import '../meets/meet_detail_screen.dart';
 
 /// Ulusal (TYF) ve İl Etkinlik Takvimi Ekranı
 class EventCalendarScreen extends StatefulWidget {
   final SwimRepository repository;
+  final int? initialAge;
+  final String? subtitle;
+  final bool embedded;
 
   const EventCalendarScreen({
     super.key,
     required this.repository,
+    this.initialAge,
+    this.subtitle,
+    this.embedded = false,
   });
 
   @override
   State<EventCalendarScreen> createState() => _EventCalendarScreenState();
 }
 
-class _EventCalendarScreenState extends State<EventCalendarScreen> {
+class _EventCalendarScreenState extends State<EventCalendarScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => widget.embedded;
   bool _isLoading = true;
   String? _error;
   List<CalendarEvent> _events = [];
@@ -33,12 +40,17 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
   String _scope = 'all'; // all | national | provincial
   String _selectedCity = '';
   String _selectedPool = ''; // '' | 25m | 50m
+  int? _selectedAge;
   bool _includePast = false;
+  bool _showCalendarGrid = true;
+  DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime? _selectedDate;
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _selectedAge = widget.initialAge;
     _loadCalendar();
   }
 
@@ -58,6 +70,7 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
         scope: _scope,
         city: _selectedCity.isEmpty ? null : _selectedCity,
         pool: _selectedPool.isEmpty ? null : _selectedPool,
+        age: _selectedAge,
         q: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
         includePast: _includePast,
       );
@@ -66,6 +79,21 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
           _events = res.events;
           if (res.cities.isNotEmpty) {
             _cities = res.cities;
+          }
+          _selectedDate = null;
+          if (_events.isNotEmpty) {
+            final hasFocusedMonth = _events.any((e) {
+              final d = _parseYmd(e.startDate);
+              return d != null &&
+                  d.year == _focusedMonth.year &&
+                  d.month == _focusedMonth.month;
+            });
+            if (!hasFocusedMonth) {
+              final first = _parseYmd(_events.first.startDate);
+              if (first != null) {
+                _focusedMonth = DateTime(first.year, first.month);
+              }
+            }
           }
           _isLoading = false;
         });
@@ -99,6 +127,27 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
       '12': 'Aralık',
     };
     return '${months[parts[1]] ?? parts[1]} ${parts[0]}';
+  }
+
+  DateTime? _parseYmd(String raw) {
+    final s = raw.trim();
+    if (s.length < 10) return null;
+    final parsed = DateTime.tryParse(s.substring(0, 10));
+    if (parsed == null) return null;
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  bool _eventCoversDay(CalendarEvent ev, DateTime day) {
+    final start = _parseYmd(ev.startDate);
+    if (start == null) return false;
+    final target = DateTime(day.year, day.month, day.day);
+    return target == start;
+  }
+
+  String _formatDayTitle(DateTime day) {
+    final mm = day.month.toString().padLeft(2, '0');
+    final monthLabel = _formatMonthTitle('${day.year}-$mm');
+    return '${day.day} $monthLabel';
   }
 
   Future<void> _openPdf(String url) async {
@@ -233,46 +282,23 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final palette = context.palette;
 
-    // Etkinlikleri aya göre grupla
+    // Seçili güne göre (varsa) etkinlikleri filtrele ve aya göre grupla
+    final visibleEvents = _selectedDate == null
+        ? _events
+        : _events.where((ev) => _eventCoversDay(ev, _selectedDate!)).toList();
+
     final grouped = <String, List<CalendarEvent>>{};
-    for (final ev in _events) {
+    for (final ev in visibleEvents) {
       grouped.putIfAbsent(ev.monthKey, () => []).add(ev);
     }
     final monthKeys = grouped.keys.toList();
 
-    return AmbientBackground(
-      artStyle: AmbientArtStyle.none,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: ResponsiveCenter(
-          maxWidth: 1040,
-          child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              BrandHeaderBar(
-                subtitle: 'Etkinlik Takvimi',
-                actions: [
-                  IconButton(
-                    tooltip:
-                        _includePast ? 'Yalnız Yaklaşanlar' : 'Geçmişi de Göster',
-                    icon: Icon(
-                      _includePast
-                          ? Icons.history_toggle_off
-                          : Icons.history_rounded,
-                      color:
-                          _includePast ? palette.accent : palette.textSecondary,
-                    ),
-                    onPressed: () {
-                      setState(() => _includePast = !_includePast);
-                      _loadCalendar();
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
+    final content = Column(
+      children: [
+          const SizedBox(height: 6),
             // Arama + Kapsam + Havuz + İl Filtreleri
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -317,6 +343,10 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                           _loadCalendar();
                         }),
                         const SizedBox(width: 6),
+                        _filterChip('Aylık Takvim', _showCalendarGrid, palette, () {
+                          setState(() => _showCalendarGrid = !_showCalendarGrid);
+                        }),
+                        const SizedBox(width: 6),
                         _filterChip('Ulusal', _scope == 'national', palette, () {
                           setState(() => _scope = 'national');
                           _loadCalendar();
@@ -326,6 +356,34 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                           setState(() => _scope = 'provincial');
                           _loadCalendar();
                         }),
+                        if (widget.initialAge != null) ...[
+                          const SizedBox(width: 6),
+                          _filterChip(
+                            '${widget.initialAge} Yaş',
+                            _selectedAge != null,
+                            palette,
+                            () {
+                              setState(() {
+                                _selectedAge = _selectedAge == null
+                                    ? widget.initialAge
+                                    : null;
+                              });
+                              _loadCalendar();
+                            },
+                          ),
+                        ],
+                        if (widget.embedded) ...[
+                          const SizedBox(width: 6),
+                          _filterChip(
+                            'Geçmiş',
+                            _includePast,
+                            palette,
+                            () {
+                              setState(() => _includePast = !_includePast);
+                              _loadCalendar();
+                            },
+                          ),
+                        ],
                         const SizedBox(width: 10),
                         _filterChip('25m', _selectedPool == '25m', palette, () {
                           setState(() => _selectedPool = _selectedPool == '25m' ? '' : '25m');
@@ -366,61 +424,164 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
                   ? Center(child: CircularProgressIndicator(color: palette.primary))
                   : _error != null
                       ? Center(
-                          child: EmptyStateWidget(
-                            title: 'Takvim Yüklenemedi',
-                            message: _error!,
-                            icon: Icons.event_busy_outlined,
-                            actionText: 'Tekrar Dene',
-                            onAction: _loadCalendar,
+                          child: SingleChildScrollView(
+                            child: EmptyStateWidget(
+                              title: 'Takvim Yüklenemedi',
+                              message: _error!,
+                              icon: Icons.event_busy_outlined,
+                              actionText: 'Tekrar Dene',
+                              onAction: _loadCalendar,
+                              compact: widget.embedded,
+                            ),
                           ),
                         )
                       : _events.isEmpty
-                          ? const Center(
-                              child: EmptyStateWidget(
-                                title: 'Etkinlik Bulunamadı',
-                                message: 'Seçili filtrelere uygun planlanmış müsabaka yok.',
-                                icon: Icons.calendar_today_outlined,
+                          ? Center(
+                              child: SingleChildScrollView(
+                                child: EmptyStateWidget(
+                                  title: 'Etkinlik Bulunamadı',
+                                  message:
+                                      'Seçili filtrelere uygun planlanmış müsabaka yok.',
+                                  icon: Icons.calendar_today_outlined,
+                                  compact: widget.embedded,
+                                ),
                               ),
                             )
                           : RefreshIndicator(
                               color: palette.primary,
                               onRefresh: _loadCalendar,
-                              child: ListView.builder(
+                              child: ListView(
                                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                                itemCount: monthKeys.length,
-                                itemBuilder: (context, mIdx) {
-                                  final mk = monthKeys[mIdx];
-                                  final list = grouped[mk]!;
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        child: Text(
-                                          _formatMonthTitle(mk),
-                                          style: TextStyle(
-                                            fontFamily: AppTextStyles.fontFamily,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w800,
+                                children: [
+                                  if (_showCalendarGrid) ...[
+                                    _MonthlyCalendarCard(
+                                      focusedMonth: _focusedMonth,
+                                      selectedDate: _selectedDate,
+                                      events: _events,
+                                      palette: palette,
+                                      monthTitle: _formatMonthTitle(
+                                        '${_focusedMonth.year}-${_focusedMonth.month.toString().padLeft(2, '0')}',
+                                      ),
+                                      eventCoversDay: _eventCoversDay,
+                                      onMonthChanged: (next) {
+                                        setState(() => _focusedMonth = next);
+                                      },
+                                      onDaySelected: (day) {
+                                        setState(() {
+                                          if (_selectedDate != null &&
+                                              _selectedDate!.year == day.year &&
+                                              _selectedDate!.month == day.month &&
+                                              _selectedDate!.day == day.day) {
+                                            _selectedDate = null;
+                                          } else {
+                                            _selectedDate = day;
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
+                                  if (_selectedDate != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.event_available_outlined,
+                                            size: 16,
                                             color: palette.primary,
                                           ),
-                                        ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              '${_formatDayTitle(_selectedDate!)} • ${visibleEvents.length} etkinlik',
+                                              style: TextStyle(
+                                                fontFamily: AppTextStyles.fontFamily,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: palette.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                setState(() => _selectedDate = null),
+                                            style: TextButton.styleFrom(
+                                              visualDensity: VisualDensity.compact,
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                              ),
+                                            ),
+                                            child: const Text('Tümünü Göster'),
+                                          ),
+                                        ],
                                       ),
-                                      ...list.map((ev) => Padding(
-                                            padding: const EdgeInsets.only(bottom: 10),
-                                            child: _buildEventCard(ev, palette),
-                                          )),
-                                    ],
-                                  );
-                                },
+                                    ),
+                                  if (visibleEvents.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 20),
+                                      child: EmptyStateWidget(
+                                        title: 'Bu Günde Etkinlik Yok',
+                                        message:
+                                            'Seçili tarihte planlanmış müsabaka bulunmuyor.',
+                                        icon: Icons.event_note_outlined,
+                                        compact: true,
+                                      ),
+                                    )
+                                  else
+                                    ...monthKeys.map((mk) {
+                                      final list = grouped[mk]!;
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            child: Text(
+                                              _formatMonthTitle(mk),
+                                              style: TextStyle(
+                                                fontFamily: AppTextStyles.fontFamily,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w800,
+                                                color: palette.primary,
+                                              ),
+                                            ),
+                                          ),
+                                          ...list.map(
+                                            (ev) => Padding(
+                                              padding: const EdgeInsets.only(bottom: 10),
+                                              child: _buildEventCard(ev, palette),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }),
+                                ],
                               ),
                             ),
-            ),
-          ],
+                          ),
+      ],
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
+    return AppPageShell(
+      subtitle: widget.subtitle ?? 'Etkinlik Takvimi',
+      actions: [
+        IconButton(
+          tooltip: _includePast ? 'Yalnız Yaklaşanlar' : 'Geçmişi de Göster',
+          icon: Icon(
+            _includePast ? Icons.history_toggle_off : Icons.history_rounded,
+            color: _includePast ? palette.accent : palette.textSecondary,
+          ),
+          onPressed: () {
+            setState(() => _includePast = !_includePast);
+            _loadCalendar();
+          },
         ),
-        ),
-        ),
-      ),
+      ],
+      body: content,
     );
   }
 
@@ -564,6 +725,437 @@ class _EventCalendarScreenState extends State<EventCalendarScreen> {
           color: color,
         ),
       ),
+    );
+  }
+}
+
+class _MonthlyCalendarCard extends StatelessWidget {
+  final DateTime focusedMonth;
+  final DateTime? selectedDate;
+  final List<CalendarEvent> events;
+  final AppColorPalette palette;
+  final String monthTitle;
+  final bool Function(CalendarEvent ev, DateTime day) eventCoversDay;
+  final ValueChanged<DateTime> onMonthChanged;
+  final ValueChanged<DateTime> onDaySelected;
+
+  const _MonthlyCalendarCard({
+    required this.focusedMonth,
+    required this.selectedDate,
+    required this.events,
+    required this.palette,
+    required this.monthTitle,
+    required this.eventCoversDay,
+    required this.onMonthChanged,
+    required this.onDaySelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final firstDayOfMonth = DateTime(focusedMonth.year, focusedMonth.month, 1);
+    final daysInMonth = DateTime(focusedMonth.year, focusedMonth.month + 1, 0).day;
+    final leadingEmpty = firstDayOfMonth.weekday - 1; // Pazartesi = 0
+    final totalCells = ((leadingEmpty + daysInMonth + 6) ~/ 7) * 7;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+
+    const weekdays = ['PZT', 'SAL', 'ÇAR', 'PER', 'CUM', 'CMT', 'PAZ'];
+    final prevMonthLastDay = DateTime(focusedMonth.year, focusedMonth.month, 0).day;
+
+    // Etkinliği olan ayları kronolojik sırayla çıkar (hızlı ay atlama çipleri için)
+    final activeMonths = <DateTime>[];
+    final seenMonths = <String>{};
+    for (final ev in events) {
+      if (ev.startDate.length >= 7) {
+        final ym = ev.startDate.substring(0, 7);
+        if (seenMonths.add(ym)) {
+          final p = ym.split('-');
+          final y = int.tryParse(p[0]);
+          final m = int.tryParse(p[1]);
+          if (y != null && m != null) {
+            activeMonths.add(DateTime(y, m));
+          }
+        }
+      }
+    }
+    activeMonths.sort();
+
+    // Odaklanılan aydaki etkinlik sayısı
+    int monthEventCount = 0;
+    for (final ev in events) {
+      bool inMonth = false;
+      for (int d = 1; d <= daysInMonth; d++) {
+        if (eventCoversDay(ev, DateTime(focusedMonth.year, focusedMonth.month, d))) {
+          inMonth = true;
+          break;
+        }
+      }
+      if (inMonth) monthEventCount++;
+    }
+
+    final cardBg = palette.isDark
+        ? palette.surfaceElevated
+        : Color.alphaBlend(palette.navFill, palette.shadowTint);
+    final dotNationalColor = palette.accent;
+    final dotProvincialColor = palette.statusWarning;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadowTint.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Önceki Ay',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                iconSize: 19,
+                color: Colors.white.withValues(alpha: 0.8),
+                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: () => onMonthChanged(
+                  DateTime(focusedMonth.year, focusedMonth.month - 1),
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      monthTitle,
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '($monthEventCount)',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: monthEventCount > 0
+                            ? dotNationalColor
+                            : Colors.white.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Sonraki Ay',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                iconSize: 19,
+                color: Colors.white.withValues(alpha: 0.8),
+                icon: const Icon(Icons.chevron_right_rounded),
+                onPressed: () => onMonthChanged(
+                  DateTime(focusedMonth.year, focusedMonth.month + 1),
+                ),
+              ),
+            ],
+          ),
+          if (activeMonths.length > 1) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 22,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: activeMonths.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 5),
+                itemBuilder: (_, i) {
+                  final m = activeMonths[i];
+                  final isCurrent =
+                      m.year == focusedMonth.year && m.month == focusedMonth.month;
+                  const shortMonths = [
+                    'Oca',
+                    'Şub',
+                    'Mar',
+                    'Nis',
+                    'May',
+                    'Haz',
+                    'Tem',
+                    'Ağu',
+                    'Eyl',
+                    'Eki',
+                    'Kas',
+                    'Ara',
+                  ];
+                  final label =
+                      "${shortMonths[m.month - 1]} '${m.year.toString().substring(2)}";
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(11),
+                    onTap: () => onMonthChanged(m),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isCurrent
+                            ? palette.primary
+                            : Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: isCurrent
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.72),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: weekdays
+                .map(
+                  (d) => Expanded(
+                    child: Text(
+                      d,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 9.5,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.48),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 4),
+          for (int weekStart = 0; weekStart < totalCells; weekStart += 7) ...[
+            if (weekStart > 0) const SizedBox(height: 2),
+            SizedBox(
+              height: 30,
+              child: Row(
+                children: List.generate(7, (col) {
+                  final index = weekStart + col;
+                  final dayOffset = index - leadingEmpty + 1;
+                  final bool isOutside = dayOffset < 1 || dayOffset > daysInMonth;
+
+                  if (isOutside) {
+                    final outsideNum = dayOffset < 1
+                        ? prevMonthLastDay + dayOffset
+                        : dayOffset - daysInMonth;
+                    return Expanded(
+                      child: Center(
+                        child: Text(
+                          '$outsideNum',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final dayNum = dayOffset;
+                  final day = DateTime(focusedMonth.year, focusedMonth.month, dayNum);
+                  final isToday = day == todayDate;
+                  final isSelected = selectedDate != null &&
+                      selectedDate!.year == day.year &&
+                      selectedDate!.month == day.month &&
+                      selectedDate!.day == day.day;
+
+                  bool hasNational = false;
+                  bool hasProvincial = false;
+                  int dayEventCount = 0;
+                  for (final ev in events) {
+                    if (eventCoversDay(ev, day)) {
+                      dayEventCount++;
+                      if (ev.scope == 'IL') {
+                        hasProvincial = true;
+                      } else {
+                        hasNational = true;
+                      }
+                    }
+                  }
+                  final hasAny = dayEventCount > 0;
+
+                  return Expanded(
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => onDaySelected(day),
+                      child: Center(
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: isSelected
+                              ? BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: palette.primary,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: palette.primary.withValues(alpha: 0.45),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                )
+                              : BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isToday
+                                      ? dotNationalColor.withValues(alpha: 0.24)
+                                      : hasAny
+                                          ? Colors.white.withValues(alpha: 0.13)
+                                          : null,
+                                  border: isToday
+                                      ? Border.all(
+                                          color: dotNationalColor,
+                                          width: 1.6,
+                                        )
+                                      : null,
+                                ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '$dayNum',
+                                style: TextStyle(
+                                  fontFamily: AppTextStyles.fontFamily,
+                                  fontSize: 11.5,
+                                  height: 1.1,
+                                  fontWeight: isSelected || isToday || hasAny
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected || isToday
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.88),
+                                ),
+                              ),
+                              if (hasAny) ...[
+                                const SizedBox(height: 2),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (hasNational)
+                                      Container(
+                                        width: 4,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : dotNationalColor,
+                                        ),
+                                      ),
+                                    if (hasNational && hasProvincial)
+                                      const SizedBox(width: 2),
+                                    if (hasProvincial)
+                                      Container(
+                                        width: 4,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : dotProvincialColor,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _legendDot(dotNationalColor, 'Ulusal', Colors.white.withValues(alpha: 0.68)),
+              const SizedBox(width: 12),
+              _legendDot(dotProvincialColor, 'İl Yarışı', Colors.white.withValues(alpha: 0.68)),
+              const SizedBox(width: 12),
+              _legendRing(dotNationalColor, 'Bugün', Colors.white.withValues(alpha: 0.68)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label, Color textColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 10.5,
+            color: textColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _legendRing(Color color, String label, Color textColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 1.5),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 10.5,
+            color: textColor,
+          ),
+        ),
+      ],
     );
   }
 }

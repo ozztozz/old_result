@@ -17,6 +17,8 @@ class QualifyingStandard {
 class RaceResult {
   final int id;
   final String eventNo;
+  final int? day;
+  final String? estimatedTime;
   final int? distance;
   final String stroke;
   final String strokeLabel;
@@ -28,6 +30,7 @@ class RaceResult {
   final String? seedTime;
   final int? seedTimeCs;
   final String resultStatus; // 'OK', 'DQ', 'DNS', 'DNF', 'WAITING'
+  final String? warningNote;
   final int? points;
   final QualifyingStandard? qualifyingStandard;
   final String source; // 'official' veya 'live'
@@ -44,6 +47,8 @@ class RaceResult {
   RaceResult({
     required this.id,
     required this.eventNo,
+    this.day,
+    this.estimatedTime,
     this.distance,
     required this.stroke,
     required this.strokeLabel,
@@ -55,6 +60,7 @@ class RaceResult {
     this.seedTime,
     this.seedTimeCs,
     required this.resultStatus,
+    this.warningNote,
     this.points,
     this.qualifyingStandard,
     required this.source,
@@ -84,6 +90,8 @@ class RaceResult {
     return RaceResult(
       id: json['id'] as int,
       eventNo: json['event_no'] as String? ?? '',
+      day: (json['day'] as num?)?.toInt(),
+      estimatedTime: json['estimated_time'] as String?,
       distance: json['distance'] as int?,
       stroke: json['stroke'] as String? ?? '',
       strokeLabel: json['stroke_label'] as String? ?? '',
@@ -95,6 +103,7 @@ class RaceResult {
       seedTime: json['seed_time'] as String?,
       seedTimeCs: json['seed_time_cs'] as int?,
       resultStatus: json['result_status'] as String? ?? 'OK',
+      warningNote: (json['warning_note'] as String?) ?? (json['uyari_notu'] as String?),
       points: json['points'] as int?,
       qualifyingStandard: standardObj != null ? QualifyingStandard.fromJson(standardObj) : null,
       source: json['source'] as String? ?? 'official',

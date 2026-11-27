@@ -39,7 +39,10 @@ class LocalStartListParser:
     """
 
     # Regex Tanımları
-    RE_SERI = re.compile(r"^\s*Seri\s+(\d+|None)(?:\s*(?:/|of)\s*(\d+))?", re.IGNORECASE)
+    RE_SERI = re.compile(
+        r"^\s*Seri\s+(\d+|None)(?:\s*(?:/|of)\s*(\d+))?(?:\s*[·•\|\-–—]\s*(.+?))?(?:\s+(\d{1,2}:\d{2}))?\s*$",
+        re.IGNORECASE,
+    )
     RE_TABLE_HEADER = re.compile(r"^(Kulvar|Sporcu|D\.Yılı|Kulüp|Giriş|YB|Sıra|Lane|Heat)$", re.IGNORECASE)
     RE_PAGE_FOOTER = re.compile(
         r"^(Sayfa\s+\d+/\d+|\d{2}[./-]\d{2}[./-]\d{4}\s+\d{2}:\d{2}\s*-\s*Sayfa\s+\d+|Türkiye Yüzme Federasyonu|Bu dosya.*oluşturuldu\.?|Splash Meet Manager.*|Registered to.*)$",
@@ -92,11 +95,18 @@ class LocalStartListParser:
 
             # 3. Serilere göre grupla
             series_dict: Dict[str, List[Dict[str, Any]]] = {}
+            unique_ages: List[str] = []
+            first_saat: Optional[str] = None
             for s in swimmers:
                 s_key = s["seri"] or "Bilinmeyen Seri"
                 if s_key not in series_dict:
                     series_dict[s_key] = []
                 series_dict[s_key].append(s)
+                s_age = (s.get("yas_grubu") or "").strip()
+                if s_age and s_age not in unique_ages:
+                    unique_ages.append(s_age)
+                if not first_saat and s.get("tahmini_saat"):
+                    first_saat = s.get("tahmini_saat")
 
             return {
                 "musabaka_adi": header_info.get("musabaka_adi"),
@@ -106,6 +116,8 @@ class LocalStartListParser:
                 "cinsiyet": header_info.get("cinsiyet"),
                 "mesafe": header_info.get("mesafe"),
                 "stil": header_info.get("stil"),
+                "yas_grubu": ", ".join(unique_ages) if unique_ages else None,
+                "tahmini_saat": first_saat,
                 "toplam_sayfa": total_pages,
                 "toplam_seri": len(series_dict),
                 "toplam_sporcu": len(swimmers),
@@ -197,6 +209,17 @@ class LocalStartListParser:
                 club = club[:m_time.start()].strip()
         return entry_time, club, idx
 
+    @staticmethod
+    def _is_relay_swimmers_line(txt: str) -> bool:
+        """Bayrak takımının altındaki virgüllü/maskeli sporcu isimleri satırını ayırt eder."""
+        if not txt:
+            return False
+        if "*" in txt and "," in txt:
+            return True
+        if txt.count(",") >= 2:
+            return True
+        return False
+
     def _is_valid_club_line(self, line: str) -> bool:
         """Kulüp satırı olamayacak gürültü/sayı/derece/başlık satırlarını eler."""
         if not line:
@@ -247,6 +270,8 @@ class LocalStartListParser:
         swimmers: List[Dict[str, Any]] = []
         current_seri: Optional[str] = None
         current_seri_no: Optional[int] = None
+        current_seri_yas: Optional[str] = None
+        current_seri_saat: Optional[str] = None
         toplam_seri: Optional[int] = None
         stil_lower = (header_info.get("stil") or "").lower()
         is_relay = "bayrak" in stil_lower or "relay" in stil_lower
@@ -278,7 +303,7 @@ class LocalStartListParser:
                         idx += 1
                         continue
 
-                # Seri Başlığı kontrolü (Örn: "Seri 1/9", "Seri 1 of 31" veya "Seri None/11")
+                # Seri Başlığı kontrolü (Örn: "Seri 1/9", "Seri 1/14 · 11 Yaş", "Seri 1 of 31" veya "Seri None/11")
                 m_seri = self.RE_SERI.match(line)
                 if m_seri:
                     has_seen_seri_or_lane = True
@@ -293,6 +318,15 @@ class LocalStartListParser:
                             current_seri = f"Seri {current_seri_no}/{toplam_seri}"
                         else:
                             current_seri = f"Seri {current_seri_no}"
+                    raw_age = (m_seri.group(3) or "").strip()
+                    inline_saat = (m_seri.group(4) or "").strip()
+                    if raw_age and not inline_saat:
+                        m_inline_clock = re.search(r"\s+(\d{1,2}:\d{2})\s*$", raw_age)
+                        if m_inline_clock:
+                            inline_saat = m_inline_clock.group(1)
+                            raw_age = raw_age[:m_inline_clock.start()].strip()
+                    current_seri_yas = raw_age if (raw_age and not self.RE_CLOCK.match(raw_age)) else None
+                    current_seri_saat = inline_saat or None
                     idx += 1
                     continue
 
@@ -302,6 +336,8 @@ class LocalStartListParser:
                     idx += 1
                     continue
                 if self.RE_CLOCK.match(line):
+                    if current_seri_saat is None:
+                        current_seri_saat = line.strip()
                     idx += 1
                     continue
 
@@ -318,6 +354,8 @@ class LocalStartListParser:
                         club = lines[idx]
                         idx += 1
                         entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
+                        while idx < n_lines and self._is_relay_swimmers_line(lines[idx]):
+                            idx += 1
                         swimmers.append({
                             "seri": current_seri,
                             "kulvar": lane,
@@ -325,6 +363,8 @@ class LocalStartListParser:
                             "dogum_yili": None,
                             "kulup": club,
                             "giris_derecesi": entry_time,
+                            "yas_grubu": current_seri_yas,
+                            "tahmini_saat": current_seri_saat,
                         })
                         continue
 
@@ -360,6 +400,8 @@ class LocalStartListParser:
                         "dogum_yili": birth_year,
                         "kulup": club,
                         "giris_derecesi": entry_time,
+                        "yas_grubu": current_seri_yas,
+                        "tahmini_saat": current_seri_saat,
                     })
                     continue
 
@@ -380,6 +422,8 @@ class LocalStartListParser:
                             "dogum_yili": None,
                             "kulup": club,
                             "giris_derecesi": entry_time,
+                            "yas_grubu": current_seri_yas,
+                            "tahmini_saat": current_seri_saat,
                         })
                         continue
 
@@ -421,6 +465,8 @@ class LocalStartListParser:
                         "dogum_yili": birth_year,
                         "kulup": club,
                         "giris_derecesi": entry_time,
+                        "yas_grubu": current_seri_yas,
+                        "tahmini_saat": current_seri_saat,
                     })
                     continue
 
@@ -432,6 +478,7 @@ class LocalStartListParser:
                     and not self.RE_TIME.match(line)
                     and not self.RE_CLOCK.match(line)
                     and not self.RE_NUMERIC_ONLY.match(line)
+                    and not self._is_relay_swimmers_line(line)
                     and line not in (header_info.get("musabaka_adi") or "")
                 ):
                     club = line
@@ -444,6 +491,8 @@ class LocalStartListParser:
                         "dogum_yili": None,
                         "kulup": club,
                         "giris_derecesi": entry_time,
+                        "yas_grubu": current_seri_yas,
+                        "tahmini_saat": current_seri_saat,
                     })
                     continue
 
@@ -480,6 +529,8 @@ class LocalStartListParser:
                         "dogum_yili": birth_year,
                         "kulup": club,
                         "giris_derecesi": entry_time,
+                        "yas_grubu": current_seri_yas,
+                        "tahmini_saat": current_seri_saat,
                     })
                     continue
 

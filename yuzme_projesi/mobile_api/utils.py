@@ -70,7 +70,7 @@ def map_result_status(derece: Optional[str], sira: Optional[str]) -> str:
         return 'WAITING'
     if any(tok in d_norm or tok in s_norm for tok in ('DNS', 'GIRMEDI', 'GİRMEDİ', 'BAŞLAMADI', 'BASLAMADI')):
         return 'DNS'
-    if any(tok in d_norm or tok in s_norm for tok in ('DQ', 'DISK', 'DİSK', 'İPTAL', 'IPTAL')):
+    if any(tok in d_norm or tok in s_norm for tok in ('DSQ', 'DQ', 'DISK', 'DİSK', 'İPTAL', 'IPTAL')):
         return 'DQ'
     if any(tok in d_norm or tok in s_norm for tok in ('DNF', 'TERK', 'BİTİREMEDİ', 'BITIREMEDI')):
         return 'DNF'
@@ -103,9 +103,18 @@ def detect_course(text_or_event: Any) -> str:
 def compute_age_group_info(result: Any, event_year: Optional[int] = None) -> Tuple[str, int]:
     """
     Sonuç satırı için yaş grubu adını ve sıralama anahtarını döndürür.
-    Web müsabaka detayındaki (sonuclar/views.py) mantıkla aynıdır:
-    hesaplanan_yas -> (event_year - dogum_yili) -> sporcu_yas -> yas_grubu.
+    Öncelik: yas_grubu (start list seri başlığı / resmi kategori) ->
+    hesaplanan_yas -> (event_year - dogum_yili) -> sporcu_yas.
     """
+    raw_group = str(getattr(result, 'yas_grubu', '') or '').strip()
+    if raw_group:
+        if raw_group.isdigit() and int(raw_group) > 0:
+            age_num = int(raw_group)
+            return (f'{age_num} Yaş', age_num)
+        m_num = re.search(r'\d+', raw_group)
+        order_num = int(m_num.group(0)) if m_num else 900
+        return (raw_group, order_num)
+
     raw_age: Optional[int] = None
     h_yas = getattr(result, 'hesaplanan_yas', None)
     if h_yas is not None and h_yas > 0:
@@ -123,16 +132,10 @@ def compute_age_group_info(result: Any, event_year: Optional[int] = None) -> Tup
         if s_yas.isdigit() and int(s_yas) > 0:
             raw_age = int(s_yas)
 
-    raw_group = str(getattr(result, 'yas_grubu', '') or '').strip()
-    if raw_age is None and raw_group.isdigit() and int(raw_group) > 0:
-        raw_age = int(raw_group)
-
     if raw_age is not None and 13 <= raw_age < 900:
         return ('13+ Yaş Grubu', 13)
     if raw_age is not None and 0 < raw_age < 13:
         return (f'{raw_age} Yaş Grubu', raw_age)
-    if raw_group:
-        return (raw_group, 900)
     return ('Genel Sıralama', 999)
 
 

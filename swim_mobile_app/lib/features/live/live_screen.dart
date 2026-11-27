@@ -9,7 +9,6 @@ import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_live_meets_service.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/services/selected_club_service.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
@@ -18,7 +17,9 @@ import '../../data/models/live_meet.dart';
 import '../../data/models/meet.dart';
 import '../../data/models/race_result.dart';
 import '../../shared/widgets/brand_header_bar.dart';
-import '../../shared/widgets/club_selection_sheet.dart';
+import '../../shared/widgets/live_event_header.dart';
+import '../../shared/widgets/modern_segmented_tab_bar.dart';
+import 'club_live_screen.dart';
 import 'live_meet_detail_screen.dart';
 import 'live_race_results_screen.dart';
 
@@ -70,29 +71,30 @@ class _MeetStatus {
 // Ekran durumu
 // ---------------------------------------------------------------------------
 
-class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
+class _LiveScreenState extends State<LiveScreen>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _isAppResumed = true;
   String? _errorMessage;
   List<LiveMeetSummary> _liveMeets = [];
   int? _selectedStoryMeetId;
+  bool _storiesExpanded = true;
   bool _isFeedLoading = false;
   LiveFeedResponse? _selectedFeed;
   final Map<int, LiveFeedResponse> _feedCache = {};
   final Map<int, MeetParticipants> _participantsCache = {};
   final Map<int, String> _computedMeetAgeRanges = {};
-  int _feedTabIndex = 0;
   String? _selectedAthleteName;
   bool _onlySelectedFocus = false;
   Timer? _autoRefreshTimer;
 
-  final PageController _feedPageController = PageController();
+  late final TabController _feedTabController;
 
   @override
   void initState() {
     super.initState();
+    _feedTabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addObserver(this);
-    SelectedClubService.instance.addListener(_onSelectedClubChanged);
     FavoriteLiveMeetsService.instance.addListener(_onFavoriteLiveMeetsChanged);
     widget.selectedMeetIdListenable?.addListener(_onRequestedMeetIdChanged);
     widget.selectedMeetListenable?.addListener(_onRequestedMeetChanged);
@@ -116,8 +118,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
     widget.selectedMeetIdListenable?.removeListener(_onRequestedMeetIdChanged);
     FavoriteLiveMeetsService.instance
         .removeListener(_onFavoriteLiveMeetsChanged);
-    SelectedClubService.instance.removeListener(_onSelectedClubChanged);
-    _feedPageController.dispose();
+    _feedTabController.dispose();
     super.dispose();
   }
 
@@ -165,14 +166,6 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
       _liveMeets = [requestedMeet, ..._liveMeets];
     });
     _selectStoryMeet(requestedMeet);
-  }
-
-  void _onSelectedClubChanged() {
-    if (!mounted) return;
-    setState(() {});
-    if (_selectedStoryMeetId != null) {
-      _loadSelectedFeed(_selectedStoryMeetId!, forceRefresh: true);
-    }
   }
 
   Future<void> _loadLiveMeets() async {
@@ -242,16 +235,21 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
   }
 
   void _selectStoryMeet(LiveMeetSummary meet) {
-    if (_selectedStoryMeetId == meet.id) return;
+    if (_selectedStoryMeetId == meet.id) {
+      if (_storiesExpanded) {
+        setState(() => _storiesExpanded = false);
+      }
+      return;
+    }
     setState(() {
       _selectedStoryMeetId = meet.id;
       _selectedFeed = _feedCache[meet.id];
       _selectedAthleteName = null;
       _onlySelectedFocus = false;
-      _feedTabIndex = 0;
+      _storiesExpanded = false;
     });
-    if (_feedPageController.hasClients) {
-      _feedPageController.jumpToPage(0);
+    if (_feedTabController.index != 0) {
+      _feedTabController.index = 0;
     }
     _loadSelectedFeed(meet.id);
   }
@@ -350,7 +348,6 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
       setState(() => _isFeedLoading = true);
     }
     try {
-      final clubService = SelectedClubService.instance;
       final LiveFeedResponse feed;
       final meet = _liveMeets.where((m) => m.id == liveMeetId).firstOrNull;
       if (meet?.meetId != null && !_participantsCache.containsKey(meet!.meetId!)) {
@@ -424,8 +421,6 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
       } else {
         feed = await widget.repository.getLiveSummary(
           liveMeetId,
-          clubId: clubService.clubId,
-          clubName: clubService.clubName,
           athleteName: _selectedAthleteName,
         );
       }
@@ -757,10 +752,30 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const BrandHeaderBar(
+        BrandHeaderBar(
           subtitle: 'Canlı Takip',
           showBack: false,
-          padding: EdgeInsets.fromLTRB(6, 2, 6, 10),
+          padding: const EdgeInsets.fromLTRB(6, 2, 6, 10),
+          actions: [
+            GlassCircleButton(
+              icon: Icons.groups_outlined,
+              iconSize: 20,
+              iconColor: palette.textPrimary,
+              tooltip: 'Kulüp Takibi',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ClubLiveScreen(
+                      repository: widget.repository,
+                      initialMeets: _liveMeets,
+                      initialMeetId: _selectedStoryMeetId,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
         if (isMasterDetail)
           Expanded(
@@ -793,7 +808,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
           )
         else ...[
           _buildMeetStoriesStrip(palette, meets, selectedStoryMeet),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           Expanded(
             child: _buildSelectedStoryFeedSection(palette, selectedStoryMeet),
           ),
@@ -903,12 +918,71 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
     final selectedIndex =
         selected == null ? 0 : meets.indexWhere((m) => m.id == selected.id);
     final activeDotIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    final selectedCity = (selected?.city ?? '').trim().isNotEmpty
+        ? StringUtils.toTitleCase(selected!.city.trim())
+        : 'Türkiye';
+
+    if (!_storiesExpanded) {
+      return Material(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _storiesExpanded = true),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: palette.border),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.podcasts_rounded,
+                  size: 15,
+                  color: palette.accent,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    'Müsabakalar (${meets.length}) · $selectedCity',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Değiştir',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: palette.accent,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: palette.accent,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 112,
+          height: 82,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -926,12 +1000,12 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
 
               return Padding(
                 padding: EdgeInsets.only(
-                  right: index == meets.length - 1 ? 0 : 14,
+                  right: index == meets.length - 1 ? 0 : 10,
                 ),
                 child: _KheloLiveOnTapScale(
                   onTap: () => _selectStoryMeet(meet),
                   child: SizedBox(
-                    width: 78,
+                    width: 66,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -941,9 +1015,9 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               curve: Curves.easeOutCubic,
-                              width: 58,
-                              height: 58,
-                              padding: const EdgeInsets.all(3),
+                              width: 44,
+                              height: 44,
+                              padding: const EdgeInsets.all(2.5),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: palette.surface,
@@ -951,7 +1025,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                                   color: isSelected
                                       ? statusColor
                                       : statusColor.withValues(alpha: 0.72),
-                                  width: isSelected ? 2.4 : 1.6,
+                                  width: isSelected ? 2.2 : 1.5,
                                 ),
                               ),
                               child: CircleAvatar(
@@ -962,7 +1036,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                                   initials,
                                   style: TextStyle(
                                     fontFamily: AppTextStyles.displayFontFamily,
-                                    fontSize: 12,
+                                    fontSize: 10.5,
                                     fontWeight: FontWeight.w800,
                                     color: isSelected
                                         ? palette.textOnContrast
@@ -974,11 +1048,11 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                             if (FavoriteLiveMeetsService.instance
                                 .isFavorite(meet.id))
                               Positioned(
-                                right: 0,
-                                top: 0,
+                                right: -1,
+                                top: -1,
                                 child: Container(
-                                  width: 16,
-                                  height: 16,
+                                  width: 14,
+                                  height: 14,
                                   decoration: BoxDecoration(
                                     color: palette.statusWarning,
                                     shape: BoxShape.circle,
@@ -989,31 +1063,31 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                                   ),
                                   child: const Icon(
                                     Icons.star_rounded,
-                                    size: 10,
+                                    size: 8.5,
                                     color: Colors.white,
                                   ),
                                 ),
                               ),
                             if (st.live)
                               Positioned(
-                                right: 1,
-                                bottom: 1,
+                                right: 0,
+                                bottom: 0,
                                 child: Container(
-                                  width: 12,
-                                  height: 12,
+                                  width: 10,
+                                  height: 10,
                                   decoration: BoxDecoration(
                                     color: palette.statusLive,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: palette.surface,
-                                      width: 2,
+                                      width: 1.5,
                                     ),
                                   ),
                                 ),
                               ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 5),
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -1028,11 +1102,11 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontFamily: AppTextStyles.fontFamily,
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: isSelected
                                           ? FontWeight.w700
                                           : FontWeight.w600,
-                                      height: 1.15,
+                                      height: 1.1,
                                       color: isSelected
                                           ? palette.textPrimary
                                           : palette.textSecondary,
@@ -1044,7 +1118,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                                 ),
                               ),
                               if (_extractBadgeAgeRange(meet) != null) ...[
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1),
                                 Flexible(
                                   child: FittedBox(
                                     fit: BoxFit.scaleDown,
@@ -1055,7 +1129,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontFamily: AppTextStyles.fontFamily,
-                                        fontSize: 10,
+                                        fontSize: 9.5,
                                         fontWeight: FontWeight.w500,
                                         height: 1.1,
                                         color: palette.textSecondary,
@@ -1079,21 +1153,21 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
           ),
         ),
         if (meets.length > 1) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (int i = 0; i < meets.length && i < 8; i++)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: i == activeDotIndex ? 16 : 5,
-                  height: 5,
+                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                  width: i == activeDotIndex ? 14 : 4,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: i == activeDotIndex
                         ? palette.accent
                         : palette.border,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
             ],
@@ -1132,9 +1206,9 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
         Container(
           decoration: BoxDecoration(
             color: palette.surfaceContrast,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
           ),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1454,23 +1528,19 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
             Expanded(
               child: Builder(
                 builder: (context) {
-                  final clubService = SelectedClubService.instance;
                   final selectedAthlete =
                       _selectedAthleteName?.trim().toLowerCase();
-                  final hasFocus = clubService.hasSelectedClub ||
-                      (selectedAthlete != null && selectedAthlete.isNotEmpty);
+                  final hasFocus =
+                      selectedAthlete != null && selectedAthlete.isNotEmpty;
 
                   bool eventHasFocusMatch(LiveEventProgramItem e) {
                     final list =
                         resultsByEvent[e.eventNo] ?? const <RaceResult>[];
                     return list.any((r) {
-                      final matchesClub = clubService.hasSelectedClub &&
-                          clubService.matches(r.clubName, r.clubId);
-                      final matchesAthlete = selectedAthlete != null &&
+                      return selectedAthlete != null &&
                           selectedAthlete.isNotEmpty &&
                           r.athleteName.trim().toLowerCase() ==
                               selectedAthlete;
-                      return matchesClub || matchesAthlete;
                     });
                   }
 
@@ -1512,33 +1582,12 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                   }
 
                   final tabs = [
-                    (0, 'Son & Sıradaki'),
-                    (1, 'Beklenen (${pendingEvents.length})'),
-                    (2, 'Sonuçlanan (${completedEvents.length})'),
+                    const TabItemData(title: 'Son & Sıradaki'),
+                    TabItemData(title: 'Beklenen (${pendingEvents.length})'),
+                    TabItemData(
+                      title: 'Sonuçlanan (${completedEvents.length})',
+                    ),
                   ];
-
-                  final disableMotion =
-                      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-
-                  void switchTab(int nextIndex) {
-                    if (nextIndex < 0 ||
-                        nextIndex > 2 ||
-                        nextIndex == _feedTabIndex) {
-                      return;
-                    }
-                    setState(() => _feedTabIndex = nextIndex);
-                    if (_feedPageController.hasClients) {
-                      if (disableMotion) {
-                        _feedPageController.jumpToPage(nextIndex);
-                      } else {
-                        _feedPageController.animateToPage(
-                          nextIndex,
-                          duration: const Duration(milliseconds: 240),
-                          curve: Curves.easeOutCubic,
-                        );
-                      }
-                    }
-                  }
 
                   final selectedMeet = _liveMeets
                       .where((m) => m.id == _selectedStoryMeetId)
@@ -1546,21 +1595,6 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                   final cachedParticipants = selectedMeet?.meetId != null
                       ? _participantsCache[selectedMeet!.meetId!]
                       : null;
-
-                  final availableClubs = (cachedParticipants != null &&
-                          cachedParticipants.clubs.isNotEmpty)
-                      ? (cachedParticipants.clubs
-                          .map((c) => c.name.trim())
-                          .where((c) => c.isNotEmpty)
-                          .toSet()
-                          .toList()
-                        ..sort())
-                      : ((feed?.results ?? const <RaceResult>[])
-                          .map((r) => r.clubName.trim())
-                          .where((c) => c.isNotEmpty)
-                          .toSet()
-                          .toList()
-                        ..sort());
 
                   final availableAthletes = (cachedParticipants != null &&
                           cachedParticipants.athletes.isNotEmpty)
@@ -1582,160 +1616,97 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                     children: [
                       _buildFeedFocusSelectorRow(
                         palette,
-                        availableClubs: availableClubs,
                         availableAthletes: availableAthletes,
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Row(
-                          children: [
-                            for (final tab in tabs)
-                              Expanded(
-                                child: Padding(
-                                  padding: EdgeInsets.only(
-                                    right: tab.$1 < 2 ? 8 : 0,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () => switchTab(tab.$1),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 180),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 9,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _feedTabIndex == tab.$1
-                                            ? palette.accent
-                                            : palette.surface,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: (_feedTabIndex == tab.$1
-                                                    ? palette.accent
-                                                    : palette.textPrimary)
-                                                .withValues(
-                                              alpha: _feedTabIndex == tab.$1
-                                                  ? 0.24
-                                                  : 0.04,
-                                            ),
-                                            blurRadius:
-                                                _feedTabIndex == tab.$1 ? 10 : 8,
-                                            offset: const Offset(0, 3),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Center(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            tab.$2,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontFamily:
-                                                  AppTextStyles.fontFamily,
-                                              fontSize: 12,
-                                              fontWeight:
-                                                  _feedTabIndex == tab.$1
-                                                      ? FontWeight.w700
-                                                      : FontWeight.w600,
-                                              color: _feedTabIndex == tab.$1
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .onPrimary
-                                                  : palette.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+                        child: ModernSegmentedTabBar(
+                          controller: _feedTabController,
+                          tabs: tabs,
+                          height: 44,
                         ),
                       ),
                       Expanded(
-                        child: PageView.builder(
-                          controller: _feedPageController,
-                          itemCount: 3,
-                          onPageChanged: (index) {
-                            if (_feedTabIndex != index) {
-                              setState(() => _feedTabIndex = index);
-                            }
-                          },
-                          itemBuilder: (context, pageIndex) {
-                            final tabEvents = eventsForTab(pageIndex);
-                            final emptyMessage = pageIndex == 1
-                                ? 'Beklenen yarış bulunmuyor.'
-                                : pageIndex == 2
-                                    ? 'Henüz sonuçlanan yarış bulunmuyor.'
-                                    : 'Bu sekmede yarış bulunmuyor.';
-                            final listBottomPadding = 64 +
-                                16 +
-                                MediaQuery.of(context).padding.bottom;
+                        child: TabBarView(
+                          controller: _feedTabController,
+                          children: [
+                            for (var pageIndex = 0; pageIndex < 3; pageIndex++)
+                              Builder(
+                                builder: (context) {
+                                  final tabEvents = eventsForTab(pageIndex);
+                                  final emptyMessage = pageIndex == 1
+                                      ? 'Beklenen yarış bulunmuyor.'
+                                      : pageIndex == 2
+                                          ? 'Henüz sonuçlanan yarış bulunmuyor.'
+                                          : 'Bu sekmede yarış bulunmuyor.';
+                                  final listBottomPadding = 64 +
+                                      16 +
+                                      MediaQuery.of(context).padding.bottom;
 
-                            return RefreshIndicator(
-                              color: palette.primary,
-                              onRefresh: () => _loadSelectedFeed(
-                                meet.id,
-                                forceRefresh: true,
-                              ),
-                              child: tabEvents.isEmpty
-                                  ? ListView(
-                                      physics:
-                                          const AlwaysScrollableScrollPhysics(),
-                                      padding: EdgeInsets.only(
-                                        top: 12,
-                                        bottom: listBottomPadding,
-                                      ),
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 16,
-                                          ),
-                                          child: Text(
-                                            emptyMessage,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: palette.textMuted,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : ListView.separated(
-                                      physics:
-                                          const AlwaysScrollableScrollPhysics(),
-                                      padding: EdgeInsets.only(
-                                        top: 2,
-                                        bottom: listBottomPadding,
-                                      ),
-                                      itemCount: tabEvents.length,
-                                      separatorBuilder: (_, __) =>
-                                          const SizedBox(height: 8),
-                                      itemBuilder: (_, i) {
-                                        final ev = tabEvents[i];
-                                        return _buildInlineEventFeedCard(
-                                          palette,
-                                          meet,
-                                          ev,
-                                          resultsByEvent[ev.eventNo] ??
-                                              const [],
-                                          sectionTag: pageIndex == 0
-                                              ? ((ev.isPending &&
-                                                      !ev.status
-                                                          .toLowerCase()
-                                                          .contains('sonu'))
-                                                  ? 'Başlayacak İlk Yarış'
-                                                  : 'Sonuçlanan Son Yarış')
-                                              : null,
-                                        );
-                                      },
+                                  return RefreshIndicator(
+                                    color: palette.primary,
+                                    onRefresh: () => _loadSelectedFeed(
+                                      meet.id,
+                                      forceRefresh: true,
                                     ),
-                            );
-                          },
+                                    child: tabEvents.isEmpty
+                                        ? ListView(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            padding: EdgeInsets.only(
+                                              top: 12,
+                                              bottom: listBottomPadding,
+                                            ),
+                                            children: [
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 16,
+                                                ),
+                                                child: Text(
+                                                  emptyMessage,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: palette.textMuted,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : ListView.separated(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            padding: EdgeInsets.only(
+                                              top: 2,
+                                              bottom: listBottomPadding,
+                                            ),
+                                            itemCount: tabEvents.length,
+                                            separatorBuilder: (_, __) =>
+                                                const SizedBox(height: 8),
+                                            itemBuilder: (_, i) {
+                                              final ev = tabEvents[i];
+                                              return _buildInlineEventFeedCard(
+                                                palette,
+                                                meet,
+                                                ev,
+                                                resultsByEvent[ev.eventNo] ??
+                                                    const [],
+                                                sectionTag: pageIndex == 0
+                                                    ? ((ev.isPending &&
+                                                            !ev.status
+                                                                .toLowerCase()
+                                                                .contains('sonu'))
+                                                        ? 'Başlayacak İlk Yarış'
+                                                        : 'Sonuçlanan Son Yarış')
+                                                    : null,
+                                              );
+                                            },
+                                          ),
+                                  );
+                                },
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -1750,40 +1721,15 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
 
   Widget _buildFeedFocusSelectorRow(
     AppColorPalette palette, {
-    required List<String> availableClubs,
     required List<String> availableAthletes,
   }) {
-    final clubService = SelectedClubService.instance;
-    final hasClub = clubService.hasSelectedClub;
     final hasAthlete =
         _selectedAthleteName != null && _selectedAthleteName!.trim().isNotEmpty;
-    final hasAnyFocus = hasClub || hasAthlete;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 2),
       child: Row(
         children: [
-          Expanded(
-            child: _buildFocusSelectorChip(
-              palette,
-              icon: hasClub ? Icons.star_rounded : Icons.groups_rounded,
-              label: hasClub ? clubService.clubName! : 'Kulüp Seç',
-              isSelected: hasClub,
-              onTap: () => ClubSelectionSheet.show(
-                context,
-                availableClubs: availableClubs,
-              ),
-              onClear: hasClub
-                  ? () {
-                      clubService.clearClub();
-                      if (!hasAthlete) {
-                        setState(() => _onlySelectedFocus = false);
-                      }
-                    }
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: _buildFocusSelectorChip(
               palette,
@@ -1799,7 +1745,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                   ? () {
                       setState(() {
                         _selectedAthleteName = null;
-                        if (!hasClub) _onlySelectedFocus = false;
+                        _onlySelectedFocus = false;
                       });
                       if (_selectedStoryMeetId != null) {
                         _loadSelectedFeed(_selectedStoryMeetId!,
@@ -1809,12 +1755,12 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                   : null,
             ),
           ),
-          if (hasAnyFocus) ...[
+          if (hasAthlete) ...[
             const SizedBox(width: 8),
             Tooltip(
               message: _onlySelectedFocus
-                  ? 'Yalnızca seçili yarışlar gösteriliyor'
-                  : 'Sadece seçili yarışları göster',
+                  ? 'Yalnızca seçili sporcunun yarışları gösteriliyor'
+                  : 'Sadece seçili sporcunun yarışlarını göster',
               child: GestureDetector(
                 onTap: () =>
                     setState(() => _onlySelectedFocus = !_onlySelectedFocus),
@@ -2089,31 +2035,19 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
     String? sectionTag,
   }) {
     final topThree = eventResults.take(3).toList();
-    final clubService = SelectedClubService.instance;
     final selectedAthlete = _selectedAthleteName?.trim().toLowerCase();
     bool isResultMatch(RaceResult r) {
-      final matchesClub = clubService.hasSelectedClub &&
-          clubService.matches(r.clubName, r.clubId);
-      final matchesAthlete = selectedAthlete != null &&
+      return selectedAthlete != null &&
           selectedAthlete.isNotEmpty &&
           r.athleteName.trim().toLowerCase() == selectedAthlete;
-      return matchesClub || matchesAthlete;
     }
 
     final clubMatches = eventResults.where(isResultMatch).toList();
     final extraClubMatches = clubMatches
         .where((m) => !topThree.any((t) => t.id == m.id))
         .toList();
-    final hasDistance = event.distance != null && event.distance! > 0;
-    final strokeText = (hasDistance && event.strokeLabel.isNotEmpty)
-        ? event.strokeLabel
-        : event.displayTitle;
-    final genderText = event.genderLabel;
-    final isFemale = genderText == 'Kadınlar';
-    final isMale = genderText == 'Erkekler';
     final isDone = !event.isPending ||
         event.status.toLowerCase().contains('sonu');
-    final ageText = (event.ageGroup ?? '').trim();
 
     return Material(
       color: palette.surface,
@@ -2180,239 +2114,7 @@ class _LiveScreenState extends State<LiveScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ],
-            Row(
-              children: [
-                if (hasDistance) ...[
-                  Container(
-                    width: 36,
-                    height: 36,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          palette.accent.withValues(alpha: 0.2),
-                          palette.infoCyan.withValues(alpha: 0.1),
-                        ],
-                      ),
-                      border: Border.all(
-                        color: palette.accent.withValues(alpha: 0.38),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: palette.accent.withValues(alpha: 0.12),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: palette.surface.withValues(alpha: 0.65),
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '${event.distance}',
-                            maxLines: 1,
-                            softWrap: false,
-                            style: TextStyle(
-                              fontFamily: AppTextStyles.displayFontFamily,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
-                              color: palette.accent,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          strokeText,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.displayFontFamily,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                      if (genderText.isNotEmpty) ...[
-                        const SizedBox(width: 7),
-                        Tooltip(
-                          message: genderText,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: (isFemale
-                                      ? palette.statusLive
-                                      : (isMale
-                                          ? palette.accent
-                                          : palette.infoCyan))
-                                  .withValues(alpha: 0.14),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: (isFemale
-                                        ? palette.statusLive
-                                        : (isMale
-                                            ? palette.accent
-                                            : palette.infoCyan))
-                                    .withValues(alpha: 0.35),
-                                width: 1.2,
-                              ),
-                            ),
-                            child: Icon(
-                              isFemale
-                                  ? Icons.female_rounded
-                                  : (isMale
-                                      ? Icons.male_rounded
-                                      : Icons.wc_rounded),
-                              size: 16,
-                              color: isFemale
-                                  ? palette.statusLive
-                                  : (isMale
-                                      ? palette.accent
-                                      : palette.infoCyan),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (clubMatches.isNotEmpty && !isDone) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: palette.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.star_rounded,
-                          size: 12,
-                          color: palette.accent,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${clubMatches.length}',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: palette.accent,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (event.eventNo.trim().isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.surfaceContrast,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Yarış ${event.eventNo.trim()}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: palette.textOnContrast,
-                        fontFeatures: const [
-                          FontFeature.tabularFigures(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 6),
-                Tooltip(
-                  message: event.status,
-                  child: Icon(
-                    isDone
-                        ? Icons.check_circle_rounded
-                        : Icons.schedule_rounded,
-                    size: 17,
-                    color: isDone
-                        ? palette.statusSuccess
-                        : palette.statusWarning,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: palette.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: palette.accent,
-                  ),
-                ),
-              ],
-            ),
-            if (ageText.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(7),
-                  border: Border.all(
-                    color: palette.border.withValues(alpha: 0.7),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  ageText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: palette.textSecondary,
-                  ),
-                ),
-              ),
-            ],
+              LiveEventHeader(event: event, isDoneOverride: isDone),
             if (topThree.isNotEmpty) ...[
               const SizedBox(height: 6),
               for (int r = 0; r < topThree.length; r++)

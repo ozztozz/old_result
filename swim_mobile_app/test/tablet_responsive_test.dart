@@ -44,6 +44,10 @@ class _TabletFakeRepository implements SwimRepository {
       ];
 
   @override
+  Future<List<LiveMeetSummary>> getClubLiveMeets({int? clubId, String? clubName}) async =>
+      getLiveMeets();
+
+  @override
   Future<List<TyfNewsItem>> getNewsFeed({String? type, int limit = 15}) async =>
       const [];
 

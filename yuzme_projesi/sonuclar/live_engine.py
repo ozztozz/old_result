@@ -1150,6 +1150,7 @@ def _process_single_race_payload(payload: dict) -> dict:
             "dosya_url": payload.get("dosya_url"),
             "dosya_turu": dosya_turu,
             "yaris_no": str(payload.get("yaris_no") or ""),
+            "gun": payload.get("gun"),
             "mesafe": payload.get("mesafe"),
             "stil": payload.get("stil"),
             "cinsiyet": payload.get("cinsiyet"),
@@ -1464,6 +1465,23 @@ def process_single_meet_db(
             update_meet_status_db(yaris, stats)
             return stats
 
+        from sonuclar.fcm_service import get_race_notify_key
+
+        already_notified_races = {
+            get_race_notify_key(
+                yaris_no=d.yaris_no,
+                cinsiyet=d.cinsiyet,
+                mesafe=d.mesafe,
+                stil=d.stil,
+                dosya_adi=d.dosya_adi,
+            )
+            for d in CanliYarisDosya.objects.filter(
+                canli_yaris=yaris,
+                dosya_turu="SONUC_LISTESI",
+                durum="ISLENDI",
+                kayit_sayisi__gt=0,
+            )
+        }
         current_batch = pending_queue[:limit] if limit else pending_queue
         batch_new_result_files = 0
         batch_new_results = 0
@@ -1513,9 +1531,19 @@ def process_single_meet_db(
                     stats["islenen_start_listesi"] += 1
                 else:
                     stats["islenen_sonuc_listesi"] += 1
-                    batch_new_result_files += 1
-                    batch_new_results += int(db_stats.get("eklenen_sonuc", 0) or 0)
-                    batch_result_filenames.append(filename)
+                    race_key = get_race_notify_key(
+                        yaris_no=parsed.get("yaris_no"),
+                        cinsiyet=parsed.get("cinsiyet"),
+                        mesafe=parsed.get("mesafe"),
+                        stil=parsed.get("stil"),
+                        dosya_adi=filename,
+                    )
+                    eklenen_sonuc = int(db_stats.get("eklenen_sonuc", 0) or 0)
+                    if eklenen_sonuc > 0 and race_key not in already_notified_races:
+                        batch_new_result_files += 1
+                        batch_new_results += eklenen_sonuc
+                        batch_result_filenames.append(filename)
+                        already_notified_races.add(race_key)
 
                 update_meet_status_db(yaris, {
                     "durum": "ISLENIYOR",

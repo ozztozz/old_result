@@ -2,7 +2,7 @@
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone as dt_timezone
-from django.db.models import Count, Q
+from django.db.models import Count, Min, Q
 from django.views.decorators.http import require_GET
 from sonuclar.models import CanliYaris, YarisSonucu
 from sonuclar.live_engine import parse_tr_date_range
@@ -61,12 +61,8 @@ def _live_meet_sort_key(m: CanliYaris, today_iso: str = ""):
     return (is_live_today, is_active, start_iso or "", athlete_count, ts, m.id)
 
 
-@require_GET
-@cache_api_response(10)
-def get_live_meets(request):
+def _collect_active_live_meets(today_tr):
     """Önümüzdeki 10 gün içinde başlayacak ve 1 haftadan eski olmayan (start listesi bulunan) canlı yarışlar."""
-    today_tr = datetime.now(TR_TIMEZONE).date()
-    today_iso = today_tr.isoformat()
     week_ago_iso = (today_tr - timedelta(days=7)).isoformat()
     ten_days_ahead_iso = (today_tr + timedelta(days=10)).isoformat()
 
@@ -79,32 +75,26 @@ def get_live_meets(request):
 
     filtered = []
     for m in qs:
-        # Start listesi olmayan (henüz boş) yarışları gösterme
         if (m.toplam_start_listesi or 0) <= 0 and (m.islenen_start_listesi or 0) <= 0:
             continue
 
         start_iso, end_iso = _extract_live_meet_dates(m)
         if start_iso:
-            # 10 günden daha uzak gelecekteki yarışları ve 1 haftadan eski yarışları ele
             if start_iso > ten_days_ahead_iso:
                 continue
             if end_iso and end_iso < week_ago_iso:
                 continue
         else:
-            # Tarihi çözülemeyen kayıtlarda oluşturulma tarihine göre 7 gün sınırı uygula
             if m.olusturulma_tarihi:
                 created_tr = m.olusturulma_tarihi.astimezone(TR_TIMEZONE).date()
                 if created_tr.isoformat() < week_ago_iso or created_tr.isoformat() > ten_days_ahead_iso:
                     continue
 
         filtered.append(m)
+    return filtered
 
-    meets = sorted(
-        filtered,
-        key=lambda m: _live_meet_sort_key(m, today_iso),
-        reverse=True,
-    )[:50]
 
+def _serialize_live_meets(meets, today_tr):
     event_ids = [m.event_id for m in meets if m.event_id]
     event_year_map = {}
     for m in meets:
@@ -152,7 +142,6 @@ def get_live_meets(request):
             )
 
     data = []
-
     for m in meets:
         data.append({
             'id': m.id,
@@ -173,8 +162,69 @@ def get_live_meets(request):
             },
             'last_activity': m.son_islem_tarihi.isoformat() if m.son_islem_tarihi else None,
         })
+    return data
 
-    return api_response({'data': data}, request=request, cache_seconds=10)
+
+@require_GET
+@cache_api_response(10)
+def get_live_meets(request):
+    """Genel canlı yarış oturumları listesi."""
+    today_tr = datetime.now(TR_TIMEZONE).date()
+    today_iso = today_tr.isoformat()
+    filtered = _collect_active_live_meets(today_tr)
+    meets = sorted(
+        filtered,
+        key=lambda m: _live_meet_sort_key(m, today_iso),
+        reverse=True,
+    )[:50]
+    return api_response({'data': _serialize_live_meets(meets, today_tr)}, request=request, cache_seconds=10)
+
+
+@require_GET
+@cache_api_response(10)
+def get_club_live_meets(request):
+    """Seçili kulübün (club_id veya club_name) katıldığı canlı müsabakalar."""
+    filter_club_id = (request.GET.get('club_id') or '').strip()
+    filter_club_name = (request.GET.get('club_name') or '').strip()
+    if not filter_club_id.isdigit() and not filter_club_name:
+        return api_error('club_id veya club_name zorunludur.', status=400)
+
+    today_tr = datetime.now(TR_TIMEZONE).date()
+    today_iso = today_tr.isoformat()
+    filtered = _collect_active_live_meets(today_tr)
+
+    if filtered:
+        candidate_event_ids = [m.event_id for m in filtered if m.event_id]
+        matched_event_ids = set()
+        if candidate_event_ids:
+            if filter_club_id.isdigit():
+                target_id = int(filter_club_id)
+                matched_event_ids = set(
+                    YarisSonucu.objects.filter(
+                        event_id__in=candidate_event_ids,
+                        kulup_id=target_id,
+                    )
+                    .values_list('event_id', flat=True)
+                    .distinct()
+                )
+            elif filter_club_name:
+                target_norm = _fold_tr(filter_club_name).strip()
+                rows = (
+                    YarisSonucu.objects.filter(event_id__in=candidate_event_ids)
+                    .values_list('event_id', 'kulup__kulup_adi')
+                    .distinct()
+                )
+                for eid, kname in rows:
+                    if kname and target_norm in _fold_tr(kname):
+                        matched_event_ids.add(eid)
+        filtered = [m for m in filtered if m.event_id in matched_event_ids]
+
+    meets = sorted(
+        filtered,
+        key=lambda m: _live_meet_sort_key(m, today_iso),
+        reverse=True,
+    )[:50]
+    return api_response({'data': _serialize_live_meets(meets, today_tr)}, request=request, cache_seconds=10)
 
 
 @require_GET
@@ -213,13 +263,14 @@ def get_live_feed(request, live_id: int):
             event_rows = (
                 live.event.yaris_sonuclari.exclude(yaris_no__isnull=True)
                 .exclude(yaris_no='')
-                .values('yaris_no', 'mesafe', 'stil', 'cinsiyet', 'yas_grubu')
+                .values('yaris_no', 'gun', 'mesafe', 'stil', 'cinsiyet', 'yas_grubu')
                 .annotate(
                     total=Count('id'),
                     finished_count=Count(
                         'id',
                         filter=(Q(derece_saniye__gt=0) | (~Q(derece='Bekleniyor') & ~Q(derece='') & Q(derece__isnull=False)))
                     ),
+                    estimated_time=Min('tahmini_saat'),
                 )
             )
             for row in event_rows:
@@ -229,6 +280,8 @@ def get_live_feed(request, live_id: int):
                 total_cnt = row['total'] or 0
                 finished_cnt = row['finished_count'] or 0
                 dist = row.get('mesafe')
+                gun_val = row.get('gun')
+                est_time = (row.get('estimated_time') or '').strip() or None
                 stil = (row.get('stil') or '').strip()
                 gender = (row.get('cinsiyet') or '').strip()
                 age_grp = (row.get('yas_grubu') or '').strip()
@@ -243,6 +296,8 @@ def get_live_feed(request, live_id: int):
                     is_pend = (finished_cnt == 0)
                     event_prog_map[eno] = {
                         'event_no': eno,
+                        'day': gun_val,
+                        'estimated_time': est_time,
                         'name': name_str,
                         'distance': dist,
                         'stroke': map_stroke(stil),
@@ -259,6 +314,10 @@ def get_live_feed(request, live_id: int):
                     if finished_cnt > 0:
                         entry['is_pending'] = False
                         entry['status'] = 'Sonuçlandı'
+                    if entry.get('day') is None and gun_val is not None:
+                        entry['day'] = gun_val
+                    if not entry.get('estimated_time') and est_time:
+                        entry['estimated_time'] = est_time
                     if not entry['distance'] and dist:
                         entry['distance'] = dist
                     if not entry['stroke_label'] and stil:
@@ -282,8 +341,8 @@ def get_live_feed(request, live_id: int):
         }, request=request, cache_seconds=10)
 
     only_fields = [
-        'id', 'event_id', 'yaris_no', 'mesafe', 'stil', 'seri', 'kulvar', 'sira',
-        'derece', 'derece_saniye', 'giris_derecesi', 'puan',
+        'id', 'event_id', 'yaris_no', 'gun', 'tahmini_saat', 'mesafe', 'stil', 'seri', 'kulvar', 'sira',
+        'derece', 'derece_saniye', 'giris_derecesi', 'puan', 'uyari_notu',
         'hesaplanan_yas', 'sporcu_yas', 'yas_grubu',
         'sporcu_id', 'sporcu__sporcu_adi', 'sporcu__dogum_yili',
         'kulup_id', 'kulup__kulup_adi',
@@ -318,7 +377,7 @@ def get_live_feed(request, live_id: int):
         return default
 
     def sort_entry(r):
-        is_dq = (r.sira or '').strip().upper() in ('DQ', 'DNS', 'DNF') or (r.derece or '').strip().upper() in ('DQ', 'DNS', 'DNF')
+        is_dq = (r.sira or '').strip().upper() in ('DQ', 'DSQ', 'DNS', 'DNF') or (r.derece or '').strip().upper() in ('DQ', 'DSQ', 'DNS', 'DNF')
         is_waiting = (r.derece or '').strip() == 'Bekleniyor'
         sec = r.derece_saniye if (r.derece_saniye and r.derece_saniye > 0) else 999999.0
         seri_val = parse_leading_int(r.seri, default=999)
@@ -414,6 +473,8 @@ def get_live_feed(request, live_id: int):
         feed_data.append({
             'id': r.id,
             'event_no': str(r.yaris_no or '').strip(),
+            'day': r.gun,
+            'estimated_time': (r.tahmini_saat or '').strip() or None,
             'distance': r.mesafe,
             'stroke': map_stroke(r.stil),
             'stroke_label': (r.stil or '').strip(),
@@ -425,6 +486,7 @@ def get_live_feed(request, live_id: int):
             'seed_time': (r.giris_derecesi or '').strip() or None,
             'seed_time_cs': seed_cs,
             'result_status': res_status,
+            'warning_note': (r.uyari_notu or '').strip() or None,
             'points': r.puan if (r.puan and r.puan > 0) else None,
             'split_times': None if summary_only else (r.ara_dereceler if isinstance(r.ara_dereceler, dict) and r.ara_dereceler else None),
             'age_group': age_group_label,

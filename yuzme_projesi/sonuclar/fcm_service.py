@@ -12,7 +12,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("fcm_service")
 
@@ -20,10 +20,12 @@ _init_lock = threading.Lock()
 _firebase_app = None
 _firebase_init_attempted = False
 _last_sent_by_meet: Dict[int, float] = {}
+_last_sent_by_club_meet: Dict[Tuple[int, int], float] = {}
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_CREDENTIALS_PATH = BASE_DIR / "firebase-service-account.json"
 MIN_COOLDOWN_SECONDS = 45
+MIN_CLUB_COOLDOWN_SECONDS = 15
 
 
 def _ensure_firebase_initialized() -> bool:
@@ -193,4 +195,135 @@ def send_live_meet_notification(
         return True
     except Exception as exc:
         logger.error(f"FCM bildirim gönderme hatası (live_meet_id={live_meet_id}): {exc}")
+        return False
+
+
+def get_race_notify_key(
+    yaris_no: Optional[str] = None,
+    cinsiyet: Optional[str] = None,
+    mesafe: Optional[int] = None,
+    stil: Optional[str] = None,
+    dosya_adi: Optional[str] = None,
+) -> str:
+    """
+    Bir yarışın müsabaka içinde ilk kez sonuç alıp almadığını takip etmek için
+    tutarlı tekil anahtar üretir.
+    """
+    y_no = str(yaris_no or "").strip().lower()
+    if y_no:
+        return f"yaris:{y_no}"
+    if mesafe and stil:
+        c_str = str(cinsiyet or "").strip().lower()
+        s_str = str(stil or "").strip().lower()
+        return f"event:{c_str}|{int(mesafe)}|{s_str}"
+    return f"file:{str(dosya_adi or '').strip().lower()}"
+
+
+def build_club_result_notification_body(
+    club_name: str,
+    entries: List[Dict[str, Any]],
+) -> Tuple[str, Optional[str]]:
+    """
+    Favori kulüp sporcularının yeni sonuçları için okunabilir bildirim metni üretir.
+    Dönüş: (body_text, single_yaris_no)
+    """
+    if not entries:
+        prefix = f"{club_name} sporcuları" if club_name else "Favori kulüp sporcuları"
+        return f"{prefix} için yeni yarış sonuçları yayınlandı.", None
+
+    def _race_label(e: Dict[str, Any]) -> str:
+        parts: List[str] = []
+        if e.get("mesafe"):
+            parts.append(f"{e['mesafe']}m")
+        if e.get("stil"):
+            parts.append(str(e["stil"]))
+        return " ".join(parts)
+
+    if len(entries) == 1:
+        e = entries[0]
+        athlete = (e.get("athlete_name") or "Sporcu").strip()
+        race_lbl = _race_label(e)
+        derece = (e.get("derece") or "").strip()
+        sira = str(e.get("sira") or "").strip()
+        y_no = str(e.get("yaris_no") or "").strip() or None
+
+        detail_parts = [p for p in [race_lbl, derece] if p]
+        detail = ": ".join(detail_parts) if len(detail_parts) == 2 else " ".join(detail_parts)
+        rank_suffix = f" ({sira}.)" if sira and sira.isdigit() else ""
+        if detail:
+            return f"{athlete} — {detail}{rank_suffix}", y_no
+        return f"{athlete} yarışı tamamladı{rank_suffix}.", y_no
+
+    previews: List[str] = []
+    for e in entries[:2]:
+        athlete = (e.get("athlete_name") or "Sporcu").strip()
+        race_lbl = _race_label(e)
+        derece = (e.get("derece") or "").strip()
+        inner = " ".join(p for p in [race_lbl, derece] if p)
+        previews.append(f"{athlete} ({inner})" if inner else athlete)
+
+    if len(entries) > 2:
+        previews.append(f"+{len(entries) - 2} sporcu")
+
+    club_prefix = f"{club_name}: " if club_name else ""
+    return f"{club_prefix}{len(entries)} yeni sonuç — {', '.join(previews)}.", None
+
+
+def send_club_result_notification(
+    club_id: int,
+    live_meet_id: int,
+    title: str,
+    body: str,
+    extra_data: Optional[Dict[str, str]] = None,
+) -> bool:
+    """`club_<id>` topic'ine favori kulüp sporcu sonucu bildirimi gönderir."""
+    if not club_id or not _ensure_firebase_initialized():
+        return False
+
+    now = time.monotonic()
+    key = (club_id, live_meet_id)
+    last_ts = _last_sent_by_club_meet.get(key, 0.0)
+    if now - last_ts < MIN_CLUB_COOLDOWN_SECONDS:
+        return False
+
+    try:
+        from firebase_admin import messaging
+
+        data_payload: Dict[str, str] = {
+            "type": "club_result_update",
+            "live_meet_id": str(live_meet_id),
+            "club_id": str(club_id),
+            "title": title,
+            "body": body,
+        }
+        if extra_data:
+            for k, v in extra_data.items():
+                data_payload[str(k)] = str(v)
+
+        topic = f"club_{club_id}"
+        message = messaging.Message(
+            topic=topic,
+            notification=messaging.Notification(title=title, body=body),
+            data=data_payload,
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="club_results_channel",
+                    priority="high",
+                ),
+            ),
+            apns=messaging.APNSConfig(
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(sound="default"),
+                ),
+            ),
+        )
+        msg_id = messaging.send(message)
+        _last_sent_by_club_meet[key] = now
+        logger.info(f"Kulüp FCM bildirimi gönderildi (topic={topic}, id={msg_id})")
+        return True
+    except Exception as exc:
+        logger.error(
+            f"Kulüp FCM bildirim gönderme hatası (club_id={club_id}, live_meet_id={live_meet_id}): {exc}"
+        )
         return False

@@ -33,6 +33,8 @@ from sonuclar.models import BarajKurali, Event, TyfBelge
 logger = logging.getLogger(__name__)
 
 DEFAULT_TAKVIM_URL = "https://www.tyf.gov.tr/haber/2026-2027-sezonu-yuzme-faaliyet-takvimi-yayinda.html"
+ANKARA_REGLAMAN_URL = "https://www.tyf.gov.tr/ankara-il-temsilciligi/dosyalar/reglamanlar.html"
+ANKARA_TAKVIM_URL = "https://www.tyf.gov.tr/ankara-il-temsilciligi/dosyalar/faaliyet-takvimi.html"
 
 TURKISH_MONTHS = {
     "ocak": 1, "subat": 2, "şubat": 2, "mart": 3, "nisan": 4,
@@ -102,26 +104,40 @@ def _extract_min_max_age(text: Optional[str]) -> Tuple[Optional[int], Optional[i
     return None, None
 
 
+def _is_past_event(baslangic: Optional[str], bitis: Optional[str], today_iso: Optional[str] = None) -> bool:
+    """Bitiş (yoksa başlangıç) tarihi bugünden önceyse True döndürür."""
+    end_d = (bitis or baslangic or "").strip()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", end_d):
+        return False
+    ref = today_iso or timezone.localdate().isoformat()
+    return end_d < ref
+
+
 def parse_turkish_date_range(date_text: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Örnekler:
       '1 EKİM - 31 ARALIK 2026' -> ('2026-10-01', '2026-12-31')
       '26-29 KASIM 2026' -> ('2026-11-26', '2026-11-29')
+      '1 -2 -3 -Aralık2026' -> ('2026-12-01', '2026-12-03')
       '28 ŞUBAT - 2 MART 2027' -> ('2027-02-28', '2027-03-02')
     """
     if not date_text:
         return None, None
     s = " ".join(str(date_text).replace("–", "-").replace("—", "-").split())
     folded = _fold_tr(s)
+    # Bitişik sayı/harf ifadelerini ayır: '4-5-6aralik2026' -> '4-5-6 aralik 2026'
+    folded = re.sub(r"(\d)([a-z])", r"\1 \2", folded)
+    folded = re.sub(r"([a-z])(\d)", r"\1 \2", folded)
 
     year_matches = re.findall(r"\b(20\d{2})\b", folded)
     default_year = int(year_matches[-1]) if year_matches else None
     if not default_year:
         return None, None
 
-    # '26-29 kasim 2026'
+    # '26-29 kasim 2026' veya '1 -2 -3 -aralik 2026'
     m_same_month = re.search(
-        r"\b(\d{1,2})\s*-\s*(\d{1,2})\s+([a-z]+)\s+(20\d{2})\b", folded
+        r"\b(\d{1,2})(?:\s*-\s*\d{1,2})*\s*-\s*(\d{1,2})\s*-?\s*([a-z]+)\s+(20\d{2})\b",
+        folded,
     )
     if m_same_month:
         d1, d2, mon_str, yr = int(m_same_month.group(1)), int(m_same_month.group(2)), m_same_month.group(3), int(m_same_month.group(4))
@@ -132,9 +148,9 @@ def parse_turkish_date_range(date_text: str) -> Tuple[Optional[str], Optional[st
             except ValueError:
                 pass
 
-    # '1 ekim - 31 aralik 2026' veya '28 aralik 2026 - 2 ocak 2027'
+    # '1 ekim - 31 aralik 2026' veya '30 - 31 ekim - 1 kasim 2026'
     m_two = re.search(
-        r"\b(\d{1,2})\s+([a-z]+)(?:\s+(20\d{2}))?\s*-\s*(\d{1,2})\s+([a-z]+)\s+(20\d{2})\b",
+        r"\b(\d{1,2})(?:\s*-\s*\d{1,2})*\s+([a-z]+)(?:\s+(20\d{2}))?\s*-\s*(\d{1,2})(?:\s*-\s*\d{1,2})*\s+([a-z]+)\s+(20\d{2})\b",
         folded,
     )
     if m_two:
@@ -420,6 +436,105 @@ def discover_tyf_calendar_documents(
     return docs
 
 
+def discover_ankara_documents(
+    reglaman_url: str = ANKARA_REGLAMAN_URL,
+    takvim_url: str = ANKARA_TAKVIM_URL,
+    timeout: int = 20,
+) -> List[Dict[str, str]]:
+    """
+    Ankara İl Temsilciliği faaliyet takvimi ve reglaman sayfalarındaki
+    yalnızca güncel/gelecek dönem PDF bağlantılarını döndürür (eski etkinlikler atlanır).
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    today = timezone.localdate()
+    today_iso = today.isoformat()
+    current_year = today.year
+    old_seasons = tuple(f"{y}-{y + 1}" for y in range(2018, current_year))
+    old_upload_years = tuple(f"/{y}-" for y in range(2018, current_year))
+
+    docs: List[Dict[str, str]] = []
+    seen_urls = set()
+
+    # 1. Ankara Faaliyet Takvimi sayfası
+    if takvim_url:
+        try:
+            resp = requests.get(takvim_url, headers=headers, timeout=timeout)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = urljoin(takvim_url, a["href"].strip())
+                txt = " ".join(a.get_text(" ", strip=True).split())
+                if ".pdf" not in href.lower() or not txt:
+                    continue
+                if any(s in txt or s in href for s in old_seasons):
+                    continue
+                if any(u in href for u in old_upload_years):
+                    continue
+                if href not in seen_urls:
+                    seen_urls.add(href)
+                    docs.append({
+                        "kaynak_sayfa": takvim_url,
+                        "kaynak_url": href,
+                        "link_baslik": txt,
+                        "revizyon_etiketi": _extract_revizyon(txt, href) or "",
+                        "on_tur": "TAKVIM",
+                        "event_source_type": "IL_TAKVIM",
+                        "default_sehir": "Ankara",
+                    })
+        except Exception as exc:
+            logger.warning(f"Ankara faaliyet takvimi sayfası taranamadı: {exc}")
+
+    # 2. Ankara Reglamanlar sayfası (geçmiş tarihli reglamanları indirmeden ele)
+    if reglaman_url:
+        try:
+            resp = requests.get(reglaman_url, headers=headers, timeout=timeout)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = urljoin(reglaman_url, a["href"].strip())
+                txt = " ".join(a.get_text(" ", strip=True).split())
+                if ".pdf" not in href.lower() or not txt:
+                    continue
+                if any(s in txt or s in href for s in old_seasons):
+                    continue
+                if any(u in href for u in old_upload_years):
+                    continue
+                # Dosya adı / başlıktan müsabaka tarihini ön-kontrol et
+                fname = os.path.splitext(os.path.basename(urlparse(href).path))[0]
+                fname_clean = re.sub(r"[-_]+", " ", fname)
+                cand_start, cand_end = parse_turkish_date_range(f"{txt} {fname_clean}")
+                if cand_start and _is_past_event(cand_start, cand_end, today_iso):
+                    continue
+                # Başlık/dosya adında tarih yoksa, satırdaki yayın tarihine bak (90+ gün eskiyse atla)
+                if not cand_start:
+                    tr = a.find_parent("tr")
+                    if tr:
+                        row_txt = " ".join(tr.get_text(" ", strip=True).split())
+                        pub_start, _ = parse_turkish_date_range(row_txt)
+                        if pub_start:
+                            try:
+                                pub_dt = datetime.strptime(pub_start, "%Y-%m-%d").date()
+                                if (today - pub_dt).days > 90:
+                                    continue
+                            except ValueError:
+                                pass
+                if href not in seen_urls:
+                    seen_urls.add(href)
+                    docs.append({
+                        "kaynak_sayfa": reglaman_url,
+                        "kaynak_url": href,
+                        "link_baslik": txt,
+                        "revizyon_etiketi": _extract_revizyon(txt, href) or "",
+                        "on_tur": "REGLAMAN",
+                        "event_source_type": "IL_REGLAMAN",
+                        "default_sehir": "Ankara",
+                    })
+        except Exception as exc:
+            logger.warning(f"Ankara reglamanlar sayfası taranamadı: {exc}")
+
+    return docs
+
+
 def analyze_pdf_with_gemini(pdf_bytes: bytes, fallback_title: str = "") -> Dict[str, Any]:
     client = _get_gemini_client()
     if client is None:
@@ -533,10 +648,17 @@ def _upsert_event(
     return ev
 
 
-def _import_takvim_pdf_events(pdf_bytes: bytes) -> int:
+def _import_takvim_pdf_events(
+    pdf_bytes: bytes,
+    *,
+    kaynak_turu: str = "TYF_TAKVIM",
+    default_sehir: Optional[str] = None,
+    skip_past: bool = True,
+) -> int:
     """Faaliyet Takvimi PDF tablosundaki satırları `Event` tablosuna aktarır."""
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     count = 0
+    today_iso = timezone.localdate().isoformat()
     try:
         for page in doc:
             tabs = page.find_tables()
@@ -553,36 +675,50 @@ def _import_takvim_pdf_events(pdf_bytes: bytes) -> int:
                     if "faaliyet takvimi" in joined_fold:
                         continue
 
-                    # Sütunlar: [TARİH(0 veya 0+1), MÜSABAKA ADI, 25/50M, KATEGORİ, YER]
+                    # Sütunlar: [TARİH, MÜSABAKA ADI, 25/50M, KATEGORİ, YER] veya [SIRA, TARİH, MÜSABAKA ADI, KATEGORİ, YER]
                     non_empty = [c for c in cells if c]
                     if len(non_empty) < 3:
                         continue
 
-                    # PyMuPDF bazen ilk sütunu 2 parçaya böler: ['1EK', 'İM - 31 ARALIK 2026', ...]
-                    if len(cells) >= 6 and cells[0] and cells[1] and not re.search(r"20\d{2}", cells[0]) and re.search(r"20\d{2}", cells[1]):
+                    if len(cells) >= 5 and re.fullmatch(r"\d{1,3}", cells[0]):
+                        # Ankara formatı: [Sıra, Tarih, Müsabaka Adı, Kategorisi, Yer]
+                        tarih_ham = cells[1]
+                        musabaka_adi = cells[2] if len(cells) > 2 else ""
+                        havuz_raw = ""
+                        kategori = cells[3] if len(cells) > 3 else ""
+                        yer = cells[4] if len(cells) > 4 else ""
+                    elif len(cells) >= 6 and cells[0] and cells[1] and not re.search(r"20\d{2}", cells[0]) and re.search(r"20\d{2}", cells[1]):
+                        # PyMuPDF bazen ilk sütunu 2 parçaya böler: ['1EK', 'İM - 31 ARALIK 2026', ...]
                         tarih_ham = f"{cells[0]}{cells[1]}".strip()
                         rest = cells[2:]
+                        musabaka_adi = rest[0] if len(rest) > 0 else ""
+                        havuz_raw = rest[1] if len(rest) > 1 else ""
+                        kategori = rest[2] if len(rest) > 2 else ""
+                        yer = rest[3] if len(rest) > 3 else ""
                     else:
                         tarih_ham = cells[0] or cells[1]
                         rest = cells[1:] if cells[0] else cells[2:]
-
-                    musabaka_adi = rest[0] if len(rest) > 0 else ""
-                    havuz_raw = rest[1] if len(rest) > 1 else ""
-                    kategori = rest[2] if len(rest) > 2 else ""
-                    yer = rest[3] if len(rest) > 3 else ""
+                        musabaka_adi = rest[0] if len(rest) > 0 else ""
+                        havuz_raw = rest[1] if len(rest) > 1 else ""
+                        kategori = rest[2] if len(rest) > 2 else ""
+                        yer = rest[3] if len(rest) > 3 else ""
 
                     if not musabaka_adi or len(musabaka_adi) < 4:
                         continue
 
                     baslangic, bitis = parse_turkish_date_range(tarih_ham)
+                    if skip_past and _is_past_event(baslangic, bitis, today_iso):
+                        continue
+
                     min_yas, max_yas = _extract_min_max_age(kategori)
+                    sehir_val = default_sehir or yer or None
                     _upsert_event(
                         musabaka_adi=musabaka_adi,
-                        sehir=yer or None,
+                        sehir=sehir_val,
                         tarih_ham=tarih_ham,
                         baslangic=baslangic,
                         bitis=bitis,
-                        kaynak_turu="TYF_TAKVIM",
+                        kaynak_turu=kaynak_turu,
                         yas_grubu=kategori or None,
                         min_yas=min_yas,
                         max_yas=max_yas,
@@ -597,6 +733,7 @@ def _import_takvim_pdf_events(pdf_bytes: bytes) -> int:
 def sync_tyf_calendar(
     takvim_url: str = DEFAULT_TAKVIM_URL,
     include_milli_takim: bool = True,
+    include_ankara: bool = True,
     force: bool = False,
     skip_gemini: bool = False,
 ) -> Dict[str, Any]:
@@ -605,6 +742,9 @@ def sync_tyf_calendar(
         takvim_url=takvim_url,
         include_milli_takim=include_milli_takim,
     )
+    if include_ankara:
+        docs.extend(discover_ankara_documents())
+    today_iso = timezone.localdate().isoformat()
     stats = {
         "discovered": len(docs),
         "processed": 0,
@@ -661,13 +801,13 @@ def sync_tyf_calendar(
             baslangic = gdata.get("baslangic_tarihi") or fb.get("baslangic_tarihi")
             bitis = gdata.get("bitis_tarihi") or fb.get("bitis_tarihi")
             tarih_metni = gdata.get("tarih_metni") or fb.get("tarih_metni") or _format_tr_date_range(baslangic, bitis)
-            il_adi = (gdata.get("il") or fb.get("il") or "").strip()
+            il_adi = (gdata.get("il") or fb.get("il") or item.get("default_sehir") or "").strip()
             yer_havuz = (gdata.get("yer_havuz") or "").strip()
             sehir_yer = (gdata.get("sehir_yer") or "").strip()
             if not sehir_yer and (il_adi or yer_havuz):
                 sehir_yer = " - ".join(x for x in (il_adi, yer_havuz) if x)
             if not sehir_yer:
-                sehir_yer = (fb.get("sehir_yer") or "").strip()
+                sehir_yer = (fb.get("sehir_yer") or item.get("default_sehir") or "").strip()
 
             # Takvimdeki eşleşen Event üzerinden şehir/tarih tamamlama
             if (not il_adi or not baslangic) and baslangic:
@@ -686,14 +826,16 @@ def sync_tyf_calendar(
             gecerlilik_bitis = gdata.get("baraj_gecerlilik_bitis") or fb.get("baraj_gecerlilik_bitis")
 
             event_obj: Optional[Event] = None
-            if belge_turu == "REGLAMAN":
+            is_past = _is_past_event(baslangic, bitis, today_iso)
+            if belge_turu == "REGLAMAN" and not is_past:
+                event_source = item.get("event_source_type") or "TYF_REGLAMAN"
                 event_obj = _upsert_event(
                     musabaka_adi=baslik,
                     sehir=il_adi or sehir_yer or None,
                     tarih_ham=tarih_metni,
                     baslangic=baslangic,
                     bitis=bitis,
-                    kaynak_turu="TYF_REGLAMAN",
+                    kaynak_turu=event_source,
                     yas_grubu=yas_grubu,
                     min_yas=min_yas,
                     max_yas=max_yas,
@@ -732,7 +874,12 @@ def sync_tyf_calendar(
                 belge.save()
 
                 if belge_turu == "TAKVIM":
-                    stats["takvim_events"] += _import_takvim_pdf_events(pdf_bytes)
+                    stats["takvim_events"] += _import_takvim_pdf_events(
+                        pdf_bytes,
+                        kaynak_turu=item.get("event_source_type") or "TYF_TAKVIM",
+                        default_sehir=item.get("default_sehir"),
+                        skip_past=True,
+                    )
 
                 # Baraj ayrıştırma
                 baraj_res = parse_baraj_pdf_bytes(

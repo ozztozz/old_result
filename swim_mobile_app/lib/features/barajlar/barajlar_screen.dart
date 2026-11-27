@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
-import '../../core/utils/responsive.dart';
 import '../../data/models/baraj_rule.dart';
 import '../../data/repositories/swim_repository.dart';
+import '../../shared/widgets/app_page_shell.dart';
 import '../../shared/widgets/baraj_event_selector.dart';
-import '../../shared/widgets/brand_header_bar.dart';
 import '../../shared/widgets/formatted_summary_view.dart';
 
 /// Resmi TYF Katılım & Harcırah Barajları Ekranı
@@ -179,40 +177,31 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
         return (ia == -1 ? 99 : ia).compareTo(ib == -1 ? 99 : ib);
       });
 
-    return AmbientBackground(
-      artStyle: AmbientArtStyle.none,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          bottom: false,
-          child: ResponsiveCenter(
-            maxWidth: 1040,
-            child: Column(
-              children: [
-              BrandHeaderBar(
-                subtitle: 'Resmi Barajlar',
-                actions: [
-                  if (hasSourcePdf)
-                    TextButton.icon(
-                      onPressed: _openSourcePdf,
-                      icon: Icon(
-                        Icons.picture_as_pdf_outlined,
-                        size: 17,
-                        color: palette.accent,
-                      ),
-                      label: Text(
-                        'Reglaman',
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: palette.accent,
-                        ),
-                      ),
-                    ),
-                ],
+    return AppPageShell(
+      subtitle: 'Resmi Barajlar',
+      actions: [
+        if (hasSourcePdf)
+          TextButton.icon(
+            onPressed: _openSourcePdf,
+            icon: Icon(
+              Icons.picture_as_pdf_outlined,
+              size: 17,
+              color: palette.accent,
+            ),
+            label: Text(
+              'Reglaman',
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: palette.accent,
               ),
-              const SizedBox(height: 4),
+            ),
+          ),
+      ],
+      body: Column(
+        children: [
+          const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -436,11 +425,8 @@ class _BarajlarScreenState extends State<BarajlarScreen> {
                                     },
                                   ),
                                 ),
-            ),
-          ],
-        ),
-          ),
-        ),
+                              ),
+        ],
       ),
     );
   }

@@ -106,10 +106,16 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
         return true;
       }).toList();
 
+      final filteredTargets = targets.where((t) {
+        final typeRaw =
+            (t['baraj_turu'] ?? t['type'] ?? '').toString().toLowerCase();
+        return !typeRaw.contains('harc');
+      }).toList();
+
       if (mounted) {
         setState(() {
           _races = filtered;
-          _targets = targets;
+          _targets = filteredTargets;
           _loading = false;
         });
       }
@@ -334,6 +340,18 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                     ? palette.successText
                                     : palette.textSecondary,
                               ),
+                              if (widget.pb.rudolphPoints != null &&
+                                  widget.pb.rudolphPoints! > 0) ...[
+                                AppSpacing.hSm,
+                                _buildKpiBox(
+                                  palette,
+                                  fill: palette.surface,
+                                  shadow: cardShadow,
+                                  label: 'Rudolph',
+                                  value: '${widget.pb.rudolphPoints}/20',
+                                  accent: palette.primary,
+                                ),
+                              ],
                               AppSpacing.hSm,
                               _buildKpiBox(
                                 palette,
@@ -394,12 +412,18 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                             d.localPosition.dx,
                                             constraints.maxWidth,
                                             points.length,
+                                            hasRudolph: points.any(
+                                              (p) => (p.rudolphPoints ?? 0) > 0,
+                                            ),
                                           ),
                                           onHorizontalDragUpdate: (d) =>
                                               _selectNearestPoint(
                                             d.localPosition.dx,
                                             constraints.maxWidth,
                                             points.length,
+                                            hasRudolph: points.any(
+                                              (p) => (p.rudolphPoints ?? 0) > 0,
+                                            ),
                                           ),
                                           child: CustomPaint(
                                             size: Size(
@@ -409,15 +433,13 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                             painter: _RaceChartPainter(
                                               points: points,
                                               minCs: minCs!,
-                                              targetCs: _targets.isNotEmpty
-                                                  ? _targets.first['target_cs']
-                                                      as int?
-                                                  : null,
+                                              targetLines: _buildChartTargetLines(
+                                                palette,
+                                              ),
                                               selectedIndex: activeIdx,
                                               primaryColor: palette.primary,
                                               pbColor: palette.successText,
-                                              targetColor:
-                                                  palette.statusWarning,
+                                              rudolphColor: palette.secondary,
                                               gridColor: palette.divider,
                                               labelColor: palette.textSecondary,
                                               surfaceColor: palette.surface,
@@ -427,6 +449,27 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                       },
                                     ),
                                   ),
+                                  if (points.any(
+                                    (p) => (p.rudolphPoints ?? 0) > 0,
+                                  )) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        _buildChartLegendItem(
+                                          palette.primary,
+                                          'Süre',
+                                          palette.textSecondary,
+                                        ),
+                                        const SizedBox(width: 14),
+                                        _buildChartLegendItem(
+                                          palette.secondary,
+                                          'Rudolph (1-20)',
+                                          palette.textSecondary,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -517,6 +560,10 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                                                       if (r.rank.isNotEmpty &&
                                                           r.rank != '-')
                                                         '${r.rank}. sıra',
+                                                      if (r.rudolphPoints !=
+                                                              null &&
+                                                          r.rudolphPoints! > 0)
+                                                        'Rudolph ${r.rudolphPoints}/20',
                                                       if (r.points != null)
                                                         '${r.points} FINA',
                                                     ].join(' • '),
@@ -565,16 +612,47 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
     );
   }
 
-  void _selectNearestPoint(double dx, double width, int count) {
+  void _selectNearestPoint(
+    double dx,
+    double width,
+    int count, {
+    bool hasRudolph = false,
+  }) {
     if (count < 2) return;
     const leftPad = 48.0;
-    const rightPad = 12.0;
+    final rightPad = hasRudolph ? 26.0 : 12.0;
     final chartW = math.max(1.0, width - leftPad - rightPad);
     final ratio = ((dx - leftPad) / chartW).clamp(0.0, 1.0);
     final idx = (ratio * (count - 1)).round();
     if (_selectedChartIndex != idx) {
       setState(() => _selectedChartIndex = idx);
     }
+  }
+
+  Widget _buildChartLegendItem(Color color, String label, Color textColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 3,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: AppTextStyles.fontFamily,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildRaceTrailing(
@@ -733,7 +811,12 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  _formatShortDate(item.date),
+                  [
+                    _formatShortDate(item.date),
+                    if (item.rudolphPoints != null && item.rudolphPoints! > 0)
+                      'Rudolph ${item.rudolphPoints}/20',
+                    if (item.points != null) '${item.points} FINA',
+                  ].join(' • '),
                   style: TextStyle(
                     fontFamily: AppTextStyles.fontFamily,
                     fontSize: 11,
@@ -858,16 +941,33 @@ class _PbHistorySheetState extends State<PbHistorySheet> {
       ),
     );
   }
+  List<({int cs, String label, Color color})> _buildChartTargetLines(
+    AppColorPalette palette,
+  ) {
+    final seenCs = <int>{};
+    final lines = <({int cs, String label, Color color})>[];
+    for (final t in _targets) {
+      final cs = (t['target_cs'] as num?)?.toInt();
+      if (cs == null || cs <= 0 || !seenCs.add(cs)) continue;
+      lines.add((
+        cs: cs,
+        label: 'Baraj ${SwimTimeFormatter.formatCs(cs)}',
+        color: palette.statusWarning,
+      ));
+    }
+    lines.sort((a, b) => a.cs.compareTo(b.cs));
+    return lines;
+  }
 }
 
 class _RaceChartPainter extends CustomPainter {
   final List<AthleteRaceHistoryItem> points;
   final int minCs;
-  final int? targetCs;
+  final List<({int cs, String label, Color color})> targetLines;
   final int? selectedIndex;
   final Color primaryColor;
   final Color pbColor;
-  final Color targetColor;
+  final Color rudolphColor;
   final Color gridColor;
   final Color labelColor;
   final Color surfaceColor;
@@ -875,11 +975,11 @@ class _RaceChartPainter extends CustomPainter {
   _RaceChartPainter({
     required this.points,
     required this.minCs,
-    this.targetCs,
+    this.targetLines = const [],
     required this.selectedIndex,
     required this.primaryColor,
     required this.pbColor,
-    required this.targetColor,
+    required this.rudolphColor,
     required this.gridColor,
     required this.labelColor,
     required this.surfaceColor,
@@ -889,9 +989,10 @@ class _RaceChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (points.length < 2) return;
 
+    final hasRudolph = points.any((e) => (e.rudolphPoints ?? 0) > 0);
     const leftPad = 48.0;
-    const rightPad = 12.0;
-    const topPad = 12.0;
+    final rightPad = hasRudolph ? 26.0 : 12.0;
+    const topPad = 14.0;
     const bottomPad = 24.0;
 
     final chartW = math.max(1.0, size.width - leftPad - rightPad);
@@ -900,9 +1001,11 @@ class _RaceChartPainter extends CustomPainter {
     final values = points.map((e) => e.timeCs!.toDouble()).toList();
     double rawMin = values.reduce(math.min);
     double rawMax = values.reduce(math.max);
-    if (targetCs != null && targetCs! > 0) {
-      rawMin = math.min(rawMin, targetCs!.toDouble());
-      rawMax = math.max(rawMax, targetCs!.toDouble());
+    for (final line in targetLines) {
+      if (line.cs > 0) {
+        rawMin = math.min(rawMin, line.cs.toDouble());
+        rawMax = math.max(rawMax, line.cs.toDouble());
+      }
     }
     final span = math.max(10.0, rawMax - rawMin);
     final minVal = rawMin - span * 0.12;
@@ -935,12 +1038,14 @@ class _RaceChartPainter extends CustomPainter {
       tp.paint(canvas, Offset(leftPad - tp.width - 6, y - tp.height / 2));
     }
 
-    // Hedef Baraj kesikli çizgisi
-    if (targetCs != null && targetCs! > 0) {
-      final yNormT = (targetCs!.toDouble() - minVal) / valSpan;
+    // Hedef Baraj kesikli çizgileri
+    double? lastLabelY;
+    for (final line in targetLines) {
+      if (line.cs <= 0) continue;
+      final yNormT = (line.cs.toDouble() - minVal) / valSpan;
       final yT = topPad + (1.0 - yNormT) * chartH;
       final dashPaint = Paint()
-        ..color = targetColor.withValues(alpha: 0.85)
+        ..color = line.color.withValues(alpha: 0.85)
         ..strokeWidth = 1.4;
       double xDash = leftPad;
       while (xDash < size.width - rightPad) {
@@ -950,18 +1055,23 @@ class _RaceChartPainter extends CustomPainter {
       }
       final tLabel = TextPainter(
         text: TextSpan(
-          text: 'Baraj ${SwimTimeFormatter.formatCs(targetCs)}',
+          text: line.label,
           style: TextStyle(
             fontSize: 9.5,
             fontWeight: FontWeight.w700,
-            color: targetColor,
+            color: line.color,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
+      var labelY = math.max(topPad, yT - tLabel.height - 2);
+      if (lastLabelY != null && (labelY - lastLabelY).abs() < tLabel.height + 2) {
+        labelY = math.min(topPad + chartH - tLabel.height, yT + 2);
+      }
+      lastLabelY = labelY;
       tLabel.paint(
         canvas,
-        Offset(size.width - rightPad - tLabel.width, math.max(topPad, yT - tLabel.height - 2)),
+        Offset(size.width - rightPad - tLabel.width, labelY),
       );
     }
 
@@ -1029,7 +1139,7 @@ class _RaceChartPainter extends CustomPainter {
       tp.paint(canvas, Offset(dx, topPad + chartH + 6));
     }
 
-    // Noktalar
+    // Noktalar (Süre)
     for (int i = 0; i < offsets.length; i++) {
       final pt = offsets[i];
       final isPb = points[i].timeCs == minCs;
@@ -1050,12 +1160,100 @@ class _RaceChartPainter extends CustomPainter {
         Paint()..color = dotColor,
       );
     }
+
+    // İkinci çizgi: Rudolph Puanı (1-20)
+    final rudolphOffsets = <({int idx, Offset pt, int val})>[];
+    final rudolphVals = points
+        .map((e) => e.rudolphPoints)
+        .whereType<int>()
+        .where((v) => v > 0)
+        .toList();
+    if (rudolphVals.isNotEmpty) {
+      final rMinRaw = rudolphVals.reduce(math.min).toDouble();
+      final rMaxRaw = rudolphVals.reduce(math.max).toDouble();
+      final rMin = math.max(0.0, rMinRaw - 2.0);
+      final rMax = math.min(20.0, rMaxRaw + 2.0);
+      final rSpan = math.max(2.0, rMax - rMin);
+
+      // Sağ Y ekseni Rudolph ölçeği
+      for (final rTick in [rMax.round(), rMin.round()]) {
+        final yNormR = (rTick - rMin) / rSpan;
+        final yR = topPad + (1.0 - yNormR) * chartH;
+        final rTp = TextPainter(
+          text: TextSpan(
+            text: '${rTick}R',
+            style: TextStyle(
+              fontFamily: AppTextStyles.fontFamily,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w700,
+              color: rudolphColor.withValues(alpha: 0.85),
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        rTp.paint(
+          canvas,
+          Offset(size.width - rightPad + 4, yR - rTp.height / 2),
+        );
+      }
+
+      for (int i = 0; i < points.length; i++) {
+        final r = points[i].rudolphPoints;
+        if (r == null || r <= 0) continue;
+        final x = leftPad + (i / (points.length - 1)) * chartW;
+        final yNormR = (r - rMin) / rSpan;
+        final yR = topPad + (1.0 - yNormR) * chartH;
+        rudolphOffsets.add((idx: i, pt: Offset(x, yR), val: r));
+      }
+
+      if (rudolphOffsets.length >= 2) {
+        final rPath = Path()
+          ..moveTo(rudolphOffsets.first.pt.dx, rudolphOffsets.first.pt.dy);
+        for (int i = 0; i < rudolphOffsets.length - 1; i++) {
+          final p0 = rudolphOffsets[i].pt;
+          final p1 = rudolphOffsets[i + 1].pt;
+          final midX = (p0.dx + p1.dx) / 2;
+          rPath.cubicTo(midX, p0.dy, midX, p1.dy, p1.dx, p1.dy);
+        }
+        canvas.drawPath(
+          rPath,
+          Paint()
+            ..color = rudolphColor
+            ..strokeWidth = 2.0
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round,
+        );
+      }
+
+      for (final ro in rudolphOffsets) {
+        final isSel = selectedIndex == ro.idx;
+        if (isSel) {
+          canvas.drawCircle(
+            ro.pt,
+            7,
+            Paint()..color = rudolphColor.withValues(alpha: 0.22),
+          );
+        }
+        canvas.drawCircle(
+          ro.pt,
+          isSel ? 4.4 : 3.2,
+          Paint()..color = surfaceColor,
+        );
+        canvas.drawCircle(
+          ro.pt,
+          isSel ? 3.5 : 2.5,
+          Paint()..color = rudolphColor,
+        );
+      }
+    }
   }
 
   @override
   bool shouldRepaint(covariant _RaceChartPainter oldDelegate) {
     return oldDelegate.points != points ||
         oldDelegate.selectedIndex != selectedIndex ||
-        oldDelegate.minCs != minCs;
+        oldDelegate.minCs != minCs ||
+        oldDelegate.targetLines.length != targetLines.length;
   }
 }

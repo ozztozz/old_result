@@ -209,7 +209,8 @@ class LocalResultListParser:
                 athlete_parts[-1] += rl
             else:
                 athlete_parts.append(rl)
-        return re.sub(r"\s+", " ", " ".join(athlete_parts)).strip()
+        joined = re.sub(r"\s+", " ", " ".join(athlete_parts)).strip()
+        return re.sub(r"^\d+\s+", "", joined).strip()
 
     def _parse_dsq_block(self, full_txt: str, page_no: int) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
@@ -476,8 +477,49 @@ class LocalResultListParser:
                                 scan += 1
 
                             if derece is not None:
+                                fina_puan = None
+                                if (
+                                    mid_lines
+                                    and re.match(r"^\d{2,4}$", mid_lines[0])
+                                    and mid_lines[0] != d_yili
+                                ):
+                                    fina_puan = int(mid_lines.pop(0))
+
+                                def _is_baraj_line(txt: str) -> bool:
+                                    low = txt.strip().lower()
+                                    if "baraj" in low:
+                                        return True
+                                    is_club_kw = any(
+                                        k in low
+                                        for k in (
+                                            "kulüb",
+                                            "kulub",
+                                            "s.k",
+                                            "sk",
+                                            "belediye",
+                                            "kolej",
+                                            "derne",
+                                            "akademi",
+                                            "üniversite",
+                                            "gençlik",
+                                        )
+                                    )
+                                    if is_club_kw:
+                                        return False
+                                    if any(
+                                        k in low
+                                        for k in ("katilim", "katılım", "harcirah", "harcırah")
+                                    ) and any(
+                                        k in low
+                                        for k in ("lcm", "scm", "yaş", "yas")
+                                    ):
+                                        return True
+                                    if re.search(r"\b(?:LCM|SCM)\b", txt):
+                                        return True
+                                    return False
+
                                 baraj_parts: List[str] = []
-                                while mid_lines and "baraj" in mid_lines[-1].lower():
+                                while mid_lines and _is_baraj_line(mid_lines[-1]):
                                     baraj_parts.insert(0, mid_lines.pop())
                                     # Eğer "BARAJI" tek başına alt satıra taşmışsa üstündeki devam satırını da al
                                     if (
@@ -493,7 +535,7 @@ class LocalResultListParser:
                                     mid_lines.pop()
 
                                 club = mid_lines.pop() if mid_lines else None
-                                if club and "baraj" in club.lower():
+                                if club and _is_baraj_line(club):
                                     baraj = f"{baraj} {club}".strip() if baraj else club
                                     while mid_lines and self.RE_NUMERIC_ONLY.match(mid_lines[-1]):
                                         mid_lines.pop()
@@ -501,8 +543,12 @@ class LocalResultListParser:
                                 athlete_name = self._join_athlete_parts(mid_lines)
 
                                 # Opsiyonel FINA puanı (dereceden sonra gelen 2-4 haneli tam sayı)
-                                fina_puan = None
-                                if scan < n_lines and re.match(r"^\d{2,4}$", lines[scan]) and lines[scan] != d_yili:
+                                if (
+                                    fina_puan is None
+                                    and scan < n_lines
+                                    and re.match(r"^\d{2,4}$", lines[scan])
+                                    and lines[scan] != d_yili
+                                ):
                                     # Sonraki satır yeni bir sporcu değilse FINA puanıdır
                                     is_next_rank = (
                                         scan + 1 < n_lines

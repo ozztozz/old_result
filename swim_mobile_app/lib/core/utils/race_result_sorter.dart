@@ -94,6 +94,44 @@ abstract final class RaceResultSorter {
   }) {
     if (list.isEmpty) return const [];
 
+    // Satırlarda birden fazla anlamlı yaş grubu (yas_grubu / ageGroup) varsa doğrudan buna göre grupla
+    final byAgeGroup = <String, ({int order, List<RaceResult> items})>{};
+    final ungrouped = <RaceResult>[];
+    for (final r in list) {
+      final ag = (r.ageGroup ?? '').trim();
+      if (ag.isNotEmpty && ag != 'Genel Sıralama') {
+        final ord = r.ageGroupOrder ?? 900;
+        final existing = byAgeGroup[ag];
+        if (existing == null) {
+          byAgeGroup[ag] = (order: ord, items: [r]);
+        } else {
+          existing.items.add(r);
+        }
+      } else {
+        ungrouped.add(r);
+      }
+    }
+
+    if (byAgeGroup.length > 1) {
+      final entries = byAgeGroup.entries.toList()
+        ..sort((a, b) {
+          final cmp = a.value.order.compareTo(b.value.order);
+          return cmp != 0 ? cmp : a.key.compareTo(b.key);
+        });
+      final groups = <({String? title, List<RaceResult> results})>[];
+      for (final e in entries) {
+        final items = List<RaceResult>.from(e.value.items);
+        sort(items, preferRankFirst: preferRankFirst);
+        groups.add((title: e.key, results: items));
+      }
+      if (ungrouped.isNotEmpty) {
+        final rest = List<RaceResult>.from(ungrouped);
+        sort(rest, preferRankFirst: preferRankFirst);
+        groups.add((title: 'Diğer / Beklenen', results: rest));
+      }
+      return groups;
+    }
+
     final ranked = <({RaceResult item, int rank, int timeCs})>[];
     final others = <RaceResult>[];
 
@@ -236,6 +274,17 @@ abstract final class RaceResultSorter {
     List<RaceResult> items,
     int fallbackIndex,
   ) {
+    final explicitGroups = <String>{};
+    for (final r in items) {
+      final ag = (r.ageGroup ?? '').trim();
+      if (ag.isNotEmpty && ag != 'Genel Sıralama') {
+        explicitGroups.add(ag);
+      }
+    }
+    if (explicitGroups.length == 1) {
+      return explicitGroups.first;
+    }
+
     final currentYear = DateTime.now().year;
     final ages = <int>[];
     for (final r in items) {

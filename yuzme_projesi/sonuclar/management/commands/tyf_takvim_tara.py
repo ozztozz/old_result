@@ -10,6 +10,7 @@ class Command(BaseCommand):
         parser.add_argument("--url", type=str, default=DEFAULT_TAKVIM_URL, help="Taranacak TYF takvim sayfası URL")
         parser.add_argument("--force", action="store_true", help="Hash değişmese bile tüm belgeleri yeniden işle")
         parser.add_argument("--no-milli-takim", action="store_true", help="Milli takım kriterleri alt sayfasını atla")
+        parser.add_argument("--no-ankara", action="store_true", help="Ankara İl Temsilciliği sayfalarını atla")
         parser.add_argument("--no-gemini", action="store_true", help="Gemini analizini atla (yalnız yerel parser)")
 
     def handle(self, *args, **options):
@@ -17,6 +18,7 @@ class Command(BaseCommand):
         stats = sync_tyf_calendar(
             takvim_url=options["url"],
             include_milli_takim=not options["no_milli_takim"],
+            include_ankara=not options["no_ankara"],
             force=options["force"],
             skip_gemini=options["no_gemini"],
         )

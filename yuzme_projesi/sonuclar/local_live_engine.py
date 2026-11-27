@@ -645,19 +645,41 @@ class LocalLiveEngine:
         pdf_items = []
         seen = set()
 
-        # Seans ve yarış programı tablolarından resmi yarış numaralarını haritalandır
+        # Seans ve yarış programı tablolarından resmi yarış numaralarını ve gün bilgisini haritalandır
         pdf_yaris_no_map: Dict[str, str] = {}
+        pdf_gun_map: Dict[str, int] = {}
+        current_gun: Optional[int] = None
+        last_tab_id: Optional[str] = None
         for tr in soup.find_all("tr"):
+            tab_pane = tr.find_parent("div", class_="tab-pane")
+            tab_id = (tab_pane.get("id") or "") if tab_pane else ""
+            if tab_id != last_tab_id:
+                last_tab_id = tab_id
+                current_gun = None
+            m_tab_gun = re.match(r"^tab-gun(\d+)$", tab_id, re.IGNORECASE)
+            tab_gun = int(m_tab_gun.group(1)) if m_tab_gun else None
+
             cols = [c.get_text(strip=True) for c in tr.find_all(["td", "th"])]
-            if cols and cols[0].isdigit():
-                row_yno = cols[0]
-                for a in tr.find_all("a", href=True):
-                    ch = a["href"].split("?")[0].strip()
-                    fn = os.path.basename(ch)
-                    pdf_yaris_no_map[fn] = row_yno
-                    m_id = re.search(r"\d+", fn)
-                    if m_id:
-                        pdf_yaris_no_map[m_id.group()] = row_yno
+            if not (cols and cols[0].isdigit()):
+                row_txt = " ".join(cols)
+                m_row_gun = re.search(r"\b(\d+)\.\s*G[ÜU]N\b", row_txt, re.IGNORECASE)
+                if m_row_gun:
+                    current_gun = int(m_row_gun.group(1))
+                continue
+
+            row_yno = cols[0]
+            row_gun = tab_gun if tab_gun is not None else current_gun
+            for a in tr.find_all("a", href=True):
+                ch = a["href"].split("?")[0].strip()
+                fn = os.path.basename(ch)
+                pdf_yaris_no_map[fn] = row_yno
+                if row_gun is not None:
+                    pdf_gun_map[fn] = row_gun
+                m_id = re.search(r"\d+", fn)
+                if m_id:
+                    pdf_yaris_no_map[m_id.group()] = row_yno
+                    if row_gun is not None:
+                        pdf_gun_map[m_id.group()] = row_gun
 
         for a in soup.find_all("a", href=True):
             href = a["href"]
@@ -693,6 +715,7 @@ class LocalLiveEngine:
                 "doc_type": doc_type,
                 "hint": hint,
                 "yaris_no": str(yaris_no),
+                "gun": pdf_gun_map.get(fname) or pdf_gun_map.get(file_id),
             })
 
         plain_text = soup.get_text("\n", strip=True)
@@ -904,6 +927,21 @@ class LocalLiveEngine:
                         return True
                 return False
 
+            # Mevcut işlenmiş dosyalarda gün bilgisi eksikse yeniden PDF indirmeden tamamla
+            for p_item in pdf_items:
+                p_gun = p_item.get("gun")
+                if p_gun is None:
+                    continue
+                kf = known_files.get(p_item["filename"])
+                if kf and kf.gun != p_gun:
+                    kf.gun = p_gun
+                    db_retry(lambda _kf=kf: _kf.save(update_fields=["gun"]))
+                    db_retry(
+                        lambda _kf=kf, _g=p_gun: YarisSonucu.objects.filter(
+                            canli_dosya=_kf, gun__isnull=True
+                        ).update(gun=_g)
+                    )
+
             pending_starts = [p for p in pdf_items if p["doc_type"] == "start_listesi" and _needs_processing(p)]
             pending_results = [p for p in pdf_items if p["doc_type"] == "sonuc_listesi" and _needs_processing(p)]
 
@@ -1002,22 +1040,58 @@ class LocalLiveEngine:
                     stats["hatalar"].append(err)
 
             # 2. Sonuç Listeleri
+            from sonuclar.fcm_service import get_race_notify_key
+
+            already_notified_races = {
+                get_race_notify_key(
+                    yaris_no=kf.yaris_no,
+                    cinsiyet=kf.cinsiyet,
+                    mesafe=kf.mesafe,
+                    stil=kf.stil,
+                    dosya_adi=kf.dosya_adi,
+                )
+                for kf in known_files.values()
+                if kf.dosya_turu == "SONUC_LISTESI"
+                and kf.durum == "ISLENDI"
+                and (kf.kayit_sayisi or 0) > 0
+            }
             notified_result_files: List[str] = []
             notified_changed_rows = 0
+            club_result_events_by_club: Dict[int, List[Dict[str, Any]]] = {}
             for item in pending_results:
                 try:
+                    file_club_events: List[Dict[str, Any]] = []
                     added, updated = self._process_single_pdf(
                         yaris,
                         event,
                         item,
                         "sonuc_listesi",
                         prefetched=prefetched_map.get(("sonuc_listesi", item["url"])),
+                        club_events_out=file_club_events,
                     )
                     stats["yeni_sonuc"] += 1
                     stats["eklenen_kayit"] += added
+                    for ce in file_club_events:
+                        cid = ce.get("club_id")
+                        if cid:
+                            club_result_events_by_club.setdefault(int(cid), []).append(ce)
                     if added + updated > 0:
-                        notified_result_files.append(item["filename"])
-                        notified_changed_rows += added + updated
+                        saved_dosya = db_retry(
+                            lambda _fn=item["filename"]: CanliYarisDosya.objects.filter(
+                                canli_yaris=yaris, dosya_adi=_fn
+                            ).first()
+                        )
+                        race_key = get_race_notify_key(
+                            yaris_no=saved_dosya.yaris_no if saved_dosya else item.get("yaris_no"),
+                            cinsiyet=saved_dosya.cinsiyet if saved_dosya else None,
+                            mesafe=saved_dosya.mesafe if saved_dosya else None,
+                            stil=saved_dosya.stil if saved_dosya else None,
+                            dosya_adi=item["filename"],
+                        )
+                        if race_key not in already_notified_races:
+                            notified_result_files.append(item["filename"])
+                            notified_changed_rows += added + updated
+                            already_notified_races.add(race_key)
                 except Exception as exc:
                     err = f"ResultList Hata ({item['filename']}): {exc}"
                     logger.error(f"  [!] {err}")
@@ -1050,6 +1124,13 @@ class LocalLiveEngine:
                 f"(Start: {islenen_start}/{all_start_count}, Sonuç: {islenen_sonuc}/{all_result_count})"
             )
 
+            if notified_result_files or club_result_events_by_club:
+                meet_title = (
+                    (yaris.musabaka_adi or "").strip()
+                    or (event.musabaka_adi if event else "").strip()
+                    or "Canlı Yarış Güncellemesi"
+                )
+
             if notified_result_files:
                 try:
                     from sonuclar.fcm_service import (
@@ -1057,11 +1138,6 @@ class LocalLiveEngine:
                         send_live_meet_notification,
                     )
 
-                    meet_title = (
-                        (yaris.musabaka_adi or "").strip()
-                        or (event.musabaka_adi if event else "").strip()
-                        or "Canlı Yarış Güncellemesi"
-                    )
                     body_text, single_yaris_no = build_live_result_notification_body(
                         yaris,
                         notified_result_files,
@@ -1076,6 +1152,30 @@ class LocalLiveEngine:
                     )
                 except Exception as fcm_exc:
                     logger.warning(f"  [!] FCM bildirim tetiklenemedi: {fcm_exc}")
+
+            if club_result_events_by_club:
+                try:
+                    from sonuclar.fcm_service import (
+                        build_club_result_notification_body,
+                        send_club_result_notification,
+                    )
+
+                    for cid, c_entries in club_result_events_by_club.items():
+                        c_name = next(
+                            (e.get("club_name", "") for e in c_entries if e.get("club_name")),
+                            "",
+                        )
+                        c_body, c_yaris_no = build_club_result_notification_body(c_name, c_entries)
+                        c_extra = {"yaris_no": c_yaris_no} if c_yaris_no else None
+                        send_club_result_notification(
+                            club_id=cid,
+                            live_meet_id=yaris.id,
+                            title=meet_title,
+                            body=c_body,
+                            extra_data=c_extra,
+                        )
+                except Exception as club_fcm_exc:
+                    logger.warning(f"  [!] Kulüp FCM bildirimi tetiklenemedi: {club_fcm_exc}")
 
         except Exception as exc:
             err = f"Canlı Yarış İşleme Hatası: {exc}"
@@ -1179,6 +1279,7 @@ class LocalLiveEngine:
         item: Dict[str, str],
         doc_type: str,
         prefetched: Optional[Dict[str, Any]] = None,
+        club_events_out: Optional[List[Dict[str, Any]]] = None,
     ) -> Tuple[int, int]:
         filename = item["filename"]
         url = item["url"]
@@ -1212,6 +1313,8 @@ class LocalLiveEngine:
             event.sehir = first_up + c_raw[1:]
             db_retry(lambda: event.save(update_fields=["sehir"]))
         yaris_no = str(item.get("yaris_no") or parsed.get("yaris_no") or "")
+        raw_gun = item.get("gun")
+        gun = int(raw_gun) if raw_gun is not None and str(raw_gun).isdigit() else None
         is_bayrak = bool("bayrak" in (stil or "").lower() or "4x" in (str(parsed.get("yaris") or "")).lower())
 
         dosya_turu_str = "START_LISTESI" if doc_type == "start_listesi" else "SONUC_LISTESI"
@@ -1220,6 +1323,8 @@ class LocalLiveEngine:
             "dosya_url": url,
             "dosya_turu": dosya_turu_str,
             "yaris_no": yaris_no,
+            "gun": gun,
+            "tahmini_saat": parsed.get("tahmini_saat") or None,
             "mesafe": mesafe,
             "stil": stil,
             "cinsiyet": cinsiyet,
@@ -1281,8 +1386,11 @@ class LocalLiveEngine:
             return cands[0] if len(cands) == 1 else None
 
         def _save_pdf_atomically() -> Tuple[int, int]:
+            if club_events_out is not None:
+                club_events_out.clear()
             records_added = 0
             meaningful_updated = 0
+            meaningful_updated_ids: set = set()
             unmatched_skipped = 0
             seen_result_ids: List[int] = []
             seen_athlete_ids_in_pdf: set = set()
@@ -1688,10 +1796,14 @@ class LocalLiveEngine:
                         fina = calculate_fina_points(cinsiyet, mesafe, stil, derece_sn or derece_val, course)
 
                     if doc_type == "start_listesi":
+                        seri_yas_grubu = (s.get("yas_grubu") or parsed.get("yas_grubu") or "").strip()
                         defaults_dict = {
                             "yaris_no": yaris_no,
+                            "gun": gun,
+                            "tahmini_saat": s.get("tahmini_saat") or None,
                             "dosya_adi": filename,
                             "kulup": club,
+                            "yas_grubu": seri_yas_grubu or None,
                             "giris_derecesi": s.get("giris_derecesi") or derece_val,
                             "derece": "Bekleniyor",
                             "derece_saniye": None,
@@ -1714,6 +1826,7 @@ class LocalLiveEngine:
 
                         defaults_dict = {
                             "yaris_no": yaris_no,
+                            "gun": gun,
                             "dosya_adi": filename,
                             "kulup": club,
                             "derece": final_derece,
@@ -1804,9 +1917,21 @@ class LocalLiveEngine:
                             if defaults_dict.get("giris_derecesi") and not existing.giris_derecesi:
                                 existing.giris_derecesi = defaults_dict["giris_derecesi"]
                                 update_fields.append("giris_derecesi")
-                            if defaults_dict.get("kulup") and not existing.kulup_id:
+                            if defaults_dict.get("kulup") and existing.kulup_id != defaults_dict["kulup"].id:
                                 existing.kulup = defaults_dict["kulup"]
                                 update_fields.append("kulup")
+                            if defaults_dict.get("seri") and not existing.seri:
+                                existing.seri = defaults_dict["seri"]
+                                update_fields.append("seri")
+                            if defaults_dict.get("kulvar") is not None and existing.kulvar is None:
+                                existing.kulvar = defaults_dict["kulvar"]
+                                update_fields.append("kulvar")
+                            if defaults_dict.get("yas_grubu") and not existing.yas_grubu:
+                                existing.yas_grubu = defaults_dict["yas_grubu"]
+                                update_fields.append("yas_grubu")
+                            if defaults_dict.get("tahmini_saat") and not existing.tahmini_saat:
+                                existing.tahmini_saat = defaults_dict["tahmini_saat"]
+                                update_fields.append("tahmini_saat")
                             if (
                                 existing.sporcu
                                 and existing.sporcu.sporcu_adi.startswith("Maskeli sporcu")
@@ -1833,6 +1958,8 @@ class LocalLiveEngine:
                             if dirty_fields:
                                 if any(f in ("derece", "derece_saniye", "kaynak_turu") for f in dirty_fields):
                                     meaningful_updated += 1
+                                    if existing.id:
+                                        meaningful_updated_ids.add(existing.id)
                                 to_update_map[existing.id] = existing
                                 bulk_update_fields.update(dirty_fields)
                         if existing.id:
@@ -1899,6 +2026,25 @@ class LocalLiveEngine:
                         f"  [!] {filename}: StartList dışı {unmatched_skipped} sonuç satırı eklenmedi "
                         f"(logs/unmatched_result_records.jsonl dosyasına kaydedildi)."
                     )
+
+                if doc_type == "sonuc_listesi" and club_events_out is not None:
+                    changed_rows = list(to_create_objs) + [
+                        obj for oid, obj in to_update_map.items() if oid in meaningful_updated_ids
+                    ]
+                    for row in changed_rows:
+                        derece_txt = str(row.derece or "").strip()
+                        if row.kulup_id and derece_txt and derece_txt != "Bekleniyor":
+                            club_events_out.append({
+                                "club_id": row.kulup_id,
+                                "club_name": row.kulup.kulup_adi if row.kulup else "",
+                                "athlete_name": row.sporcu.sporcu_adi if row.sporcu else "",
+                                "yaris_no": yaris_no,
+                                "cinsiyet": cinsiyet,
+                                "mesafe": mesafe,
+                                "stil": stil,
+                                "derece": derece_txt,
+                                "sira": row.sira,
+                            })
 
             return records_added, meaningful_updated
 

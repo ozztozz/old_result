@@ -22,6 +22,7 @@ class _FakeMeetSearchRepository implements SwimRepository {
     String? year,
     String? city,
     String? q,
+    int? clubId,
     String? club,
     String? athlete,
     String? gender,

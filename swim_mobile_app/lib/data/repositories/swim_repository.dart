@@ -36,6 +36,7 @@ class SwimRepository {
     String? year,
     String? city,
     String? q,
+    int? clubId,
     String? club,
     String? athlete,
     String? gender,
@@ -44,6 +45,7 @@ class SwimRepository {
     if (year != null && year.isNotEmpty) query['year'] = year;
     if (city != null && city.isNotEmpty) query['city'] = city;
     if (q != null && q.isNotEmpty) query['q'] = q;
+    if (clubId != null && clubId > 0) query['club_id'] = clubId.toString();
     if (club != null && club.isNotEmpty) query['club'] = club;
     if (athlete != null && athlete.isNotEmpty) query['athlete'] = athlete;
     if (gender != null && gender.isNotEmpty) query['gender'] = gender;
@@ -150,6 +152,24 @@ class SwimRepository {
   /// Canlı yarış oturumları listesi
   Future<List<LiveMeetSummary>> getLiveMeets() async {
     final res = await apiClient.get('/live/');
+    final list = res.data['data'] as List<dynamic>? ?? [];
+    return list.map((e) => LiveMeetSummary.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Seçili kulübün katıldığı canlı müsabakalar
+  Future<List<LiveMeetSummary>> getClubLiveMeets({
+    int? clubId,
+    String? clubName,
+  }) async {
+    final query = <String, dynamic>{};
+    if (clubId != null && clubId > 0) query['club_id'] = clubId.toString();
+    if (clubName != null && clubName.trim().isNotEmpty) {
+      query['club_name'] = clubName.trim();
+    }
+    final res = await apiClient.get(
+      '/live/club/',
+      queryParameters: query.isEmpty ? null : query,
+    );
     final list = res.data['data'] as List<dynamic>? ?? [];
     return list.map((e) => LiveMeetSummary.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -348,12 +368,14 @@ class SwimRepository {
     String scope = 'all',
     String? city,
     String? pool,
+    int? age,
     String? q,
     bool includePast = false,
   }) async {
     final query = <String, dynamic>{'scope': scope};
     if (city != null && city.isNotEmpty) query['city'] = city;
     if (pool != null && pool.isNotEmpty) query['pool'] = pool;
+    if (age != null) query['age'] = age.toString();
     if (q != null && q.isNotEmpty) query['q'] = q;
     if (includePast) query['include_past'] = '1';
 
@@ -412,6 +434,36 @@ class SwimRepository {
       months: monthsRaw.map((e) => e.toString()).toList(),
       ageLabels: ages.map((e) => e.toString()).toList(),
     );
+  }
+
+  /// Seçili kulübün seçilen barajdaki sporcu durumları
+  Future<ClubBarajStatusResponse> getClubBarajStatus({
+    int? clubId,
+    String? clubName,
+    int? eventId,
+    String? barajAdi,
+    String? barajTuru,
+    String? havuz,
+  }) async {
+    final query = <String, dynamic>{};
+    if (clubId != null && clubId > 0) query['club_id'] = clubId.toString();
+    if (clubName != null && clubName.trim().isNotEmpty) {
+      query['club_name'] = clubName.trim();
+    }
+    if (eventId != null) query['event_id'] = eventId.toString();
+    if (barajAdi != null && barajAdi.trim().isNotEmpty) {
+      query['baraj_adi'] = barajAdi.trim();
+    }
+    if (barajTuru != null && barajTuru.trim().isNotEmpty) {
+      query['baraj_turu'] = barajTuru.trim();
+    }
+    if (havuz != null && havuz.trim().isNotEmpty) {
+      query['havuz'] = havuz.trim();
+    }
+
+    final res =
+        await apiClient.get('/clubs/baraj-status/', queryParameters: query);
+    return ClubBarajStatusResponse.fromJson(res.data as Map<String, dynamic>);
   }
 }
 

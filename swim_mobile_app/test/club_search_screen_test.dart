@@ -105,6 +105,9 @@ class _FakeClubSearchRepository implements SwimRepository {
   Future<List<LiveMeetSummary>> getLiveMeets() async => const [];
 
   @override
+  Future<List<LiveMeetSummary>> getClubLiveMeets({int? clubId, String? clubName}) async => const [];
+
+  @override
   Future<List<Map<String, dynamic>>> getHighlightsFeed({
     List<int> athleteIds = const [],
     int? clubId,

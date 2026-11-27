@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'notification_service.dart';
 
 /// Global Seçili Takım / Kulüp Servisi
 /// Kullanıcının seçtiği takımı SharedPreferences ile kalıcı olarak saklar
@@ -49,6 +53,7 @@ class SelectedClubService extends ChangeNotifier {
     }
     await _prefs?.setString(_keyClubName, _clubName!);
     notifyListeners();
+    unawaited(NotificationService.instance.syncFavoriteClubTopic(_clubId));
   }
 
   /// Takım seçimini sıfırlar
@@ -59,6 +64,7 @@ class SelectedClubService extends ChangeNotifier {
     await _prefs?.remove(_keyClubId);
     await _prefs?.remove(_keyClubName);
     notifyListeners();
+    unawaited(NotificationService.instance.syncFavoriteClubTopic(null));
   }
 
   /// Kulüp ismi veya ID eşleşme kontrolü (Türkçe karakter ve kısaltma toleranslı)

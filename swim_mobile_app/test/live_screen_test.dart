@@ -65,6 +65,9 @@ class _FakeLiveScreenRepository implements SwimRepository {
   Future<List<LiveMeetSummary>> getLiveMeets() async => meets;
 
   @override
+  Future<List<LiveMeetSummary>> getClubLiveMeets({int? clubId, String? clubName}) async => meets;
+
+  @override
   Future<LiveFeedResponse> getLiveSummary(
     int liveMeetId, {
     int? clubId,

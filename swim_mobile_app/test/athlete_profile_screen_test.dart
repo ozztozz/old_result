@@ -103,14 +103,19 @@ void main() {
     expect(find.text('Emre Sakçı'), findsOneWidget);
     expect(find.textContaining('Fenerbahçe'), findsOneWidget);
 
-    // The two main swipeable tabs should be visible
+    // The main swipeable tabs should be visible
+    expect(find.text('Takvim'), findsOneWidget);
     expect(find.text('Best Time'), findsOneWidget);
     expect(find.text('Barajlar'), findsOneWidget);
 
     // Bottom race history title 'Son Yarışlar' should NOT exist
     expect(find.text('Son Yarışlar'), findsNothing);
 
-    // PB tab is selected by default; Kurbağalama stroke card and 50m tile should be visible
+    // Switch to Best Time tab
+    await tester.tap(find.text('Best Time'));
+    await tester.pumpAndSettle();
+
+    // Kurbağalama stroke card and 50m tile should be visible
     expect(find.text('Kurbağalama'), findsOneWidget);
     expect(find.text('50'), findsOneWidget);
     expect(find.text('26.83'), findsOneWidget);
@@ -154,6 +159,8 @@ void main() {
     );
 
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Best Time'));
+    await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.text('Kayıtlı PB Bulunamadı'), findsOneWidget);
@@ -186,6 +193,8 @@ void main() {
       ),
     );
 
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Best Time'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);

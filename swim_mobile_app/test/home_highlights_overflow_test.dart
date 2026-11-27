@@ -24,6 +24,10 @@ class _FakeHomeRepository implements SwimRepository {
       const [];
 
   @override
+  Future<List<LiveMeetSummary>> getClubLiveMeets({int? clubId, String? clubName}) async =>
+      getLiveMeets();
+
+  @override
   Future<List<LiveMeetSummary>> getLiveMeets() async => [
         LiveMeetSummary(
           id: 1,

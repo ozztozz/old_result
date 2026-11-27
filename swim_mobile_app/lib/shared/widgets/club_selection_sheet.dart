@@ -8,19 +8,25 @@ import '../../core/utils/string_utils.dart';
 /// Kullanıcının Takım / Kulüp Seçmesini Sağlayan Modal Sheet
 class ClubSelectionSheet extends StatefulWidget {
   final List<String> availableClubs;
+  final Map<String, int>? clubIdsByName;
 
   const ClubSelectionSheet({
     super.key,
     required this.availableClubs,
+    this.clubIdsByName,
   });
 
   static Future<String?> show(
     BuildContext context, {
     required List<String> availableClubs,
+    Map<String, int>? clubIdsByName,
   }) {
     return AppBottomSheet.show<String>(
       context,
-      builder: (_) => ClubSelectionSheet(availableClubs: availableClubs),
+      builder: (_) => ClubSelectionSheet(
+        availableClubs: availableClubs,
+        clubIdsByName: clubIdsByName,
+      ),
     );
   }
 
@@ -233,8 +239,10 @@ class _ClubSelectionSheetState extends State<ClubSelectionSheet> {
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () async {
-                            await SelectedClubService.instance
-                                .setClub(name: club);
+                            await SelectedClubService.instance.setClub(
+                              id: widget.clubIdsByName?[club],
+                              name: club,
+                            );
                             if (context.mounted) Navigator.pop(context, club);
                           },
                           child: Padding(

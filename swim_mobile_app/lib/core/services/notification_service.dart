@@ -27,10 +27,15 @@ class NotificationService extends ChangeNotifier {
   static const String _keyLiveNotificationsEnabled =
       'live_notifications_enabled';
   static const String _keySubscribedTopics = 'subscribed_live_meet_topics';
+  static const String _keySubscribedClubTopic = 'subscribed_favorite_club_topic';
   static const String liveChannelId = 'live_races_channel';
   static const String liveChannelName = 'Canlı Yarış Bildirimleri';
   static const String liveChannelDescription =
       'Takip edilen canlı müsabakalardaki yeni seri ve sonuç bildirimleri.';
+  static const String clubChannelId = 'club_results_channel';
+  static const String clubChannelName = 'Favori Kulüp Bildirimleri';
+  static const String clubChannelDescription =
+      'Favori kulübünüzün sporcuları sonuç aldığında anlık bildirimler.';
 
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
@@ -44,6 +49,7 @@ class NotificationService extends ChangeNotifier {
   bool _hasPermission = false;
   int? _pendingLiveMeetId;
   final Set<String> _subscribedTopics = {};
+  String? _subscribedClubTopic;
 
   bool get isInitialized => _isInitialized;
   bool get firebaseAvailable => _firebaseAvailable;
@@ -59,7 +65,10 @@ class NotificationService extends ChangeNotifier {
   }
 
   /// Servisi başlatır: tercihleri yükler, yerel bildirimleri ve FCM'i yapılandırır.
-  Future<void> init({List<int> initialFavoriteMeetIds = const []}) async {
+  Future<void> init({
+    List<int> initialFavoriteMeetIds = const [],
+    int? initialFavoriteClubId,
+  }) async {
     if (_isInitialized) return;
 
     try {
@@ -70,10 +79,14 @@ class NotificationService extends ChangeNotifier {
       _subscribedTopics
         ..clear()
         ..addAll(storedTopics);
+      _subscribedClubTopic = _prefs?.getString(_keySubscribedClubTopic);
     } catch (_) {}
 
     await _initLocalNotifications();
-    await _initFirebaseMessaging(initialFavoriteMeetIds);
+    await _initFirebaseMessaging(
+      initialFavoriteMeetIds,
+      initialFavoriteClubId: initialFavoriteClubId,
+    );
 
     _isInitialized = true;
     notifyListeners();
@@ -104,20 +117,30 @@ class NotificationService extends ChangeNotifier {
           _localNotifications.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
-        const channel = AndroidNotificationChannel(
+        const liveChannel = AndroidNotificationChannel(
           liveChannelId,
           liveChannelName,
           description: liveChannelDescription,
           importance: Importance.high,
         );
-        await androidPlugin.createNotificationChannel(channel);
+        const clubChannel = AndroidNotificationChannel(
+          clubChannelId,
+          clubChannelName,
+          description: clubChannelDescription,
+          importance: Importance.high,
+        );
+        await androidPlugin.createNotificationChannel(liveChannel);
+        await androidPlugin.createNotificationChannel(clubChannel);
       }
     } catch (e) {
       debugPrint('[NotificationService] Local init hatası: $e');
     }
   }
 
-  Future<void> _initFirebaseMessaging(List<int> initialFavoriteMeetIds) async {
+  Future<void> _initFirebaseMessaging(
+    List<int> initialFavoriteMeetIds, {
+    int? initialFavoriteClubId,
+  }) async {
     try {
       await Firebase.initializeApp();
       _firebaseAvailable = true;
@@ -159,6 +182,7 @@ class NotificationService extends ChangeNotifier {
 
       if (_liveNotificationsEnabled && _hasPermission) {
         await syncAllFavoriteTopics(initialFavoriteMeetIds);
+        await syncFavoriteClubTopic(initialFavoriteClubId);
       }
     } catch (e) {
       _firebaseAvailable = false;
@@ -205,6 +229,7 @@ class NotificationService extends ChangeNotifier {
   Future<bool> setLiveNotificationsEnabled(
     bool enabled, {
     List<int> favoriteMeetIds = const [],
+    int? favoriteClubId,
   }) async {
     _prefs ??= await SharedPreferences.getInstance();
 
@@ -223,6 +248,7 @@ class NotificationService extends ChangeNotifier {
 
     if (enabled) {
       await syncAllFavoriteTopics(favoriteMeetIds);
+      await syncFavoriteClubTopic(favoriteClubId);
     } else {
       await _unsubscribeAllTopics();
     }
@@ -297,7 +323,63 @@ class NotificationService extends ChangeNotifier {
         debugPrint('[NotificationService] Unsubscribe hatası ($topic): $e');
       }
     }
+    if (_subscribedClubTopic != null) {
+      try {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(_subscribedClubTopic!);
+      } catch (e) {
+        debugPrint('[NotificationService] Kulüp unsubscribe hatası ($_subscribedClubTopic): $e');
+      }
+      _subscribedClubTopic = null;
+      await _saveSubscribedClubTopic();
+    }
     await _saveSubscribedTopics();
+  }
+
+  /// Favori kulüp için `club_<id>` topic aboneliğini senkronize eder.
+  Future<void> syncFavoriteClubTopic(int? clubId) async {
+    if (!_firebaseAvailable) return;
+    final desiredTopic =
+        (clubId != null && clubId > 0 && _liveNotificationsEnabled)
+            ? topicForClub(clubId)
+            : null;
+
+    if (_subscribedClubTopic == desiredTopic) return;
+
+    if (_subscribedClubTopic != null) {
+      try {
+        await FirebaseMessaging.instance
+            .unsubscribeFromTopic(_subscribedClubTopic!);
+      } catch (e) {
+        debugPrint(
+          '[NotificationService] Kulüp unsubscribe hatası ($_subscribedClubTopic): $e',
+        );
+      }
+      _subscribedClubTopic = null;
+    }
+
+    if (desiredTopic != null) {
+      try {
+        await FirebaseMessaging.instance.subscribeToTopic(desiredTopic);
+        _subscribedClubTopic = desiredTopic;
+      } catch (e) {
+        debugPrint(
+          '[NotificationService] Kulüp subscribe hatası ($desiredTopic): $e',
+        );
+      }
+    }
+
+    await _saveSubscribedClubTopic();
+  }
+
+  Future<void> _saveSubscribedClubTopic() async {
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      if (_subscribedClubTopic == null) {
+        await _prefs?.remove(_keySubscribedClubTopic);
+      } else {
+        await _prefs?.setString(_keySubscribedClubTopic, _subscribedClubTopic!);
+      }
+    } catch (_) {}
   }
 
   Future<void> _saveSubscribedTopics() async {
@@ -313,30 +395,37 @@ class NotificationService extends ChangeNotifier {
   void _onForegroundMessage(RemoteMessage message) {
     if (!_liveNotificationsEnabled) return;
 
+    final isClubResult = message.data['type'] == 'club_result_update';
     final title = message.notification?.title ??
         message.data['title']?.toString() ??
-        'Canlı Yarış Güncellemesi';
+        (isClubResult ? 'Favori Kulüp Sonucu' : 'Canlı Yarış Güncellemesi');
     final body = message.notification?.body ??
         message.data['body']?.toString() ??
-        'Takip ettiğiniz müsabakada yeni sonuçlar var.';
+        (isClubResult
+            ? 'Favori kulübünüzün sporcusu yarışı tamamladı.'
+            : 'Takip ettiğiniz müsabakada yeni sonuçlar var.');
 
     final meetId = _extractLiveMeetId(message.data);
     final payload = meetId != null ? jsonEncode({'live_meet_id': meetId}) : null;
+    final notificationId = isClubResult
+        ? Object.hash(meetId, message.data['club_id'], 'club')
+        : (meetId ?? message.hashCode);
 
     _localNotifications.show(
-      id: meetId ?? message.hashCode,
+      id: notificationId,
       title: title,
       body: body,
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          liveChannelId,
-          liveChannelName,
-          channelDescription: liveChannelDescription,
+          isClubResult ? clubChannelId : liveChannelId,
+          isClubResult ? clubChannelName : liveChannelName,
+          channelDescription:
+              isClubResult ? clubChannelDescription : liveChannelDescription,
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -379,4 +468,5 @@ class NotificationService extends ChangeNotifier {
   }
 
   static String topicForLiveMeet(int liveMeetId) => 'live_meet_$liveMeetId';
+  static String topicForClub(int clubId) => 'club_$clubId';
 }

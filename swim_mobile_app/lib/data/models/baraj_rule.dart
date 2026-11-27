@@ -121,3 +121,132 @@ class BarajFeedResponse {
     required this.ageLabels,
   });
 }
+
+class ClubBarajRuleStatus {
+  final int distance;
+  final String stroke;
+  final String strokeLabel;
+  final String course;
+  final String barajTuru;
+  final String yasEtiketi;
+  final int targetCs;
+  final String targetTime;
+  final int? pbCs;
+  final String? pbTime;
+  final int? diffCs;
+  final bool passed;
+
+  const ClubBarajRuleStatus({
+    required this.distance,
+    required this.stroke,
+    required this.strokeLabel,
+    required this.course,
+    required this.barajTuru,
+    required this.yasEtiketi,
+    required this.targetCs,
+    required this.targetTime,
+    this.pbCs,
+    this.pbTime,
+    this.diffCs,
+    required this.passed,
+  });
+
+  factory ClubBarajRuleStatus.fromJson(Map<String, dynamic> json) {
+    return ClubBarajRuleStatus(
+      distance: (json['distance'] as num?)?.toInt() ?? 0,
+      stroke: (json['stroke'] as String?) ?? '',
+      strokeLabel: (json['stroke_label'] as String?) ?? '',
+      course: (json['course'] as String?) ?? '',
+      barajTuru: (json['baraj_turu'] as String?) ?? '',
+      yasEtiketi: (json['yas_etiketi'] as String?) ?? '',
+      targetCs: (json['target_cs'] as num?)?.toInt() ?? 0,
+      targetTime: (json['target_time'] as String?) ?? '',
+      pbCs: (json['pb_cs'] as num?)?.toInt(),
+      pbTime: json['pb_time'] as String?,
+      diffCs: (json['diff_cs'] as num?)?.toInt(),
+      passed: json['passed'] as bool? ?? false,
+    );
+  }
+}
+
+class ClubBarajAthleteStatus {
+  final int id;
+  final String name;
+  final int? birthYear;
+  final String gender;
+  final int passedCount;
+  final int totalCount;
+  final List<ClubBarajRuleStatus> rules;
+
+  const ClubBarajAthleteStatus({
+    required this.id,
+    required this.name,
+    this.birthYear,
+    required this.gender,
+    required this.passedCount,
+    required this.totalCount,
+    required this.rules,
+  });
+
+  factory ClubBarajAthleteStatus.fromJson(Map<String, dynamic> json) {
+    final rawRules = json['rules'] as List<dynamic>? ?? const [];
+    return ClubBarajAthleteStatus(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: (json['name'] as String?) ?? '',
+      birthYear: (json['birth_year'] as num?)?.toInt(),
+      gender: (json['gender'] as String?) ?? '',
+      passedCount: (json['passed_count'] as num?)?.toInt() ?? 0,
+      totalCount: (json['total_count'] as num?)?.toInt() ?? 0,
+      rules: rawRules
+          .map((e) => ClubBarajRuleStatus.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class ClubBarajSummary {
+  final int totalAthletes;
+  final int passedAthletes;
+  final int totalPassedRules;
+  final int totalApplicableRules;
+
+  const ClubBarajSummary({
+    this.totalAthletes = 0,
+    this.passedAthletes = 0,
+    this.totalPassedRules = 0,
+    this.totalApplicableRules = 0,
+  });
+
+  factory ClubBarajSummary.fromJson(Map<String, dynamic> json) {
+    return ClubBarajSummary(
+      totalAthletes: (json['total_athletes'] as num?)?.toInt() ?? 0,
+      passedAthletes: (json['passed_athletes'] as num?)?.toInt() ?? 0,
+      totalPassedRules: (json['total_passed_rules'] as num?)?.toInt() ?? 0,
+      totalApplicableRules:
+          (json['total_applicable_rules'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class ClubBarajStatusResponse {
+  final ClubBarajSummary summary;
+  final List<ClubBarajAthleteStatus> athletes;
+
+  const ClubBarajStatusResponse({
+    this.summary = const ClubBarajSummary(),
+    this.athletes = const [],
+  });
+
+  factory ClubBarajStatusResponse.fromJson(Map<String, dynamic> json) {
+    final rawAthletes = json['athletes'] as List<dynamic>? ?? const [];
+    return ClubBarajStatusResponse(
+      summary: ClubBarajSummary.fromJson(
+        json['summary'] as Map<String, dynamic>? ?? const {},
+      ),
+      athletes: rawAthletes
+          .map((e) =>
+              ClubBarajAthleteStatus.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}

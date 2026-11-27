@@ -5,9 +5,9 @@ from .models import Kulup, Sporcu, SporcuKulupTarihce, YarisSonucu, CanliYaris, 
 
 @admin.register(CanliYarisDosya)
 class CanliYarisDosyaAdmin(admin.ModelAdmin):
-    list_display = ('dosya_adi', 'event', 'dosya_turu', 'yaris_no', 'mesafe', 'stil', 'durum', 'kayit_sayisi', 'etag', 'content_hash', 'son_islem_tarihi')
+    list_display = ('dosya_adi', 'event', 'dosya_turu', 'gun', 'tahmini_saat', 'yaris_no', 'mesafe', 'stil', 'durum', 'kayit_sayisi', 'etag', 'content_hash', 'son_islem_tarihi')
     search_fields = ('dosya_adi', 'event__musabaka_adi', 'yaris_no', 'content_hash')
-    list_filter = ('dosya_turu', 'durum')
+    list_filter = ('dosya_turu', 'durum', 'gun')
     list_select_related = ('event', 'canli_yaris')
     readonly_fields = ('content_hash', 'etag', 'last_modified', 'dosya_boyutu', 'kayit_sayisi', 'son_kontrol_tarihi', 'son_islem_tarihi', 'olusturulma_tarihi', 'guncellenme_tarihi')
 

@@ -95,48 +95,54 @@ class ModernSegmentedTabBar extends StatelessWidget {
                               curve: Curves.easeOutCubic,
                             ),
                             child: Center(
-                              child: AnimatedScale(
-                                scale: controller.index == index ? 1.02 : 0.98,
-                                duration: const Duration(milliseconds: 200),
-                                curve: Curves.easeOutCubic,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (tabs[index].icon != null) ...[
-                                      Icon(
-                                        tabs[index].icon,
-                                        size: 16,
-                                        color: controller.index == index
-                                            ? palette.activeChipText
-                                            : (tabs[index].iconColor ??
-                                                palette.textSecondary),
-                                      ),
-                                      AppSpacing.hXs,
-                                    ],
-                                    Flexible(
-                                      child: AnimatedDefaultTextStyle(
-                                        duration:
-                                            const Duration(milliseconds: 200),
-                                        curve: Curves.easeOutCubic,
-                                        style: controller.index == index
-                                            ? AppTextStyles.tabSelected
-                                                .copyWith(
-                                                fontWeight: FontWeight.w600,
-                                                color: palette.activeChipText,
-                                              )
-                                            : AppTextStyles.tabUnselected
-                                                .copyWith(
-                                                fontWeight: FontWeight.w500,
-                                                color: palette.textSecondary,
-                                              ),
-                                        child: Text(
-                                          tabs[index].title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 6),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: AnimatedScale(
+                                    scale:
+                                        controller.index == index ? 1.02 : 0.98,
+                                    duration: const Duration(milliseconds: 200),
+                                    curve: Curves.easeOutCubic,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (tabs[index].icon != null) ...[
+                                          Icon(
+                                            tabs[index].icon,
+                                            size: 16,
+                                            color: controller.index == index
+                                                ? palette.activeChipText
+                                                : (tabs[index].iconColor ??
+                                                    palette.textSecondary),
+                                          ),
+                                          AppSpacing.hXs,
+                                        ],
+                                        AnimatedDefaultTextStyle(
+                                          duration:
+                                              const Duration(milliseconds: 200),
+                                          curve: Curves.easeOutCubic,
+                                          style: controller.index == index
+                                              ? AppTextStyles.tabSelected
+                                                  .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: palette.activeChipText,
+                                                )
+                                              : AppTextStyles.tabUnselected
+                                                  .copyWith(
+                                                  fontWeight: FontWeight.w500,
+                                                  color: palette.textSecondary,
+                                                ),
+                                          child: Text(
+                                            tabs[index].title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),

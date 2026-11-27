@@ -24,12 +24,14 @@ urlpatterns = [
 
     # 4. Canlı Yarış Takibi
     path('live/', views_live.get_live_meets, name='live_meets'),
+    path('live/club/', views_live.get_club_live_meets, name='club_live_meets'),
     path('live/<int:live_id>/feed/', views_live.get_live_feed, name='live_feed'),
 
     # 5. Bayrak Simülatörü, Sıralamalar & Özet Akışı
     path('clubs/', views_config.get_clubs_list, name='clubs_list'),
     path('clubs/map/', views_config.get_clubs_map, name='clubs_map'),
     path('clubs/<int:club_id>/', views_config.get_club_detail, name='club_detail'),
+    path('clubs/baraj-status/', views_meets.get_club_baraj_status, name='club_baraj_status'),
     path('clubs/relay-simulator/', views_tools.get_relay_simulator, name='relay_simulator'),
     path('rankings/', views_tools.get_rankings, name='rankings'),
     path('highlights/', views_tools.get_highlights_feed, name='highlights_feed'),

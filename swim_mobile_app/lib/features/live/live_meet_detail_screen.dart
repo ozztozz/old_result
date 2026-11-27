@@ -198,6 +198,11 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
         }).length;
       }
 
+      final timeLabelParts = <String>[
+        if (e.day != null && e.day! > 0) '${e.day}. Gün',
+        if ((e.estimatedTime ?? '').trim().isNotEmpty) e.estimatedTime!.trim(),
+      ];
+
       return RaceModel(
         id: e.eventNo,
         distance: dist,
@@ -210,7 +215,9 @@ class _LiveMeetDetailScreenState extends State<LiveMeetDetailScreen>
                     e.status.toLowerCase().contains('isleniyor')
                 ? RaceStatus.live
                 : RaceStatus.upcoming),
-        startTime: e.status,
+        startTime: timeLabelParts.isNotEmpty
+            ? timeLabelParts.join(' • ')
+            : e.status,
         heatLaneInfo: isFinished ? null : 'Havuzda • Sonuç Bekleniyor',
         winnerSummary: winner,
         myTeamAthleteCount: myTeamCount,

@@ -7,6 +7,7 @@ class PersonalBest {
   final String time;
   final int? timeCs;
   final int? points;
+  final int? rudolphPoints;
   final String date;
   final String meetName;
   final String course; // 'SC' veya 'LC'
@@ -18,6 +19,7 @@ class PersonalBest {
     required this.time,
     this.timeCs,
     this.points,
+    this.rudolphPoints,
     required this.date,
     required this.meetName,
     required this.course,
@@ -31,6 +33,7 @@ class PersonalBest {
       time: json['time'] as String? ?? '',
       timeCs: json['time_cs'] as int?,
       points: json['points'] as int?,
+      rudolphPoints: json['rudolph_points'] as int?,
       date: json['date'] as String? ?? '',
       meetName: json['meet_name'] as String? ?? '',
       course: json['course'] as String? ?? 'LC',
@@ -132,6 +135,7 @@ class AthleteRaceHistoryItem {
   final int? timeCs;
   final String resultStatus;
   final int? points;
+  final int? rudolphPoints;
   final String clubName;
 
   AthleteRaceHistoryItem({
@@ -151,6 +155,7 @@ class AthleteRaceHistoryItem {
     this.timeCs,
     required this.resultStatus,
     this.points,
+    this.rudolphPoints,
     required this.clubName,
   });
 
@@ -172,6 +177,7 @@ class AthleteRaceHistoryItem {
       timeCs: json['time_cs'] as int?,
       resultStatus: json['result_status'] as String? ?? 'OK',
       points: json['points'] as int?,
+      rudolphPoints: json['rudolph_points'] as int?,
       clubName: json['club_name'] as String? ?? '',
     );
   }

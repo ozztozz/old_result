@@ -31,11 +31,47 @@ Future<void> main() async {
 
   await NotificationService.instance.init(
     initialFavoriteMeetIds: FavoriteLiveMeetsService.instance.favoriteIds,
+    initialFavoriteClubId: SelectedClubService.instance.clubId,
   );
 
   // Merkezi HTTP ve Veri Deposu
   final apiClient = ApiClient();
   final repository = SwimRepository(apiClient: apiClient);
+
+  // Kulüp adı seçili ancak ID'si yoksa (örn. ClubSelectionSheet üzerinden seçildiyse)
+  // arka planda kulüp ID'sini çözüp FCM topic aboneliğini tamamla.
+  String? resolvingClubName;
+  Future<void> resolveClubIdIfNeeded() async {
+    final clubService = SelectedClubService.instance;
+    final name = clubService.clubName?.trim();
+    if (!clubService.hasSelectedClub ||
+        clubService.clubId != null ||
+        name == null ||
+        name.isEmpty ||
+        resolvingClubName == name) {
+      return;
+    }
+    resolvingClubName = name;
+    try {
+      final results = await repository.searchClubs(q: name);
+      if (clubService.clubName?.trim() != name || clubService.clubId != null) {
+        return;
+      }
+      for (final item in results) {
+        if (clubService.matches(item.name, item.id)) {
+          await clubService.setClub(id: item.id, name: name);
+          break;
+        }
+      }
+    } catch (_) {
+      // Ağ hatası varsa sessizce geç; bir sonraki açılışta tekrar denenir
+    }
+  }
+
+  SelectedClubService.instance.addListener(() {
+    unawaited(resolveClubIdIfNeeded());
+  });
+  unawaited(resolveClubIdIfNeeded());
 
   runApp(SwimApp(repository: repository));
 }

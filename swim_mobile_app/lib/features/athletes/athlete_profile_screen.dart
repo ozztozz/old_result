@@ -14,10 +14,12 @@ import '../../data/models/athlete.dart';
 import '../../data/models/baraj_rule.dart';
 import '../../data/repositories/swim_repository.dart';
 import '../../shared/widgets/baraj_event_selector.dart';
+import '../../shared/widgets/baraj_status_table.dart';
 import '../../shared/widgets/brand_header_bar.dart';
 import '../../shared/widgets/formatted_summary_view.dart';
 import '../../shared/widgets/modern_filter_chips.dart';
 import '../../shared/widgets/modern_segmented_tab_bar.dart';
+import '../calendar/event_calendar_screen.dart';
 import 'athlete_compare_screen.dart';
 import 'widgets/pb_history_sheet.dart';
 
@@ -49,7 +51,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   String _selectedBarajMeet = '';
   String _selectedBarajCity = '';
   String _selectedBarajMonth = '';
-  String _selectedBarajType = 'Katılım Barajı';
+  final String _selectedBarajType = 'Katılım Barajı';
   bool _isFavorite = false;
   late TabController _tabController;
   int _selectedCourseIndex = 0; // 0: 50m Uzun Kulvar, 1: 25m Kısa Kulvar
@@ -57,7 +59,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _isFavorite = FavoriteAthletesService.instance.isFavorite(widget.athleteId);
     FavoriteAthletesService.instance.addListener(_onFavoritesChanged);
     _loadAthleteData();
@@ -145,69 +147,74 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                           onAction: _loadAthleteData,
                         ),
                       )
-                    : NestedScrollView(
-                        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                AppSpacing.s20,
-                                AppSpacing.s12,
-                                AppSpacing.s20,
-                                AppSpacing.md,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const BrandHeaderBar(
-                                    subtitle: 'Sporcu Profili',
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildProfileHero(palette, _athlete!),
-                                ],
-                              ),
+                    : Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.s20,
+                              AppSpacing.s12,
+                              AppSpacing.s20,
+                              AppSpacing.sm,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const BrandHeaderBar(
+                                  subtitle: 'Sporcu Profili',
+                                  padding: EdgeInsets.zero,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildProfileHero(palette, _athlete!),
+                              ],
                             ),
                           ),
-                          SliverPersistentHeader(
-                            pinned: true,
-                            delegate: _PinnedTabBarDelegate(
-                              extent: _profileTabBarHeight + AppSpacing.xs * 2,
-                              child: Container(
-                                color: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.s20,
-                                  vertical: AppSpacing.xs,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.s20,
+                              vertical: AppSpacing.xs,
+                            ),
+                            child: ModernSegmentedTabBar(
+                              controller: _tabController,
+                              height: _profileTabBarHeight,
+                              tabs: const [
+                                TabItemData(
+                                  title: 'Takvim',
+                                  icon: Icons.calendar_month_outlined,
                                 ),
-                                child: ModernSegmentedTabBar(
-                                  controller: _tabController,
-                                  height: _profileTabBarHeight,
-                                  tabs: const [
-                                    TabItemData(
-                                      title: 'Best Time',
-                                      icon: Icons.timer_outlined,
-                                    ),
-                                    TabItemData(
-                                      title: 'Barajlar',
-                                      icon: Icons.flag_outlined,
-                                    ),
-                                    TabItemData(
-                                      title: 'Scout Analizi',
-                                      icon: Icons.insights_outlined,
-                                    ),
-                                  ],
+                                TabItemData(
+                                  title: 'Best Time',
+                                  icon: Icons.timer_outlined,
                                 ),
-                              ),
+                                TabItemData(
+                                  title: 'Barajlar',
+                                  icon: Icons.flag_outlined,
+                                ),
+                                TabItemData(
+                                  title: 'Scout Analizi',
+                                  icon: Icons.insights_outlined,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: TabBarView(
+                              controller: _tabController,
+                              children: [
+                                EventCalendarScreen(
+                                  repository: widget.repository,
+                                  initialAge: (_athlete!.birthYear != null &&
+                                          _athlete!.birthYear! > 1900)
+                                      ? DateTime.now().year - _athlete!.birthYear!
+                                      : null,
+                                  embedded: true,
+                                ),
+                                _buildBestTimesTab(context, palette, _athlete!),
+                                _buildBarajlarTab(context, palette),
+                                _buildScoutAnalysisTab(context, palette, _athlete!),
+                              ],
                             ),
                           ),
                         ],
-                        body: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildBestTimesTab(context, palette, _athlete!),
-                            _buildBarajlarTab(context, palette),
-                            _buildScoutAnalysisTab(context, palette, _athlete!),
-                          ],
-                        ),
                       ),
           ),
         ),
@@ -228,7 +235,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
         AppSpacing.vSm,
         const AppSkeleton.line(width: 240, height: 28),
         AppSpacing.vLg,
-        const AppSkeleton.card(height: 164),
+        const AppSkeleton.card(height: 84),
         AppSpacing.vLg,
         const AppSkeleton.card(height: 46, borderRadius: AppRadius.chipRadius),
         AppSpacing.vLg,
@@ -246,7 +253,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     required Color onContrast,
     required String tooltip,
     required VoidCallback onTap,
-    double size = 38,
+    double size = 34,
   }) {
     return Tooltip(
       message: tooltip,
@@ -267,7 +274,7 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
               ),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, size: 19, color: iconColor),
+            child: Icon(icon, size: 17, color: iconColor),
           ),
         ),
       ),
@@ -303,236 +310,125 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     }
     final metaText = metaItems.join(' · ');
 
-    final hasPodium = a.stats.podiumCount > 0;
     final onContrast = palette.textOnContrast;
     return Container(
       decoration: BoxDecoration(
         color: palette.surfaceContrast,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
-      padding: AppSpacing.cardPadding,
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: palette.primary.withAlpha(42),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: palette.primary,
-                    width: 1.5,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials.isEmpty ? 'SP' : initials,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.displayFontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: onContrast,
-                  ),
-                ),
-              ),
-              AppSpacing.hMd,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      athleteName,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.displayFontFamily,
-                        fontFamilyFallback: AppTextStyles.fontFamilyFallback,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                        height: 1.18,
-                        color: onContrast,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (metaText.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        metaText,
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: onContrast.withAlpha(200),
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 3),
-                    Text(
-                      clubName,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: palette.primary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (hasPodium) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        'Kürsü Oranı %${a.stats.podiumRate.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontFamily: AppTextStyles.fontFamily,
-                          fontSize: 12,
-                          color: onContrast.withAlpha(170),
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              AppSpacing.hSm,
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeroCircleButton(
-                    icon: Icons.compare_arrows_outlined,
-                    iconColor: onContrast,
-                    onContrast: onContrast,
-                    tooltip: 'Karşılaştır',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AthleteCompareScreen(
-                            athleteA: a,
-                            repository: widget.repository,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 6),
-                  _buildHeroCircleButton(
-                    icon: _isFavorite
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    iconColor:
-                        _isFavorite ? palette.statusWarning : onContrast,
-                    onContrast: onContrast,
-                    tooltip:
-                        _isFavorite ? 'Favorilerden çıkar' : 'Favoriye ekle',
-                    onTap: _toggleFavorite,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          AppSpacing.v20,
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: _buildHeroMetric(
-                  palette: palette,
-                  label: 'Toplam Yarış',
-                  value: '${a.stats.totalRaces}',
-                ),
-              ),
-              if (hasPodium) ...[
-                _buildHeroDivider(palette),
-                Expanded(
-                  child: _buildHeroMetric(
-                    palette: palette,
-                    label: 'Kürsü',
-                    value: '${a.stats.podiumCount}',
-                  ),
-                ),
-              ],
-              _buildHeroDivider(palette),
-              Expanded(
-                child: _buildHeroMetric(
-                  palette: palette,
-                  label: 'Baraj',
-                  value: '${a.stats.standardsPassed}',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeroMetric({
-    required AppColorPalette palette,
-    required String label,
-    required String value,
-  }) {
-    final onContrast = palette.textOnContrast;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            height: 46,
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  softWrap: false,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    fontSize: 38,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    height: 1.0,
-                    color: onContrast,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: palette.primary.withAlpha(42),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: palette.primary,
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initials.isEmpty ? 'SP' : initials,
+              style: TextStyle(
+                fontFamily: AppTextStyles.displayFontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: onContrast,
               ),
             ),
           ),
-          AppSpacing.vXs,
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppTextStyles.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: onContrast.withAlpha(180),
+          AppSpacing.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  athleteName,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.displayFontFamily,
+                    fontFamilyFallback: AppTextStyles.fontFamilyFallback,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                    height: 1.15,
+                    color: onContrast,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (metaText.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    metaText,
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: onContrast.withAlpha(200),
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 2),
+                Text(
+                  clubName,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.fontFamily,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: palette.primary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
+          ),
+          AppSpacing.hSm,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeroCircleButton(
+                icon: Icons.compare_arrows_outlined,
+                iconColor: onContrast,
+                onContrast: onContrast,
+                tooltip: 'Karşılaştır',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AthleteCompareScreen(
+                        athleteA: a,
+                        repository: widget.repository,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 6),
+              _buildHeroCircleButton(
+                icon: _isFavorite
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+                iconColor:
+                    _isFavorite ? palette.statusWarning : onContrast,
+                onContrast: onContrast,
+                tooltip:
+                    _isFavorite ? 'Favorilerden çıkar' : 'Favoriye ekle',
+                onTap: _toggleFavorite,
+              ),
+            ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeroDivider(AppColorPalette palette) {
-    return Container(
-      width: 1,
-      height: 36,
-      color: palette.textOnContrast.withAlpha(36),
     );
   }
 
@@ -973,23 +869,6 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                     )
                 : null,
           ),
-          AppSpacing.vSm,
-          Row(
-            children: [
-              ModernFilterChip(
-                label: 'Katılım',
-                isSelected: _selectedBarajType == 'Katılım Barajı',
-                onTap: () =>
-                    setState(() => _selectedBarajType = 'Katılım Barajı'),
-              ),
-              ModernFilterChip(
-                label: 'Harcırah',
-                isSelected: _selectedBarajType == 'Harcırah Barajı',
-                onTap: () =>
-                    setState(() => _selectedBarajType = 'Harcırah Barajı'),
-              ),
-            ],
-          ),
           if (meetRows.any((t) =>
               (t['pb_cs'] as num?) == null &&
               (t['overall_pb_cs'] as num?) != null)) ...[
@@ -1028,100 +907,12 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
             ),
           ],
           const SizedBox(height: 8),
-          // Kompakt tablo başlığı
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: Row(
-              children: [
-                const SizedBox(
-                  width: 52,
-                  child: Text('MESAFE',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
-                ),
-                Expanded(
-                  child: Text(
-                    'BARAJ',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'SPORCU',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    'DURUM',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 6, color: palette.divider),
-          if (strokes.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'Bu etkinlikte seçili tür için baraj bulunamadı.',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.fontFamily,
-                  fontSize: 12,
-                  color: palette.textSecondary,
-                ),
-              ),
-            )
-          else
-            ...strokes.map((stroke) {
-              final list = byStroke[stroke]!;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10, bottom: 4),
-                    child: Row(
-                      children: [
-                        Text(
-                          stroke,
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.displayFontFamily,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            height: 1.2,
-                            color: palette.primary.withAlpha(75),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ...list.map((t) {
-                    final mesafe = t['mesafe'];
+          BarajTabbedStatusView(
+            rows: [
+              for (final stroke in strokes)
+                for (final t in byStroke[stroke]!)
+                  (() {
+                    final mesafe = (t['mesafe'] as num?)?.toInt() ?? 0;
                     final rawTargetTime = (t['target_time'] ?? '-').toString();
                     final targetCs = _parseBarajTimeToCs(rawTargetTime);
                     final targetText = targetCs != null
@@ -1133,153 +924,23 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                     final pbText = shownPbCs == null
                         ? '-'
                         : SwimTimeFormatter.formatCs(shownPbCs);
-
                     final rawDiffCs = (t['diff_cs'] as num?)?.toInt() ??
                         (shownPbCs != null && targetCs != null
                             ? shownPbCs - targetCs
                             : null);
                     final passed = t['passed'] == true ||
                         (rawDiffCs != null && rawDiffCs <= 0);
-                    final statusText = rawDiffCs != null
-                        ? (passed
-                            ? 'GEÇTİ'
-                            : '+${(rawDiffCs / 100).toStringAsFixed(2)}')
-                        : '-';
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 6, horizontal: 4),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: palette.divider.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 52,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Container(
-                                width: 42,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: passed
-                                      ? (palette.isDark
-                                          ? const Color(0x2610B981)
-                                          : const Color(0xFFECFDF5))
-                                      : palette.statusSuccessBg,
-                                  borderRadius: BorderRadius.circular(7),
-                                  border: Border.all(
-                                    color: (passed
-                                            ? const Color(0xFF10B981)
-                                            : palette.statusSuccess)
-                                        .withAlpha(85),
-                                    width: 1.0,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '${mesafe ?? "-"}',
-                                  style: TextStyle(
-                                    fontFamily: AppTextStyles.displayFontFamily,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.3,
-                                    color: passed
-                                        ? (palette.isDark
-                                            ? const Color(0xFF34D399)
-                                            : const Color(0xFF059669))
-                                        : palette.statusSuccess,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              targetText,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: palette.statusSuccess,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              pbText,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: shownPbCs != null
-                                    ? palette.textPrimary
-                                    : palette.textTertiary,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 72,
-                            child: rawDiffCs != null && passed
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.emoji_events_rounded,
-                                        size: 13.5,
-                                        color: palette.gold,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        statusText,
-                                        style: TextStyle(
-                                          fontFamily: AppTextStyles.fontFamily,
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: palette.isDark
-                                              ? const Color(0xFF34D399)
-                                              : const Color(0xFF059669),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    statusText,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontFamily: AppTextStyles.fontFamily,
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: rawDiffCs != null
-                                          ? palette.statusWarning
-                                          : palette.textTertiary,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      ),
+                    return BarajStatusRowData(
+                      distance: mesafe,
+                      strokeLabel: stroke,
+                      targetTime: targetText,
+                      pbTime: pbText,
+                      diffCs: rawDiffCs,
+                      passed: passed,
                     );
-                  }),
-                ],
-              );
-            }),
+                  })(),
+            ],
+          ),
         ],
       ),
     );
@@ -1329,6 +990,17 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   }
 
   /// Belirli bir stil altındaki mesafeleri Level 2 cam kart içinde saran kutucuklar olarak gösterir
+  String _formatPbDate(String raw) {
+    final s = raw.trim();
+    if (s.length >= 10 && s[4] == '-' && s[7] == '-') {
+      final y = s.substring(0, 4);
+      final m = s.substring(5, 7);
+      final d = s.substring(8, 10);
+      return '$d.$m.$y';
+    }
+    return s;
+  }
+
   Widget _buildStrokeSection(
     AppColorPalette palette,
     String strokeName,
@@ -1477,6 +1149,56 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
                                             ),
                                           ),
                                         ),
+                                        if (pb.date.trim().isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              _formatPbDate(pb.date),
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              style: TextStyle(
+                                                fontFamily:
+                                                    AppTextStyles.fontFamily,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w500,
+                                                color: palette.textSecondary,
+                                                fontFeatures: const [
+                                                  FontFeature.tabularFigures(),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                        if (pb.rudolphPoints != null &&
+                                            pb.rudolphPoints! > 0) ...[
+                                          const SizedBox(height: 3),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 1.5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: palette.primary
+                                                  .withValues(alpha: 0.14),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'Rudolph ${pb.rudolphPoints}',
+                                              style: TextStyle(
+                                                fontFamily:
+                                                    AppTextStyles.fontFamily,
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: palette.primary,
+                                                fontFeatures: const [
+                                                  FontFeature.tabularFigures(),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
@@ -1508,6 +1230,13 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
     final peakPb = allPbs.isNotEmpty && (allPbs.first.points ?? 0) > 0
         ? allPbs.first
         : null;
+    final rudolphPbs = allPbs
+        .where((e) => (e.rudolphPoints ?? 0) > 0)
+        .toList()
+      ..sort(
+        (x, y) => (y.rudolphPoints ?? 0).compareTo(x.rudolphPoints ?? 0),
+      );
+    final peakRudolphPb = rudolphPbs.isNotEmpty ? rudolphPbs.first : null;
 
     final podiumRatio = (a.stats.podiumRate / 100.0).clamp(0.0, 1.0);
 
@@ -1568,87 +1297,111 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
         ),
         AppSpacing.vLg,
 
-        // 2. Kariyer Verimliliği & Kürsü Dönüşüm Analizi
-        const SectionHeader(title: 'Kariyer Verimliliği'),
-        AppSpacing.v12,
-        SoftGlassPanel(
-          level: 2,
-          borderRadius: AppRadius.cardRadius,
-          padding: AppSpacing.cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Kürsüye Çıkma Oranı',
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontSize: 13.5,
-                        color: palette.textSecondary,
+        // 2. Kariyer Verimliliği & Pozitif Metrikler
+        if (a.stats.totalRaces > 0 ||
+            a.stats.podiumCount > 0 ||
+            a.stats.standardsPassed > 0 ||
+            allPbs.isNotEmpty) ...[
+          const SectionHeader(title: 'Kariyer Verimliliği'),
+          AppSpacing.v12,
+          SoftGlassPanel(
+            level: 2,
+            borderRadius: AppRadius.cardRadius,
+            padding: AppSpacing.cardPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (a.stats.podiumCount > 0) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Kürsüye Çıkma Oranı',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 13.5,
+                            color: palette.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      AppSpacing.hSm,
+                      Text(
+                        '%${a.stats.podiumRate.toStringAsFixed(1)}',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: palette.textPrimary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  AppSpacing.vSm,
+                  ClipRRect(
+                    borderRadius: AppRadius.full,
+                    child: LinearProgressIndicator(
+                      value: podiumRatio,
+                      minHeight: 8,
+                      backgroundColor: palette.progressTrack,
+                      valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
                     ),
                   ),
-                  AppSpacing.hSm,
-                  Text(
-                    '%${a.stats.podiumRate.toStringAsFixed(1)}',
-                    maxLines: 1,
-                    softWrap: false,
-                    style: TextStyle(
-                      fontFamily: AppTextStyles.fontFamily,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: palette.textPrimary,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
+                  AppSpacing.vMd,
+                  Divider(color: palette.divider, height: 1),
+                  AppSpacing.v12,
                 ],
-              ),
-              AppSpacing.vSm,
-              ClipRRect(
-                borderRadius: AppRadius.full,
-                child: LinearProgressIndicator(
-                  value: podiumRatio,
-                  minHeight: 8,
-                  backgroundColor: palette.progressTrack,
-                  valueColor: AlwaysStoppedAnimation<Color>(palette.primary),
+                Row(
+                  children: [
+                    if (a.stats.totalRaces > 0)
+                      _buildMetricDetail(
+                        palette: palette,
+                        label: 'Toplam Yarış',
+                        value: '${a.stats.totalRaces}',
+                      ),
+                    if (a.stats.podiumCount > 0)
+                      _buildMetricDetail(
+                        palette: palette,
+                        label: 'Madalya / Kürsü',
+                        value: '${a.stats.podiumCount}',
+                      ),
+                    if (a.stats.standardsPassed > 0)
+                      _buildMetricDetail(
+                        palette: palette,
+                        label: 'Geçilen Baraj',
+                        value: '${a.stats.standardsPassed}',
+                      )
+                    else if (allPbs.isNotEmpty)
+                      _buildMetricDetail(
+                        palette: palette,
+                        label: 'Kayıtlı PB',
+                        value: '${allPbs.length}',
+                      ),
+                    if (peakRudolphPb != null)
+                      _buildMetricDetail(
+                        palette: palette,
+                        label: 'En İyi Rudolph',
+                        value: '${peakRudolphPb.rudolphPoints}/20',
+                      ),
+                  ],
                 ),
-              ),
-              AppSpacing.vMd,
-              Divider(color: palette.divider, height: 1),
-              AppSpacing.v12,
-              Row(
-                children: [
-                  _buildMetricDetail(
-                    palette: palette,
-                    label: 'Yarış / Start',
-                    value: '${a.stats.totalRaces}',
-                  ),
-                  _buildMetricDetail(
-                    palette: palette,
-                    label: 'Madalya / Kürsü',
-                    value: '${a.stats.podiumCount}',
-                  ),
-                  _buildMetricDetail(
-                    palette: palette,
-                    label: 'Geçilen Baraj',
-                    value: '${a.stats.standardsPassed}',
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
 
-        // 3. Zirve Performans (En Yüksek FINA Puanı)
-        if (peakPb != null) ...[
+        // 3. Zirve Performans (Yaş Grubu Rudolph & FINA)
+        if (peakRudolphPb != null || peakPb != null) ...[
           AppSpacing.vLg,
           SectionHeader(
             title: 'Zirve Performans',
-            trailingText: '${peakPb.points} FINA',
+            trailingText: peakRudolphPb != null
+                ? '${peakRudolphPb.rudolphPoints}/20 Rudolph'
+                : '${peakPb!.points} FINA',
           ),
           AppSpacing.v12,
           SoftGlassPanel(
@@ -1658,54 +1411,578 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${peakPb.distance}m ${peakPb.strokeLabel}',
+                if (peakRudolphPb != null) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${peakRudolphPb.distance}m ${peakRudolphPb.strokeLabel}',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: palette.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: palette.primary.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${peakRudolphPb.rudolphPoints}/20 Rudolph',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: palette.primary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      Text(
+                        SwimTimeFormatter.formatCs(peakRudolphPb.timeCs),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: palette.textPrimary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  AppSpacing.vXs,
+                  Text(
+                    '${peakRudolphPb.course == 'SC' ? '25m Kısa Kulvar' : '50m Uzun Kulvar'} · ${StringUtils.toTitleCase(peakRudolphPb.meetName)} (${_formatPbDate(peakRudolphPb.date)})',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      color: palette.textSecondary,
+                      fontSize: 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (peakPb != null &&
+                    (peakRudolphPb == null ||
+                        peakPb.distance != peakRudolphPb.distance ||
+                        peakPb.stroke != peakRudolphPb.stroke ||
+                        peakPb.course != peakRudolphPb.course)) ...[
+                  if (peakRudolphPb != null) ...[
+                    AppSpacing.vMd,
+                    Divider(color: palette.divider, height: 1),
+                    AppSpacing.v12,
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${peakPb.distance}m ${peakPb.strokeLabel}',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14.5,
+                            color: palette.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: palette.accent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${peakPb.points} FINA',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      Text(
+                        SwimTimeFormatter.formatCs(peakPb.timeCs),
+                        maxLines: 1,
+                        softWrap: false,
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
                           fontWeight: FontWeight.w600,
-                          fontSize: 15,
+                          fontSize: 15.5,
                           color: palette.textPrimary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    AppSpacing.h12,
-                    Text(
-                      SwimTimeFormatter.formatCs(peakPb.timeCs),
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontFamily: AppTextStyles.fontFamily,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 17,
-                        color: palette.textPrimary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-                AppSpacing.vXs,
-                Text(
-                  '${peakPb.course == 'SC' ? '25m Kısa Kulvar' : '50m Uzun Kulvar'} · ${StringUtils.toTitleCase(peakPb.meetName)} (${peakPb.date})',
-                  style: TextStyle(
-                    fontFamily: AppTextStyles.fontFamily,
-                    color: palette.textSecondary,
-                    fontSize: 12.5,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  AppSpacing.vXs,
+                  Text(
+                    '${peakPb.course == 'SC' ? '25m Kısa Kulvar' : '50m Uzun Kulvar'} · ${StringUtils.toTitleCase(peakPb.meetName)} (${_formatPbDate(peakPb.date)})',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      color: palette.textSecondary,
+                      fontSize: 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
         ],
+
+        // 4. Güçlü Stiller & Mesafe Profili
+        if (allPbs.isNotEmpty) ..._buildStrengthProfileSection(palette, allPbs),
+
+        // 5. Hedefe Yakın Branşlar (Sadece pozitif fırsatlar)
+        ..._buildCloseBarajSection(palette),
+
+        // 6. Son Dönem Form & PB Özeti
+        ..._buildRecentFormSection(palette, allPbs),
       ],
     );
+  }
+
+  DateTime? _parsePbDateTime(String raw) {
+    final s = raw.trim();
+    if (s.length >= 10 && s[4] == '-' && s[7] == '-') {
+      return DateTime.tryParse(s.substring(0, 10));
+    }
+    final dot = RegExp(r'^(\d{2})\.(\d{2})\.(\d{4})').firstMatch(s);
+    if (dot != null) {
+      final d = int.tryParse(dot.group(1)!);
+      final m = int.tryParse(dot.group(2)!);
+      final y = int.tryParse(dot.group(3)!);
+      if (d != null && m != null && y != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    return null;
+  }
+
+  List<Widget> _buildStrengthProfileSection(
+    AppColorPalette palette,
+    List<PersonalBest> allPbs,
+  ) {
+    final strokeBestScore = <String, int>{};
+    final hasAnyRudolph = allPbs.any((pb) => (pb.rudolphPoints ?? 0) > 0);
+    final hasAnyFina =
+        !hasAnyRudolph && allPbs.any((pb) => (pb.points ?? 0) > 0);
+    for (final pb in allPbs) {
+      final key = pb.strokeLabel.isNotEmpty ? pb.strokeLabel : pb.stroke;
+      if (key.isEmpty) continue;
+      if (hasAnyRudolph) {
+        final r = pb.rudolphPoints ?? 0;
+        if (r > 0) {
+          strokeBestScore[key] =
+              (strokeBestScore[key] ?? 0) > r ? strokeBestScore[key]! : r;
+        }
+      } else if (hasAnyFina) {
+        final pts = pb.points ?? 0;
+        if (pts > 0) {
+          strokeBestScore[key] =
+              (strokeBestScore[key] ?? 0) > pts ? strokeBestScore[key]! : pts;
+        }
+      } else {
+        strokeBestScore[key] = (strokeBestScore[key] ?? 0) + 1;
+      }
+    }
+    if (strokeBestScore.isEmpty) return const [];
+
+    final sortedStrokes = strokeBestScore.entries.toList()
+      ..sort((x, y) => y.value.compareTo(x.value));
+    final maxScore = hasAnyRudolph ? 20 : sortedStrokes.first.value;
+
+    // Mesafe profili: Sprint (50-100), Orta (200), Uzun (400+)
+    final tierScores = <String, int>{};
+    for (final pb in allPbs) {
+      final tier = pb.distance <= 100
+          ? 'Sprint (50-100m)'
+          : pb.distance == 200
+              ? 'Orta Mesafe (200m)'
+              : 'Uzun Mesafe (400m+)';
+      final val = hasAnyRudolph
+          ? (pb.rudolphPoints ?? 0)
+          : hasAnyFina
+              ? (pb.points ?? 0)
+              : 1;
+      if ((hasAnyRudolph || hasAnyFina) && val == 0) continue;
+      if (hasAnyRudolph || hasAnyFina) {
+        tierScores[tier] =
+            (tierScores[tier] ?? 0) > val ? tierScores[tier]! : val;
+      } else {
+        tierScores[tier] = (tierScores[tier] ?? 0) + 1;
+      }
+    }
+    final sortedTiers = tierScores.entries.toList()
+      ..sort((x, y) => y.value.compareTo(x.value));
+
+    return [
+      AppSpacing.vLg,
+      SectionHeader(
+        title: 'Branş Güç Profili',
+        trailingText: 'Ana Stil: ${sortedStrokes.first.key}',
+      ),
+      AppSpacing.v12,
+      SoftGlassPanel(
+        level: 2,
+        borderRadius: AppRadius.cardRadius,
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (int i = 0; i < sortedStrokes.length; i++) ...[
+              if (i > 0) const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      sortedStrokes[i].key,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 13,
+                        fontWeight: i == 0 ? FontWeight.w700 : FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (i == 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: palette.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'En Güçlü',
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: palette.primary,
+                        ),
+                      ),
+                    ),
+                  Text(
+                    hasAnyRudolph
+                        ? '${sortedStrokes[i].value}/20 Rudolph'
+                        : hasAnyFina
+                            ? '${sortedStrokes[i].value} FINA'
+                            : '${sortedStrokes[i].value} Branş',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.fontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: i == 0 ? palette.primary : palette.textSecondary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              ClipRRect(
+                borderRadius: AppRadius.full,
+                child: LinearProgressIndicator(
+                  value: maxScore > 0
+                      ? (sortedStrokes[i].value / maxScore).clamp(0.15, 1.0)
+                      : 0.5,
+                  minHeight: 6,
+                  backgroundColor: palette.progressTrack,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    i == 0 ? palette.primary : palette.accent,
+                  ),
+                ),
+              ),
+            ],
+            if (sortedTiers.isNotEmpty) ...[
+              AppSpacing.vMd,
+              Divider(color: palette.divider, height: 1),
+              AppSpacing.v12,
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: sortedTiers.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final t = entry.value;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: idx == 0
+                          ? palette.primary.withValues(alpha: 0.12)
+                          : palette.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: idx == 0
+                            ? palette.primary.withValues(alpha: 0.45)
+                            : palette.border,
+                      ),
+                    ),
+                    child: Text(
+                      hasAnyRudolph
+                          ? '${t.key} · ${t.value}/20 R'
+                          : hasAnyFina
+                              ? '${t.key} · ${t.value} FINA'
+                              : '${t.key} (${t.value})',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 11.5,
+                        fontWeight: idx == 0 ? FontWeight.w700 : FontWeight.w500,
+                        color: idx == 0 ? palette.primary : palette.textPrimary,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildCloseBarajSection(AppColorPalette palette) {
+    final seen = <String>{};
+    final candidates = <Map<String, dynamic>>[];
+    for (final t in _barajTargets) {
+      if (t['passed'] != false) continue;
+      final pbCs = (t['pb_cs'] as num?)?.toInt();
+      final barajCs = (t['baraj_cs'] as num?)?.toInt();
+      if (pbCs == null || barajCs == null) continue;
+      final diffCs = pbCs - barajCs;
+      if (diffCs <= 0 || diffCs > 500) continue; // 5 saniye içinde hedefe yakınlar
+      final key = '${t['havuz']}_${t['mesafe']}_${t['stil']}';
+      if (!seen.add(key)) continue;
+      candidates.add({...t, '_diff_cs': diffCs});
+    }
+    if (candidates.isEmpty) return const [];
+
+    candidates.sort(
+      (x, y) => (x['_diff_cs'] as int).compareTo(y['_diff_cs'] as int),
+    );
+    final top = candidates.take(3).toList();
+
+    return [
+      AppSpacing.vLg,
+      const SectionHeader(
+        title: 'Baraja Çok Yakın Branşlar',
+        trailingText: 'Hedef Fırsatı',
+      ),
+      AppSpacing.v12,
+      SoftGlassPanel(
+        level: 2,
+        borderRadius: AppRadius.cardRadius,
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          children: [
+            for (int i = 0; i < top.length; i++) ...[
+              if (i > 0) ...[
+                const SizedBox(height: 8),
+                Divider(color: palette.divider, height: 1),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${top[i]['mesafe']}m ${top[i]['stil']} (${top[i]['havuz'] ?? ''})',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: palette.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Hedef: ${SwimTimeFormatter.formatCs((top[i]['baraj_cs'] as num).toInt())} · PB: ${SwimTimeFormatter.formatCs((top[i]['pb_cs'] as num).toInt())}',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 11.5,
+                            color: palette.textSecondary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.primary.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Sadece ${((top[i]['_diff_cs'] as int) / 100.0).toStringAsFixed(2)} sn',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: palette.primary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildRecentFormSection(
+    AppColorPalette palette,
+    List<PersonalBest> allPbs,
+  ) {
+    if (allPbs.isEmpty) return const [];
+    final cutoff = DateTime.now().subtract(const Duration(days: 180));
+    final recentPbs = <PersonalBest>[];
+    PersonalBest? latestPb;
+    DateTime? latestDt;
+
+    for (final pb in allPbs) {
+      final dt = _parsePbDateTime(pb.date);
+      if (dt != null) {
+        if (!dt.isBefore(cutoff)) {
+          recentPbs.add(pb);
+        }
+        if (latestDt == null || dt.isAfter(latestDt)) {
+          latestDt = dt;
+          latestPb = pb;
+        }
+      }
+    }
+
+    final finaPoints =
+        allPbs.map((e) => e.points ?? 0).where((p) => p > 0).toList();
+    final avgFina = finaPoints.isNotEmpty
+        ? (finaPoints.reduce((a, b) => a + b) / finaPoints.length).round()
+        : 0;
+    final rudolphList = allPbs
+        .map((e) => e.rudolphPoints ?? 0)
+        .where((p) => p > 0)
+        .toList();
+    final avgRudolph = rudolphList.isNotEmpty
+        ? (rudolphList.reduce((a, b) => a + b) / rudolphList.length)
+        : 0.0;
+
+    if (recentPbs.isEmpty &&
+        avgFina == 0 &&
+        avgRudolph == 0 &&
+        latestPb == null) {
+      return const [];
+    }
+
+    return [
+      AppSpacing.vLg,
+      const SectionHeader(title: 'Son Dönem Form & Gelişim'),
+      AppSpacing.v12,
+      SoftGlassPanel(
+        level: 2,
+        borderRadius: AppRadius.cardRadius,
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (recentPbs.isNotEmpty)
+                  _buildMetricDetail(
+                    palette: palette,
+                    label: 'Son 6 Ayda PB',
+                    value: '${recentPbs.length}',
+                  ),
+                if (avgRudolph > 0)
+                  _buildMetricDetail(
+                    palette: palette,
+                    label: 'Ort. Rudolph',
+                    value: '${avgRudolph.toStringAsFixed(1)}/20',
+                  )
+                else if (avgFina > 0)
+                  _buildMetricDetail(
+                    palette: palette,
+                    label: 'Ort. En İyi FINA',
+                    value: '$avgFina',
+                  ),
+                _buildMetricDetail(
+                  palette: palette,
+                  label: 'Toplam PB Branşı',
+                  value: '${allPbs.length}',
+                ),
+              ],
+            ),
+            if (latestPb != null) ...[
+              AppSpacing.vMd,
+              Divider(color: palette.divider, height: 1),
+              AppSpacing.v12,
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 16,
+                    color: palette.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'En Güncel PB: ${latestPb.distance}m ${latestPb.strokeLabel} (${SwimTimeFormatter.formatCs(latestPb.timeCs)})'
+                      '${(latestPb.rudolphPoints ?? 0) > 0 ? ' · Rudolph ${latestPb.rudolphPoints}/20' : ''}'
+                      ' · ${_formatPbDate(latestPb.date)}',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.fontFamily,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
   }
 
   Widget _buildMetricDetail({
@@ -1744,33 +2021,4 @@ class _AthleteProfileScreenState extends State<AthleteProfileScreen>
   }
 }
 
-/// Sabit TabBar için SliverPersistentHeaderDelegate
-class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-  final double extent;
 
-  _PinnedTabBarDelegate({
-    required this.child,
-    required this.extent,
-  });
-
-  @override
-  double get minExtent => extent;
-
-  @override
-  double get maxExtent => extent;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(_PinnedTabBarDelegate oldDelegate) {
-    return child != oldDelegate.child || extent != oldDelegate.extent;
-  }
-}

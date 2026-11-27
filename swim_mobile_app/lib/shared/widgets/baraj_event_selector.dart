@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/theme/tokens/tokens.dart';
 import '../../data/models/baraj_rule.dart';
+import 'formatted_summary_view.dart';
 
 /// Barajlar sayfası ve Sporcu Detay sayfasında ortak kullanılan
 /// Yer / Tarih filtreli Baraj Etkinlik Seçici bileşeni.
@@ -151,7 +153,7 @@ class BarajEventSelector extends StatelessWidget {
           ),
           AppSpacing.vSm,
         ],
-        if (events.isNotEmpty && activeEvent != null)
+        if (events.isNotEmpty)
           SoftGlassPanel(
             level: 3,
             borderRadius: AppRadius.buttonRadius,
@@ -165,7 +167,28 @@ class BarajEventSelector extends StatelessWidget {
               activeEvent: activeEvent,
               onEventSelected: onEventSelected,
             ),
-            child: Row(
+            child: activeEvent == null
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Baraj Seçin',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.fontFamily,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ),
+                      AppSpacing.hSm,
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: palette.textSecondary,
+                      ),
+                    ],
+                  )
+                : Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
@@ -210,32 +233,77 @@ class BarajEventSelector extends StatelessWidget {
                           ),
                         ),
                       ],
-                      if (onOpenPdf != null || onOpenSummary != null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (onOpenPdf != null)
-                              _buildActionBadge(
-                                icon: Icons.picture_as_pdf_outlined,
-                                label: 'Reglaman',
-                                foreground: palette.accent,
-                                background: palette.accentSoft,
-                                onTap: onOpenPdf!,
-                              ),
-                            if (onOpenPdf != null && onOpenSummary != null)
-                              const SizedBox(width: 8),
-                            if (onOpenSummary != null)
-                              _buildActionBadge(
-                                icon: Icons.info_outline_rounded,
-                                label: 'Özet',
-                                foreground: palette.statusSuccess,
-                                background: palette.statusSuccessBg,
-                                onTap: onOpenSummary!,
-                              ),
-                          ],
-                        ),
-                      ],
+                      Builder(
+                        builder: (context) {
+                          final pdfUrl = activeEvent!.pdfUrl.trim();
+                          final effectivePdf = onOpenPdf ??
+                              (pdfUrl.isNotEmpty
+                                  ? () async {
+                                      final uri = Uri.tryParse(pdfUrl);
+                                      if (uri != null) {
+                                        await launchUrl(
+                                          uri,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      }
+                                    }
+                                  : null);
+                          final hasSummary = activeEvent!.ozet.trim().isNotEmpty ||
+                              activeEvent!.onemliNotlar.isNotEmpty;
+                          final effectiveSummary = onOpenSummary ??
+                              (hasSummary
+                                  ? () => showAnnouncementDetailSheet(
+                                        context,
+                                        title: activeEvent!.title,
+                                        subtitle: [
+                                          if (activeEvent!.dateText.isNotEmpty)
+                                            activeEvent!.dateText,
+                                          if (activeEvent!.city.isNotEmpty)
+                                            activeEvent!.city,
+                                        ].join(' • '),
+                                        tags: [
+                                          if (activeEvent!
+                                              .validityText.isNotEmpty)
+                                            'Geçerlilik: ${activeEvent!.validityText}',
+                                        ],
+                                        summary: activeEvent!.ozet,
+                                        notes: activeEvent!.onemliNotlar,
+                                        onOpenPdf: effectivePdf,
+                                      )
+                                  : null);
+                          if (effectivePdf == null &&
+                              effectiveSummary == null) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (effectivePdf != null)
+                                  _buildActionBadge(
+                                    icon: Icons.picture_as_pdf_outlined,
+                                    label: 'Reglaman',
+                                    foreground: palette.accent,
+                                    background: palette.accentSoft,
+                                    onTap: effectivePdf,
+                                  ),
+                                if (effectivePdf != null &&
+                                    effectiveSummary != null)
+                                  const SizedBox(width: 8),
+                                if (effectiveSummary != null)
+                                  _buildActionBadge(
+                                    icon: Icons.info_outline_rounded,
+                                    label: 'Özet',
+                                    foreground: palette.statusSuccess,
+                                    background: palette.statusSuccessBg,
+                                    onTap: effectiveSummary,
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),

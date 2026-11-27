@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from sonuclar.models import Sporcu, YarisSonucu, CanliYaris
 from sonuclar.local_baraj_parser import _fold_tr, _normalize_stil
+from sonuclar.rudolph_calc import compute_rudolph_points
 from .utils import (
     api_response,
     api_error,
@@ -88,14 +89,33 @@ def get_athlete_detail(request, athlete_id: int):
         key = (c, r.mesafe, r.stil)
         if key not in seen_pbs:
             seen_pbs.add(key)
+            t_cs = seconds_to_cs(r.derece_saniye)
+            pb_date = r.event.yaris_tarihi_baslangic if r.event else ''
+            pb_age = None
+            if athlete.dogum_yili and athlete.dogum_yili > 1900:
+                ref_year = None
+                if pb_date and len(pb_date) >= 4 and pb_date[:4].isdigit():
+                    ref_year = int(pb_date[:4])
+                else:
+                    ref_year = timezone.now().year
+                pb_age = ref_year - athlete.dogum_yili
+            stroke_code = map_stroke(r.stil)
+            rudolph_pts = compute_rudolph_points(
+                gender=athlete.cinsiyet,
+                age=pb_age,
+                stroke=stroke_code,
+                distance=r.mesafe,
+                time_cs=t_cs,
+            )
             item = {
                 'distance': r.mesafe,
-                'stroke': map_stroke(r.stil),
+                'stroke': stroke_code,
                 'stroke_label': r.stil.strip(),
                 'time': r.derece,
-                'time_cs': seconds_to_cs(r.derece_saniye),
+                'time_cs': t_cs,
                 'points': r.puan if (r.puan and r.puan > 0) else None,
-                'date': r.event.yaris_tarihi_baslangic if r.event else '',
+                'rudolph_points': rudolph_pts,
+                'date': pb_date,
                 'meet_name': r.event.musabaka_adi if r.event else '',
                 'course': c,
             }
@@ -226,16 +246,28 @@ def get_athlete_races(request, athlete_id: int):
         res_status = map_result_status(r.derece, r.sira)
         standard = parse_qualifying_standard(r.baraj)
         course = detect_course(r.event.musabaka_adi if r.event else '')
+        race_date = r.event.yaris_tarihi_baslangic if r.event else ''
+        stroke_code = map_stroke(r.stil)
+        rudolph_pts = None
+        if res_status == 'OK' and time_cs and athlete.dogum_yili and athlete.dogum_yili > 1900:
+            ref_yr = int(race_date[:4]) if (race_date and len(race_date) >= 4 and race_date[:4].isdigit()) else timezone.now().year
+            rudolph_pts = compute_rudolph_points(
+                gender=athlete.cinsiyet,
+                age=ref_yr - athlete.dogum_yili,
+                stroke=stroke_code,
+                distance=r.mesafe,
+                time_cs=time_cs,
+            )
 
         races_data.append({
             'id': r.id,
             'meet_id': r.event_id,
             'meet_name': r.event.musabaka_adi if r.event else '',
-            'date': r.event.yaris_tarihi_baslangic if r.event else '',
+            'date': race_date,
             'course': course,
             'event_no': str(r.yaris_no or ''),
             'distance': r.mesafe,
-            'stroke': map_stroke(r.stil),
+            'stroke': stroke_code,
             'stroke_label': (r.stil or '').strip(),
             'heat': (r.seri or '').strip(),
             'lane': r.kulvar,
@@ -244,6 +276,7 @@ def get_athlete_races(request, athlete_id: int):
             'time_cs': time_cs if res_status == 'OK' else None,
             'result_status': res_status,
             'points': r.puan if (r.puan and r.puan > 0) else None,
+            'rudolph_points': rudolph_pts,
             'qualifying_standard': standard,
             'club_name': r.kulup.kulup_adi if r.kulup else '',
         })
@@ -385,7 +418,7 @@ def get_athletes_summary(request):
 
 
 @require_GET
-@cache_api_response(120)
+@cache_api_response(20)
 def get_athlete_baraj_targets(request, athlete_id: int):
     """
     Sporcunun cinsiyeti ve doğum yılına göre tanımlı reglaman barajlarını
@@ -585,5 +618,5 @@ def get_athlete_baraj_targets(request, athlete_id: int):
             })
 
     targets.sort(key=lambda t: (t.get('start_date') or '9999-99-99', t.get('meet_name') or ''))
-    return api_response({'data': targets}, request=request, cache_seconds=60)
+    return api_response({'data': targets}, request=request, cache_seconds=20)
 

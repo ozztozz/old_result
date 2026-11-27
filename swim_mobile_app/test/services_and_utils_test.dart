@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swim_mobile_app/core/services/favorite_athletes_service.dart';
+import 'package:swim_mobile_app/core/services/notification_service.dart';
 import 'package:swim_mobile_app/core/services/selected_club_service.dart';
 import 'package:swim_mobile_app/core/utils/race_result_sorter.dart';
 import 'package:swim_mobile_app/core/utils/string_utils.dart';
@@ -90,6 +91,13 @@ void main() {
       RaceResultSorter.sort(list);
 
       expect(list.map((r) => r.id).toList(), [4, 3, 2, 1]);
+    });
+  });
+
+  group('NotificationService', () {
+    test('generates expected FCM topic names for meets and clubs', () {
+      expect(NotificationService.topicForLiveMeet(42), 'live_meet_42');
+      expect(NotificationService.topicForClub(17), 'club_17');
     });
   });
 }

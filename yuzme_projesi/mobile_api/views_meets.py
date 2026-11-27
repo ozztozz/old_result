@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import re
+from collections import defaultdict
 from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
 from django.db.models import Case, Count, Prefetch, Q, When, Value, IntegerField
@@ -16,6 +18,97 @@ from .utils import (
     detect_course,
     compute_age_group_info,
 )
+
+
+def _fold_tr_upper(s):
+    return (
+        (s or '')
+        .replace('İ', 'I')
+        .replace('ı', 'i')
+        .replace('Ş', 'S')
+        .replace('ş', 's')
+        .replace('Ğ', 'G')
+        .replace('ğ', 'g')
+        .replace('Ü', 'U')
+        .replace('ü', 'u')
+        .replace('Ö', 'O')
+        .replace('ö', 'o')
+        .replace('Ç', 'C')
+        .replace('ç', 'c')
+        .upper()
+    )
+
+
+def _dedupe_calendar_events(events):
+    """TYF takvim ve reglaman taramalarından doğan aynı gün/müsabaka kopyalarını tekiller."""
+    if len(events) < 2:
+        return events
+
+    def _norm_name(s):
+        return re.sub(r'[^A-Z0-9]+', ' ', _fold_tr_upper(s)).strip()
+
+    def _is_wildcard_city(c):
+        return _fold_tr_upper(c).strip() in ('', 'MUHTELIF', 'ILLER', '-', 'TURKIYE')
+
+    def _similar_names(a, b):
+        na, nb = _norm_name(a), _norm_name(b)
+        if not na or not nb:
+            return False
+        na_ns, nb_ns = na.replace(' ', ''), nb.replace(' ', '')
+        if na_ns in nb_ns or nb_ns in na_ns:
+            return True
+        stop = {'TURKIYE', 'YUZME', 'FEDERASYONU', 'ARENA', 'YAS', 'VE', 'ILE'}
+        ta = set(na.split()) - stop
+        tb = set(nb.split()) - stop
+        if not ta or not tb:
+            return True
+        return len(ta & tb) >= min(len(ta), len(tb)) * 0.6
+
+    def _score(ev):
+        baraj_cnt = getattr(ev, 'baraj_count', 0) or 0
+        belge_cnt = len(getattr(ev, 'aktif_belgeler', None) or [])
+        res_cnt = ev.toplam_yaris_sayisi or 0
+        src = (ev.kaynak_turu or '').upper()
+        return (
+            1 if (res_cnt > 0 or baraj_cnt > 0 or belge_cnt > 0) else 0,
+            baraj_cnt + belge_cnt * 10,
+            res_cnt,
+            1 if src == 'TYF_REGLAMAN' else 0,
+            -ev.id,
+        )
+
+    tyf_sources = {'TYF_TAKVIM', 'TYF_REGLAMAN', 'IL_TAKVIM', 'IL_REGLAMAN'}
+    by_date = defaultdict(list)
+    for ev in events:
+        by_date[ev.yaris_tarihi_baslangic or ''].append(ev)
+
+    kept_ids = set()
+    for _dt, day_events in by_date.items():
+        clusters = []
+        for ev in day_events:
+            placed = False
+            c_ev = _fold_tr_upper(ev.sehir).strip()
+            src_ev = (ev.kaynak_turu or '').upper()
+            for cl in clusters:
+                rep = cl[0]
+                src_rep = (rep.kaynak_turu or '').upper()
+                if src_ev not in tyf_sources and src_rep not in tyf_sources:
+                    continue
+                c_rep = _fold_tr_upper(rep.sehir).strip()
+                same_city = not _is_wildcard_city(c_ev) and not _is_wildcard_city(c_rep) and c_ev == c_rep
+                if (same_city or _is_wildcard_city(c_ev) or _is_wildcard_city(c_rep)) and _similar_names(
+                    ev.musabaka_adi, rep.musabaka_adi
+                ):
+                    cl.append(ev)
+                    placed = True
+                    break
+            if not placed:
+                clusters.append([ev])
+        for cl in clusters:
+            best = max(cl, key=_score)
+            kept_ids.add(best.id)
+
+    return [ev for ev in events if ev.id in kept_ids]
 
 
 @require_GET
@@ -186,10 +279,11 @@ def get_event_calendar(request):
             (Q(yaris_tarihi_bitis='') & Q(yaris_tarihi_baslangic__gte=today_iso))
         )
 
+    national_q = Q(kaynak_turu__startswith='TYF') | Q(kaynak_turu__isnull=True) | Q(kaynak_turu='')
     if scope == 'national':
-        qs = qs.filter(Q(kaynak_turu__startswith='TYF') | Q(kaynak_turu__isnull=True))
+        qs = qs.filter(national_q)
     elif scope == 'provincial':
-        qs = qs.filter(Q(kaynak_turu__startswith='IL') | Q(kaynak_turu__icontains='PROVINCIAL'))
+        qs = qs.exclude(national_q)
 
     if city:
         qs = qs.filter(sehir__icontains=city)
@@ -218,13 +312,13 @@ def get_event_calendar(request):
 
     events_data = []
     cities_set = set()
-    for ev in qs[:200]:
+    for ev in _dedupe_calendar_events(list(qs[:200])):
         sehir = (ev.sehir or '').strip()
         if sehir and sehir.upper() not in ('İLLER', 'ILLER', '-'):
             cities_set.add(sehir)
 
         src = (ev.kaynak_turu or '').upper()
-        ev_scope = 'IL' if src.startswith('IL') else 'ULUSAL'
+        ev_scope = 'ULUSAL' if (not src or src.startswith('TYF')) else 'IL'
 
         belge = ev.aktif_belgeler[0] if getattr(ev, 'aktif_belgeler', None) else None
         pdf_url = ''
@@ -692,4 +786,231 @@ def get_meet_results(request, meet_id: int):
         'total_count': total_count,
         'has_next': has_next,
     }, request=request, cache_seconds=15)
+
+
+def _format_cs_str(cs):
+    if cs is None or cs <= 0:
+        return None
+    total_sec, rem_cs = divmod(int(cs), 100)
+    mins, secs = divmod(total_sec, 60)
+    if mins > 0:
+        return f'{mins}:{secs:02d}.{rem_cs:02d}'
+    return f'{secs}.{rem_cs:02d}'
+
+
+@require_GET
+@cache_api_response(60)
+def get_club_baraj_status(request):
+    """
+    Seçili kulübün, seçilen baraja tabi olan sporcularını ve
+    ilgili branşlardaki geçme/kalma durumlarını döndürür.
+    """
+    from datetime import date, timedelta
+    from sonuclar.models import BarajKurali, Kulup, Sporcu, SporcuKulupTarihce
+    from sonuclar.local_baraj_parser import _fold_tr
+    from .views_athletes import _normalize_stil
+
+    club_id_raw = (request.GET.get('club_id') or '').strip()
+    club_name = (request.GET.get('club_name') or '').strip()
+    event_id_raw = (request.GET.get('event_id') or '').strip()
+    baraj_adi = (request.GET.get('baraj_adi') or '').strip()
+    baraj_turu = (request.GET.get('baraj_turu') or '').strip()
+    havuz = (request.GET.get('havuz') or '').strip()
+
+    if not club_id_raw.isdigit() and not club_name:
+        return api_error('club_id veya club_name zorunludur.', status=400)
+    if not event_id_raw.isdigit() and not baraj_adi:
+        return api_error('event_id veya baraj_adi zorunludur.', status=400)
+
+    target_club_ids = []
+    if club_id_raw.isdigit():
+        target_club_ids = [int(club_id_raw)]
+    elif club_name:
+        norm_target = _fold_tr(club_name).strip()
+        for kid, kname in Kulup.objects.values_list('id', 'kulup_adi'):
+            if kname and norm_target in _fold_tr(kname):
+                target_club_ids.append(kid)
+
+    if not target_club_ids:
+        return api_response({
+            'summary': {
+                'total_athletes': 0,
+                'passed_athletes': 0,
+                'total_passed_rules': 0,
+                'total_applicable_rules': 0,
+            },
+            'athletes': [],
+        }, request=request, cache_seconds=30)
+
+    rules_qs = BarajKurali.objects.select_related('belge', 'event').order_by('mesafe', 'stil', 'yas_etiketi')
+    if event_id_raw.isdigit():
+        rules_qs = rules_qs.filter(event_id=int(event_id_raw))
+    elif baraj_adi:
+        rules_qs = rules_qs.filter(baraj_adi=baraj_adi)
+    if baraj_turu:
+        rules_qs = rules_qs.filter(baraj_turu=baraj_turu)
+    if havuz in ('25m', '50m'):
+        rules_qs = rules_qs.filter(havuz=havuz)
+
+    rules = list(rules_qs)
+    if not rules:
+        return api_response({
+            'summary': {
+                'total_athletes': 0,
+                'passed_athletes': 0,
+                'total_passed_rules': 0,
+                'total_applicable_rules': 0,
+            },
+            'athletes': [],
+        }, request=request, cache_seconds=30)
+
+    # Kulübün son 1 yılda aktif güncel sporcuları (transfer olanlar ve pasifler hariç)
+    cutoff_str = (date.today() - timedelta(days=365)).strftime('%Y-%m-%d')
+    athlete_ids = list(
+        SporcuKulupTarihce.objects.filter(
+            kulup_id__in=target_club_ids,
+            aktif_kulup_mu=1,
+            son_yaris_tarihi__gte=cutoff_str,
+        )
+        .exclude(sporcu__sporcu_adi__startswith='Maskeli')
+        .values_list('sporcu_id', flat=True)
+        .distinct()
+    )
+    if not athlete_ids:
+        return api_response({
+            'summary': {
+                'total_athletes': 0,
+                'passed_athletes': 0,
+                'total_passed_rules': 0,
+                'total_applicable_rules': 0,
+            },
+            'athletes': [],
+        }, request=request, cache_seconds=30)
+
+    athletes = list(
+        Sporcu.objects.filter(id__in=athlete_ids)
+        .only('id', 'sporcu_adi', 'dogum_yili', 'cinsiyet')
+    )
+
+    # Kulüp sporcularının tüm geçerli dereceleri: sporcu_id -> (havuz, mesafe, stil) -> [(ev_date, cs)]
+    race_records = {}
+    for r in (
+        YarisSonucu.objects.filter(
+            sporcu_id__in=athlete_ids,
+            derece_saniye__gt=0,
+            mesafe__isnull=False,
+            stil__isnull=False,
+        )
+        .select_related('event')
+        .only(
+            'sporcu_id', 'mesafe', 'stil', 'derece_saniye',
+            'event__musabaka_adi', 'event__kaynak_turu', 'event__havuz',
+            'event__yaris_tarihi_baslangic',
+        )
+    ):
+        r_stil = _normalize_stil(r.stil or '')
+        if not r_stil:
+            continue
+        r_course = r.event.havuz if (r.event and r.event.havuz in ('25m', '50m')) else None
+        if not r_course and r.event:
+            c_code = detect_course(r.event.musabaka_adi or r.event.kaynak_turu)
+            r_course = '25m' if c_code == 'SC' else '50m'
+        cs = seconds_to_cs(r.derece_saniye)
+        ev_date = (r.event.yaris_tarihi_baslangic or '') if r.event else ''
+        if cs and cs > 0 and r_course:
+            race_records.setdefault(r.sporcu_id, {}).setdefault(
+                (r_course, int(r.mesafe), r_stil), []
+            ).append((ev_date, cs))
+
+    athletes_out = []
+    passed_athletes = 0
+    total_passed_rules = 0
+    total_applicable_rules = 0
+
+    for sp in athletes:
+        by = sp.dogum_yili
+        g_fold = _fold_tr(sp.cinsiyet or '')
+        sp_gender = 'Erkek' if 'erkek' in g_fold else ('Kadın' if ('kadin' in g_fold or 'bayan' in g_fold) else None)
+        if by is None or sp_gender is None:
+            continue
+
+        sp_recs = race_records.get(sp.id, {})
+        applicable = []
+        seen = set()
+        for bk in rules:
+            if bk.cinsiyet and bk.cinsiyet != sp_gender:
+                continue
+            dys = bk.dogum_yillari or []
+            max_dy = bk.max_dogum_yili
+            if not ((dys and by in dys) or (max_dy is not None and by <= max_dy)):
+                continue
+
+            dkey = (bk.baraj_turu, bk.havuz, bk.yas_etiketi, bk.mesafe, bk.stil, bk.sure_cs)
+            if dkey in seen:
+                continue
+            seen.add(dkey)
+
+            g_start = (bk.belge.baraj_gecerlilik_baslangic or '') if bk.belge else ''
+            g_end = (bk.belge.baraj_gecerlilik_bitis or '') if bk.belge else ''
+            recs = sp_recs.get((bk.havuz or '', int(bk.mesafe), bk.stil), [])
+
+            eff_pb_cs = None
+            if recs:
+                if g_start or g_end:
+                    in_win = [
+                        cs for ev_d, cs in recs
+                        if ev_d and (not g_start or ev_d >= g_start) and (not g_end or ev_d <= g_end)
+                    ]
+                    eff_pb_cs = min(in_win) if in_win else None
+                else:
+                    eff_pb_cs = min(cs for _, cs in recs)
+
+            passed = eff_pb_cs is not None and eff_pb_cs <= bk.sure_cs
+            diff_cs = (eff_pb_cs - bk.sure_cs) if eff_pb_cs is not None else None
+            applicable.append({
+                'distance': bk.mesafe,
+                'stroke': map_stroke(bk.stil),
+                'stroke_label': bk.stil,
+                'course': bk.havuz,
+                'baraj_turu': bk.baraj_turu,
+                'yas_etiketi': bk.yas_etiketi,
+                'target_cs': bk.sure_cs,
+                'target_time': _format_cs_str(bk.sure_cs) or '',
+                'pb_cs': eff_pb_cs,
+                'pb_time': _format_cs_str(eff_pb_cs),
+                'diff_cs': diff_cs,
+                'passed': passed,
+            })
+
+        if not applicable:
+            continue
+
+        passed_cnt = sum(1 for r in applicable if r['passed'])
+        total_cnt = len(applicable)
+        if passed_cnt > 0:
+            passed_athletes += 1
+        total_passed_rules += passed_cnt
+        total_applicable_rules += total_cnt
+
+        athletes_out.append({
+            'id': sp.id,
+            'name': sp.sporcu_adi,
+            'birth_year': by,
+            'gender': sp_gender,
+            'passed_count': passed_cnt,
+            'total_count': total_cnt,
+            'rules': applicable,
+        })
+
+    athletes_out.sort(key=lambda a: (a['birth_year'] or 9999, a['gender'] or '', a['name'].lower()))
+
+    return api_response({
+        'summary': {
+            'total_athletes': len(athletes_out),
+            'passed_athletes': passed_athletes,
+            'total_passed_rules': total_passed_rules,
+            'total_applicable_rules': total_applicable_rules,
+        },
+        'athletes': athletes_out,
+    }, request=request, cache_seconds=60)
 

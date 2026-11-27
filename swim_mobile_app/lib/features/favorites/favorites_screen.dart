@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/components/ambient_canvas.dart';
 import '../../core/components/empty_state_widget.dart';
 import '../../core/components/soft_glass_panel.dart';
 import '../../core/services/favorite_athletes_service.dart';
@@ -8,7 +7,7 @@ import '../../core/utils/responsive.dart';
 import '../../core/utils/string_utils.dart';
 import '../../data/models/athlete.dart';
 import '../../data/repositories/swim_repository.dart';
-import '../../shared/widgets/brand_header_bar.dart';
+import '../../shared/widgets/app_page_shell.dart';
 import '../athletes/athlete_profile_screen.dart';
 import '../home/home_screen.dart';
 
@@ -146,33 +145,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final palette = context.palette;
     final filtered = _filteredFavorites;
 
-    return AmbientBackground(
-      artStyle: AmbientArtStyle.none,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              // 1. Sabit Marka Başlığı
-              BrandHeaderBar(
-                subtitle: 'Favori Sporcular',
-                showBack: false,
-                actions: [
-                  GlassCircleButton(
-                    icon: Icons.refresh_outlined,
-                    iconSize: 20,
-                    iconColor: palette.textPrimary,
-                    tooltip: 'Yenile',
-                    onTap: _loadFavorites,
-                  ),
-                ],
-              ),
-
-              // 2. İçerik
-              Expanded(
-                child: _isLoading
-                    ? Center(
+    return AppPageShell(
+      subtitle: 'Favori Sporcular',
+      showBack: false,
+      maxWidth: null,
+      actions: [
+        GlassCircleButton(
+          icon: Icons.refresh_outlined,
+          iconSize: 20,
+          iconColor: palette.textPrimary,
+          tooltip: 'Yenile',
+          onTap: _loadFavorites,
+        ),
+      ],
+      body: _isLoading
+          ? Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2.2,
                           color: palette.primary,
@@ -324,11 +311,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 ),
                               ),
                             ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

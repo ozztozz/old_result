@@ -87,6 +87,8 @@ class LiveMeetSummary {
 
 class LiveEventProgramItem {
   final String eventNo;
+  final int? day;
+  final String? estimatedTime;
   final String name;
   final int? distance;
   final String stroke;
@@ -99,6 +101,8 @@ class LiveEventProgramItem {
 
   LiveEventProgramItem({
     required this.eventNo,
+    this.day,
+    this.estimatedTime,
     required this.name,
     this.distance,
     required this.stroke,
@@ -117,6 +121,8 @@ class LiveEventProgramItem {
 
     return LiveEventProgramItem(
       eventNo: json['event_no'] as String? ?? '',
+      day: (json['day'] as num?)?.toInt(),
+      estimatedTime: json['estimated_time'] as String?,
       name: json['name'] as String? ?? (defaultName.isNotEmpty ? defaultName : 'Yarış'),
       distance: dist,
       stroke: json['stroke'] as String? ?? '',
