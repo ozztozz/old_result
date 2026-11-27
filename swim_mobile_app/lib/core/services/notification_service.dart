@@ -82,11 +82,13 @@ class NotificationService extends ChangeNotifier {
       _subscribedClubTopic = _prefs?.getString(_keySubscribedClubTopic);
     } catch (_) {}
 
-    await _initLocalNotifications();
-    await _initFirebaseMessaging(
-      initialFavoriteMeetIds,
-      initialFavoriteClubId: initialFavoriteClubId,
-    );
+    if (!kIsWeb) {
+      await _initLocalNotifications();
+      await _initFirebaseMessaging(
+        initialFavoriteMeetIds,
+        initialFavoriteClubId: initialFavoriteClubId,
+      );
+    }
 
     _isInitialized = true;
     notifyListeners();
@@ -192,6 +194,7 @@ class NotificationService extends ChangeNotifier {
 
   /// İşletim sisteminden bildirim izni ister.
   Future<bool> requestPermission() async {
+    if (kIsWeb) return false;
     bool granted = false;
 
     try {

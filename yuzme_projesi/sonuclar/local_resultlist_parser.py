@@ -364,6 +364,11 @@ class LocalResultListParser:
                             derece = nxt2
                             idx += 3
 
+                            fina_puan = None
+                            if idx < n_lines and re.match(r"^\d{2,4}$", lines[idx]):
+                                fina_puan = int(lines[idx])
+                                idx += 1
+
                             club = ""
                             if (
                                 idx < n_lines
@@ -374,8 +379,7 @@ class LocalResultListParser:
                                 club = re.sub(r"\s+", " ", lines[idx]).strip()
                                 idx += 1
 
-                            fina_puan = None
-                            if idx < n_lines and re.match(r"^\d{2,4}$", lines[idx]):
+                            if fina_puan is None and idx < n_lines and re.match(r"^\d{2,4}$", lines[idx]):
                                 fina_puan = int(lines[idx])
                                 idx += 1
 

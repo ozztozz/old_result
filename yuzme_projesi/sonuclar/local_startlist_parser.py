@@ -351,9 +351,18 @@ class LocalStartListParser:
                         break
 
                     if is_relay:
-                        club = lines[idx]
-                        idx += 1
-                        entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
+                        entry_time = None
+                        club = ""
+                        if idx < n_lines and self.RE_TIME.match(lines[idx]):
+                            entry_time = lines[idx]
+                            idx += 1
+                            if idx < n_lines and self._is_valid_club_line(lines[idx]):
+                                club = lines[idx]
+                                idx += 1
+                        else:
+                            club = lines[idx]
+                            idx += 1
+                            entry_time, club, idx = self._extract_entry_time(lines, idx, n_lines, club)
                         while idx < n_lines and self._is_relay_swimmers_line(lines[idx]):
                             idx += 1
                         swimmers.append({
